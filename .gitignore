@@ -26,3 +26,6 @@ yarn-error.log
 /.zed
 
 /composer.lock
+
+# Scripts locales de diagnóstico
+/scratch

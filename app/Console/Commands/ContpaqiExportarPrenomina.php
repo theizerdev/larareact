@@ -36,17 +36,19 @@ class ContpaqiExportarPrenomina extends Command
 
     public function handle(ContpaqiExportService $servicio): int
     {
-        [$desde, $hasta] = $this->resolverPeriodo();
+        // La empresa va primero porque el período por defecto depende de su
+        // calendario: semanal o quincenal, y qué día corta la semana.
+        $empresa = $this->resolverEmpresa();
+
+        if ($empresa === null) {
+            return self::FAILURE;
+        }
+
+        [$desde, $hasta] = $this->resolverPeriodo($empresa);
 
         if ($desde->greaterThan($hasta)) {
             $this->error('La fecha --desde es posterior a --hasta.');
 
-            return self::FAILURE;
-        }
-
-        $empresa = $this->resolverEmpresa();
-
-        if ($empresa === null) {
             return self::FAILURE;
         }
 
@@ -102,25 +104,26 @@ class ContpaqiExportarPrenomina extends Command
     }
 
     /**
-     * Período por defecto: la semana completa anterior a hoy.
+     * Período por defecto: el último completo según el calendario de la
+     * empresa.
      *
-     * Es el caso normal —la prenómina se cierra al terminar la semana— y
+     * Es el caso normal —la prenómina se cierra al terminar el período— y
      * evita el error clásico de exportar la semana en curso, que todavía no
      * tiene todos sus marcajes.
      *
      * @return array{CarbonImmutable, CarbonImmutable}
      */
-    private function resolverPeriodo(): array
+    private function resolverPeriodo(Empresa $empresa): array
     {
-        $inicioSemana = (int) config('contpaqi.dia_inicio_semana', 1);
+        [$desdeDefault, $hastaDefault] = $empresa->contpaqiPeriodoAnterior();
 
         $desde = $this->option('desde')
             ? CarbonImmutable::parse((string) $this->option('desde'))->startOfDay()
-            : CarbonImmutable::now()->subWeek()->startOfWeek($inicioSemana)->startOfDay();
+            : $desdeDefault;
 
         $hasta = $this->option('hasta')
             ? CarbonImmutable::parse((string) $this->option('hasta'))->endOfDay()
-            : $desde->addDays(6)->endOfDay();
+            : ($this->option('desde') ? $desde->addDays(6)->endOfDay() : $hastaDefault);
 
         return [$desde, $hasta];
     }

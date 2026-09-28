@@ -152,6 +152,23 @@ class PermissionSeeder extends Seeder
                 'asistencia.configuracion' => 'Configurar Asistencia y Turnos LFT',
             ],
 
+            // Sector: Nómina — captura de incidencias y salida a CONTPAQi
+            //
+            // Aprobar está separado de capturar a propósito: una incidencia
+            // aprobada mueve dinero y tapa faltas injustificadas, así que quien
+            // la captura no debería poder autorizarse a sí mismo.
+            'nomina' => [
+                'incidencias.view' => 'Ver Incidencias de Nómina',
+                'incidencias.create' => 'Capturar Incidencia',
+                'incidencias.edit' => 'Editar Incidencia',
+                'incidencias.delete' => 'Eliminar Incidencia',
+                'incidencias.aprobar' => 'Aprobar o Rechazar Incidencias',
+
+                'contpaqi.view' => 'Ver Exportaciones a CONTPAQi',
+                'contpaqi.exportar' => 'Generar Prenómina para CONTPAQi',
+                'contpaqi.catalogo' => 'Administrar Catálogo y Mapeo de CONTPAQi',
+            ],
+
         ];
 
         foreach ($permissions as $sector => $sectorPermissions) {
@@ -178,6 +195,8 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'visitas_temporales.') => 'visitas_temporales',
                     str_starts_with($permission, 'control_acceso.') => 'control_acceso',
                     str_starts_with($permission, 'asistencia.') => 'asistencia',
+                    str_starts_with($permission, 'incidencias.') => 'incidencias',
+                    str_starts_with($permission, 'contpaqi.') => 'contpaqi',
 
                     default => 'general',
                 };

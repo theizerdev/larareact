@@ -24,6 +24,11 @@ class DatabaseSeeder extends Seeder
             EmpresaSucursalSeeder::class,
             UsersSeeder::class,
             TipoServicioSeeder::class,
+            DepartamentoDriscollsSeeder::class,
+            CargoDriscollsSeeder::class,
+            ResponsableDriscollsSeeder::class,
+            EmpleadoDriscollsSeeder::class,
+            ContpaqiTipoIncidenciaSeeder::class,
         ]);
     }
 }

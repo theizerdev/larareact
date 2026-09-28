@@ -25,6 +25,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:incidencias.view')->group(function () {
         Route::get('/nomina/incidencias', [IncidenciaEmpleadoController::class, 'index'])
             ->name('nomina.incidencias.index');
+
+        // El justificante se ve con el mismo permiso que la incidencia: quien
+        // puede revisar la lista tiene que poder abrir la incapacidad que la
+        // respalda, o la revisión no sirve de nada.
+        Route::get('/nomina/incidencias/{incidencia}/justificante', [IncidenciaEmpleadoController::class, 'justificante'])
+            ->name('nomina.incidencias.justificante');
     });
 
     Route::middleware('permission:incidencias.create')->group(function () {
@@ -68,13 +74,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('permission:contpaqi.exportar')->group(function () {
         Route::post('/nomina/contpaqi/generar', [ContpaqiPrenominaController::class, 'generar'])
             ->name('nomina.contpaqi.generar');
+
+        // Trae las últimas checadas del reloj y recalcula el período antes de
+        // generar. Escribe en asistencia, por eso no basta con contpaqi.view.
+        Route::post('/nomina/contpaqi/sincronizar-reloj', [ContpaqiPrenominaController::class, 'sincronizarReloj'])
+            ->name('nomina.contpaqi.sincronizar-reloj');
+
+        // Cerrar va con el permiso de exportar y no con uno propio: quien
+        // puede producir el archivo es quien sabe cuál se importó de verdad.
+        Route::patch('/nomina/contpaqi/{exportacion}/cerrar', [ContpaqiPrenominaController::class, 'cerrar'])
+            ->name('nomina.contpaqi.cerrar');
     });
 
     /* ---------------------------------------------------------------- */
-    /*  Mapeo de códigos de empleado */
+    /*  Mapeo de códigos de empleado y calendario */
     /* ---------------------------------------------------------------- */
 
     Route::middleware('permission:contpaqi.catalogo')->group(function () {
+        Route::put('/nomina/contpaqi/configuracion', [ContpaqiPrenominaController::class, 'configuracion'])
+            ->name('nomina.contpaqi.configuracion');
+
         Route::get('/nomina/contpaqi/mapeos', [ContpaqiPrenominaController::class, 'mapeos'])
             ->name('nomina.contpaqi.mapeos.index');
         Route::post('/nomina/contpaqi/mapeos', [ContpaqiPrenominaController::class, 'guardarMapeo'])

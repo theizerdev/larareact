@@ -36,6 +36,21 @@ return [
     'enabled' => (bool) env('CONTPAQI_ENABLED', true),
 
     /*
+    | ¿Se anuncia Nómina en el menú y el dashboard?
+    |
+    | Publicado desde sept. 2026. Ocultarlo otra vez —para un cliente que
+    | todavía no contrata el módulo, por ejemplo— es poner
+    | CONTPAQI_MODULO_VISIBLE=false en su .env, sin desplegar código: las
+    | pantallas siguen respondiendo por URL para quien tenga permiso, nada se
+    | rompe, sólo dejan de anunciarse.
+    |
+    | Ojo: esto es visibilidad, no control de acceso. Quien no deba entrar a
+    | Nómina se queda fuera por permisos (incidencias.*, contpaqi.*), que es
+    | lo que de verdad cierra la puerta.
+    */
+    'modulo_visible' => (bool) env('CONTPAQI_MODULO_VISIBLE', true),
+
+    /*
     | Con false, el panel muestra un aviso de que el layout no está verificado.
     |
     | Está en true por indicación del cliente (sept. 2026): los encabezados del

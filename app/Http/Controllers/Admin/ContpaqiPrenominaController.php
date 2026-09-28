@@ -8,6 +8,8 @@ use App\Models\ContpaqiExportacion;
 use App\Models\ContpaqiTipoIncidencia;
 use App\Models\Empleado;
 use App\Models\Empresa;
+use App\Services\BioTimeAsistenciaService;
+use App\Services\BioTimeSyncService;
 use App\Services\Contpaqi\ContpaqiExportService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -34,14 +36,21 @@ class ContpaqiPrenominaController extends Controller
      * resultado sobrevive a un refresco y la URL del período se puede compartir
      * con quien tenga que revisarlo antes de generar.
      */
-    public function index(Request $request, ContpaqiExportService $servicio): Response
+    public function index(Request $request, ContpaqiExportService $servicio, BioTimeAsistenciaService $reloj): Response
     {
         $empresa = $this->empresaDe($request);
-        [$desde, $hasta] = $this->periodoDe($request);
+        [$desde, $hasta] = $this->periodoDe($request, $empresa);
 
         $previsualizacion = null;
+        $incidenciasPendientes = 0;
+        $cerrada = null;
+        $relojChecador = null;
 
         if ($request->filled('desde') && $request->filled('hasta')) {
+            $incidenciasPendientes = $servicio->incidenciasPendientes($empresa, $desde, $hasta);
+            $cerrada = $servicio->cerradaQueTraslapa($empresa, $desde, $hasta);
+            $relojChecador = $reloj->diagnostico($empresa, $desde, $hasta);
+
             try {
                 $resultado = $servicio->previsualizar($empresa, $desde, $hasta);
 
@@ -60,7 +69,7 @@ class ContpaqiPrenominaController extends Controller
         }
 
         $exportaciones = ContpaqiExportacion::query()
-            ->with('generadaPor:id,name')
+            ->with(['generadaPor:id,name', 'cerradaPor:id,name'])
             ->paraEmpresa($empresa->id)
             ->orderByDesc('created_at')
             ->limit(20)
@@ -80,11 +89,25 @@ class ContpaqiPrenominaController extends Controller
             'previsualizacion' => $previsualizacion,
             'exportaciones' => $exportaciones,
             'empleadosSinMapeo' => $sinMapeo,
+            'incidenciasPendientes' => $incidenciasPendientes,
+            'relojChecador' => $relojChecador,
+            'periodoCerrado' => $cerrada === null ? null : [
+                'id' => $cerrada->id,
+                'periodo_inicio' => $cerrada->periodo_inicio->toDateString(),
+                'periodo_fin' => $cerrada->periodo_fin->toDateString(),
+                'nombre_archivo' => $cerrada->nombre_archivo,
+                'cerrada_at' => $cerrada->cerrada_at?->toDateTimeString(),
+            ],
+            'configuracion' => [
+                'periodicidad' => $empresa->contpaqiPeriodicidad(),
+                'dia_inicio_semana' => $empresa->contpaqiDiaInicioSemana(),
+            ],
             'catalogo' => ContpaqiTipoIncidencia::query()
                 ->paraEmpresa($empresa->id)
                 ->orderBy('id')
                 ->get(['id', 'mnemonico', 'descripcion', 'unidad', 'tipo_imss', 'es_derivada', 'activo']),
             'puedeExportar' => $request->user()->can('contpaqi.exportar'),
+            'puedeConfigurar' => $request->user()->can('contpaqi.catalogo'),
 
             // El layout de columnas todavía no está confirmado contra un
             // CONTPAQi real; la pantalla lo dice en vez de dejar que alguien
@@ -96,11 +119,30 @@ class ContpaqiPrenominaController extends Controller
     public function generar(Request $request, ContpaqiExportService $servicio): RedirectResponse
     {
         $empresa = $this->empresaDe($request);
-        [$desde, $hasta] = $this->periodoDe($request, exigir: true);
+        [$desde, $hasta] = $this->periodoDe($request, $empresa, exigir: true);
 
-        $numeroPeriodo = $request->validate([
+        $validado = $request->validate([
             'numero_periodo' => ['nullable', 'integer', 'min:1', 'max:400'],
-        ])['numero_periodo'] ?? null;
+            'confirmar_pendientes' => ['nullable', 'boolean'],
+        ]);
+
+        $numeroPeriodo = $validado['numero_periodo'] ?? null;
+
+        /*
+         * Con incidencias sin aprobar en el período, generar exige confirmación
+         * explícita. No se bloquea del todo: a veces la pendiente es un error
+         * que nadie va a aprobar y la nómina no puede esperar. Pero tiene que
+         * ser una decisión, no algo que pasó porque nadie miró.
+         */
+        $pendientes = $servicio->incidenciasPendientes($empresa, $desde, $hasta);
+
+        if ($pendientes > 0 && ! ($validado['confirmar_pendientes'] ?? false)) {
+            throw ValidationException::withMessages([
+                'confirmar_pendientes' => $pendientes === 1
+                    ? 'Hay 1 incidencia pendiente de aprobar en este período y no saldrá en el archivo. Apruébala o recházala antes, o confirma que quieres generar sin ella.'
+                    : "Hay {$pendientes} incidencias pendientes de aprobar en este período y no saldrán en el archivo. Apruébalas o recházalas antes, o confirma que quieres generar sin ellas.",
+            ]);
+        }
 
         try {
             $exportacion = $servicio->exportar($empresa, $desde, $hasta, $numeroPeriodo, $request->user());
@@ -115,6 +157,51 @@ class ContpaqiPrenominaController extends Controller
                 $exportacion->empleados_exportados,
                 $exportacion->empleados_omitidos,
             ),
+        ]);
+    }
+
+    /**
+     * Trae del reloj las checadas más recientes y las pasa a asistencia antes
+     * de previsualizar.
+     *
+     * El scheduler ya lo hace cada pocos minutos; esto existe para quien va a
+     * cerrar la nómina y no quiere esperar a la siguiente corrida ni dudar de
+     * si la última checada del viernes alcanzó a entrar.
+     */
+    public function sincronizarReloj(Request $request, BioTimeAsistenciaService $reloj): RedirectResponse
+    {
+        $empresa = $this->empresaDe($request);
+        [$desde, $hasta] = $this->periodoDe($request, $empresa, exigir: true);
+
+        if (! $empresa->biotime_active || blank($empresa->biotime_base_url)) {
+            throw ValidationException::withMessages(['reloj' => 'Esta empresa no tiene el reloj BioTime conectado.']);
+        }
+
+        if (! config('biotime.asistencia.alimentar', true)) {
+            throw ValidationException::withMessages(['reloj' => 'Las checadas del reloj están desactivadas para nómina (BIOTIME_ALIMENTAR_ASISTENCIA).']);
+        }
+
+        // Sólo la parte de marcajes: es incremental desde la última corrida y
+        // no se queda esperando el catálogo completo de empleados.
+        $sync = BioTimeSyncService::for($empresa)->sync($empresa, ['transactions']);
+
+        $importacion = $reloj->importar($empresa, $desde, $hasta);
+
+        $mensaje = sprintf(
+            'Reloj sincronizado: %d días recalculados con %d checadas.',
+            $importacion['dias'],
+            $importacion['marcajes'],
+        );
+
+        if ($importacion['bloqueados'] > 0) {
+            $mensaje .= sprintf(' %d días no se tocaron por estar en un período ya cerrado.', $importacion['bloqueados']);
+        }
+
+        $problemas = [...$sync['errors'], ...$importacion['errores']];
+
+        return back()->with('notification', [
+            'type' => $problemas === [] ? 'success' : 'warning',
+            'message' => $problemas === [] ? $mensaje : $mensaje.' Hubo errores: '.implode(' · ', array_slice($problemas, 0, 3)),
         ]);
     }
 
@@ -140,6 +227,58 @@ class ContpaqiPrenominaController extends Controller
         }
 
         return $disco->download($exportacion->ruta_archivo, $exportacion->nombre_archivo);
+    }
+
+    /**
+     * Cierra el período: contabilidad confirma que este archivo es el que se
+     * importó en CONTPAQi y con el que se pagó.
+     */
+    public function cerrar(Request $request, ContpaqiExportacion $exportacion, ContpaqiExportService $servicio): RedirectResponse
+    {
+        abort_unless(
+            $exportacion->empresa_id === $this->empresaDe($request)->id,
+            403,
+            'La exportación pertenece a otra empresa.'
+        );
+
+        try {
+            $servicio->cerrar($exportacion, $request->user());
+        } catch (Throwable $e) {
+            throw ValidationException::withMessages(['estado' => $e->getMessage()]);
+        }
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => sprintf(
+                'Período del %s al %s cerrado. Ya no se pueden generar más archivos para esas fechas.',
+                $exportacion->periodo_inicio->format('d/m/Y'),
+                $exportacion->periodo_fin->format('d/m/Y'),
+            ),
+        ]);
+    }
+
+    /**
+     * Calendario de nómina de la empresa: semanal o quincenal, y qué día
+     * corta la semana.
+     */
+    public function configuracion(Request $request): RedirectResponse
+    {
+        $empresa = $this->empresaDe($request);
+
+        $datos = $request->validate([
+            'periodicidad' => ['required', Rule::in([Empresa::PERIODICIDAD_SEMANAL, Empresa::PERIODICIDAD_QUINCENAL])],
+            'dia_inicio_semana' => ['required', 'integer', 'min:1', 'max:7'],
+        ]);
+
+        $empresa->update([
+            'contpaqi_periodicidad' => $datos['periodicidad'],
+            'contpaqi_dia_inicio_semana' => $datos['dia_inicio_semana'],
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => 'Calendario de nómina guardado. El período propuesto se ajusta en la siguiente carga.',
+        ]);
     }
 
     /* ------------------------------------------------------------------ */
@@ -269,12 +408,13 @@ class ContpaqiPrenominaController extends Controller
     }
 
     /**
-     * Período a exportar. Por defecto, la semana completa anterior a hoy: la
-     * prenómina se cierra cuando la semana terminó, no a media semana.
+     * Período a exportar. Por defecto, el último completo según el calendario
+     * de la empresa: la prenómina se cierra cuando el período terminó, no a
+     * la mitad.
      *
      * @return array{CarbonImmutable, CarbonImmutable}
      */
-    private function periodoDe(Request $request, bool $exigir = false): array
+    private function periodoDe(Request $request, Empresa $empresa, bool $exigir = false): array
     {
         if ($exigir) {
             $request->validate([
@@ -283,15 +423,15 @@ class ContpaqiPrenominaController extends Controller
             ]);
         }
 
-        $inicioSemana = (int) config('contpaqi.dia_inicio_semana', 1);
+        [$desdeDefault, $hastaDefault] = $empresa->contpaqiPeriodoAnterior();
 
         $desde = $request->filled('desde')
             ? CarbonImmutable::parse((string) $request->string('desde'))->startOfDay()
-            : CarbonImmutable::now()->subWeek()->startOfWeek($inicioSemana)->startOfDay();
+            : $desdeDefault;
 
         $hasta = $request->filled('hasta')
             ? CarbonImmutable::parse((string) $request->string('hasta'))->endOfDay()
-            : $desde->addDays(6)->endOfDay();
+            : ($request->filled('desde') ? $desde->addDays(6)->endOfDay() : $hastaDefault);
 
         return [$desde, $hasta];
     }

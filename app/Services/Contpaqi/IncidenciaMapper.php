@@ -69,10 +69,11 @@ class IncidenciaMapper
         Collection $resumenes,
         Collection $incidencias,
         array $festivos,
+        int $diaInicioSemana = 1,
     ): array {
         $movimientos = [];
 
-        $this->acumularAsistencia($movimientos, $resumenes, $festivos);
+        $this->acumularAsistencia($movimientos, $resumenes, $festivos, $diaInicioSemana);
         $this->acumularFaltas($movimientos, $empleado, $desde, $hasta, $resumenes, $incidencias, $festivos);
         $this->acumularIncidencias($movimientos, $incidencias, $desde, $hasta);
 
@@ -97,15 +98,18 @@ class IncidenciaMapper
      * @param  Collection<int, AsistenciaResumenDiario>  $resumenes
      * @param  array<string, bool>  $festivos
      */
-    private function acumularAsistencia(array &$movimientos, Collection $resumenes, array $festivos): void
+    private function acumularAsistencia(array &$movimientos, Collection $resumenes, array $festivos, int $diaInicioSemana): void
     {
-        $totalHorasExtra = 0.00;
+        /** @var array<string, float> horas extra por semana, 'Y-m-d' del inicio => horas */
+        $horasExtraPorSemana = [];
         $totalMinutosRetardo = 0;
 
         foreach ($resumenes as $resumen) {
             $horasOrdinarias = (float) $resumen->horas_ordinarias;
-            $totalHorasExtra += (float) $resumen->horas_extra_diarias;
             $totalMinutosRetardo += (int) $resumen->minutos_retraso;
+
+            $semana = $resumen->fecha->toImmutable()->startOfWeek($diaInicioSemana)->format('Y-m-d');
+            $horasExtraPorSemana[$semana] = ($horasExtraPorSemana[$semana] ?? 0.00) + (float) $resumen->horas_extra_diarias;
 
             // Sin horas ordinarias no hubo jornada que clasificar. Las horas
             // extra y el retardo ya se acumularon arriba, que es lo correcto:
@@ -129,12 +133,18 @@ class IncidenciaMapper
             $this->sumar($movimientos, $mnemonico, 1.0);
         }
 
-        // Regla 3x3: las primeras 9 horas extra del período al doble, el resto
-        // al triple. Se aplica sobre el total del período y no día por día
-        // porque el tope es semanal, no diario.
-        if ($totalHorasExtra > 0) {
-            $dobles = min(self::TOPE_HORAS_DOBLES, $totalHorasExtra);
-            $triples = max(0.00, $totalHorasExtra - self::TOPE_HORAS_DOBLES);
+        // Regla 3x3: las primeras 9 horas extra de cada semana al doble, el
+        // resto al triple. El tope es semanal —ni diario ni del período—, así
+        // que se corta semana por semana: en una quincena con 12 horas extra
+        // en cada una salen 18 dobles y 6 triples, no 9 y 15. Con nómina
+        // semanal el período es una sola semana y da lo mismo de siempre.
+        foreach ($horasExtraPorSemana as $horasExtra) {
+            if ($horasExtra <= 0) {
+                continue;
+            }
+
+            $dobles = min(self::TOPE_HORAS_DOBLES, $horasExtra);
+            $triples = max(0.00, $horasExtra - self::TOPE_HORAS_DOBLES);
 
             $this->sumar($movimientos, $this->mnemonico('horas_extra_dobles'), $dobles);
             $this->sumar($movimientos, $this->mnemonico('horas_extra_triples'), $triples);

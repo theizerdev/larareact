@@ -8,7 +8,6 @@ use App\Models\AsistenciaResumenSemanal;
 use App\Models\ConfiguracionAsistencia;
 use App\Models\DiaFestivo;
 use App\Models\Empleado;
-
 use Carbon\Carbon;
 
 class CalculoAsistenciaLftService
@@ -21,16 +20,21 @@ class CalculoAsistenciaLftService
         $fecha = Carbon::parse($fechaDateString);
         $empresaId = $empleado->empresa_id;
 
-        // Cargar configuración de asistencia y turno del empleado
-        $config = ConfiguracionAsistencia::where('empresa_id', $empresaId)->first();
+        // Todas las consultas van sin el scope multitenant: el empleado ya
+        // define empresa y persona. Con el scope, un usuario de otra sucursal
+        // que dispara el cálculo (kiosko, prenómina) no veía el resumen
+        // existente y creaba uno duplicado, o perdía el turno del empleado.
+        $config = ConfiguracionAsistencia::withoutTenant()->where('empresa_id', $empresaId)->first();
         $toleranciaRetardo = $config?->tolerancia_retardo_minutos ?? 10;
         $descansoEsTiempoEfectivo = $config?->descanso_es_tiempo_efectivo ?? false;
 
-        $turno = $empleado->turnoLaboral;
+        $turno = $empleado->relationLoaded('turnoLaboral')
+            ? $empleado->turnoLaboral
+            : $empleado->turnoLaboral()->withoutGlobalScope('multitenancy')->first();
         $horasLey = $turno?->horas_diarias_ley ? (float) $turno->horas_diarias_ley : 8.00;
 
         // Cargar todos los marcajes del empleado en esa fecha
-        $marcajes = AsistenciaMarcaje::where('empleado_id', $empleado->id)
+        $marcajes = AsistenciaMarcaje::withoutTenant()->where('empleado_id', $empleado->id)
             ->whereDate('fecha_hora', $fecha->toDateString())
             ->orderBy('fecha_hora', 'asc')
             ->get();
@@ -43,12 +47,17 @@ class CalculoAsistenciaLftService
         $horaEntradaReal = $entrada ? $entrada->fecha_hora->format('H:i:s') : null;
         $horaSalidaReal = $salida ? $salida->fecha_hora->format('H:i:s') : null;
 
+        // Las diferencias se calculan siempre del evento anterior al
+        // posterior. Carbon 3 devuelve diffInMinutes con signo: al revés da
+        // negativo, y con eso cada día salía con horas negativas, sin retardo
+        // y, en la prenómina, como falta.
+
         // Cálculo de Minutos de Retardo
         $minutosRetardo = 0;
         if ($entrada && $turno && $turno->hora_entrada) {
             $horaEntradaTeorica = Carbon::parse($fecha->toDateString().' '.$turno->hora_entrada);
             if ($entrada->fecha_hora->gt($horaEntradaTeorica)) {
-                $diferencia = $entrada->fecha_hora->diffInMinutes($horaEntradaTeorica);
+                $diferencia = (int) $horaEntradaTeorica->diffInMinutes($entrada->fecha_hora);
                 if ($diferencia > $toleranciaRetardo) {
                     $minutosRetardo = $diferencia;
                 }
@@ -57,14 +66,14 @@ class CalculoAsistenciaLftService
 
         // Cálculo de minutos de descanso consumidos
         $minutosDescansoReales = 0;
-        if ($salidaComida && $entradaComida) {
-            $minutosDescansoReales = $entradaComida->fecha_hora->diffInMinutes($salidaComida->fecha_hora);
+        if ($salidaComida && $entradaComida && $entradaComida->fecha_hora->gt($salidaComida->fecha_hora)) {
+            $minutosDescansoReales = (int) $salidaComida->fecha_hora->diffInMinutes($entradaComida->fecha_hora);
         }
 
         // Cálculo de horas trabajadas brutas
         $horasTrabajadasBrutas = 0.00;
-        if ($entrada && $salida) {
-            $minutosTotales = $salida->fecha_hora->diffInMinutes($entrada->fecha_hora);
+        if ($entrada && $salida && $salida->fecha_hora->gt($entrada->fecha_hora)) {
+            $minutosTotales = $entrada->fecha_hora->diffInMinutes($salida->fecha_hora);
             $horasTrabajadasBrutas = $minutosTotales / 60.0;
         }
 
@@ -82,7 +91,7 @@ class CalculoAsistenciaLftService
         $aplicaPrimaDominical = $fecha->isSunday() && $horasTrabajadasNetas > 0;
 
         // Verificar si es día festivo (Art. 74 LFT)
-        $esFestivo = DiaFestivo::where(function ($q) use ($empresaId) {
+        $esFestivo = DiaFestivo::withoutTenant()->where(function ($q) use ($empresaId) {
             $q->where('empresa_id', $empresaId)->orWhereNull('empresa_id');
         })
             ->whereDate('fecha', $fecha->toDateString())
@@ -98,27 +107,35 @@ class CalculoAsistenciaLftService
 
         $montoDia = $horasOrdinarias * $tarifaHoraOrdinaria;
 
-        return AsistenciaResumenDiario::updateOrCreate(
-            [
+        // Se busca con whereDate y no con updateOrCreate: el cast 'date' guarda
+        // "Y-m-d 00:00:00", y en SQLite comparar contra "Y-m-d" no encuentra
+        // la fila y cada recálculo creaba un resumen duplicado del mismo día.
+        $resumen = AsistenciaResumenDiario::withoutTenant()
+            ->where('empleado_id', $empleado->id)
+            ->whereDate('fecha', $fecha->toDateString())
+            ->first() ?? new AsistenciaResumenDiario([
                 'empleado_id' => $empleado->id,
                 'fecha' => $fecha->toDateString(),
-            ],
-            [
-                'empresa_id' => $empresaId,
-                'turno_laboral_id' => $turno?->id,
-                'hora_entrada_real' => $horaEntradaReal,
-                'hora_salida_real' => $horaSalidaReal,
-                'minutos_retraso' => $minutosRetardo,
-                'minutos_descanso_reales' => $minutosDescansoReales,
-                'horas_ordinarias' => round($horasOrdinarias, 2),
-                'horas_extra_diarias' => round($horasExtraDiarias, 2),
-                'es_festivo' => $esFestivo,
-                'aplica_prima_dominical' => $aplicaPrimaDominical,
-                'es_dia_descanso' => $esDiaDescanso,
-                'estado' => 'aprobado',
-                'monto_estimado_dia' => round($montoDia, 2),
-            ]
-        );
+            ]);
+
+        $resumen->fill([
+            'empresa_id' => $empresaId,
+            'sucursal_id' => $empleado->sucursal_id,
+            'turno_laboral_id' => $turno?->id,
+            'hora_entrada_real' => $horaEntradaReal,
+            'hora_salida_real' => $horaSalidaReal,
+            'minutos_retraso' => $minutosRetardo,
+            'minutos_descanso_reales' => $minutosDescansoReales,
+            'horas_ordinarias' => round($horasOrdinarias, 2),
+            'horas_extra_diarias' => round($horasExtraDiarias, 2),
+            'es_festivo' => $esFestivo,
+            'aplica_prima_dominical' => $aplicaPrimaDominical,
+            'es_dia_descanso' => $esDiaDescanso,
+            'estado' => 'aprobado',
+            'monto_estimado_dia' => round($montoDia, 2),
+        ])->save();
+
+        return $resumen;
     }
 
     /**
@@ -253,7 +270,9 @@ class CalculoAsistenciaLftService
             $salida = $marcajesDia->where('tipo_marcaje', 'salida')->last();
 
             if ($entrada && $salida) {
-                $minutos = Carbon::parse($salida->fecha_hora)->diffInMinutes(Carbon::parse($entrada->fecha_hora));
+                // Del anterior al posterior: Carbon 3 devuelve la diferencia
+                // con signo (ver calcularHorasDiarias).
+                $minutos = max(0, Carbon::parse($entrada->fecha_hora)->diffInMinutes(Carbon::parse($salida->fecha_hora)));
                 $horas = $minutos / 60.0;
 
                 // Descontar almuerzo si no es tiempo efectivo
@@ -261,7 +280,7 @@ class CalculoAsistenciaLftService
                     $salidaComida = $marcajesDia->firstWhere('tipo_marcaje', 'salida_comida');
                     $entradaComida = $marcajesDia->firstWhere('tipo_marcaje', 'entrada_comida');
                     if ($salidaComida && $entradaComida) {
-                        $minComida = Carbon::parse($entradaComida->fecha_hora)->diffInMinutes(Carbon::parse($salidaComida->fecha_hora));
+                        $minComida = max(0, Carbon::parse($salidaComida->fecha_hora)->diffInMinutes(Carbon::parse($entradaComida->fecha_hora)));
                         $horas = max(0, $horas - ($minComida / 60.0));
                     }
                 }

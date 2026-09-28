@@ -77,14 +77,6 @@ type AdminSaasLayoutProps = {
     breadcrumbs?: BreadcrumbItem[];
 };
 
-/**
- * Nómina viaja en el repo pero todavía no se anuncia en el menú: el módulo
- * está completo y probado, falta la decisión de negocio para lanzarlo. Poner
- * esto en true es lo único que hace falta para publicarlo; la visibilidad fina
- * por sector la sigue mandando isMenuVisible('nomina'), como en el resto.
- */
-const MOSTRAR_NOMINA = false;
-
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
@@ -385,6 +377,11 @@ export default function AdminSaasLayout({
     const isSuperAdmin = (auth as any)?.user?.is_super_admin === true;
     const menuVisibility = ((page.props as any)?.menuVisibility || {}) as Record<string, boolean>;
     const isMenuVisible = (key: string) => menuVisibility[key] !== false;
+
+    // Nómina viaja completo pero se anuncia sólo cuando negocio lo decida. La
+    // bandera vive en config/contpaqi.php (CONTPAQI_MODULO_VISIBLE) y llega
+    // como prop compartida, la misma que usa el dashboard.
+    const nominaVisible = (page.props as any)?.nominaVisible === true;
 
     const markAsRead = (id: string) => {
         router.post(
@@ -725,7 +722,7 @@ export default function AdminSaasLayout({
                             Va aparte de Reloj Checador a propósito: el reloj produce
                             marcajes, esto produce la prenómina que se entrega a
                             contabilidad, y son responsabilidades de gente distinta. */}
-                        {MOSTRAR_NOMINA && isMenuVisible('nomina') && (() => {
+                        {nominaVisible && isMenuVisible('nomina') && (() => {
                             const nominaItems = [
                                 {
                                     title: 'Incidencias',

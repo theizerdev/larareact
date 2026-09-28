@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +28,13 @@ class ContpaqiExportacion extends Model
     /** Alguien ya lo descargó; se asume que va camino a CONTPAQi. */
     public const ESTADO_DESCARGADA = 'descargada';
 
+    /**
+     * Contabilidad confirmó que este archivo se importó y la nómina se pagó
+     * con él. Es el estado terminal bueno: bloquea nuevas exportaciones del
+     * período y, entre varias del mismo, señala cuál fue la definitiva.
+     */
+    public const ESTADO_CERRADA = 'cerrada';
+
     /** Falló la generación. `mensaje_error` dice por qué. */
     public const ESTADO_ERROR = 'error';
 
@@ -47,6 +55,8 @@ class ContpaqiExportacion extends Model
         'mensaje_error',
         'generado_por',
         'generada_at',
+        'cerrada_por',
+        'cerrada_at',
     ];
 
     protected function casts(): array
@@ -56,6 +66,7 @@ class ContpaqiExportacion extends Model
             'periodo_fin' => 'date',
             'columnas' => 'array',
             'generada_at' => 'datetime',
+            'cerrada_at' => 'datetime',
             'numero_periodo' => 'integer',
         ];
     }
@@ -78,14 +89,46 @@ class ContpaqiExportacion extends Model
         return $this->belongsTo(User::class, 'generado_por');
     }
 
+    /** @return BelongsTo<User, $this> */
+    public function cerradaPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cerrada_por');
+    }
+
     /** @param  Builder<$this>  $query */
     public function scopeParaEmpresa(Builder $query, int $empresaId): void
     {
         $query->where('empresa_id', $empresaId);
     }
 
+    /**
+     * Exportaciones cerradas que tocan un rango de fechas.
+     *
+     * Traslape y no igualdad exacta a propósito: si la semana del 6 al 12 ya
+     * se pagó, tampoco debe poder generarse "del 8 al 14", porque volvería a
+     * exportar tres días que ya viajaron en el archivo definitivo.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeCerradasEnRango(Builder $query, CarbonInterface|string $desde, CarbonInterface|string $hasta): void
+    {
+        $desde = $desde instanceof CarbonInterface ? $desde->toDateString() : $desde;
+        $hasta = $hasta instanceof CarbonInterface ? $hasta->toDateString() : $hasta;
+
+        $query->where('estado', self::ESTADO_CERRADA)
+            ->where('periodo_inicio', '<=', $hasta)
+            ->where('periodo_fin', '>=', $desde);
+    }
+
     /** ¿Hay un archivo que se pueda bajar? */
     public function tieneArchivo(): bool
+    {
+        return filled($this->ruta_archivo)
+            && in_array($this->estado, [self::ESTADO_GENERADA, self::ESTADO_DESCARGADA, self::ESTADO_CERRADA], true);
+    }
+
+    /** ¿Se puede dar por definitiva? Sólo si hay archivo y todavía no se cerró. */
+    public function sePuedeCerrar(): bool
     {
         return filled($this->ruta_archivo)
             && in_array($this->estado, [self::ESTADO_GENERADA, self::ESTADO_DESCARGADA], true);

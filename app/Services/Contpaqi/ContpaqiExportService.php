@@ -15,6 +15,7 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -103,6 +104,7 @@ class ContpaqiExportService
                 $resumenes->get($empleado->id, collect()),
                 $incidencias->get($empleado->id, collect()),
                 $festivos,
+                $empresa->contpaqiDiaInicioSemana(),
             );
 
             // Un empleado sin un solo movimiento no aporta nada al archivo y sí
@@ -151,6 +153,19 @@ class ContpaqiExportService
     ): ContpaqiExportacion {
         if (! config('contpaqi.enabled', true)) {
             throw new RuntimeException('El módulo de CONTPAQi está desactivado (contpaqi.enabled).');
+        }
+
+        // Va aquí y no sólo en el controlador para que el comando de consola
+        // tampoco pueda pisar una nómina ya pagada.
+        $cerrada = $this->cerradaQueTraslapa($empresa, $desde, $hasta);
+
+        if ($cerrada !== null) {
+            throw new RuntimeException(sprintf(
+                'El período del %s al %s ya está cerrado (nómina pagada con el archivo %s). No se puede volver a generar.',
+                $cerrada->periodo_inicio->toDateString(),
+                $cerrada->periodo_fin->toDateString(),
+                $cerrada->nombre_archivo,
+            ));
         }
 
         $exportacion = ContpaqiExportacion::create([
@@ -212,6 +227,13 @@ class ContpaqiExportService
      * archivos y no en un disco de Laravel; hacerlo así deja el módulo
      * funcionando igual si mañana los archivos se guardan en S3.
      *
+     * El temporal vive en storage/app/tmp y no en sys_get_temp_dir() a
+     * propósito: `artisan serve` arranca el servidor sin TMP/TEMP, y en
+     * Windows eso deja a tempnam() sin directorio válido y la exportación
+     * muere con "file created in the system's temporary directory". Además
+     * tempnam() creaba un .tmp que nadie borraba, porque el nombre final
+     * llevaba .xlsx concatenado.
+     *
      * @param  array{renglones: list<array<string, mixed>>, tipos: Collection<int, ContpaqiTipoIncidencia>}  $resultado
      */
     private function escribirArchivo(array $resultado, string $nombreArchivo): string
@@ -221,7 +243,9 @@ class ContpaqiExportService
         $directorio = trim((string) config('contpaqi.directorio', 'contpaqi/prenomina'), '/');
         $ruta = $directorio.'/'.$nombreArchivo;
 
-        $temporal = tempnam(sys_get_temp_dir(), 'contpaqi_').'.xlsx';
+        $directorioTemporal = storage_path('app/tmp');
+        File::ensureDirectoryExists($directorioTemporal);
+        $temporal = $directorioTemporal.DIRECTORY_SEPARATOR.'contpaqi_'.Str::uuid().'.xlsx';
 
         try {
             $this->writer->escribir($temporal, $columnasFijas, $resultado['tipos'], $resultado['renglones']);
@@ -345,9 +369,11 @@ class ContpaqiExportService
     /** @return Collection<int, Collection<int, AsistenciaResumenDiario>> Agrupada por empleado_id */
     private function resumenesDe(Empresa $empresa, CarbonImmutable $desde, CarbonImmutable $hasta): Collection
     {
+        // El tope va al final del día: en SQLite la fecha se guarda como
+        // "Y-m-d 00:00:00" y contra "Y-m-d" el último día quedaba fuera.
         return AsistenciaResumenDiario::withoutTenant()
             ->where('empresa_id', $empresa->id)
-            ->whereBetween('fecha', [$desde->toDateString(), $hasta->toDateString()])
+            ->whereBetween('fecha', [$desde->toDateString(), $hasta->endOfDay()->toDateTimeString()])
             ->get()
             ->groupBy('empleado_id');
     }
@@ -362,6 +388,59 @@ class ContpaqiExportService
             ->enRango($desde, $hasta)
             ->get()
             ->groupBy('empleado_id');
+    }
+
+    /**
+     * Incidencias del período que nadie ha aprobado ni rechazado.
+     *
+     * No entran al archivo —sólo las aprobadas cuentan— y ése es el problema:
+     * se quedan fuera en silencio y el empleado aparece con faltas que sí
+     * tenía justificadas. La pantalla las anuncia antes de generar para que
+     * la omisión sea una decisión y no un descuido.
+     */
+    public function incidenciasPendientes(Empresa $empresa, CarbonImmutable $desde, CarbonImmutable $hasta): int
+    {
+        return IncidenciaEmpleado::query()
+            ->paraEmpresa($empresa->id)
+            ->whereIn('estado', [IncidenciaEmpleado::ESTADO_BORRADOR, IncidenciaEmpleado::ESTADO_PENDIENTE])
+            ->enRango($desde, $hasta)
+            ->count();
+    }
+
+    /** La exportación cerrada que ya cubre alguna fecha del período, si la hay. */
+    public function cerradaQueTraslapa(Empresa $empresa, CarbonImmutable $desde, CarbonImmutable $hasta): ?ContpaqiExportacion
+    {
+        return ContpaqiExportacion::query()
+            ->paraEmpresa($empresa->id)
+            ->cerradasEnRango($desde, $hasta)
+            ->orderByDesc('cerrada_at')
+            ->first();
+    }
+
+    /**
+     * Da por definitiva una exportación: la nómina ya se pagó con este archivo.
+     *
+     * A partir de aquí el período queda bloqueado para nuevas exportaciones y
+     * las incidencias que viajaron en él siguen en 'aplicada', que ya era
+     * terminal. Sólo se cierra lo que tiene archivo y no está cerrado.
+     */
+    public function cerrar(ContpaqiExportacion $exportacion, ?User $usuario = null): ContpaqiExportacion
+    {
+        if (! $exportacion->sePuedeCerrar()) {
+            throw new RuntimeException(match ($exportacion->estado) {
+                ContpaqiExportacion::ESTADO_CERRADA => 'Esta exportación ya está cerrada.',
+                ContpaqiExportacion::ESTADO_ERROR => 'Una exportación fallida no se puede cerrar: no tiene archivo.',
+                default => 'La exportación todavía no tiene archivo que cerrar.',
+            });
+        }
+
+        $exportacion->update([
+            'estado' => ContpaqiExportacion::ESTADO_CERRADA,
+            'cerrada_por' => $usuario?->id,
+            'cerrada_at' => now(),
+        ]);
+
+        return $exportacion;
     }
 
     /**

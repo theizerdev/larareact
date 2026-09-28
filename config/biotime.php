@@ -51,4 +51,44 @@ return [
     // Verificación TLS. El servidor conocido es HTTP plano, así que por
     // defecto va desactivada; se puede forzar por env si algún día es HTTPS.
     'verify_ssl' => (bool) env('BIOTIME_VERIFY_SSL', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Puente reloj → asistencia → nómina
+    |--------------------------------------------------------------------------
+    |
+    | Las checadas del espejo biotime_marcajes se copian a asistencia_marcajes
+    | (origen "biotime") y se recalcula el resumen diario LFT del que se arma
+    | la prenómina de CONTPAQi. Lo hace BioTimeAsistenciaService, nunca el
+    | sincronizador: el espejo sigue siendo una copia fiel de BioTime.
+    */
+    'asistencia' => [
+        // Apagarlo deja el espejo funcionando (PeopleSoft lo sigue leyendo)
+        // pero las checadas del reloj dejan de contar para la nómina.
+        'alimentar' => (bool) env('BIOTIME_ALIMENTAR_ASISTENCIA', true),
+
+        // Cómo se decide si una checada es entrada, salida o comida:
+        //  - 'estado': se confía en el punch_state del reloj (teclas F1..F4).
+        //  - 'orden':  primera = entrada, última = salida, y con 4 o más, la
+        //              2ª y 3ª son salida/entrada de comida.
+        //  - 'auto':   'estado' cuando el día trae entrada y salida bien
+        //              marcadas; si no (relojes que mandan todo como "0"),
+        //              'orden'.
+        'tipo_por' => env('BIOTIME_TIPO_MARCAJE_POR', 'auto'),
+
+        // Checadas del mismo empleado a menos de estos minutos de la anterior
+        // se consideran rebote (puso el dedo dos veces) y no cuentan en el
+        // modo por orden.
+        'minutos_rebote' => (int) env('BIOTIME_MINUTOS_REBOTE', 3),
+
+        // punch_state de ZKTeco => tipo_marcaje de Shigoto.
+        'estados' => [
+            '0' => 'entrada',
+            '1' => 'salida',
+            '2' => 'salida_comida',
+            '3' => 'entrada_comida',
+            '4' => 'entrada',        // entrada de horas extra
+            '5' => 'salida',         // salida de horas extra
+        ],
+    ],
 ];

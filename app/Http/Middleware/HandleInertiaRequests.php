@@ -56,6 +56,11 @@ class HandleInertiaRequests extends Middleware
                 ]) : null,
             ],
             'menuVisibility' => fn () => \App\Models\MenuVisibilitySetting::map(),
+
+            // Nómina viaja completo pero se anuncia sólo cuando negocio lo
+            // decida. Una sola bandera para menú y dashboard, en config y no
+            // en el frontend, para que publicarlo sea un cambio de .env.
+            'nominaVisible' => (bool) config('contpaqi.modulo_visible', false),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => $currentLocale,
             'regional_config' => fn () => \App\Services\RegionalConfigurationService::getCurrentConfiguration(),

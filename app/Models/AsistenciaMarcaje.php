@@ -42,6 +42,7 @@ class AsistenciaMarcaje extends Model
         'latitud',
         'longitud',
         'dispositivo_id',
+        'biotime_marcaje_id',
         'observaciones',
         'registrado_por_user_id',
         'incidente_causa',

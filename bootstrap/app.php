@@ -51,6 +51,16 @@ return Application::configure(basePath: dirname(__DIR__))
             ->onOneServer()
             ->runInBackground()
             ->appendOutputTo(storage_path('logs/biotime-sync.log'));
+
+        // Puente reloj → nómina: copia al módulo de asistencia las checadas
+        // que el sync dejó en el espejo y recalcula el resumen diario del que
+        // sale la prenómina. Sólo procesa lo que cambió; es barato.
+        $schedule->command('asistencia:importar-biotime')
+            ->everyFiveMinutes()
+            ->withoutOverlapping(10)
+            ->onOneServer()
+            ->runInBackground()
+            ->appendOutputTo(storage_path('logs/biotime-sync.log'));
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // La app corre detrás del Apache del host, que termina TLS y reenvía por HTTP

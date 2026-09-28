@@ -34,6 +34,7 @@ class AsistenciaResumenDiario extends Model
 
     protected $fillable = [
         'empresa_id',
+        'sucursal_id',
         'empleado_id',
         'turno_laboral_id',
         'fecha',

@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ContpaqiEmpleadoMapeo;
+use App\Models\ContpaqiExportacion;
 use App\Models\Empleado;
 use App\Models\EmpleadoPreRegistro;
+use App\Models\IncidenciaEmpleado;
 use App\Models\Productor;
 use App\Models\Proveedor;
 use App\Models\VisitaAcceso;
@@ -61,6 +64,51 @@ class DashboardController extends Controller
                 'sucursales' => Sucursal::count(),
                 'departamentos' => Departamento::count(),
                 'usuarios' => User::count(),
+            ],
+            'nomina' => $this->resumenNomina(),
+        ];
+    }
+
+    /**
+     * Lo que alguien de nómina necesita ver al entrar: cuántas incidencias
+     * esperan aprobación, cuántos empleados no saldrían en el archivo por no
+     * tener código de CONTPAQi, y qué pasó con la última exportación.
+     *
+     * Null cuando el módulo no está publicado, para que el dashboard no
+     * anuncie una sección que el menú esconde.
+     *
+     * @return array{pendientes: int, sin_mapeo: int, ultima: array{periodo_inicio: string, periodo_fin: string, estado: string, empleados_exportados: int}|null}|null
+     */
+    private function resumenNomina(): ?array
+    {
+        if (! config('contpaqi.modulo_visible', false)) {
+            return null;
+        }
+
+        $empresaId = auth()->user()?->empresa_id;
+
+        $ultima = ContpaqiExportacion::query()
+            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+            ->orderByDesc('created_at')
+            ->first(['periodo_inicio', 'periodo_fin', 'estado', 'empleados_exportados']);
+
+        return [
+            'pendientes' => IncidenciaEmpleado::query()
+                ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+                ->whereIn('estado', [IncidenciaEmpleado::ESTADO_BORRADOR, IncidenciaEmpleado::ESTADO_PENDIENTE])
+                ->count(),
+            'sin_mapeo' => Empleado::query()
+                ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+                ->where('status', true)
+                ->whereNotIn('id', ContpaqiEmpleadoMapeo::query()
+                    ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+                    ->select('empleado_id'))
+                ->count(),
+            'ultima' => $ultima === null ? null : [
+                'periodo_inicio' => $ultima->periodo_inicio->toDateString(),
+                'periodo_fin' => $ultima->periodo_fin->toDateString(),
+                'estado' => $ultima->estado,
+                'empleados_exportados' => (int) $ultima->empleados_exportados,
             ],
         ];
     }

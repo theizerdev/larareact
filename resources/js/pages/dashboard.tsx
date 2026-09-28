@@ -10,11 +10,13 @@ import {
     Layers,
     MessageSquare,
     QrCode,
+    Receipt,
     RefreshCw,
     ShieldCheck,
     TrendingUp,
     UserCheck,
     Users,
+    UserX,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +34,17 @@ interface ModuleOverview {
     productores?: { total: number };
     visitas_temporales?: { total: number; visitas_hoy?: number };
     organizacion?: { empresas: number; sucursales: number; departamentos: number; usuarios: number };
+    // null mientras el módulo de Nómina no esté publicado.
+    nomina?: {
+        pendientes: number;
+        sin_mapeo: number;
+        ultima: {
+            periodo_inicio: string;
+            periodo_fin: string;
+            estado: string;
+            empleados_exportados: number;
+        } | null;
+    } | null;
 }
 
 interface Props {
@@ -413,6 +426,101 @@ export default function Dashboard({ moduleStats }: Props) {
                         </div>
                     </SectionCard>
                 </div>
+
+                {/*
+                 * Nómina. Sólo aparece cuando el módulo está publicado; lo que
+                 * se muestra es lo accionable —qué frena la siguiente
+                 * prenómina— y no un conteo total que a nadie le sirve.
+                 */}
+                {overview.nomina && (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <SectionCard className="relative overflow-hidden border-none bg-gradient-to-br from-card to-muted/30 py-5 shadow-sm">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        Incidencias por aprobar
+                                    </p>
+                                    <p className="mt-2 text-2xl font-bold tracking-tight">
+                                        {overview.nomina.pendientes}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl bg-indigo-500/10 p-2.5 text-indigo-500">
+                                    <Receipt className="size-5" />
+                                </div>
+                            </div>
+                            <div className="mt-3 text-xs text-muted-foreground">
+                                {overview.nomina.pendientes > 0 ? (
+                                    <Link
+                                        href="/admin/nomina/incidencias?estado=pendiente"
+                                        className="inline-flex items-center gap-1 text-indigo-500 hover:underline"
+                                    >
+                                        Revisar ahora <ArrowRight className="size-3" />
+                                    </Link>
+                                ) : (
+                                    <span>Nada pendiente de autorizar</span>
+                                )}
+                            </div>
+                        </SectionCard>
+
+                        <SectionCard className="relative overflow-hidden border-none bg-gradient-to-br from-card to-muted/30 py-5 shadow-sm">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        Empleados sin código CONTPAQi
+                                    </p>
+                                    <p className="mt-2 text-2xl font-bold tracking-tight">
+                                        {overview.nomina.sin_mapeo}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500">
+                                    <UserX className="size-5" />
+                                </div>
+                            </div>
+                            <div className="mt-3 text-xs text-muted-foreground">
+                                {overview.nomina.sin_mapeo > 0 ? (
+                                    <Link
+                                        href="/admin/nomina/contpaqi/mapeos"
+                                        className="inline-flex items-center gap-1 text-rose-500 hover:underline"
+                                    >
+                                        No saldrán en el archivo <ArrowRight className="size-3" />
+                                    </Link>
+                                ) : (
+                                    <span>Todos tienen código asignado</span>
+                                )}
+                            </div>
+                        </SectionCard>
+
+                        <SectionCard className="relative overflow-hidden border-none bg-gradient-to-br from-card to-muted/30 py-5 shadow-sm">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground">Última prenómina</p>
+                                    <p className="mt-2 text-2xl font-bold tracking-tight">
+                                        {overview.nomina.ultima?.empleados_exportados ?? '—'}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl bg-teal-500/10 p-2.5 text-teal-500">
+                                    <FileText className="size-5" />
+                                </div>
+                            </div>
+                            <div className="mt-3 text-xs text-muted-foreground">
+                                {overview.nomina.ultima ? (
+                                    <span>
+                                        {overview.nomina.ultima.periodo_inicio} → {overview.nomina.ultima.periodo_fin}
+                                        {' · '}
+                                        {overview.nomina.ultima.estado}
+                                    </span>
+                                ) : (
+                                    <Link
+                                        href="/admin/nomina/contpaqi"
+                                        className="inline-flex items-center gap-1 text-teal-500 hover:underline"
+                                    >
+                                        Generar la primera <ArrowRight className="size-3" />
+                                    </Link>
+                                )}
+                            </div>
+                        </SectionCard>
+                    </div>
+                )}
 
                 {/* Charts Section */}
                 <div className="grid gap-6 lg:grid-cols-2">

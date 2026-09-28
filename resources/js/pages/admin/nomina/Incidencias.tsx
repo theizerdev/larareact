@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { CalendarDays, Check, Plus, Trash2, X } from 'lucide-react';
+import { CalendarDays, Check, Paperclip, Plus, Trash2, X } from 'lucide-react';
 
 type Estado = 'borrador' | 'pendiente' | 'aprobada' | 'rechazada' | 'aplicada';
 
@@ -37,6 +37,7 @@ interface Incidencia {
     estado: Estado;
     folio: string | null;
     motivo: string | null;
+    documento: string | null;
     empleado: EmpleadoLigero | null;
     tipo: Tipo | null;
     aprobada_por?: { id: number; name: string } | null;
@@ -76,7 +77,16 @@ export default function Incidencias({ incidencias, tipos, empleados, filtros, pu
     const [hasta, setHasta] = useState(filtros.hasta);
     const [estado, setEstado] = useState(filtros.estado ?? 'todos');
 
-    const form = useForm({
+    const form = useForm<{
+        empleado_id: string;
+        contpaqi_tipo_incidencia_id: string;
+        fecha_inicio: string;
+        fecha_fin: string;
+        cantidad: string;
+        folio: string;
+        motivo: string;
+        documento: File | null;
+    }>({
         empleado_id: '',
         contpaqi_tipo_incidencia_id: '',
         fecha_inicio: '',
@@ -84,7 +94,12 @@ export default function Incidencias({ incidencias, tipos, empleados, filtros, pu
         cantidad: '',
         folio: '',
         motivo: '',
+        documento: null,
     });
+
+    // El <input type="file"> no se limpia con form.reset(): el navegador
+    // conserva el archivo elegido aunque el estado ya sea null.
+    const inputArchivo = React.useRef<HTMLInputElement>(null);
 
     const tipoElegido = useMemo(
         () => tipos.find((t) => String(t.id) === form.data.contpaqi_tipo_incidencia_id),
@@ -115,7 +130,11 @@ export default function Incidencias({ incidencias, tipos, empleados, filtros, pu
         e.preventDefault();
         form.post('/admin/nomina/incidencias', {
             preserveScroll: true,
-            onSuccess: () => form.reset(),
+            forceFormData: true,
+            onSuccess: () => {
+                form.reset();
+                if (inputArchivo.current) inputArchivo.current.value = '';
+            },
         });
     };
 
@@ -246,13 +265,28 @@ export default function Incidencias({ incidencias, tipos, empleados, filtros, pu
                                 />
                             </div>
 
-                            <div className="space-y-1 md:col-span-3">
+                            <div className="space-y-1 md:col-span-2">
                                 <label className="text-xs font-medium text-muted-foreground">Motivo</label>
                                 <Input
                                     value={form.data.motivo}
                                     onChange={(e) => form.setData('motivo', e.target.value)}
                                     placeholder="Opcional"
                                 />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-muted-foreground">
+                                    Justificante (PDF o imagen, máx. 5 MB)
+                                </label>
+                                <Input
+                                    ref={inputArchivo}
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                    onChange={(e) => form.setData('documento', e.target.files?.[0] ?? null)}
+                                />
+                                {form.errors.documento && (
+                                    <p className="text-xs text-rose-600">{form.errors.documento}</p>
+                                )}
                             </div>
 
                             <div className="md:col-span-3">
@@ -314,6 +348,7 @@ export default function Incidencias({ incidencias, tipos, empleados, filtros, pu
                                         <th className="px-3 py-2 text-left">Período</th>
                                         <th className="px-3 py-2 text-center">Cantidad</th>
                                         <th className="px-3 py-2 text-left">Folio</th>
+                                        <th className="px-3 py-2 text-center">Justificante</th>
                                         <th className="px-3 py-2 text-center">Estado</th>
                                         <th className="px-3 py-2 text-right">Acciones</th>
                                     </tr>
@@ -321,7 +356,7 @@ export default function Incidencias({ incidencias, tipos, empleados, filtros, pu
                                 <tbody>
                                     {incidencias.data.length === 0 && (
                                         <tr>
-                                            <td colSpan={7} className="py-6 text-center text-muted-foreground">
+                                            <td colSpan={8} className="py-6 text-center text-muted-foreground">
                                                 Sin incidencias en este rango.
                                             </td>
                                         </tr>
@@ -342,6 +377,20 @@ export default function Incidencias({ incidencias, tipos, empleados, filtros, pu
                                                 {i.cantidad} {i.tipo?.unidad === 'horas' ? 'h' : 'd'}
                                             </td>
                                             <td className="px-3 py-2 text-xs text-muted-foreground">{i.folio ?? '—'}</td>
+                                            <td className="px-3 py-2 text-center">
+                                                {i.documento ? (
+                                                    <a
+                                                        href={`/admin/nomina/incidencias/${i.id}/justificante`}
+                                                        title="Descargar justificante"
+                                                        className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline dark:text-indigo-400"
+                                                    >
+                                                        <Paperclip className="h-3.5 w-3.5" />
+                                                        Ver
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">—</span>
+                                                )}
+                                            </td>
                                             <td className="px-3 py-2 text-center">
                                                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_BADGE[i.estado]}`}>
                                                     {i.estado}
