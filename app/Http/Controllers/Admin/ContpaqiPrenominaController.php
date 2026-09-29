@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\EmpresaDeNomina;
 use App\Http\Controllers\Controller;
 use App\Models\ContpaqiEmpleadoMapeo;
 use App\Models\ContpaqiExportacion;
@@ -28,6 +29,8 @@ use Throwable;
  */
 class ContpaqiPrenominaController extends Controller
 {
+    use EmpresaDeNomina;
+
     /**
      * Panel principal.
      *
@@ -38,7 +41,7 @@ class ContpaqiPrenominaController extends Controller
      */
     public function index(Request $request, ContpaqiExportService $servicio, BioTimeAsistenciaService $reloj): Response
     {
-        $empresa = $this->empresaDe($request);
+        $empresa = $this->empresaDeNomina($request);
         [$desde, $hasta] = $this->periodoDe($request, $empresa);
 
         $previsualizacion = null;
@@ -85,6 +88,7 @@ class ContpaqiPrenominaController extends Controller
 
         return Inertia::render('admin/nomina/PrenominaContpaqi', [
             'empresa' => ['id' => $empresa->id, 'razon_social' => $empresa->razon_social],
+            'empresasElegibles' => $this->empresasElegiblesDeNomina($request),
             'periodo' => ['desde' => $desde->toDateString(), 'hasta' => $hasta->toDateString()],
             'previsualizacion' => $previsualizacion,
             'exportaciones' => $exportaciones,
@@ -118,7 +122,7 @@ class ContpaqiPrenominaController extends Controller
 
     public function generar(Request $request, ContpaqiExportService $servicio): RedirectResponse
     {
-        $empresa = $this->empresaDe($request);
+        $empresa = $this->empresaDeNomina($request);
         [$desde, $hasta] = $this->periodoDe($request, $empresa, exigir: true);
 
         $validado = $request->validate([
@@ -170,7 +174,7 @@ class ContpaqiPrenominaController extends Controller
      */
     public function sincronizarReloj(Request $request, BioTimeAsistenciaService $reloj): RedirectResponse
     {
-        $empresa = $this->empresaDe($request);
+        $empresa = $this->empresaDeNomina($request);
         [$desde, $hasta] = $this->periodoDe($request, $empresa, exigir: true);
 
         if (! $empresa->biotime_active || blank($empresa->biotime_base_url)) {
@@ -208,7 +212,7 @@ class ContpaqiPrenominaController extends Controller
     public function descargar(Request $request, ContpaqiExportacion $exportacion): StreamedResponse
     {
         abort_unless(
-            $exportacion->empresa_id === $this->empresaDe($request)->id,
+            $exportacion->empresa_id === $this->empresaDeNomina($request)->id,
             403,
             'La exportación pertenece a otra empresa.'
         );
@@ -236,7 +240,7 @@ class ContpaqiPrenominaController extends Controller
     public function cerrar(Request $request, ContpaqiExportacion $exportacion, ContpaqiExportService $servicio): RedirectResponse
     {
         abort_unless(
-            $exportacion->empresa_id === $this->empresaDe($request)->id,
+            $exportacion->empresa_id === $this->empresaDeNomina($request)->id,
             403,
             'La exportación pertenece a otra empresa.'
         );
@@ -263,7 +267,7 @@ class ContpaqiPrenominaController extends Controller
      */
     public function configuracion(Request $request): RedirectResponse
     {
-        $empresa = $this->empresaDe($request);
+        $empresa = $this->empresaDeNomina($request);
 
         $datos = $request->validate([
             'periodicidad' => ['required', Rule::in([Empresa::PERIODICIDAD_SEMANAL, Empresa::PERIODICIDAD_QUINCENAL])],
@@ -287,10 +291,11 @@ class ContpaqiPrenominaController extends Controller
 
     public function mapeos(Request $request): Response
     {
-        $empresa = $this->empresaDe($request);
+        $empresa = $this->empresaDeNomina($request);
 
         return Inertia::render('admin/nomina/MapeoContpaqi', [
             'empresa' => ['id' => $empresa->id, 'razon_social' => $empresa->razon_social],
+            'empresasElegibles' => $this->empresasElegiblesDeNomina($request),
             'mapeos' => ContpaqiEmpleadoMapeo::query()
                 ->with('empleado:id,nombres,apellidos,documento_identidad')
                 ->paraEmpresa($empresa->id)
@@ -309,7 +314,7 @@ class ContpaqiPrenominaController extends Controller
 
     public function guardarMapeo(Request $request): RedirectResponse
     {
-        $empresa = $this->empresaDe($request);
+        $empresa = $this->empresaDeNomina($request);
 
         $datos = $request->validate([
             'empleado_id' => [
@@ -335,7 +340,7 @@ class ContpaqiPrenominaController extends Controller
 
     public function actualizarMapeo(Request $request, ContpaqiEmpleadoMapeo $mapeo): RedirectResponse
     {
-        $empresa = $this->empresaDe($request);
+        $empresa = $this->empresaDeNomina($request);
 
         abort_unless($mapeo->empresa_id === $empresa->id, 403, 'El mapeo pertenece a otra empresa.');
 
@@ -361,7 +366,7 @@ class ContpaqiPrenominaController extends Controller
 
     public function eliminarMapeo(Request $request, ContpaqiEmpleadoMapeo $mapeo): RedirectResponse
     {
-        abort_unless($mapeo->empresa_id === $this->empresaDe($request)->id, 403, 'El mapeo pertenece a otra empresa.');
+        abort_unless($mapeo->empresa_id === $this->empresaDeNomina($request)->id, 403, 'El mapeo pertenece a otra empresa.');
 
         $mapeo->delete();
 
@@ -374,38 +379,6 @@ class ContpaqiPrenominaController extends Controller
     /* ------------------------------------------------------------------ */
     /*  Andamiaje */
     /* ------------------------------------------------------------------ */
-
-    /**
-     * La empresa sobre la que se trabaja.
-     *
-     * Se exige explícita en vez de adivinarla porque exportar la nómina de la
-     * razón social equivocada es un problema fiscal. Un Super Administrador
-     * sin empresa asignada tiene que elegir una con ?empresa_id=.
-     */
-    private function empresaDe(Request $request): Empresa
-    {
-        $empresaId = $request->integer('empresa_id') ?: $request->user()->empresa_id;
-
-        abort_if(
-            blank($empresaId),
-            422,
-            'Tu usuario no tiene empresa asignada. Indica una con el parámetro empresa_id.'
-        );
-
-        $empresa = Empresa::withoutGlobalScopes()->find($empresaId);
-
-        abort_if($empresa === null, 404, 'La empresa indicada no existe.');
-
-        // Un usuario con empresa asignada no puede salirse de ella por query
-        // string; sólo quien no tiene ninguna (Super Administrador) elige.
-        abort_if(
-            filled($request->user()->empresa_id) && (int) $request->user()->empresa_id !== $empresa->id,
-            403,
-            'No puedes operar sobre otra empresa.'
-        );
-
-        return $empresa;
-    }
 
     /**
      * Período a exportar. Por defecto, el último completo según el calendario

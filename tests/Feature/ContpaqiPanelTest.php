@@ -11,6 +11,7 @@ use App\Models\TurnoLaboral;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
@@ -176,6 +177,47 @@ class ContpaqiPanelTest extends TestCase
     /* ------------------------------------------------------------------ */
 
     /** @param  list<string>  $permisos */
+    public function test_el_super_admin_elige_empresa_y_la_eleccion_se_queda_en_la_sesion(): void
+    {
+        $otra = Empresa::create(['razon_social' => 'Otra Empresa', 'documento' => 'OTRA-PANEL']);
+        Role::findOrCreate('super-admin', 'web');
+
+        $admin = $this->usuario(['contpaqi.view', 'incidencias.view', 'contpaqi.catalogo']);
+        $admin->assignRole('super-admin');
+
+        $this->actingAs($admin)
+            ->get("/admin/nomina/contpaqi?empresa_id={$otra->id}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('empresa.razon_social', 'Otra Empresa')
+                ->has('empresasElegibles', 2)
+            );
+
+        // Sin parámetro, las demás pantallas del módulo siguen en la elegida.
+        $this->get('/admin/nomina/incidencias')
+            ->assertInertia(fn ($page) => $page->where('empresa.id', $otra->id));
+
+        $this->get('/admin/nomina/contpaqi/mapeos')
+            ->assertInertia(fn ($page) => $page->where('empresa.id', $otra->id));
+    }
+
+    public function test_un_usuario_de_empresa_no_puede_cambiarse_de_empresa(): void
+    {
+        $otra = Empresa::create(['razon_social' => 'Otra Empresa', 'documento' => 'OTRA-PANEL']);
+
+        $usuario = $this->usuario(['contpaqi.view']);
+
+        $this->actingAs($usuario)
+            ->get("/admin/nomina/contpaqi?empresa_id={$otra->id}")
+            ->assertForbidden();
+
+        $this->get('/admin/nomina/contpaqi')
+            ->assertInertia(fn ($page) => $page
+                ->where('empresa.id', $this->empresa->id)
+                ->has('empresasElegibles', 0)
+            );
+    }
+
     private function usuario(array $permisos): User
     {
         $usuario = User::factory()->create([

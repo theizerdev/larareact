@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\EmpresaDeNomina;
 use App\Http\Controllers\Controller;
 use App\Models\AsistenciaResumenDiario;
 use App\Models\ContpaqiTipoIncidencia;
@@ -29,6 +30,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class IncidenciaEmpleadoController extends Controller
 {
+    use EmpresaDeNomina;
+
     /**
      * Dónde viven los justificantes dentro del disco. Un subdirectorio por
      * empresa para que un respaldo o una baja de cliente sea un solo rm.
@@ -37,7 +40,8 @@ class IncidenciaEmpleadoController extends Controller
 
     public function index(Request $request): Response
     {
-        $empresaId = (int) $request->user()->empresa_id;
+        $empresa = $this->empresaDeNomina($request);
+        $empresaId = $empresa->id;
 
         $desde = $request->filled('desde')
             ? CarbonImmutable::parse((string) $request->string('desde'))
@@ -59,6 +63,8 @@ class IncidenciaEmpleadoController extends Controller
             ->withQueryString();
 
         return Inertia::render('admin/nomina/Incidencias', [
+            'empresa' => ['id' => $empresa->id, 'razon_social' => $empresa->razon_social],
+            'empresasElegibles' => $this->empresasElegiblesDeNomina($request),
             'incidencias' => $incidencias,
             'tipos' => ContpaqiTipoIncidencia::query()
                 ->paraEmpresa($empresaId)
@@ -82,7 +88,7 @@ class IncidenciaEmpleadoController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $empresaId = (int) $request->user()->empresa_id;
+        $empresaId = $this->empresaDeNomina($request)->id;
         $datos = $this->validar($request);
 
         $incidencia = IncidenciaEmpleado::create([
@@ -234,7 +240,7 @@ class IncidenciaEmpleadoController extends Controller
     /** @return array<string, mixed> */
     private function validar(Request $request, ?IncidenciaEmpleado $actual = null): array
     {
-        $empresaId = (int) $request->user()->empresa_id;
+        $empresaId = $this->empresaDeNomina($request)->id;
 
         $datos = $request->validate([
             'empleado_id' => [
@@ -404,7 +410,7 @@ class IncidenciaEmpleadoController extends Controller
     private function autorizarEmpresa(Request $request, IncidenciaEmpleado $incidencia): void
     {
         abort_unless(
-            $incidencia->empresa_id === (int) $request->user()->empresa_id,
+            $incidencia->empresa_id === $this->empresaDeNomina($request)->id,
             403,
             'La incidencia pertenece a otra empresa.'
         );

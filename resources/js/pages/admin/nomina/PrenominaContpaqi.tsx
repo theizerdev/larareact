@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import { ModuleHeader } from '@/components/module-header';
+import { SelectorEmpresaNomina } from '@/components/nomina/selector-empresa-nomina';
+import type { EmpresaElegible } from '@/components/nomina/selector-empresa-nomina';
 import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,6 +110,7 @@ interface RelojChecador {
 
 interface Props {
     empresa: { id: number; razon_social: string };
+    empresasElegibles: EmpresaElegible[];
     periodo: { desde: string; hasta: string };
     previsualizacion: Previsualizacion | null;
     exportaciones: Exportacion[];
@@ -142,6 +145,7 @@ const DIAS_SEMANA: { valor: number; nombre: string }[] = [
 
 export default function PrenominaContpaqi({
     empresa,
+    empresasElegibles,
     periodo,
     previsualizacion,
     exportaciones,
@@ -234,6 +238,7 @@ export default function PrenominaContpaqi({
                     description={`${empresa.razon_social} · el archivo se importa con "Capturar movimientos desde Excel"`}
                     colorClassName="bg-teal-600"
                 >
+                    <SelectorEmpresaNomina empresaId={empresa.id} empresas={empresasElegibles} />
                     <Button variant="secondary" onClick={() => router.get('/admin/nomina/contpaqi/mapeos')}>
                         <Link2 className="mr-2 h-4 w-4" />
                         Mapeo de códigos

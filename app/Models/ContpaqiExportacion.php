@@ -62,11 +62,14 @@ class ContpaqiExportacion extends Model
     protected function casts(): array
     {
         return [
-            'periodo_inicio' => 'date',
-            'periodo_fin' => 'date',
+            // Con formato explícito: sin él, al mandarse a la pantalla salen
+            // como ISO en UTC ("2026-09-21T06:00:00.000000Z"), que además de
+            // ilegible corre la fecha seis horas.
+            'periodo_inicio' => 'date:Y-m-d',
+            'periodo_fin' => 'date:Y-m-d',
             'columnas' => 'array',
-            'generada_at' => 'datetime',
-            'cerrada_at' => 'datetime',
+            'generada_at' => 'datetime:Y-m-d H:i',
+            'cerrada_at' => 'datetime:Y-m-d H:i',
             'numero_periodo' => 'integer',
         ];
     }

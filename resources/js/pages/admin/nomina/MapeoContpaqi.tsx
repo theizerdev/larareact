@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import { ModuleHeader } from '@/components/module-header';
+import { SelectorEmpresaNomina } from '@/components/nomina/selector-empresa-nomina';
+import type { EmpresaElegible } from '@/components/nomina/selector-empresa-nomina';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,11 +33,12 @@ interface Mapeo {
 
 interface Props {
     empresa: { id: number; razon_social: string };
+    empresasElegibles: EmpresaElegible[];
     mapeos: Mapeo[];
     empleadosSinMapeo: EmpleadoLigero[];
 }
 
-export default function MapeoContpaqi({ empresa, mapeos, empleadosSinMapeo }: Props) {
+export default function MapeoContpaqi({ empresa, empresasElegibles, mapeos, empleadosSinMapeo }: Props) {
     const [editando, setEditando] = useState<number | null>(null);
     const [codigoEditado, setCodigoEditado] = useState('');
 
@@ -76,6 +79,7 @@ export default function MapeoContpaqi({ empresa, mapeos, empleadosSinMapeo }: Pr
                     description={`${empresa.razon_social} · equivalencia entre Shigoto y el "Código empleado" de CONTPAQi`}
                     colorClassName="bg-teal-600"
                 >
+                    <SelectorEmpresaNomina empresaId={empresa.id} empresas={empresasElegibles} />
                     <Button variant="secondary" onClick={() => router.get('/admin/nomina/contpaqi')}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Volver a prenómina

@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import { ModuleHeader } from '@/components/module-header';
+import { SelectorEmpresaNomina } from '@/components/nomina/selector-empresa-nomina';
+import type { EmpresaElegible } from '@/components/nomina/selector-empresa-nomina';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,6 +52,8 @@ interface Paginado<T> {
 }
 
 interface Props {
+    empresa: { id: number; razon_social: string };
+    empresasElegibles: EmpresaElegible[];
     incidencias: Paginado<Incidencia>;
     tipos: Tipo[];
     empleados: EmpleadoLigero[];
@@ -72,7 +76,15 @@ function diasEntre(inicio: string, fin: string): number {
     return ms < 0 ? 0 : Math.round(ms / 86_400_000) + 1;
 }
 
-export default function Incidencias({ incidencias, tipos, empleados, filtros, puedeAprobar }: Props) {
+export default function Incidencias({
+    empresa,
+    empresasElegibles,
+    incidencias,
+    tipos,
+    empleados,
+    filtros,
+    puedeAprobar,
+}: Props) {
     const [desde, setDesde] = useState(filtros.desde);
     const [hasta, setHasta] = useState(filtros.hasta);
     const [estado, setEstado] = useState(filtros.estado ?? 'todos');
@@ -154,9 +166,11 @@ export default function Incidencias({ incidencias, tipos, empleados, filtros, pu
                 <ModuleHeader
                     icon={<CalendarDays className="h-6 w-6" />}
                     title="Incidencias de nómina"
-                    description="Vacaciones, permisos, incapacidades y castigos: lo que los marcajes no pueden deducir solos"
+                    description={`${empresa.razon_social} · vacaciones, permisos, incapacidades y castigos: lo que los marcajes no pueden deducir solos`}
                     colorClassName="bg-indigo-600"
-                />
+                >
+                    <SelectorEmpresaNomina empresaId={empresa.id} empresas={empresasElegibles} />
+                </ModuleHeader>
 
                 {/* ---------- Captura ---------- */}
                 <Card>
