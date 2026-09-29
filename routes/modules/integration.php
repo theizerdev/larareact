@@ -42,4 +42,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // escribir y probar la conexión requiere su propio permiso.
     Route::put('/integrations/zapsign', [IntegrationController::class, 'updateZapsign'])->name('integrations.zapsign.update')->can('zapsign.manage');
     Route::post('/integrations/zapsign/test', [IntegrationController::class, 'zapsignTest'])->name('integrations.zapsign.test')->can('zapsign.manage');
+
+    // DIDIT (Validaciones) Integration Routes
+    Route::put('/integrations/didit', [IntegrationController::class, 'updateDidit'])->name('integrations.didit.update')->can('integrations.edit');
+    Route::post('/integrations/didit/test', [IntegrationController::class, 'diditTest'])->name('integrations.didit.test')->can('integrations.edit');
 });

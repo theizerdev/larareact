@@ -7,6 +7,7 @@ use App\Models\Empresa;
 use App\Models\Pais;
 use App\Services\BioTimeService;
 use App\Services\ControlAccesoService;
+use App\Services\DiditService;
 use App\Services\JaakService;
 use App\Services\WhatsAppService;
 use App\Services\ZapSignService;
@@ -631,6 +632,9 @@ class IntegrationController extends Controller
             'zapsign_api_token' => ZapSignService::tokenDe($empresa),
             'zapsign_environment' => $empresa->zapsign_environment ?? 'production',
             'zapsign_active' => (bool) $empresa->zapsign_active,
+            'didit_api_key' => DiditService::tokenDe($empresa),
+            'didit_workflow_id' => $empresa->didit_workflow_id ?? config('didit.default_workflow_id'),
+            'didit_active' => (bool) $empresa->didit_active,
         ]);
     }
 
@@ -803,6 +807,79 @@ class IntegrationController extends Controller
         }
 
         $result = (new ZapSignService($empresa))->testConnection();
+
+        return back()->with('notification', [
+            'type' => $result['success'] ? 'success' : 'error',
+            'message' => $result['message'],
+        ]);
+    }
+
+    /**
+     * Actualiza la configuración de DIDIT (verificación de identidad) de la empresa.
+     */
+    public function updateDidit(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'didit_api_key' => 'nullable|string|max:4000',
+            'didit_workflow_id' => 'nullable|string|max:100',
+            'didit_active' => 'required|boolean',
+        ]);
+
+        $apiKey = $validated['didit_api_key'] !== null ? trim($validated['didit_api_key']) : '';
+
+        // Activar sin API Key deja la integración inutilizable
+        if ($validated['didit_active'] && $apiKey === '') {
+            return back()->withErrors([
+                'didit_api_key' => __('An API Key is required to enable the DIDIT integration.'),
+            ])->with('notification', [
+                'type' => 'error',
+                'message' => __('An API Key is required to enable the DIDIT integration.'),
+            ]);
+        }
+
+        $empresa->update([
+            'didit_api_key' => $apiKey !== '' ? $apiKey : null,
+            'didit_workflow_id' => ! empty($validated['didit_workflow_id']) ? trim($validated['didit_workflow_id']) : null,
+            'didit_active' => $validated['didit_active'],
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('DIDIT integration settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Prueba la conexión con DIDIT usando las credenciales guardadas.
+     */
+    public function diditTest(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        if (empty($empresa->didit_api_key)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Please configure and save the API Key before testing the connection.'),
+            ]);
+        }
+
+        $result = (new DiditService($empresa))->testConnection();
 
         return back()->with('notification', [
             'type' => $result['success'] ? 'success' : 'error',

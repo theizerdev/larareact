@@ -18,6 +18,9 @@ interface PageProps {
     zapsign_api_token: string | null;
     zapsign_environment: 'sandbox' | 'production';
     zapsign_active: boolean;
+    didit_api_key?: string | null;
+    didit_workflow_id?: string | null;
+    didit_active?: boolean;
 }
 
 export default function Validaciones({
@@ -27,10 +30,14 @@ export default function Validaciones({
     zapsign_api_token,
     zapsign_environment,
     zapsign_active,
+    didit_api_key,
+    didit_workflow_id,
+    didit_active,
 }: PageProps) {
     const { __ } = useTranslate();
     const [testingConnection, setTestingConnection] = useState(false);
     const [testingZapsign, setTestingZapsign] = useState(false);
+    const [testingDidit, setTestingDidit] = useState(false);
 
     const jaakForm = useForm({
         jaak_api_key: jaak_api_key || '',
@@ -42,6 +49,12 @@ export default function Validaciones({
         zapsign_api_token: zapsign_api_token || '',
         zapsign_environment: zapsign_environment || 'production',
         zapsign_active: zapsign_active,
+    });
+
+    const diditForm = useForm({
+        didit_api_key: didit_api_key || '',
+        didit_workflow_id: didit_workflow_id || '',
+        didit_active: !!didit_active,
     });
 
     const handleSaveJaak = (e: React.FormEvent) => {
@@ -89,6 +102,30 @@ export default function Validaciones({
         router.post('/admin/integrations/zapsign/test', {}, {
             preserveScroll: true,
             onFinish: () => setTestingZapsign(false),
+        });
+    };
+
+    const handleSaveDidit = (e: React.FormEvent) => {
+        e.preventDefault();
+        diditForm.put('/admin/integrations/didit', {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: __('DIDIT integration settings updated successfully.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+        });
+    };
+
+    const handleTestDidit = () => {
+        setTestingDidit(true);
+        router.post('/admin/integrations/didit/test', {}, {
+            preserveScroll: true,
+            onFinish: () => setTestingDidit(false),
         });
     };
 
@@ -316,17 +353,122 @@ export default function Validaciones({
                             </CardFooter>
                         </form>
                     </Card>
+
+                    {/* DIDIT Identity Verification */}
+                    <Card className="shadow-sm border-t-4 border-t-purple-600 flex flex-col justify-between">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 rounded bg-white border border-purple-100 dark:border-purple-900/40">
+                                        <img
+                                            src="/image/logo/integrations/didit-logo.png"
+                                            alt="DIDIT"
+                                            className="h-6 w-6 rounded object-contain"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <CardTitle>{__('DIDIT Identity Verification')}</CardTitle>
+                                        <CardDescription>{__("Connect to DIDIT's API for AI-powered KYC, biometric liveness, and fraud prevention.")}</CardDescription>
+                                    </div>
+                                </div>
+                                <BadgeStatus active={diditForm.data.didit_active} tone="purple" />
+                            </div>
+                        </CardHeader>
+                        <form onSubmit={handleSaveDidit}>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-sm font-medium">{__('Enable DIDIT')}</Label>
+                                        <p className="text-xs text-muted-foreground">{__('Toggle the connection to the DIDIT identity verification API.')}</p>
+                                    </div>
+                                    <Switch
+                                        checked={diditForm.data.didit_active}
+                                        onCheckedChange={(checked) => diditForm.setData('didit_active', checked)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="didit_api_key">{__('API Key')}</Label>
+                                    <Input
+                                        id="didit_api_key"
+                                        type="password"
+                                        placeholder="M4gUgMHMyZiiiIE4..."
+                                        value={diditForm.data.didit_api_key}
+                                        onChange={(e) => diditForm.setData('didit_api_key', e.target.value)}
+                                        disabled={!diditForm.data.didit_active}
+                                        className="font-mono text-sm"
+                                    />
+                                    {diditForm.errors.didit_api_key && (
+                                        <p className="text-xs text-red-600">{diditForm.errors.didit_api_key}</p>
+                                    )}
+                                    <p className="text-xs text-muted-foreground">{__('Sent as the x-api-key header on every verification request.')}</p>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <span>{__('Find your API key in')}</span>
+                                        <a href="https://business.didit.me" target="_blank" rel="noreferrer" className="text-purple-600 hover:underline flex items-center gap-0.5">
+                                            business.didit.me <ExternalLink className="h-3 w-3 inline" />
+                                        </a>
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="didit_workflow_id">{__('Workflow ID')}</Label>
+                                    <Input
+                                        id="didit_workflow_id"
+                                        type="text"
+                                        placeholder="d7fe3736-3de9-4bb7-8b63-4bd53f8de50a"
+                                        value={diditForm.data.didit_workflow_id}
+                                        onChange={(e) => diditForm.setData('didit_workflow_id', e.target.value)}
+                                        disabled={!diditForm.data.didit_active}
+                                        className="font-mono text-sm"
+                                    />
+                                    {diditForm.errors.didit_workflow_id && (
+                                        <p className="text-xs text-red-600">{diditForm.errors.didit_workflow_id}</p>
+                                    )}
+                                    <p className="text-xs text-muted-foreground">
+                                        {__('ID of the verification flow configured in Didit (e.g. Custom KYC).')}
+                                    </p>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex flex-col gap-2">
+                                <div className="flex w-full justify-between">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2 border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 dark:border-purple-900/50 dark:text-purple-400 dark:hover:bg-purple-950/20"
+                                        disabled={!diditForm.data.didit_active || testingDidit}
+                                        onClick={handleTestDidit}
+                                    >
+                                        {testingDidit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
+                                        {__('Test Connection')}
+                                    </Button>
+                                    <Button type="submit" disabled={diditForm.processing || !diditForm.data.didit_active} className="gap-2">
+                                        <Save className="h-4 w-4" />
+                                        {__('Save Changes')}
+                                    </Button>
+                                </div>
+                                {diditForm.isDirty && (
+                                    <p className="w-full text-xs text-amber-600 dark:text-amber-500">
+                                        {__('The connection test uses the saved credentials. Save your changes first.')}
+                                    </p>
+                                )}
+                            </CardFooter>
+                        </form>
+                    </Card>
                 </div>
             </div>
         </>
     );
 }
 
-function BadgeStatus({ active, tone = 'teal' }: { active: boolean; tone?: 'teal' | 'blue' }) {
+function BadgeStatus({ active, tone = 'teal' }: { active: boolean; tone?: 'teal' | 'blue' | 'purple' }) {
     const { __ } = useTranslate();
 
     const activeTone = tone === 'blue'
         ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+        : tone === 'purple'
+        ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
         : 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300';
 
     return (
