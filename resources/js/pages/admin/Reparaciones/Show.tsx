@@ -41,7 +41,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { QRCodeSVG } from '@/components/qr-code-svg';
 import { BarcodeSVG } from '@/components/barcode-svg';
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import EtiquetaTermicaModal from '@/components/reparaciones/EtiquetaTermicaModal';
+import ImprimirComprobantesModal from '@/components/reparaciones/ImprimirComprobantesModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -561,14 +561,14 @@ function PatternLockCanvas({
     );
 }
 
-export default function ShowReparacion({ 
-    orden, 
-    empresa: propEmpresa, 
-    productosRepuestos = [], 
-    tecnicos = [], 
-    clientes = [], 
-    marcas = [], 
-    categorias = [], 
+export default function ShowReparacion({
+    orden,
+    empresa: propEmpresa,
+    productosRepuestos = [],
+    tecnicos = [],
+    clientes = [],
+    marcas = [],
+    categorias = [],
     currencySymbol,
     sucursales = [],
     checklist_items: propChecklistItems = {},
@@ -576,10 +576,10 @@ export default function ShowReparacion({
 }: Props) {
     const { __ } = useTranslate();
     const pageProps = usePage<any>().props;
-    const empresa = propEmpresa 
-        || (orden as any)?.empresa 
-        || pageProps.empresa 
-        || pageProps.auth?.user?.empresa 
+    const empresa = propEmpresa
+        || (orden as any)?.empresa
+        || pageProps.empresa
+        || pageProps.auth?.user?.empresa
         || (pageProps as any)?.auth?.empresa;
 
 
@@ -618,15 +618,15 @@ export default function ShowReparacion({
     const [isSavingDatos, setIsSavingDatos] = useState(false);
 
     const handleOpenEditDatosModal = () => {
-        const matchedMarca = marcas.find((m) => 
-            (orden.marca_id && m.id === orden.marca_id) || 
+        const matchedMarca = marcas.find((m) =>
+            (orden.marca_id && m.id === orden.marca_id) ||
             (orden.marca_nombre && m.nombre.toLowerCase() === orden.marca_nombre.toLowerCase())
         );
         const resolvedMarcaId = matchedMarca ? String(matchedMarca.id) : (orden.marca_id ? String(orden.marca_id) : '');
 
         let resolvedModeloId = orden.modelo_id ? String(orden.modelo_id) : '';
         if (matchedMarca && !resolvedModeloId && orden.modelo_nombre) {
-            const matchedMod = matchedMarca.modelos?.find((mod) => 
+            const matchedMod = matchedMarca.modelos?.find((mod) =>
                 mod.nombre_comercial.toLowerCase() === orden.modelo_nombre.toLowerCase()
             );
             if (matchedMod) {
@@ -2199,7 +2199,7 @@ export default function ShowReparacion({
                                 {__('Imprimir Ticket')}
                             </Button>
 
-                            <Button size="sm" onClick={() => setIsStickerModalOpen(true)} variant="outline" className="h-10 gap-2 text-xs font-bold bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-400/40 text-indigo-100 shadow-md">
+                            <Button size="sm" onClick={() => setIsPrintModalOpen(true)} variant="outline" className="h-10 gap-2 text-xs font-bold bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-400/40 text-indigo-100 shadow-md">
                                 <Tag className="w-4 h-4 text-indigo-300" />
                                 {__('Sticker / Etiqueta')}
                             </Button>
@@ -4133,8 +4133,8 @@ export default function ShowReparacion({
                                                 type="button"
                                                 onClick={() => setModalTab(tab.id as any)}
                                                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${modalTab === tab.id
-                                                        ? 'bg-indigo-600 text-white shadow-xs'
-                                                        : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                    ? 'bg-indigo-600 text-white shadow-xs'
+                                                    : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
                                                     }`}
                                             >
                                                 <span>{tab.icon}</span>
@@ -4197,10 +4197,10 @@ export default function ShowReparacion({
                                                     <div
                                                         key={item}
                                                         className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${current.estado === 'malo'
-                                                                ? 'border-rose-300 bg-rose-50/50 dark:bg-rose-950/20 shadow-xs'
-                                                                : current.estado === 'bueno'
-                                                                    ? 'border-emerald-300 bg-emerald-50/30 dark:bg-emerald-950/10'
-                                                                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60'
+                                                            ? 'border-rose-300 bg-rose-50/50 dark:bg-rose-950/20 shadow-xs'
+                                                            : current.estado === 'bueno'
+                                                                ? 'border-emerald-300 bg-emerald-50/30 dark:bg-emerald-950/10'
+                                                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60'
                                                             }`}
                                                     >
                                                         <div className="flex items-center justify-between">
@@ -4216,8 +4216,8 @@ export default function ShowReparacion({
                                                                         }))
                                                                     }
                                                                     className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${current.estado === 'bueno'
-                                                                            ? 'bg-emerald-600 text-white shadow-xs scale-105'
-                                                                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                        ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                                                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                                                                         }`}
                                                                 >
                                                                     {__('Bueno')}
@@ -4231,8 +4231,8 @@ export default function ShowReparacion({
                                                                         }))
                                                                     }
                                                                     className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${current.estado === 'malo'
-                                                                            ? 'bg-rose-600 text-white shadow-xs scale-105'
-                                                                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                        ? 'bg-rose-600 text-white shadow-xs scale-105'
+                                                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                                                                         }`}
                                                                 >
                                                                     {__('Malo')}
@@ -4246,8 +4246,8 @@ export default function ShowReparacion({
                                                                         }))
                                                                     }
                                                                     className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${current.estado === 'na'
-                                                                            ? 'bg-slate-600 text-white shadow-xs'
-                                                                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                        ? 'bg-slate-600 text-white shadow-xs'
+                                                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                                                                         }`}
                                                                 >
                                                                     {__('N/A')}
@@ -4296,8 +4296,8 @@ export default function ShowReparacion({
                                                     <div
                                                         key={rev.key}
                                                         className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isChecked
-                                                                ? 'border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs'
-                                                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900'
+                                                            ? 'border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs'
+                                                            : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900'
                                                             }`}
                                                     >
                                                         <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{rev.label}</span>
@@ -4306,8 +4306,8 @@ export default function ShowReparacion({
                                                                 type="button"
                                                                 onClick={() => setEstadoEquipo((prev) => ({ ...prev, [rev.key]: true }))}
                                                                 className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all ${isChecked
-                                                                        ? 'bg-emerald-600 text-white shadow-xs scale-105'
-                                                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                    ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                                                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                                                                     }`}
                                                             >
                                                                 {__('Sí')}
@@ -4316,8 +4316,8 @@ export default function ShowReparacion({
                                                                 type="button"
                                                                 onClick={() => setEstadoEquipo((prev) => ({ ...prev, [rev.key]: false }))}
                                                                 className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all ${!isChecked
-                                                                        ? 'bg-rose-600 text-white shadow-xs scale-105'
-                                                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                    ? 'bg-rose-600 text-white shadow-xs scale-105'
+                                                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                                                                     }`}
                                                             >
                                                                 {__('No')}
@@ -4406,8 +4406,8 @@ export default function ShowReparacion({
                                                 type="button"
                                                 onClick={() => setPostModalTab(tab.id as any)}
                                                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${postModalTab === tab.id
-                                                        ? 'bg-emerald-600 text-white shadow-xs'
-                                                        : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                                    ? 'bg-emerald-600 text-white shadow-xs'
+                                                    : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
                                                     }`}
                                             >
                                                 <span>{tab.icon}</span>
@@ -4471,8 +4471,8 @@ export default function ShowReparacion({
                                                     <div
                                                         key={fn}
                                                         className={`p-3 rounded-2xl border transition-all space-y-2 ${!isOk
-                                                                ? 'border-rose-300 bg-rose-50/50 dark:bg-rose-950/20 shadow-xs'
-                                                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60'
+                                                            ? 'border-rose-300 bg-rose-50/50 dark:bg-rose-950/20 shadow-xs'
+                                                            : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60'
                                                             }`}
                                                     >
                                                         <div className="flex items-center justify-between">
@@ -4488,8 +4488,8 @@ export default function ShowReparacion({
                                                                         }))
                                                                     }
                                                                     className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${isOk
-                                                                            ? 'bg-emerald-600 text-white shadow-xs scale-105'
-                                                                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                        ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                                                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                                                                         }`}
                                                                 >
                                                                     {__('Correcto')}
@@ -4503,8 +4503,8 @@ export default function ShowReparacion({
                                                                         }))
                                                                     }
                                                                     className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all ${!isOk
-                                                                            ? 'bg-rose-600 text-white shadow-xs scale-105'
-                                                                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                                                        ? 'bg-rose-600 text-white shadow-xs scale-105'
+                                                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                                                                         }`}
                                                                 >
                                                                     {__('Incorrecto')}
@@ -4552,8 +4552,8 @@ export default function ShowReparacion({
                                                         <div
                                                             key={item}
                                                             className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${isChecked
-                                                                    ? 'border-emerald-300 bg-emerald-50/40 dark:bg-emerald-950/20'
-                                                                    : 'border-slate-200 dark:border-slate-800 bg-slate-50'
+                                                                ? 'border-emerald-300 bg-emerald-50/40 dark:bg-emerald-950/20'
+                                                                : 'border-slate-200 dark:border-slate-800 bg-slate-50'
                                                                 }`}
                                                         >
                                                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{item}</span>
@@ -4562,8 +4562,8 @@ export default function ShowReparacion({
                                                                     type="button"
                                                                     onClick={() => setLimpiezaFinalState((prev) => ({ ...prev, [item]: true }))}
                                                                     className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all ${isChecked
-                                                                            ? 'bg-emerald-600 text-white shadow-xs'
-                                                                            : 'text-slate-600 dark:text-slate-400'
+                                                                        ? 'bg-emerald-600 text-white shadow-xs'
+                                                                        : 'text-slate-600 dark:text-slate-400'
                                                                         }`}
                                                                 >
                                                                     {__('Sí')}
@@ -4572,8 +4572,8 @@ export default function ShowReparacion({
                                                                     type="button"
                                                                     onClick={() => setLimpiezaFinalState((prev) => ({ ...prev, [item]: false }))}
                                                                     className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all ${!isChecked
-                                                                            ? 'bg-rose-600 text-white shadow-xs'
-                                                                            : 'text-slate-600 dark:text-slate-400'
+                                                                        ? 'bg-rose-600 text-white shadow-xs'
+                                                                        : 'text-slate-600 dark:text-slate-400'
                                                                         }`}
                                                                 >
                                                                     {__('No')}
@@ -4602,8 +4602,8 @@ export default function ShowReparacion({
                                                             key={qc.key}
                                                             onClick={() => setControlCalidadState((prev) => ({ ...prev, [qc.key]: !isChecked }))}
                                                             className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ${isChecked
-                                                                    ? 'border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs'
-                                                                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900'
+                                                                ? 'border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs'
+                                                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900'
                                                                 }`}
                                                         >
                                                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{qc.label}</span>
@@ -4935,8 +4935,8 @@ export default function ShowReparacion({
                     </div>
                 )}
 
-                {/* MODAL SELECCIONAR TIPO DE TICKET (CLIENTE O TÉCNICO) */}
-                <Dialog
+                {/* MODAL UNIFICADO: TICKET CLIENTE (COL-6) Y ETIQUETA ADHESIVA (COL-6) */}
+                <ImprimirComprobantesModal
                     open={isPrintModalOpen}
                     onOpenChange={(open) => {
                         setIsPrintModalOpen(open);
@@ -4944,328 +4944,10 @@ export default function ShowReparacion({
                             document.body.style.pointerEvents = "";
                         }
                     }}
-                >
-                    <DialogContent className="sm:max-w-3xl p-6 sm:p-8 rounded-2xl pointer-events-auto">
-                        <DialogHeader className="pb-2">
-                            <DialogTitle className="flex items-center gap-3 text-xl font-extrabold text-slate-900 dark:text-slate-100">
-                                <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                    <Printer className="w-6 h-6" />
-                                </div>
-                                {__('Imprimir Comprobante o Etiqueta')}
-                            </DialogTitle>
-                        </DialogHeader>
-
-                        <div className="py-4 space-y-6">
-                            <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">
-                                {__('Seleccione el formato de impresión deseado para esta orden de servicio:')}
-                            </p>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                {/* OPCIÓN ETIQUETA ADHESIVA / STICKER TÉRMICO (NUEVO) */}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsPrintModalOpen(false);
-                                        setIsStickerModalOpen(true);
-                                    }}
-                                    className="p-5 rounded-2xl border-2 border-indigo-200 dark:border-indigo-900/60 hover:border-indigo-500 dark:hover:border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50/80 dark:hover:bg-indigo-950/50 transition-all text-left group flex flex-col justify-between space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer ring-1 ring-indigo-500/30"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shadow-inner">
-                                            <Tag className="w-6 h-6" />
-                                        </div>
-                                        <Badge className="bg-indigo-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 shadow-sm">
-                                            {__('Sticker Equipo')}
-                                        </Badge>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <h4 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 transition-colors">
-                                            {__('Etiqueta Adhesiva')}
-                                        </h4>
-                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                                            {__('Sticker para pegar en el equipo (50x30 / 60x40mm) con vista previa, switches de contenido y código de barras.')}
-                                        </p>
-                                    </div>
-                                </button>
-
-                                {/* OPCIÓN CLIENTE */}
-                                <button
-                                    type="button"
-                                    onClick={() => handleExecutePrint('cliente')}
-                                    className="p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-blue-50/60 dark:hover:bg-blue-950/40 transition-all text-left group flex flex-col justify-between space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform shadow-inner">
-                                            <User className="w-6 h-6" />
-                                        </div>
-                                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 text-[10px] font-extrabold px-2.5 py-0.5">
-                                            80mm POS
-                                        </Badge>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <h4 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">
-                                            {__('Ticket para Cliente')}
-                                        </h4>
-                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                                            {__('Comprobante oficial de entrega con servicios, financiero, técnico y términos de garantía.')}
-                                        </p>
-                                    </div>
-                                </button>
-
-                                {/* OPCIÓN TÉCNICO */}
-                                <button
-                                    type="button"
-                                    onClick={() => handleExecutePrint('tecnico')}
-                                    className="p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-purple-500 dark:hover:border-purple-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-purple-50/60 dark:hover:bg-purple-950/40 transition-all text-left group flex flex-col justify-between space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform shadow-inner">
-                                            <Wrench className="w-6 h-6" />
-                                        </div>
-                                        <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300 text-[10px] font-extrabold px-2.5 py-0.5">
-                                            Ficha Taller
-                                        </Badge>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <h4 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
-                                            {__('Ticket Técnico')}
-                                        </h4>
-                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                                            {__('Ficha de taller con falla, observaciones, patrón de seguridad y Código QR escaneable.')}
-                                        </p>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-
-                        <DialogFooter className="border-t border-slate-100 dark:border-slate-800 pt-3 flex items-center justify-end">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => {
-                                    setIsPrintModalOpen(false);
-                                    document.body.style.pointerEvents = "";
-                                }}
-                                className="h-10 px-5 text-xs font-semibold"
-                            >
-                                {__('Cerrar')}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-
-                {/* PLANTILLA DE IMPRESIÓN OFICIAL TICKET 80MM (REPARACIÓN: CLIENTE O TÉCNICO) */}
-                <div id="printable-ticket-reparacion" className="hidden print:block text-black bg-white font-sans p-4 text-xs w-[80mm] max-w-[80mm] mx-auto">
-                    <style>{`
-                        @media print {
-                            * {
-                                -webkit-print-color-adjust: exact !important;
-                                print-color-adjust: exact !important;
-                                color-adjust: exact !important;
-                            }
-                            body * {
-                                visibility: hidden !important;
-                            }
-                            #printable-ticket-reparacion, #printable-ticket-reparacion * {
-                                visibility: visible !important;
-                            }
-                            #printable-ticket-reparacion {
-                                position: absolute !important;
-                                left: 0 !important;
-                                top: 0 !important;
-                                width: 80mm !important;
-                                max-width: 80mm !important;
-                                margin: 0 !important;
-                                padding: 2mm !important;
-                                background: white !important;
-                                color: black !important;
-                                font-family: 'Courier New', Courier, monospace, Arial, sans-serif !important;
-                                font-size: 11px !important;
-                            }
-                            @page {
-                                size: 80mm auto;
-                                margin: 0;
-                            }
-                        }
-                    `}</style>
-
-                    {printType === 'cliente' ? (
-                        /* ================= TICKET PARA EL CLIENTE ================= */
-                        <div className="font-mono text-black text-xs leading-tight p-0 bg-white">
-                            {/* HEADER EMPRESA CON LOGO */}
-                            <div className="text-center mb-1 flex flex-col items-center justify-center">
-                                {empresa?.logo || empresa?.logo_mini ? (
-                                    <img
-                                        src={empresa.logo || empresa.logo_mini}
-                                        alt={empresa.razon_social || empresa.nombre_comercial || 'Logo'}
-                                        style={{
-                                            width: `${Number(empresa?.logo_ticket_size || 200)}px`,
-                                            maxWidth: '100%',
-                                            height: 'auto',
-                                            maxHeight: '160px',
-                                        }}
-                                        className="mx-auto object-contain mb-1"
-                                    />
-                                ) : (
-                                    <div className="font-black text-base uppercase tracking-tight">{empresa?.nombre_comercial || empresa?.razon_social || 'SERVITEC'}</div>
-                                )}
-                            </div>
-
-                            {/* DIRECCIÓN Y TELÉFONO CENTRADOS */}
-                            {empresa?.direccion && (
-                                <div className="text-center font-bold text-[9px] uppercase px-1 leading-snug font-mono">
-                                    {empresa.direccion}
-                                </div>
-                            )}
-                            <div className="text-center font-bold text-[10.5px] mt-0.5 font-mono">
-                                TEL: {empresa?.telefono || empresa?.whatsapp_phone || 'S/T'}
-                            </div>
-
-                            {/* BANNER NEGRO ORDEN N° CON BORDES NEGROS SÓLIDOS */}
-                            <div className="bg-black text-white text-center font-black text-sm py-1 my-2 uppercase tracking-wider">
-                                ORDEN N° {orden.numero_orden}
-                            </div>
-
-                            {/* DATOS DEL CLIENTE */}
-                            <div className="text-center font-black text-[11px] uppercase mb-1">
-                                DATOS DEL CLIENTE
-                            </div>
-                            <div className="text-[10px] space-y-0.5 font-bold uppercase px-1">
-                                <div>NOMBRE: <span className="font-normal">{clienteNombreDisplay}</span></div>
-                                <div>TELEFONO: <span className="font-normal">{clienteTelefonoDisplay}</span></div>
-                            </div>
-
-                            {/* DATOS DEL EQUIPO */}
-                            <div className="text-center font-black text-[11px] uppercase mt-3 mb-1">
-                                DATOS DEL EQUIPO
-                            </div>
-                            <div className="text-[10px] space-y-0.5 font-bold uppercase px-1">
-                                <div>EQUIPO: <span className="font-normal">{marcaNombreDisplay} {modeloNombreDisplay}</span></div>
-                                <div>IMEI/SN: <span className="font-normal">{orden.imei_serie || 'nv'}</span></div>
-                                <div>OBSERVACIONES: <span className="font-normal">{orden.observaciones_fisicas || 'equipo sin observaciones'}</span></div>
-                                <div>REPARACION: <span className="font-normal">{orden.descripcion_falla || (orden.items && orden.items.length > 0 ? orden.items.map((i) => i.descripcion || i.servicio?.nombre || i.producto?.nombre).join(', ') : 'Revisión y diagnóstico')}</span></div>
-                                <div>ACCESORIOS: <span className="font-normal">{orden.accesorios_incluidos || 'no deja'}</span></div>
-                            </div>
-
-                            {/* BANNER COSTO REPARACION */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-3 uppercase tracking-wide">
-                                COSTO REPARACION
-                            </div>
-                            <div className="text-[10px] space-y-0.5 py-1 px-1 font-bold">
-                                <div className="flex justify-between">
-                                    <span>SUBTOTAL =</span>
-                                    <span>${formatNum(orden.costo_estimado)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>ANTICIPO =</span>
-                                    <span>${formatNum(orden.anticipo)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
-                                </div>
-                                <div className="flex justify-between border-t border-dotted border-black pt-0.5 font-black">
-                                    <span>TOTAL =</span>
-                                    <span>${formatNum(orden.saldo_restante)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
-                                </div>
-                            </div>
-
-                            {/* BANNER FECHA DE RECEPCION */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide">
-                                FECHA DE RECEPCION
-                            </div>
-                            <div className="text-center text-[10px] font-bold py-1">
-                                {formatDate(orden.fecha_recepcion)}
-                            </div>
-
-                            {/* BANNER CONTRASEÑA */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide">
-                                CONTRASEÑA
-                            </div>
-                            <div className="py-2">
-                                {extractPatternNumbers(orden.contrasena_patron).length > 0 ? (
-                                    <PrintablePatternLock pattern={extractPatternNumbers(orden.contrasena_patron)} />
-                                ) : (
-                                    <div className="text-center font-bold text-xs py-1">
-                                        {orden.contrasena_patron || 'Sin contraseña'}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* CÓDIGO DE BARRAS Y CÓDIGO DE REPARACIÓN PARA CONSULTA Y BÚSQUEDA */}
-                            <div className="text-center py-2.5 flex flex-col items-center">
-                                <div className="w-full max-w-[250px] overflow-hidden flex justify-center py-1">
-                                    <BarcodeSVG
-                                        value={orden.numero_orden}
-                                        width={1.6}
-                                        height={48}
-                                        displayValue={false}
-                                    />
-                                </div>
-                                <div className="text-[10px] font-black uppercase mt-1 font-mono tracking-wider">
-                                    CÓDIGO DE REPARACIÓN: {orden.numero_orden}
-                                </div>
-                                <div className="text-[7.5px] text-gray-700 font-semibold font-mono">
-                                    Escanee el código para consultar estado o cobrar en POS
-                                </div>
-                            </div>
-
-                            {/* TÉRMINOS Y GARANTÍA CON RECUADRO DE FIRMA DE CONFORMIDAD */}
-                            <div className="pt-2">
-                                <div className="text-[9px] font-bold text-left mb-1 font-mono">
-                                    Términos y Condiciones de Garantía:
-                                </div>
-                                <div className="border-2 border-black h-12 w-full mb-1 bg-white"></div>
-                                <div className="text-center font-black text-[10px] uppercase font-mono">
-                                    FIRMA DE CONFORMIDAD
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        /* ================= TICKET PARA EL TÉCNICO ================= */
-                        <>
-                            <div className="text-center font-bold uppercase text-[11px] font-mono bg-black text-white py-0.5">
-                                FICHA DE TRABAJO TÉCNICO DE TALLER
-                            </div>
-                            <div className="flex justify-between text-[10px] font-mono mt-1">
-                                <span>ORDEN: <strong>{orden.numero_orden}</strong></span>
-                                <span>RECIBIDO: <strong>{formatDate(orden.fecha_recepcion)}</strong></span>
-                            </div>
-                            <div className="flex justify-between text-[10px] font-mono">
-                                <span>CLIENTE: <strong>{clienteNombreDisplay}</strong></span>
-                                <span>TEL: <strong>{clienteTelefonoDisplay}</strong></span>
-                            </div>
-                            <div className="border-b border-black my-1"></div>
-
-                            <div className="text-[10px] font-mono space-y-0.5">
-                                <div>EQUIPO: <strong>{marcaNombreDisplay} {modeloNombreDisplay}</strong></div>
-                                <div>IMEI/SERIE: <strong>{orden.imei_serie || 'nv'}</strong></div>
-                                <div>ENTREGA ESTIMADA: <strong>{formatDate(orden.fecha_prometida || orden.fecha_estimada_entrega) || 'No especificada'}</strong></div>
-                                <div>FALLA: <strong>{orden.descripcion_falla}</strong></div>
-                                <div>DETALLE TALLER: <strong>{orden.observaciones_fisicas || 'Sin observaciones'}</strong></div>
-                                <div>SEGURIDAD: <strong>{orden.contrasena_patron || 'Sin contraseña'}</strong></div>
-                            </div>
-
-                            {extractPatternNumbers(orden.contrasena_patron).length > 0 && (
-                                <PrintablePatternLock pattern={extractPatternNumbers(orden.contrasena_patron)} />
-                            )}
-
-                            <div className="border-b border-dashed border-black my-1.5"></div>
-
-                            {/* CÓDIGO DE BARRAS PARA ESCANEAR */}
-                            <div className="text-center pt-1 pb-1 flex flex-col items-center">
-                                <div className="w-full max-w-[250px] overflow-hidden flex justify-center py-0.5">
-                                    <BarcodeSVG
-                                        value={orden.numero_orden}
-                                        width={1.6}
-                                        height={45}
-                                        displayValue={false}
-                                    />
-                                </div>
-                                <div className="text-[8.5px] font-bold uppercase mt-1 font-mono">CÓDIGO DE REPARACIÓN: {orden.numero_orden}</div>
-                                <div className="text-[7px] text-gray-600 font-mono">
-                                    Escanee para consultar estado o abrir detalle en el sistema
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </div>
+                    orden={orden}
+                    empresa={empresa}
+                    currencySymbol={currencySymbol}
+                />
             </div>
             {/* MODAL DIALOG PARA EDITAR/CORREGIR DATOS DE LA ORDEN */}
             <Dialog open={openEditDatosModal} onOpenChange={setOpenEditDatosModal}>
@@ -5349,7 +5031,7 @@ export default function ShowReparacion({
                         {/* SECCIÓN DISPOSITIVO CON LISTAS DESPLEGABLES */}
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-xl space-y-3 border border-slate-100 dark:border-slate-800">
                             <span className="font-bold text-purple-700 dark:text-purple-300 block text-xs">2. Datos del Dispositivo</span>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 {/* TIPO / CATEGORÍA */}
                                 <div>
@@ -5716,13 +5398,7 @@ export default function ShowReparacion({
                 onItemsUpdated={handleChecklistUpdated}
             />
 
-            {/* MODAL ETIQUETA TÉRMICA AUTOADHESIVA (STICKER PARA EQUIPO) */}
-            <EtiquetaTermicaModal
-                open={isStickerModalOpen}
-                onOpenChange={setIsStickerModalOpen}
-                orden={orden}
-                empresa={empresa}
-            />
+            {/* Fin modal de impresión unificado */}
 
         </>
     );

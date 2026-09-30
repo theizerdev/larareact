@@ -59,6 +59,8 @@ export default function EtiquetaTermicaModal({
     empresa,
     onAfterPrint,
 }: EtiquetaTermicaModalProps) {
+    if (!open) return null;
+
     const { __ } = useTranslate();
 
     // 1. Configuración de copias y formato
@@ -222,9 +224,11 @@ export default function EtiquetaTermicaModal({
 
         setTimeout(() => {
             window.print();
-            setIsPrinting(false);
-            if (onAfterPrint) onAfterPrint();
-        }, 300);
+            setTimeout(() => {
+                setIsPrinting(false);
+                if (onAfterPrint) onAfterPrint();
+            }, 500);
+        }, 150);
     };
 
     // Componente interno del sticker físico (reproduce la estética de la Imagen 2)
@@ -357,57 +361,60 @@ export default function EtiquetaTermicaModal({
 
     return (
         <>
-            {/* ESTILOS DE IMPRESIÓN EXACTOS PARA IMPRESORAS TÉRMICAS DE ETIQUETAS */}
-            <style>{`
-                @media print {
-                    * {
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                        color-adjust: exact !important;
-                    }
-                    body * {
-                        visibility: hidden !important;
-                    }
-                    #thermal-label-print-zone, #thermal-label-print-zone * {
-                        visibility: visible !important;
-                    }
-                    #thermal-label-print-zone {
-                        display: block !important;
-                        position: absolute !important;
-                        left: 0 !important;
-                        top: 0 !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        width: ${activeWidth}mm !important;
-                        background: white !important;
-                    }
-                    .thermal-sticker-page {
-                        width: ${activeWidth}mm !important;
-                        height: ${activeHeight}mm !important;
-                        page-break-after: always !important;
-                        break-after: page !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        box-sizing: border-box !important;
-                        display: flex !important;
-                        align-items: stretch !important;
-                        justify-content: stretch !important;
-                    }
-                    @page {
-                        size: ${activeWidth}mm ${activeHeight}mm;
-                        margin: 0mm !important;
-                    }
-                }
-            `}</style>
+            {/* ESTILOS DE IMPRESIÓN Y CONTENEDOR OCULTO SOLO ACTIVOS DURANTE LA IMPRESIÓN DE LA ETIQUETA */}
+            {isPrinting && (
+                <>
+                    <style>{`
+                        @media print {
+                            * {
+                                -webkit-print-color-adjust: exact !important;
+                                print-color-adjust: exact !important;
+                                color-adjust: exact !important;
+                            }
+                            body * {
+                                visibility: hidden !important;
+                            }
+                            #thermal-label-print-zone, #thermal-label-print-zone * {
+                                visibility: visible !important;
+                            }
+                            #thermal-label-print-zone {
+                                display: block !important;
+                                position: absolute !important;
+                                left: 0 !important;
+                                top: 0 !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                width: ${activeWidth}mm !important;
+                                background: white !important;
+                            }
+                            .thermal-sticker-page {
+                                width: ${activeWidth}mm !important;
+                                height: ${activeHeight}mm !important;
+                                page-break-after: always !important;
+                                break-after: page !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                box-sizing: border-box !important;
+                                display: flex !important;
+                                align-items: stretch !important;
+                                justify-content: stretch !important;
+                            }
+                            @page {
+                                size: ${activeWidth}mm ${activeHeight}mm !important;
+                                margin: 0mm !important;
+                            }
+                        }
+                    `}</style>
 
-            {/* CONTENEDOR OCULTO DE IMPRESIÓN CON REPETICIÓN POR N° DE COPIAS */}
-            <div id="thermal-label-print-zone" className="hidden print:block">
-                {Array.from({ length: Math.max(1, copias) }).map((_, idx) => (
-                    <div key={`sticker-copy-${idx}`} className="thermal-sticker-page">
-                        {renderStickerLabel(true)}
+                    <div id="thermal-label-print-zone" className="hidden print:block">
+                        {Array.from({ length: Math.max(1, copias) }).map((_, idx) => (
+                            <div key={`sticker-copy-${idx}`} className="thermal-sticker-page">
+                                {renderStickerLabel(true)}
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
+                </>
+            )}
 
             {/* MODAL DIALOG PRINCIPAL (EXPERIENCIA IMAGEN 1) */}
             <Dialog open={open} onOpenChange={onOpenChange}>
