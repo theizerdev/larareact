@@ -584,8 +584,7 @@ export default function ShowReparacion({
 
 
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-    const [printType, setPrintType] = useState<'cliente' | 'tecnico'>('cliente');
-    const [isStickerModalOpen, setIsStickerModalOpen] = useState(false);
+    const [printInitialView, setPrintInitialView] = useState<'cliente' | 'sticker' | 'ambos'>('cliente');
 
     // Auto-apertura si la orden acaba de ser creada
     useEffect(() => {
@@ -820,15 +819,7 @@ export default function ShowReparacion({
         };
     }, []);
 
-    const handleExecutePrint = (type: 'cliente' | 'tecnico') => {
-        setPrintType(type);
-        setIsPrintModalOpen(false);
-        document.body.style.pointerEvents = "";
-        setTimeout(() => {
-            window.print();
-            document.body.style.pointerEvents = "";
-        }, 350);
-    };
+
 
     const [activeTab, setActiveTab] = useState<'general' | 'preservicio' | 'postservicio' | 'repuestos' | 'fotos' | 'historial'>('general');
     const [previewPhoto, setPreviewPhoto] = useState<{ url: string; label: string } | null>(null);
@@ -2194,12 +2185,28 @@ export default function ShowReparacion({
                                 {__('Editar Datos')}
                             </Button>
 
-                            <Button size="sm" onClick={() => setIsPrintModalOpen(true)} variant="outline" className="h-10 gap-2 text-xs font-bold bg-white/10 hover:bg-white/20 border-white/20 text-white">
+                            <Button
+                                size="sm"
+                                onClick={() => {
+                                    setPrintInitialView('cliente');
+                                    setIsPrintModalOpen(true);
+                                }}
+                                variant="outline"
+                                className="h-10 gap-2 text-xs font-bold bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                            >
                                 <Printer className="w-4 h-4 text-blue-400" />
                                 {__('Imprimir Ticket')}
                             </Button>
 
-                            <Button size="sm" onClick={() => setIsPrintModalOpen(true)} variant="outline" className="h-10 gap-2 text-xs font-bold bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-400/40 text-indigo-100 shadow-md">
+                            <Button
+                                size="sm"
+                                onClick={() => {
+                                    setPrintInitialView('sticker');
+                                    setIsPrintModalOpen(true);
+                                }}
+                                variant="outline"
+                                className="h-10 gap-2 text-xs font-bold bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-400/40 text-indigo-100 shadow-md"
+                            >
                                 <Tag className="w-4 h-4 text-indigo-300" />
                                 {__('Sticker / Etiqueta')}
                             </Button>
@@ -4947,6 +4954,7 @@ export default function ShowReparacion({
                     orden={orden}
                     empresa={empresa}
                     currencySymbol={currencySymbol}
+                    initialView={printInitialView}
                 />
             </div>
             {/* MODAL DIALOG PARA EDITAR/CORREGIR DATOS DE LA ORDEN */}

@@ -12,6 +12,9 @@ import {
     Maximize2,
     Wrench,
     Check,
+    RotateCw,
+    ArrowLeftRight,
+    Sparkles,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -32,6 +35,7 @@ export interface ImprimirComprobantesModalProps {
     orden: any;
     empresa?: any;
     currencySymbol?: string;
+    initialView?: 'cliente' | 'sticker' | 'ambos';
 }
 
 export const FORMATOS_STICKER = [
@@ -39,10 +43,21 @@ export const FORMATOS_STICKER = [
     { id: '60x40', label: '60 × 40 mm (Mediana con Código de Barras)', width: 60, height: 40 },
     { id: '70x35', label: '70 × 35 mm (Alargada para Carcasa / Tapa)', width: 70, height: 35 },
     { id: '80x50', label: '80 × 50 mm (Grande con QR y Barras)', width: 80, height: 50 },
+    { id: '30x50', label: '30 × 50 mm (Vertical / Retrato)', width: 30, height: 50 },
+    { id: '40x60', label: '40 × 60 mm (Vertical Mediana)', width: 40, height: 60 },
     { id: 'custom', label: 'Personalizado (Medidas a Medida mm)', width: 50, height: 30 },
 ] as const;
 
+export const ORIENTACIONES_STICKER = [
+    { id: 'horizontal', label: 'Horizontal / Paisaje (Normal)', desc: 'Ancho mayor que alto (50×30 mm)' },
+    { id: 'vertical', label: 'Vertical / Retrato', desc: 'Alto mayor que ancho (30×50 mm)' },
+    { id: 'rotado_90', label: 'Rotado 90° (Horario)', desc: 'Giro para rollos de avance perpendicular' },
+    { id: 'rotado_180', label: 'Rotado 180° (Invertido)', desc: 'Impresión de cabeza' },
+    { id: 'rotado_270', label: 'Rotado 270° (Antihorario)', desc: 'Giro antihorario 90°' },
+] as const;
+
 export const TAMANOS_LETRA = [
+    { id: '6.5', label: '6.5px - Ultra Compacta', value: 6.5 },
     { id: '7', label: '7.0px - Extra Compacta (Mucho Texto)', value: 7 },
     { id: '7.5', label: '7.5px - Micro (Ideal 50×30mm)', value: 7.5 },
     { id: '8', label: '8.0px - Fina y Nítida', value: 8 },
@@ -117,17 +132,189 @@ const extractPatternNumbers = (val: string | null | undefined): number[] => {
     return digits.map(Number);
 };
 
+/**
+ * Función aislada de impresión mediante <iframe> oculto.
+ * Evita el bug donde el árbol DOM completo de Show.tsx (20.000px de altura)
+ * genera 24 páginas y encabezados/pies de página de Chrome con URL y número de página.
+ */
+function printViaIframe(
+    contentHtml: string,
+    pageWidthMm: number,
+    pageHeightMm: number | 'auto',
+    copies: number = 1,
+    rotationDeg: number = 0,
+    docTitle: string = 'FixSale_Comprobante'
+) {
+    const existing = document.getElementById('fixsale-print-iframe');
+    if (existing && existing.parentNode) {
+        existing.parentNode.removeChild(existing);
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'fixsale-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.top = '-10000px';
+    iframe.style.left = '-10000px';
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    iframe.style.border = 'none';
+    iframe.style.opacity = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    let pagesHtml = '';
+    const numCopies = Math.max(1, copies);
+    for (let i = 0; i < numCopies; i++) {
+        pagesHtml += `<div class="fixsale-print-page">${contentHtml}</div>`;
+    }
+
+    const pageSizeCss = pageHeightMm === 'auto'
+        ? `${pageWidthMm}mm auto`
+        : `${pageWidthMm}mm ${pageHeightMm}mm`;
+
+    let rotationCss = '';
+    if (rotationDeg === 90) {
+        rotationCss = `
+            .fixsale-print-page > div {
+                transform: rotate(90deg) translateY(-${pageWidthMm}mm) !important;
+                transform-origin: top left !important;
+            }
+        `;
+    } else if (rotationDeg === 180) {
+        rotationCss = `
+            .fixsale-print-page > div {
+                transform: rotate(180deg) !important;
+                transform-origin: center center !important;
+            }
+        `;
+    } else if (rotationDeg === 270) {
+        rotationCss = `
+            .fixsale-print-page > div {
+                transform: rotate(270deg) translateX(-${pageHeightMm}mm) !important;
+                transform-origin: top left !important;
+            }
+        `;
+    }
+
+    const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>${docTitle}</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            width: ${pageWidthMm}mm !important;
+        }
+        @page {
+            size: ${pageSizeCss} !important;
+            margin: 0mm !important;
+        }
+        @media print {
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .fixsale-print-page {
+                page-break-after: always !important;
+                break-after: page !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            .fixsale-print-page:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
+            }
+        }
+        .fixsale-print-page {
+            width: ${pageWidthMm}mm;
+            ${pageHeightMm !== 'auto' ? `height: ${pageHeightMm}mm; max-height: ${pageHeightMm}mm;` : ''}
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: stretch;
+            align-items: stretch;
+            position: relative;
+        }
+        ${rotationCss}
+    </style>
+</head>
+<body>
+    ${pagesHtml}
+</body>
+</html>`;
+
+    doc.open();
+    doc.write(fullHtml);
+    doc.close();
+
+    const doPrint = () => {
+        try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+        } catch (err) {
+            console.error('[FixSale Print Error]', err);
+        }
+    };
+
+    const images = iframe.contentDocument?.images;
+    if (images && images.length > 0) {
+        let loaded = 0;
+        let triggered = false;
+        const checkDone = () => {
+            if (!triggered) {
+                triggered = true;
+                setTimeout(doPrint, 100);
+            }
+        };
+        for (let i = 0; i < images.length; i++) {
+            if (images[i].complete) {
+                loaded++;
+            } else {
+                images[i].onload = () => {
+                    loaded++;
+                    if (loaded >= images.length) checkDone();
+                };
+                images[i].onerror = () => {
+                    loaded++;
+                    if (loaded >= images.length) checkDone();
+                };
+            }
+        }
+        if (loaded >= images.length) {
+            setTimeout(checkDone, 100);
+        } else {
+            setTimeout(checkDone, 700);
+        }
+    } else {
+        setTimeout(doPrint, 150);
+    }
+}
+
 export default function ImprimirComprobantesModal({
     open,
     onOpenChange,
     orden,
     empresa,
     currencySymbol = '$',
+    initialView = 'cliente',
 }: ImprimirComprobantesModalProps) {
     if (!open || !orden) return null;
 
     const { __ } = useTranslate();
-
 
     // ─────────────────────────────────────────────────────────────
     // COLUMNA 1: TICKET PARA EL CLIENTE (80MM POS)
@@ -140,9 +327,10 @@ export default function ImprimirComprobantesModal({
     const [tipoTicketTecnico, setTipoTicketTecnico] = useState<'sticker' | 'ficha_80mm'>('sticker');
     const [copiasSticker, setCopiasSticker] = useState<number>(1);
     const [formatoStickerId, setFormatoStickerId] = useState<string>('50x30');
+    const [orientacionSticker, setOrientacionSticker] = useState<'horizontal' | 'vertical' | 'rotado_90' | 'rotado_180' | 'rotado_270'>('horizontal');
     const [customWidth, setCustomWidth] = useState<number>(50);
     const [customHeight, setCustomHeight] = useState<number>(30);
-    const [fontSizeId, setFontSizeId] = useState<string>('8.5');
+    const [fontSizeId, setFontSizeId] = useState<string>('7.5');
 
     // Switches de campos del ticket técnico / sticker
     const [showEmpresa, setShowEmpresa] = useState<boolean>(true);
@@ -165,7 +353,7 @@ export default function ImprimirComprobantesModal({
     const [customObsText, setCustomObsText] = useState<string>(defaultObs);
     const [labelObsTitle, setLabelObsTitle] = useState<string>('Observaciones');
 
-    // Cargar y persistir configuración del ticket técnico en localStorage
+    // Cargar configuración guardada del sticker en localStorage
     useEffect(() => {
         try {
             const saved = localStorage.getItem('fixsale_etiqueta_termica_config');
@@ -173,6 +361,7 @@ export default function ImprimirComprobantesModal({
                 const p = JSON.parse(saved);
                 if (p.tipoTicketTecnico) setTipoTicketTecnico(p.tipoTicketTecnico);
                 if (p.formatoId) setFormatoStickerId(p.formatoId);
+                if (p.orientacionSticker) setOrientacionSticker(p.orientacionSticker);
                 if (p.customWidth) setCustomWidth(p.customWidth);
                 if (p.customHeight) setCustomHeight(p.customHeight);
                 if (p.fontSizeId) setFontSizeId(p.fontSizeId);
@@ -193,6 +382,7 @@ export default function ImprimirComprobantesModal({
         } catch {}
     }, []);
 
+    // Guardar preferencias en caliente
     const saveStickerPreferences = () => {
         try {
             localStorage.setItem(
@@ -200,6 +390,7 @@ export default function ImprimirComprobantesModal({
                 JSON.stringify({
                     tipoTicketTecnico,
                     formatoId: formatoStickerId,
+                    orientacionSticker,
                     customWidth,
                     customHeight,
                     fontSizeId,
@@ -221,11 +412,35 @@ export default function ImprimirComprobantesModal({
         } catch {}
     };
 
-    // Dimensiones activas del sticker en milímetros
+    useEffect(() => {
+        saveStickerPreferences();
+    }, [
+        tipoTicketTecnico,
+        formatoStickerId,
+        orientacionSticker,
+        customWidth,
+        customHeight,
+        fontSizeId,
+        showEmpresa,
+        showNumeroOrden,
+        showCliente,
+        showTelefono,
+        showEquipo,
+        showPin,
+        showObservaciones,
+        showFalla,
+        showBarcode,
+        showQr,
+        showFecha,
+        showTecnico,
+        labelObsTitle,
+    ]);
+
+    // Dimensiones activas del sticker
     const { stickerWidth, stickerHeight } = useMemo(() => {
         if (formatoStickerId === 'custom') {
             return {
-                stickerWidth: Math.max(30, Math.min(120, customWidth || 50)),
+                stickerWidth: Math.max(25, Math.min(150, customWidth || 50)),
                 stickerHeight: Math.max(20, Math.min(150, customHeight || 30)),
             };
         }
@@ -235,6 +450,45 @@ export default function ImprimirComprobantesModal({
             stickerHeight: found?.height || 30,
         };
     }, [formatoStickerId, customWidth, customHeight]);
+
+    // Parámetros efectivos de impresión según orientación
+    const printParams = useMemo(() => {
+        if (orientacionSticker === 'rotado_90') {
+            return {
+                pageWidthMm: stickerHeight,
+                pageHeightMm: stickerWidth,
+                rotationDeg: 90,
+            };
+        }
+        if (orientacionSticker === 'rotado_270') {
+            return {
+                pageWidthMm: stickerHeight,
+                pageHeightMm: stickerWidth,
+                rotationDeg: 270,
+            };
+        }
+        if (orientacionSticker === 'rotado_180') {
+            return {
+                pageWidthMm: stickerWidth,
+                pageHeightMm: stickerHeight,
+                rotationDeg: 180,
+            };
+        }
+        return {
+            pageWidthMm: stickerWidth,
+            pageHeightMm: stickerHeight,
+            rotationDeg: 0,
+        };
+    }, [stickerWidth, stickerHeight, orientacionSticker]);
+
+    // Invertir medidas (Ancho ↔ Alto)
+    const handleSwapDimensions = () => {
+        const newW = stickerHeight;
+        const newH = stickerWidth;
+        setFormatoStickerId('custom');
+        setCustomWidth(newW);
+        setCustomHeight(newH);
+    };
 
     // ─────────────────────────────────────────────────────────────
     // DATOS NORMALIZADOS DE LA ORDEN Y EMPRESA
@@ -321,83 +575,70 @@ export default function ImprimirComprobantesModal({
         return `${window.location.origin}/reparacion/${empId}/consultar?orden=${folio}`;
     }, [orden?.empresa_id, empresaInfo?.id, folio]);
 
-    // Estado de destino activo de impresión nativa (para evitar que Chromium aísle iframes y use tamaño Carta)
-    const [activePrintTarget, setActivePrintTarget] = useState<'cliente' | 'tecnico_sticker' | 'tecnico_ficha' | null>(null);
-    const [isPrintingBoth, setIsPrintingBoth] = useState<boolean>(false);
-
-    // Escuchar el evento nativo afterprint del navegador para limpiar estilos o encadenar impresión
-    useEffect(() => {
-        const handleAfterPrint = () => {
-            if (isPrintingBoth) {
-                setIsPrintingBoth(false);
-                setTimeout(() => {
-                    setActivePrintTarget(tipoTicketTecnico === 'sticker' ? 'tecnico_sticker' : 'tecnico_ficha');
-                    setTimeout(() => {
-                        window.print();
-                    }, 250);
-                }, 350);
-            } else {
-                setActivePrintTarget(null);
-            }
-        };
-
-        window.addEventListener('afterprint', handleAfterPrint);
-        return () => {
-            window.removeEventListener('afterprint', handleAfterPrint);
-        };
-    }, [isPrintingBoth, tipoTicketTecnico]);
-
-    // Auto-guardado en caliente de preferencias en localStorage
-    useEffect(() => {
-        saveStickerPreferences();
-    }, [
-        tipoTicketTecnico,
-        formatoStickerId,
-        customWidth,
-        customHeight,
-        fontSizeId,
-        showEmpresa,
-        showNumeroOrden,
-        showCliente,
-        showTelefono,
-        showEquipo,
-        showPin,
-        showObservaciones,
-        showFalla,
-        showBarcode,
-        showQr,
-        showFecha,
-        showTecnico,
-        labelObsTitle,
-    ]);
-
+    // ─────────────────────────────────────────────────────────────
+    // ACCIONES DE IMPRESIÓN (MEDIANTE IFRAME AISLADO - STRICT 1 PÁGINA)
+    // ─────────────────────────────────────────────────────────────
     const handlePrintClientTicket = () => {
         saveStickerPreferences();
-        setActivePrintTarget('cliente');
-        setTimeout(() => {
-            window.print();
-        }, 150);
+        const container = document.getElementById('fixsale-client-ticket-render');
+        if (!container) return;
+        printViaIframe(
+            container.innerHTML,
+            80,
+            'auto',
+            copiasTicket,
+            0,
+            `Ticket_Cliente_${folio}`
+        );
     };
 
     const handlePrintSticker = () => {
         saveStickerPreferences();
-        setActivePrintTarget(tipoTicketTecnico === 'sticker' ? 'tecnico_sticker' : 'tecnico_ficha');
-        setTimeout(() => {
-            window.print();
-        }, 150);
+        if (tipoTicketTecnico === 'sticker') {
+            const container = document.getElementById('fixsale-sticker-render');
+            if (!container) return;
+            printViaIframe(
+                container.innerHTML,
+                printParams.pageWidthMm,
+                printParams.pageHeightMm,
+                copiasSticker,
+                printParams.rotationDeg,
+                `Sticker_${folio}`
+            );
+        } else {
+            const container = document.getElementById('fixsale-ficha-render');
+            if (!container) return;
+            printViaIframe(
+                container.innerHTML,
+                80,
+                'auto',
+                copiasSticker,
+                0,
+                `Ficha_Taller_${folio}`
+            );
+        }
     };
 
     const handlePrintBoth = () => {
         saveStickerPreferences();
-        setIsPrintingBoth(true);
-        setActivePrintTarget('cliente');
+        const ticketContainer = document.getElementById('fixsale-client-ticket-render');
+        if (ticketContainer) {
+            printViaIframe(
+                ticketContainer.innerHTML,
+                80,
+                'auto',
+                copiasTicket,
+                0,
+                `Ticket_Cliente_${folio}`
+            );
+        }
         setTimeout(() => {
-            window.print();
-        }, 150);
+            handlePrintSticker();
+        }, 900);
     };
 
     // ─────────────────────────────────────────────────────────────
-    // RENDERIZADO DEL TICKET DE CLIENTE (OFICIAL 80MM POS)
+    // RENDERIZADO DEL TICKET DE CLIENTE (80MM POS)
     // ─────────────────────────────────────────────────────────────
     const renderTicketClienteContent = (isForPrint = false) => (
         <div style={{ fontFamily: 'Courier New, Courier, monospace, Arial, sans-serif', color: '#000000', fontSize: '11px', lineHeight: 1.25, padding: isForPrint ? '0' : '12px', background: '#ffffff', userSelect: 'none' }}>
@@ -423,7 +664,7 @@ export default function ImprimirComprobantesModal({
                 )}
             </div>
 
-            {/* DIRECCIÓN Y TELÉFONO CENTRADOS */}
+            {/* DIRECCIÓN Y TELÉFONO */}
             {empresaInfo?.direccion && (
                 <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9px', textTransform: 'uppercase', padding: '0 4px', lineHeight: 1.2 }}>
                     {empresaInfo.direccion}
@@ -459,7 +700,7 @@ export default function ImprimirComprobantesModal({
                 <div>ACCESORIOS: <span style={{ fontWeight: 'normal' }}>{orden.accesorios_incluidos || 'no deja'}</span></div>
             </div>
 
-            {/* BANNER COSTO REPARACION */}
+            {/* COSTO REPARACION */}
             <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10px', padding: '3px 0', marginTop: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 COSTO REPARACION
             </div>
@@ -478,7 +719,7 @@ export default function ImprimirComprobantesModal({
                 </div>
             </div>
 
-            {/* BANNER FECHA DE RECEPCION */}
+            {/* FECHAS */}
             <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10px', padding: '3px 0', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 FECHA DE RECEPCION
             </div>
@@ -486,7 +727,6 @@ export default function ImprimirComprobantesModal({
                 {formatDate(orden.fecha_recepcion)}
             </div>
 
-            {/* BANNER FECHA APROX DE ENTREGA */}
             <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10px', padding: '3px 0', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 FECHA APROX DE ENTREGA
             </div>
@@ -494,7 +734,7 @@ export default function ImprimirComprobantesModal({
                 {formatFullSpanishDate(orden.fecha_estimada_entrega || orden.fecha_prometida || orden.fecha_recepcion)}
             </div>
 
-            {/* BANNER CONTRASEÑA */}
+            {/* CONTRASEÑA O PATRÓN */}
             <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10px', padding: '3px 0', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 CONTRASEÑA
             </div>
@@ -508,7 +748,7 @@ export default function ImprimirComprobantesModal({
                 )}
             </div>
 
-            {/* TÉCNICO ASIGNADO */}
+            {/* TÉCNICO */}
             {tecnicoNombre && (
                 <div style={{ borderTop: '1px dashed #000000', marginTop: '6px', paddingTop: '4px', textAlign: 'center' }}>
                     <div style={{ fontSize: '8.5px', textTransform: 'uppercase', fontWeight: 'bold', color: '#4b5563' }}>TÉCNICO ASIGNADO:</div>
@@ -548,11 +788,10 @@ export default function ImprimirComprobantesModal({
     );
 
     // ─────────────────────────────────────────────────────────────
-    // RENDERIZADO DEL TICKET PARA TÉCNICO / TALLER (PERSONALIZABLE)
+    // RENDERIZADO DEL TICKET PARA TÉCNICO (STICKER O FICHA 80MM)
     // ─────────────────────────────────────────────────────────────
     const renderTicketTecnicoContent = (isForPrint = false) => {
         if (tipoTicketTecnico === 'ficha_80mm') {
-            // Formato Ficha de Trabajo Taller en 80mm
             return (
                 <div style={{ fontFamily: 'Courier New, Courier, monospace, Arial, sans-serif', color: '#000000', fontSize: '10.5px', lineHeight: 1.25, padding: isForPrint ? '0' : '12px', background: '#ffffff', userSelect: 'none' }}>
                     <div style={{ textAlign: 'center', fontWeight: 900, textTransform: 'uppercase', fontSize: '11.5px', background: '#000000', color: '#ffffff', padding: '3px 0' }}>
@@ -603,10 +842,10 @@ export default function ImprimirComprobantesModal({
             );
         }
 
-        // Formato Sticker Adhesivo Físico (Estilo Imagen 2)
-        const isSmallLabel = stickerHeight <= 32 || stickerWidth <= 50;
-        const fontPx = parseFloat(fontSizeId) || (isSmallLabel ? 7.5 : 8.5);
-        const paddingMm = isSmallLabel ? '1.2mm 1.8mm' : '1.8mm 2.2mm';
+        // Formato Sticker Físico Compacto (Diseñado para 50×30 mm sin desbordes)
+        const isSmallLabel = stickerHeight <= 35 || stickerWidth <= 50;
+        const fontPx = parseFloat(fontSizeId) || (isSmallLabel ? 7.2 : 8.5);
+        const paddingMm = isSmallLabel ? '1mm 1.5mm' : '1.8mm 2.2mm';
 
         return (
             <div
@@ -616,7 +855,7 @@ export default function ImprimirComprobantesModal({
                     maxHeight: `${stickerHeight}mm`,
                     padding: paddingMm,
                     fontSize: `${fontPx}px`,
-                    lineHeight: '1.14',
+                    lineHeight: '1.12',
                     fontFamily: 'Arial, Helvetica, sans-serif',
                     color: '#000000',
                     backgroundColor: '#ffffff',
@@ -627,20 +866,23 @@ export default function ImprimirComprobantesModal({
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
+                    pageBreakInside: 'avoid',
+                    breakInside: 'avoid',
                 }}
             >
-                <div style={{ overflow: 'hidden' }}>
-                    {/* CABECERA: EMPRESA Y REPARACIÓN N° */}
+                <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.5px' }}>
+                    {/* CABECERA: EMPRESA Y FOLIO EN UNA SOLA LÍNEA */}
                     {(showEmpresa || showNumeroOrden) && (
                         <div
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
-                                paddingBottom: '1.5px',
-                                marginBottom: '2px',
+                                paddingBottom: '1px',
+                                marginBottom: '1px',
                                 borderBottom: '1px solid #000000',
-                                gap: '4px',
+                                gap: '2px',
+                                overflow: 'hidden',
                             }}
                         >
                             {showEmpresa && (
@@ -648,7 +890,7 @@ export default function ImprimirComprobantesModal({
                                     style={{
                                         fontWeight: 900,
                                         textTransform: 'uppercase',
-                                        fontSize: `${fontPx + 1}px`,
+                                        fontSize: `${fontPx + 0.8}px`,
                                         whiteSpace: 'nowrap',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -662,114 +904,122 @@ export default function ImprimirComprobantesModal({
                                 <span
                                     style={{
                                         fontWeight: 900,
-                                        fontSize: `${fontPx + 1}px`,
+                                        fontSize: `${fontPx + 0.8}px`,
                                         marginLeft: 'auto',
                                         whiteSpace: 'nowrap',
                                     }}
                                 >
-                                    Reparación N° {folio}
+                                    Rep. N° {folio}
                                 </span>
                             )}
                         </div>
                     )}
 
-                    {/* FILAS DE INFORMACIÓN TÉCNICA */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                        {showCliente && (
-                            <div style={{ wordBreak: 'break-word' }}>
-                                <strong>Cliente: </strong>
-                                <span style={{ textTransform: 'uppercase', fontWeight: 600 }}>{clienteNombre}</span>
-                            </div>
-                        )}
+                    {/* FILAS DE INFORMACIÓN TÉCNICA CON DENSIDAD COMPACTA */}
+                    {showCliente && (
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <strong>Cliente: </strong>
+                            <span style={{ textTransform: 'uppercase', fontWeight: 600 }}>{clienteNombre}</span>
+                            {showTelefono && clienteTelefono && (
+                                <>
+                                    <strong style={{ marginLeft: '3px' }}>| Tel: </strong>
+                                    <span style={{ fontFamily: 'monospace' }}>{clienteTelefono}</span>
+                                </>
+                            )}
+                        </div>
+                    )}
 
-                        {showTelefono && clienteTelefono && (
-                            <div>
-                                <strong>Teléfono: </strong>
-                                <span style={{ fontFamily: 'monospace' }}>{clienteTelefono}</span>
-                            </div>
-                        )}
+                    {!showCliente && showTelefono && clienteTelefono && (
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <strong>Tel: </strong>
+                            <span style={{ fontFamily: 'monospace' }}>{clienteTelefono}</span>
+                        </div>
+                    )}
 
-                        {(showEquipo || (showPin && pinDisplay)) && (
-                            <div style={{ wordBreak: 'break-word' }}>
-                                {showEquipo && (
-                                    <>
-                                        <strong>Marca: </strong>
-                                        <span style={{ textTransform: 'uppercase', fontWeight: 600 }}>{equipoDisplay}</span>
-                                    </>
-                                )}
-                                {showPin && pinDisplay && (
-                                    <>
-                                        <strong>{pinDisplay.toLowerCase().startsWith('patrón') || pinDisplay.toLowerCase().startsWith('patron') ? ' | ' : ' | PIN: '}</strong>
-                                        <span style={{ fontFamily: 'monospace', fontWeight: 'bold', background: '#f1f5f9', padding: '0 2px', whiteSpace: 'nowrap' }}>
-                                            {pinDisplay}
-                                        </span>
-                                    </>
-                                )}
-                            </div>
-                        )}
+                    {(showEquipo || (showPin && pinDisplay)) && (
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {showEquipo && (
+                                <>
+                                    <strong>Marca: </strong>
+                                    <span style={{ textTransform: 'uppercase', fontWeight: 600 }}>{equipoDisplay}</span>
+                                </>
+                            )}
+                            {showPin && pinDisplay && (
+                                <>
+                                    <strong style={{ marginLeft: showEquipo ? '3px' : '0' }}>| PIN: </strong>
+                                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', background: '#f1f5f9', padding: '0 2px' }}>
+                                        {pinDisplay}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    )}
 
-                        {showObservaciones && obsDisplay && (
-                            <div style={{ wordBreak: 'break-word' }}>
-                                <strong>{labelObsTitle}: </strong>
-                                <span style={{ textTransform: 'uppercase' }}>{obsDisplay}</span>
-                            </div>
-                        )}
+                    {showObservaciones && obsDisplay && (
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <strong>{labelObsTitle}: </strong>
+                            <span style={{ textTransform: 'uppercase' }}>{obsDisplay}</span>
+                        </div>
+                    )}
 
-                        {showFalla && fallaDisplay && (
-                            <div style={{ wordBreak: 'break-word' }}>
-                                <strong>Falla: </strong>
-                                <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{fallaDisplay}</span>
-                            </div>
-                        )}
+                    {showFalla && fallaDisplay && (
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <strong>Falla: </strong>
+                            <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{fallaDisplay}</span>
+                        </div>
+                    )}
 
-                        {showFecha && fechaCortaDisplay && (
-                            <div>
-                                <strong>Recibido: </strong>
-                                <span>{fechaCortaDisplay}</span>
-                            </div>
-                        )}
-
-                        {showTecnico && tecnicoNombre && (
-                            <div style={{ wordBreak: 'break-word' }}>
-                                <strong>Técnico: </strong>
-                                <span>{tecnicoNombre}</span>
-                            </div>
-                        )}
-                    </div>
+                    {((showFecha && fechaCortaDisplay) || (showTecnico && tecnicoNombre)) && (
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {showFecha && fechaCortaDisplay && (
+                                <>
+                                    <strong>Rec: </strong>
+                                    <span>{fechaCortaDisplay}</span>
+                                </>
+                            )}
+                            {showTecnico && tecnicoNombre && (
+                                <>
+                                    <strong style={{ marginLeft: showFecha && fechaCortaDisplay ? '4px' : '0' }}>| Téc: </strong>
+                                    <span>{tecnicoNombre}</span>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                {/* CÓDIGO DE BARRAS / QR INFERIOR */}
+                {/* CÓDIGO DE BARRAS / QR INFERIOR (AJUSTADO PARA NUNCA SALIRSE DEL 30MM) */}
                 {(showBarcode || showQr) && (
                     <div
                         style={{
-                            marginTop: '1px',
-                            paddingTop: '2px',
-                            borderTop: '1px dashed rgba(0,0,0,0.4)',
+                            marginTop: 'auto',
+                            paddingTop: '1px',
+                            borderTop: '1px dashed rgba(0,0,0,0.35)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            gap: '4px',
+                            gap: '2px',
                             overflow: 'hidden',
                             flexShrink: 0,
+                            maxHeight: isSmallLabel ? '24px' : '32px',
                         }}
                     >
                         {showBarcode && (
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                                <div style={{ transform: isSmallLabel ? 'scale(0.85)' : 'scale(0.92)', transformOrigin: 'center', maxHeight: isSmallLabel ? '15px' : '20px', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
+                                <div style={{ maxHeight: isSmallLabel ? '13px' : '18px', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
                                     <BarcodeSVG
                                         value={folio}
-                                        width={isSmallLabel ? 0.9 : 1.1}
-                                        height={isSmallLabel ? 14 : 18}
+                                        width={isSmallLabel ? 0.85 : 1.1}
+                                        height={isSmallLabel ? 12 : 16}
                                         displayValue={false}
                                     />
                                 </div>
-                                <span style={{ fontSize: '6px', fontFamily: 'monospace', fontWeight: 'bold', lineHeight: 1, marginTop: '1px' }}>{folio}</span>
+                                <span style={{ fontSize: '5.5px', fontFamily: 'monospace', fontWeight: 'bold', lineHeight: 1, marginTop: '0.5px' }}>{folio}</span>
                             </div>
                         )}
 
                         {showQr && (
                             <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <QRCodeSVG value={trackingUrl} size={isSmallLabel ? 22 : 28} />
+                                <QRCodeSVG value={trackingUrl} size={isSmallLabel ? 20 : 26} />
                             </div>
                         )}
                     </div>
@@ -780,167 +1030,34 @@ export default function ImprimirComprobantesModal({
 
     return (
         <>
-            {/* =========================================================================
-                PORTAL DE IMPRESIÓN NATIVO EN EL DOCUMENTO PRINCIPAL
-                (Garantiza que Chromium adopte el tamaño @page exacto y NO hoja Carta)
-                ========================================================================= */}
-            {activePrintTarget === 'cliente' && (
-                <div id="fixsale-active-print-zone" className="hidden print:block">
-                    <style>{`
-                        @media print {
-                            * {
-                                -webkit-print-color-adjust: exact !important;
-                                print-color-adjust: exact !important;
-                                color-adjust: exact !important;
-                            }
-                            body * {
-                                visibility: hidden !important;
-                            }
-                            #fixsale-active-print-zone, #fixsale-active-print-zone * {
-                                visibility: visible !important;
-                            }
-                            #fixsale-active-print-zone {
-                                display: block !important;
-                                position: absolute !important;
-                                left: 0 !important;
-                                top: 0 !important;
-                                width: 80mm !important;
-                                max-width: 80mm !important;
-                                margin: 0 !important;
-                                padding: 0 !important;
-                                background: #ffffff !important;
-                                color: #000000 !important;
-                            }
-                            .fixsale-ticket-copy-page {
-                                width: 80mm !important;
-                                page-break-after: always !important;
-                                break-after: page !important;
-                                margin: 0 !important;
-                                padding: 2mm !important;
-                                box-sizing: border-box !important;
-                            }
-                            @page {
-                                size: 80mm auto !important;
-                                margin: 0mm !important;
-                            }
-                        }
-                    `}</style>
-                    {Array.from({ length: Math.max(1, copiasTicket) }).map((_, idx) => (
-                        <div key={`client-ticket-copy-${idx}`} className="fixsale-ticket-copy-page">
-                            {renderTicketClienteContent(true)}
-                        </div>
-                    ))}
+            {/* CONTENEDOR OCULTO OFFSCREEN PARA RENDERIZAR SVGS Y DOM PARA IFRAME PRINT */}
+            <div
+                style={{
+                    position: 'fixed',
+                    left: '-9999px',
+                    top: '-9999px',
+                    width: '1px',
+                    height: '1px',
+                    opacity: 0,
+                    overflow: 'hidden',
+                    pointerEvents: 'none',
+                }}
+                aria-hidden="true"
+            >
+                <div id="fixsale-client-ticket-render">
+                    {renderTicketClienteContent(true)}
                 </div>
-            )}
-
-            {activePrintTarget === 'tecnico_sticker' && (
-                <div id="fixsale-active-print-zone" className="hidden print:block">
-                    <style>{`
-                        @media print {
-                            * {
-                                -webkit-print-color-adjust: exact !important;
-                                print-color-adjust: exact !important;
-                                color-adjust: exact !important;
-                            }
-                            body * {
-                                visibility: hidden !important;
-                            }
-                            #fixsale-active-print-zone, #fixsale-active-print-zone * {
-                                visibility: visible !important;
-                            }
-                            #fixsale-active-print-zone {
-                                display: block !important;
-                                position: absolute !important;
-                                left: 0 !important;
-                                top: 0 !important;
-                                width: ${stickerWidth}mm !important;
-                                max-width: ${stickerWidth}mm !important;
-                                margin: 0 !important;
-                                padding: 0 !important;
-                                background: #ffffff !important;
-                                color: #000000 !important;
-                            }
-                            .fixsale-sticker-copy-page {
-                                width: ${stickerWidth}mm !important;
-                                height: ${stickerHeight}mm !important;
-                                max-height: ${stickerHeight}mm !important;
-                                page-break-after: always !important;
-                                break-after: page !important;
-                                margin: 0 !important;
-                                padding: 0 !important;
-                                box-sizing: border-box !important;
-                                overflow: hidden !important;
-                                display: flex !important;
-                                flex-direction: column !important;
-                            }
-                            @page {
-                                size: ${stickerWidth}mm ${stickerHeight}mm !important;
-                                margin: 0mm !important;
-                            }
-                        }
-                    `}</style>
-                    {Array.from({ length: Math.max(1, copiasSticker) }).map((_, idx) => (
-                        <div key={`sticker-copy-${idx}`} className="fixsale-sticker-copy-page">
-                            {renderTicketTecnicoContent(true)}
-                        </div>
-                    ))}
+                <div id="fixsale-sticker-render">
+                    {renderTicketTecnicoContent(true)}
                 </div>
-            )}
-
-            {activePrintTarget === 'tecnico_ficha' && (
-                <div id="fixsale-active-print-zone" className="hidden print:block">
-                    <style>{`
-                        @media print {
-                            * {
-                                -webkit-print-color-adjust: exact !important;
-                                print-color-adjust: exact !important;
-                                color-adjust: exact !important;
-                            }
-                            body * {
-                                visibility: hidden !important;
-                            }
-                            #fixsale-active-print-zone, #fixsale-active-print-zone * {
-                                visibility: visible !important;
-                            }
-                            #fixsale-active-print-zone {
-                                display: block !important;
-                                position: absolute !important;
-                                left: 0 !important;
-                                top: 0 !important;
-                                width: 80mm !important;
-                                max-width: 80mm !important;
-                                margin: 0 !important;
-                                padding: 0 !important;
-                                background: #ffffff !important;
-                                color: #000000 !important;
-                            }
-                            .fixsale-ficha-copy-page {
-                                width: 80mm !important;
-                                page-break-after: always !important;
-                                break-after: page !important;
-                                margin: 0 !important;
-                                padding: 2mm !important;
-                                box-sizing: border-box !important;
-                            }
-                            @page {
-                                size: 80mm auto !important;
-                                margin: 0mm !important;
-                            }
-                        }
-                    `}</style>
-                    {Array.from({ length: Math.max(1, copiasSticker) }).map((_, idx) => (
-                        <div key={`ficha-copy-${idx}`} className="fixsale-ficha-copy-page">
-                            {renderTicketTecnicoContent(true)}
-                        </div>
-                    ))}
+                <div id="fixsale-ficha-render">
+                    {renderTicketTecnicoContent(true)}
                 </div>
-            )}
+            </div>
 
-            {/* ─────────────────────────────────────────────────────────────
-                VENTANA MODAL UNIFICADA: COL-6 (CLIENTE) Y COL-6 (TÉCNICO)
-                ───────────────────────────────────────────────────────────── */}
+            {/* MODAL DIALOG PRINCIPAL */}
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-6xl max-h-[94vh] overflow-y-auto p-5 sm:p-7 rounded-3xl">
+                <DialogContent className="sm:max-w-6xl max-h-[94vh] overflow-y-auto p-4 sm:p-6 rounded-3xl">
                     <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
                         <DialogTitle className="flex items-center gap-3 text-lg font-bold text-slate-900 dark:text-slate-100">
                             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600/20 via-indigo-600/20 to-purple-600/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
@@ -951,20 +1068,26 @@ export default function ImprimirComprobantesModal({
                                     {__('Imprimir Comprobantes de Reparación')}
                                 </h3>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                                    {__('Ticket para el cliente (80mm) y comprobante personalizable para el técnico en una sola ventana.')}
+                                    {__('Ticket para el cliente (80mm) y comprobante / sticker para el técnico con orientación ajustable.')}
                                 </p>
                             </div>
                         </DialogTitle>
                     </DialogHeader>
 
-                    {/* GRID PRINCIPAL DE 2 COLUMNAS (COL-6 Y COL-6) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
+                    {/* GRID DE 2 COLUMNAS (CLIENTE Y TÉCNICO) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pt-2">
                         {/* ═════════════════════════════════════════════════════════════
-                            COLUMNA 1 (COL-6): TICKET PARA EL CLIENTE (80MM POS)
+                            COLUMNA 1: TICKET PARA EL CLIENTE (80MM POS)
                             ═════════════════════════════════════════════════════════════ */}
-                        <div className="lg:col-span-6 flex flex-col justify-between space-y-4 bg-slate-50/70 dark:bg-slate-900/40 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                        <div
+                            className={cn(
+                                "lg:col-span-6 flex flex-col justify-between space-y-4 bg-slate-50/70 dark:bg-slate-900/40 p-4 sm:p-5 rounded-2xl border transition-all",
+                                initialView === 'cliente'
+                                    ? "border-blue-400/80 ring-2 ring-blue-500/20 shadow-md"
+                                    : "border-slate-200/80 dark:border-slate-800"
+                            )}
+                        >
                             <div className="space-y-4">
-                                {/* CABECERA DE LA COLUMNA 1 */}
                                 <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-slate-800">
                                     <div className="flex items-center gap-2">
                                         <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950/60 flex items-center justify-center text-blue-600 dark:text-blue-400">
@@ -984,7 +1107,7 @@ export default function ImprimirComprobantesModal({
                                     </Badge>
                                 </div>
 
-                                {/* COPIAS A IMPRIMIR */}
+                                {/* COPIAS DEL TICKET */}
                                 <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
                                     <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                                         {__('Copias del Ticket:')}
@@ -1015,12 +1138,12 @@ export default function ImprimirComprobantesModal({
                                     </div>
                                 </div>
 
-                                {/* VISTA PREVIA DEL TICKET (SIMULADA 80MM) */}
+                                {/* VISTA PREVIA DEL TICKET */}
                                 <div className="space-y-1">
                                     <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
                                         {__('VISTA PREVIA TICKET CLIENTE (80MM)')}
                                     </span>
-                                    <div className="p-3 sm:p-4 bg-slate-200/80 dark:bg-slate-950 rounded-2xl flex justify-center max-h-[420px] overflow-y-auto shadow-inner border border-slate-300 dark:border-slate-800">
+                                    <div className="p-3 sm:p-4 bg-slate-200/80 dark:bg-slate-950 rounded-2xl flex justify-center max-h-[380px] overflow-y-auto shadow-inner border border-slate-300 dark:border-slate-800">
                                         <div className="w-[300px] shadow-lg rounded-sm border border-slate-300 bg-white">
                                             {renderTicketClienteContent(false)}
                                         </div>
@@ -1028,25 +1151,30 @@ export default function ImprimirComprobantesModal({
                                 </div>
                             </div>
 
-                            {/* BOTÓN IMPRIMIR TICKET */}
                             <Button
                                 type="button"
-                                onClick={() => handlePrintClientTicket()}
+                                onClick={handlePrintClientTicket}
                                 className="w-full h-11 gap-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md shadow-blue-900/20"
                             >
                                 <Printer className="w-4 h-4" />
                                 {copiasTicket === 1
-                                    ? __('Imprimir Ticket de Cliente')
+                                    ? __('Imprimir Ticket de Cliente (1 sola hoja)')
                                     : __('Imprimir :count Tickets de Cliente', { count: copiasTicket })}
                             </Button>
                         </div>
 
                         {/* ═════════════════════════════════════════════════════════════
-                            COLUMNA 2 (COL-6): TICKET / ETIQUETA PARA TÉCNICO
+                            COLUMNA 2: TICKET / ETIQUETA PARA TÉCNICO (CON ORIENTACIÓN)
                             ═════════════════════════════════════════════════════════════ */}
-                        <div className="lg:col-span-6 flex flex-col justify-between space-y-4 bg-indigo-50/40 dark:bg-indigo-950/20 p-4 sm:p-5 rounded-2xl border border-indigo-200/80 dark:border-indigo-900/60">
+                        <div
+                            className={cn(
+                                "lg:col-span-6 flex flex-col justify-between space-y-4 bg-indigo-50/40 dark:bg-indigo-950/20 p-4 sm:p-5 rounded-2xl border transition-all",
+                                initialView === 'sticker'
+                                    ? "border-indigo-400/80 ring-2 ring-indigo-500/20 shadow-md"
+                                    : "border-indigo-200/80 dark:border-indigo-900/60"
+                            )}
+                        >
                             <div className="space-y-4">
-                                {/* CABECERA DE LA COLUMNA 2 */}
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-indigo-200/60 dark:border-indigo-900/60 gap-2">
                                     <div className="flex items-center gap-2">
                                         <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
@@ -1054,7 +1182,7 @@ export default function ImprimirComprobantesModal({
                                         </div>
                                         <div>
                                             <h4 className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
-                                                {__('2. Ticket para Técnico / Taller')}
+                                                {__('2. Ticket / Sticker para Técnico')}
                                             </h4>
                                             <p className="text-[10.5px] text-slate-500">
                                                 {tipoTicketTecnico === 'sticker'
@@ -1064,7 +1192,7 @@ export default function ImprimirComprobantesModal({
                                         </div>
                                     </div>
 
-                                    {/* SELECTOR DE MODO: STICKER VS FICHA 80MM */}
+                                    {/* MODO: STICKER VS FICHA */}
                                     <div className="flex items-center bg-white dark:bg-slate-900 p-0.5 rounded-lg border border-indigo-200 dark:border-slate-800 text-[10px]">
                                         <button
                                             type="button"
@@ -1093,90 +1221,133 @@ export default function ImprimirComprobantesModal({
                                     </div>
                                 </div>
 
-                                {/* CONTROLES DE FORMATO, TIPOGRAFÍA Y COPIAS */}
-                                <div className="space-y-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-indigo-100 dark:border-slate-800">
+                                {/* CONTROLES DE FORMATO, ORIENTACIÓN Y TIPOGRAFÍA */}
+                                <div className="space-y-2.5 bg-white dark:bg-slate-900 p-3 rounded-xl border border-indigo-100 dark:border-slate-800">
                                     {tipoTicketTecnico === 'sticker' && (
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                            {/* FORMATO MEDIDAS */}
-                                            <div className="space-y-1">
-                                                <Label className="text-[10.5px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                                    <Maximize2 className="w-3 h-3 text-indigo-500" />
-                                                    {__('Medidas:')}
-                                                </Label>
-                                                <Select value={formatoStickerId} onValueChange={setFormatoStickerId}>
-                                                    <SelectTrigger className="h-8 text-xs font-semibold">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {FORMATOS_STICKER.map((f) => (
-                                                            <SelectItem key={f.id} value={f.id} className="text-xs">
-                                                                {f.label}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                        <>
+                                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                                                {/* FORMATO MEDIDAS */}
+                                                <div className="sm:col-span-5 space-y-1">
+                                                    <Label className="text-[10.5px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                                        <Maximize2 className="w-3 h-3 text-indigo-500" />
+                                                        {__('Medidas:')}
+                                                    </Label>
+                                                    <Select value={formatoStickerId} onValueChange={setFormatoStickerId}>
+                                                        <SelectTrigger className="h-8 text-xs font-semibold">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {FORMATOS_STICKER.map((f) => (
+                                                                <SelectItem key={f.id} value={f.id} className="text-xs">
+                                                                    {f.label}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
 
-                                            {/* TAMAÑO DE FUENTE */}
-                                            <div className="space-y-1">
-                                                <Label className="text-[10.5px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                                    <Type className="w-3 h-3 text-indigo-500" />
-                                                    {__('Tamaño Letra:')}
-                                                </Label>
-                                                <Select value={fontSizeId} onValueChange={setFontSizeId}>
-                                                    <SelectTrigger className="h-8 text-xs font-semibold">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {TAMANOS_LETRA.map((t) => (
-                                                            <SelectItem key={t.id} value={t.id} className="text-xs">
-                                                                {t.label}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                                {/* ORIENTACIÓN (HORIZONTAL / VERTICAL / ROTADO 90°) */}
+                                                <div className="sm:col-span-4 space-y-1">
+                                                    <Label className="text-[10.5px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                                                        <span className="flex items-center gap-1">
+                                                            <RotateCw className="w-3 h-3 text-indigo-500" />
+                                                            {__('Orientación:')}
+                                                        </span>
+                                                    </Label>
+                                                    <Select
+                                                        value={orientacionSticker}
+                                                        onValueChange={(val: any) => setOrientacionSticker(val)}
+                                                    >
+                                                        <SelectTrigger className="h-8 text-xs font-semibold">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {ORIENTACIONES_STICKER.map((o) => (
+                                                                <SelectItem key={o.id} value={o.id} className="text-xs">
+                                                                    {o.label}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
 
-                                            {/* COPIAS */}
-                                            <div className="space-y-1">
-                                                <Label className="text-[10.5px] font-bold text-slate-700 dark:text-slate-300">
-                                                    {__('Copias:')}
-                                                </Label>
-                                                <div className="flex items-center gap-1">
+                                                {/* BOTÓN INVERTIR MEDIDAS */}
+                                                <div className="sm:col-span-3 flex items-end">
                                                     <Button
                                                         type="button"
                                                         variant="outline"
-                                                        size="icon"
-                                                        onClick={() => setCopiasSticker((p) => Math.max(1, p - 1))}
-                                                        disabled={copiasSticker <= 1}
-                                                        className="h-8 w-8 rounded-lg"
+                                                        onClick={handleSwapDimensions}
+                                                        className="h-8 w-full text-[10.5px] font-bold border-indigo-200 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 gap-1 px-1.5"
+                                                        title="Invertir Ancho por Alto (50x30 ↔ 30x50)"
                                                     >
-                                                        <Minus className="w-3 h-3" />
-                                                    </Button>
-                                                    <span className="w-7 text-center font-bold text-xs font-mono">
-                                                        {copiasSticker}
-                                                    </span>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={() => setCopiasSticker((p) => Math.min(50, p + 1))}
-                                                        className="h-8 w-8 rounded-lg"
-                                                    >
-                                                        <Plus className="w-3 h-3" />
+                                                        <ArrowLeftRight className="w-3 h-3" />
+                                                        {__('Invertir')}
                                                     </Button>
                                                 </div>
                                             </div>
 
-                                            {/* MEDIDAS MANUALES MM */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                                                {/* TAMAÑO DE FUENTE */}
+                                                <div className="space-y-1">
+                                                    <Label className="text-[10.5px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                                        <Type className="w-3 h-3 text-indigo-500" />
+                                                        {__('Tamaño Letra:')}
+                                                    </Label>
+                                                    <Select value={fontSizeId} onValueChange={setFontSizeId}>
+                                                        <SelectTrigger className="h-8 text-xs font-semibold">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {TAMANOS_LETRA.map((t) => (
+                                                                <SelectItem key={t.id} value={t.id} className="text-xs">
+                                                                    {t.label}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                {/* COPIAS */}
+                                                <div className="space-y-1">
+                                                    <Label className="text-[10.5px] font-bold text-slate-700 dark:text-slate-300">
+                                                        {__('Copias del Sticker:')}
+                                                    </Label>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => setCopiasSticker((p) => Math.max(1, p - 1))}
+                                                            disabled={copiasSticker <= 1}
+                                                            className="h-8 w-8 rounded-lg"
+                                                        >
+                                                            <Minus className="w-3 h-3" />
+                                                        </Button>
+                                                        <span className="w-8 text-center font-bold text-xs font-mono">
+                                                            {copiasSticker}
+                                                        </span>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => setCopiasSticker((p) => Math.min(50, p + 1))}
+                                                            className="h-8 w-8 rounded-lg"
+                                                        >
+                                                            <Plus className="w-3 h-3" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* MEDIDAS PERSONALIZADAS SI APLICA */}
                                             {formatoStickerId === 'custom' && (
-                                                <div className="sm:col-span-3 pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2">
+                                                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2">
                                                     <div>
                                                         <span className="text-[10px] text-slate-500 font-bold block mb-0.5">Ancho (mm):</span>
                                                         <Input
                                                             type="number"
-                                                            min="30"
-                                                            max="120"
+                                                            min="20"
+                                                            max="150"
                                                             value={customWidth}
                                                             onChange={(e) => setCustomWidth(parseInt(e.target.value) || 50)}
                                                             className="h-7 text-xs font-mono"
@@ -1195,7 +1366,7 @@ export default function ImprimirComprobantesModal({
                                                     </div>
                                                 </div>
                                             )}
-                                        </div>
+                                        </>
                                     )}
 
                                     {tipoTicketTecnico === 'ficha_80mm' && (
@@ -1231,7 +1402,7 @@ export default function ImprimirComprobantesModal({
                                     )}
                                 </div>
 
-                                {/* SWITCHES DE CONTENIDO PERSONALIZABLES (SOLO MODO STICKER) */}
+                                {/* CAMPOS PERSONALIZADOS DEL STICKER */}
                                 {tipoTicketTecnico === 'sticker' && (
                                     <div className="space-y-1.5">
                                         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
@@ -1290,7 +1461,7 @@ export default function ImprimirComprobantesModal({
                                     </div>
                                 )}
 
-                                {/* NOTA EDITABLE RÁPIDA (EN VIVO ANTES DE IMPRIMIR) */}
+                                {/* NOTA RÁPIDA EDITABLE */}
                                 {tipoTicketTecnico === 'sticker' && showObservaciones && (
                                     <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-2 rounded-xl border border-indigo-100 dark:border-slate-800">
                                         <button
@@ -1310,7 +1481,7 @@ export default function ImprimirComprobantesModal({
                                     </div>
                                 )}
 
-                                {/* VISTA PREVIA DEL TICKET / STICKER TÉCNICO */}
+                                {/* VISTA PREVIA DEL STICKER CON ROTACIÓN VISUAL */}
                                 <div className="space-y-1">
                                     <div className="flex items-center justify-between">
                                         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
@@ -1319,19 +1490,26 @@ export default function ImprimirComprobantesModal({
                                                 : `VISTA PREVIA FICHA TALLER (80MM)`}
                                         </span>
                                         {tipoTicketTecnico === 'sticker' && (
-                                            <span className="text-[9.5px] font-mono text-indigo-600 dark:text-indigo-400 font-bold">
-                                                Letra: {fontSizeId}px
+                                            <span className="text-[9.5px] font-mono text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1">
+                                                <span>Salida: {printParams.pageWidthMm}×{printParams.pageHeightMm}mm</span>
+                                                <span>• Letra: {fontSizeId}px</span>
                                             </span>
                                         )}
                                     </div>
-                                    <div className="p-3 sm:p-4 bg-slate-200/80 dark:bg-slate-950 rounded-2xl flex items-center justify-center shadow-inner border border-slate-300 dark:border-slate-800 min-h-[200px] max-h-[420px] overflow-auto">
+                                    <div className="p-3 sm:p-4 bg-slate-200/80 dark:bg-slate-950 rounded-2xl flex items-center justify-center shadow-inner border border-slate-300 dark:border-slate-800 min-h-[190px] max-h-[380px] overflow-auto">
                                         {tipoTicketTecnico === 'sticker' ? (
                                             <div
                                                 className="bg-white shadow-xl transition-all border border-slate-300"
                                                 style={{
-                                                    transform: stickerWidth <= 55 ? 'scale(1.25)' : stickerWidth <= 70 ? 'scale(1.15)' : 'scale(1.0)',
+                                                    transform: orientacionSticker === 'rotado_90'
+                                                        ? 'rotate(90deg)'
+                                                        : orientacionSticker === 'rotado_180'
+                                                        ? 'rotate(180deg)'
+                                                        : orientacionSticker === 'rotado_270'
+                                                        ? 'rotate(270deg)'
+                                                        : stickerWidth <= 55 ? 'scale(1.15)' : 'scale(1.0)',
                                                     transformOrigin: 'center center',
-                                                    margin: '12px auto',
+                                                    margin: orientacionSticker === 'rotado_90' || orientacionSticker === 'rotado_270' ? '25px auto' : '10px auto',
                                                 }}
                                             >
                                                 {renderTicketTecnicoContent(false)}
@@ -1344,24 +1522,25 @@ export default function ImprimirComprobantesModal({
                                     </div>
 
                                     {/* CONSEJO DE IMPRESIÓN */}
-                                    <div className="text-[10px] text-slate-500 dark:text-slate-400 bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-900/40 p-2.5 rounded-xl flex items-center gap-2 leading-tight">
+                                    <div className="text-[10px] text-slate-500 dark:text-slate-400 bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-900/40 p-2 rounded-xl flex items-center gap-2 leading-tight">
                                         <span className="text-xs shrink-0">💡</span>
-                                        <span>{__('En la ventana de impresión del navegador, asegúrate de tener Márgenes: "Ninguno" (None) y Escala: 100% para respetar las medidas exactas del papel.')}</span>
+                                        <span>
+                                            {__('Impresión directa de 1 sola página exacta. En el diálogo de Chrome verifica Márgenes: "Ninguno" y Tamaño: :size mm.', { size: `${printParams.pageWidthMm}×${printParams.pageHeightMm}` })}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* BOTÓN IMPRIMIR TÉCNICO */}
                             <Button
                                 type="button"
-                                onClick={() => handlePrintSticker()}
+                                onClick={handlePrintSticker}
                                 className="w-full h-11 gap-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md shadow-indigo-900/20"
                             >
                                 <Tag className="w-4 h-4" />
                                 {tipoTicketTecnico === 'sticker'
                                     ? copiasSticker === 1
-                                        ? __('Imprimir Etiqueta Sticker (:width × :height mm)', { width: stickerWidth, height: stickerHeight })
-                                        : __('Imprimir :count Stickers (:width × :height mm)', { count: copiasSticker, width: stickerWidth, height: stickerHeight })
+                                        ? __('Imprimir 1 Sticker (:w × :h mm - :ori)', { w: printParams.pageWidthMm, h: printParams.pageHeightMm, ori: orientacionSticker })
+                                        : __('Imprimir :count Stickers (:w × :h mm)', { count: copiasSticker, w: printParams.pageWidthMm, h: printParams.pageHeightMm })
                                     : copiasSticker === 1
                                         ? __('Imprimir Ficha de Taller (80mm)')
                                         : __('Imprimir :count Fichas de Taller', { count: copiasSticker })}
@@ -1386,7 +1565,7 @@ export default function ImprimirComprobantesModal({
                             className="h-10 px-6 gap-2 text-xs font-extrabold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-950/30 rounded-xl w-full sm:w-auto"
                         >
                             <Printer className="w-4 h-4" />
-                            {__('🖨️ Imprimir Ambos (Cliente + Técnico)')}
+                            {__('🖨️ Imprimir Ambos (Ticket Cliente + Sticker)')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
