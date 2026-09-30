@@ -118,6 +118,7 @@ function LiveBreakTimer({
     limiteMinutos?: number; 
     subtexto?: string | null;
 }) {
+    const { __ } = useTranslate();
     const [now, setNow] = useState(Date.now());
 
     useEffect(() => {
@@ -127,8 +128,8 @@ function LiveBreakTimer({
         return () => clearInterval(interval);
     }, []);
 
-    const dateStr = fechaHoraIso || fechaHora;
-    const startMs = new Date(dateStr).getTime();
+    const dateStr = (fechaHoraIso || fechaHora || '').replace(' ', 'T');
+    const startMs = new Date(dateStr).getTime() || Date.now();
     const elapsedSeconds = Math.floor(Math.max(0, now - startMs) / 1000);
     const limitSeconds = limiteMinutos * 60;
     const remainingSeconds = limitSeconds - elapsedSeconds;

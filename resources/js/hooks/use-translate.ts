@@ -17,5 +17,9 @@ export function useTranslate() {
         return translation;
     };
 
+    if (typeof window !== 'undefined') {
+        (window as any).__ = __;
+    }
+
     return { __, currentLocale: locale, locale, isRtl };
 }

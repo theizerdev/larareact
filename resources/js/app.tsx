@@ -9,6 +9,16 @@ import AuthLayout from '@/layouts/auth-layout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+if (typeof window !== 'undefined' && !(window as any).__) {
+    (window as any).__ = (key: string, replace: Record<string, string> = {}) => {
+        let translation = key;
+        Object.keys(replace).forEach((rKey) => {
+            translation = translation.replace(`:${rKey}`, replace[rKey]);
+        });
+        return translation;
+    };
+}
+
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) => {

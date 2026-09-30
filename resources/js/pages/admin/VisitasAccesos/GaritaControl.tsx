@@ -104,6 +104,7 @@ interface CameraWidgetProps {
 }
 
 function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide = false }: CameraWidgetProps) {
+    const { __ } = useTranslate();
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
