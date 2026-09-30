@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <!-- Primary SEO Meta Tags -->
         <title>{{ config('app.name', 'FixSale') }} | Sistema de Punto de Venta (POS), Inventario y Servicio Técnico</title>

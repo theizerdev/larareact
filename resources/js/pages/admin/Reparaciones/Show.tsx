@@ -35,11 +35,13 @@ import {
     Info,
     Loader2,
     ExternalLink,
+    Tag,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { QRCodeSVG } from '@/components/qr-code-svg';
 import { BarcodeSVG } from '@/components/barcode-svg';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import EtiquetaTermicaModal from '@/components/reparaciones/EtiquetaTermicaModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -583,6 +585,17 @@ export default function ShowReparacion({
 
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [printType, setPrintType] = useState<'cliente' | 'tecnico'>('cliente');
+    const [isStickerModalOpen, setIsStickerModalOpen] = useState(false);
+
+    // Auto-apertura si la orden acaba de ser creada
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('nueva') === '1' || params.get('print') === '1') {
+                setIsPrintModalOpen(true);
+            }
+        }
+    }, []);
 
     // MODAL DE EDICIÓN / CORRECCIÓN DE DATOS DE LA ORDEN
     const [openEditDatosModal, setOpenEditDatosModal] = useState(false);
@@ -2184,6 +2197,11 @@ export default function ShowReparacion({
                             <Button size="sm" onClick={() => setIsPrintModalOpen(true)} variant="outline" className="h-10 gap-2 text-xs font-bold bg-white/10 hover:bg-white/20 border-white/20 text-white">
                                 <Printer className="w-4 h-4 text-blue-400" />
                                 {__('Imprimir Ticket')}
+                            </Button>
+
+                            <Button size="sm" onClick={() => setIsStickerModalOpen(true)} variant="outline" className="h-10 gap-2 text-xs font-bold bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-400/40 text-indigo-100 shadow-md">
+                                <Tag className="w-4 h-4 text-indigo-300" />
+                                {__('Sticker / Etiqueta')}
                             </Button>
 
                             <a
@@ -4927,42 +4945,69 @@ export default function ShowReparacion({
                         }
                     }}
                 >
-                    <DialogContent className="sm:max-w-2xl p-6 sm:p-8 rounded-2xl pointer-events-auto">
+                    <DialogContent className="sm:max-w-3xl p-6 sm:p-8 rounded-2xl pointer-events-auto">
                         <DialogHeader className="pb-2">
                             <DialogTitle className="flex items-center gap-3 text-xl font-extrabold text-slate-900 dark:text-slate-100">
                                 <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-600 dark:text-blue-400">
                                     <Printer className="w-6 h-6" />
                                 </div>
-                                {__('Imprimir Ticket de Reparación')}
+                                {__('Imprimir Comprobante o Etiqueta')}
                             </DialogTitle>
                         </DialogHeader>
 
                         <div className="py-4 space-y-6">
                             <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">
-                                {__('Seleccione el tipo de comprobante térmico (80mm) que desea generar para esta orden de servicio:')}
+                                {__('Seleccione el formato de impresión deseado para esta orden de servicio:')}
                             </p>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                {/* OPCIÓN ETIQUETA ADHESIVA / STICKER TÉRMICO (NUEVO) */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsPrintModalOpen(false);
+                                        setIsStickerModalOpen(true);
+                                    }}
+                                    className="p-5 rounded-2xl border-2 border-indigo-200 dark:border-indigo-900/60 hover:border-indigo-500 dark:hover:border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50/80 dark:hover:bg-indigo-950/50 transition-all text-left group flex flex-col justify-between space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer ring-1 ring-indigo-500/30"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shadow-inner">
+                                            <Tag className="w-6 h-6" />
+                                        </div>
+                                        <Badge className="bg-indigo-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 shadow-sm">
+                                            {__('Sticker Equipo')}
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 transition-colors">
+                                            {__('Etiqueta Adhesiva')}
+                                        </h4>
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                                            {__('Sticker para pegar en el equipo (50x30 / 60x40mm) con vista previa, switches de contenido y código de barras.')}
+                                        </p>
+                                    </div>
+                                </button>
+
                                 {/* OPCIÓN CLIENTE */}
                                 <button
                                     type="button"
                                     onClick={() => handleExecutePrint('cliente')}
-                                    className="p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-blue-50/60 dark:hover:bg-blue-950/40 transition-all text-left group flex flex-col justify-between space-y-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
+                                    className="p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-blue-50/60 dark:hover:bg-blue-950/40 transition-all text-left group flex flex-col justify-between space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
                                 >
                                     <div className="flex items-center justify-between">
-                                        <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform shadow-inner">
-                                            <User className="w-7 h-7" />
+                                        <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform shadow-inner">
+                                            <User className="w-6 h-6" />
                                         </div>
-                                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 text-xs font-extrabold px-3 py-1">
+                                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 text-[10px] font-extrabold px-2.5 py-0.5">
                                             80mm POS
                                         </Badge>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <h4 className="text-base font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">
-                                            {__('Ticket para el Cliente')}
+                                    <div className="space-y-1">
+                                        <h4 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">
+                                            {__('Ticket para Cliente')}
                                         </h4>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                            {__('Comprobante oficial de entrega con datos del equipo, servicios contratados, resumen financiero, técnico asignado y datos de seguridad.')}
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                                            {__('Comprobante oficial de entrega con servicios, financiero, técnico y términos de garantía.')}
                                         </p>
                                     </div>
                                 </button>
@@ -4971,22 +5016,22 @@ export default function ShowReparacion({
                                 <button
                                     type="button"
                                     onClick={() => handleExecutePrint('tecnico')}
-                                    className="p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-purple-500 dark:hover:border-purple-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-purple-50/60 dark:hover:bg-purple-950/40 transition-all text-left group flex flex-col justify-between space-y-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
+                                    className="p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-purple-500 dark:hover:border-purple-500 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-purple-50/60 dark:hover:bg-purple-950/40 transition-all text-left group flex flex-col justify-between space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
                                 >
                                     <div className="flex items-center justify-between">
-                                        <div className="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform shadow-inner">
-                                            <Wrench className="w-7 h-7" />
+                                        <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform shadow-inner">
+                                            <Wrench className="w-6 h-6" />
                                         </div>
-                                        <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300 text-xs font-extrabold px-3 py-1">
-                                            Con QR Local
+                                        <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300 text-[10px] font-extrabold px-2.5 py-0.5">
+                                            Ficha Taller
                                         </Badge>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <h4 className="text-base font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
-                                            {__('Ticket para el Técnico')}
+                                    <div className="space-y-1">
+                                        <h4 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 transition-colors">
+                                            {__('Ticket Técnico')}
                                         </h4>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                            {__('Ficha de trabajo de taller con descripción de la falla, observaciones físicas, patrón 3x3 y Código QR para escanear en móvil.')}
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                                            {__('Ficha de taller con falla, observaciones, patrón de seguridad y Código QR escaneable.')}
                                         </p>
                                     </div>
                                 </button>
@@ -5669,6 +5714,14 @@ export default function ShowReparacion({
                 sucursales={sucursales}
                 initialSucursalId={orden.sucursal_id || null}
                 onItemsUpdated={handleChecklistUpdated}
+            />
+
+            {/* MODAL ETIQUETA TÉRMICA AUTOADHESIVA (STICKER PARA EQUIPO) */}
+            <EtiquetaTermicaModal
+                open={isStickerModalOpen}
+                onOpenChange={setIsStickerModalOpen}
+                orden={orden}
+                empresa={empresa}
             />
 
         </>

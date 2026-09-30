@@ -12,9 +12,11 @@ import {
     QrCode,
     Camera,
     Loader2,
+    Tag,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import EtiquetaTermicaModal from '@/components/reparaciones/EtiquetaTermicaModal';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { FilterBar, FilterField } from '@/components/filter-bar';
@@ -178,6 +180,8 @@ export default function IndexReparaciones({
 
     // Quick Print Ticket State
     const [printOrden, setPrintOrden] = useState<Orden | null>(null);
+    const [isStickerModalOpen, setIsStickerModalOpen] = useState(false);
+    const [selectedStickerOrden, setSelectedStickerOrden] = useState<Orden | null>(null);
 
     // Select2 Options (memoized)
     const statusOptions = useMemo(() => [
@@ -805,6 +809,21 @@ export default function IndexReparaciones({
                         variant="outline"
                         onClick={(e) => {
                             e.stopPropagation();
+                            setSelectedStickerOrden(o);
+                            setIsStickerModalOpen(true);
+                        }}
+                        className="h-8 text-xs font-bold gap-1 border-indigo-200 hover:bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
+                        title={__('Imprimir Etiqueta Adhesiva / Sticker')}
+                    >
+                        <Tag className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        {__('Sticker')}
+                    </Button>
+
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                            e.stopPropagation();
                             router.visit(`/admin/reparaciones/${o.id}`);
                         }}
                         className="h-8 text-xs font-bold gap-1 border-purple-200 hover:bg-purple-50 text-purple-700 dark:border-purple-900 dark:text-purple-300 dark:hover:bg-purple-950/40"
@@ -1260,6 +1279,16 @@ export default function IndexReparaciones({
                     </div>
                 )}
             </div>
+
+            {/* MODAL ETIQUETA TÉRMICA AUTOADHESIVA */}
+            {selectedStickerOrden && (
+                <EtiquetaTermicaModal
+                    open={isStickerModalOpen}
+                    onOpenChange={setIsStickerModalOpen}
+                    orden={selectedStickerOrden}
+                    empresa={empresa}
+                />
+            )}
         </>
     );
 }

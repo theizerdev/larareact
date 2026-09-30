@@ -870,17 +870,28 @@ export default function CreateReparacion({
     };
 
     const postJson = async (url: string, bodyObj: any) => {
-        const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+        let csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+        if (!csrfToken) {
+            const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+            if (match) {
+                csrfToken = decodeURIComponent(match[1]);
+            }
+        }
         const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': csrfToken,
+                'X-XSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest',
             },
             body: JSON.stringify(bodyObj),
         });
+        if (response.status === 419) {
+            notifyError(__('La sesión ha expirado. Por favor recarga la página para continuar.'));
+            return { success: false, message: 'Sesión expirada' };
+        }
         return await response.json();
     };
 

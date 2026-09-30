@@ -787,7 +787,7 @@ class ReparacionController extends Controller
         // Enviar notificaciones por WhatsApp al cliente y al técnico asociado
         $waUrl = $this->sendWhatsAppNotificationsOnOrderCreation($orden);
 
-        $redirect = redirect()->route('admin.reparaciones.show', $orden->id)->with('notification', [
+        $redirect = redirect()->to(route('admin.reparaciones.show', $orden->id) . '?nueva=1')->with('notification', [
             'type' => 'success',
             'message' => "Orden de Reparación {$numeroOrden} creada exitosamente.",
         ]);
