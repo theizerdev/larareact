@@ -1028,16 +1028,32 @@ export default function Terminal({
     }, 0);
     const remaining = Math.max(0, total - totalPaid);
 
-    // Calcular el dinero recibido real en moneda base para calcular el cambio sin desfasar la venta
+    // Sum of secondary payments (from line index 1 onwards) in base currency
+    const secondaryPaymentsTotal = paymentLines.slice(1).reduce((acc, pl) => {
+        const val = parseFloat(pl.monto) || 0;
+        return acc + (pl.metodo_pago === 'dolar' ? val * (valorDolar || 1) : val);
+    }, 0);
+
+    // Primary payment line calculation
     const pagaConVal = parseFloat(pagaCon);
     const isPrimaryDolar = paymentLines[0]?.metodo_pago === 'dolar';
-    const pagaConMXN = !isNaN(pagaConVal) && pagaConVal > 0
+    const primaryMontoBase = paymentLines[0]
+        ? (parseFloat(paymentLines[0].monto) || 0) * (isPrimaryDolar ? (valorDolar || 1) : 1)
+        : 0;
+
+    // Effective cash/currency received for the primary payment line
+    const primaryReceivedBase = (!isNaN(pagaConVal) && pagaConVal > 0)
         ? (isPrimaryDolar
             ? pagaConVal * (valorDolar || 1)
             : (isVenezuela && valorDolar > 0 ? pagaConVal / valorDolar : pagaConVal))
-        : totalPaid;
+        : primaryMontoBase;
 
-    const cambio = activeTicket.esCredito ? 0 : Math.max(0, pagaConMXN - total);
+    // Dinero total recibido entregado por el cliente sumando todas las formas de pago
+    const montoRecibidoTotal = activeTicket.esCredito
+        ? totalPaid
+        : (primaryReceivedBase + secondaryPaymentsTotal);
+
+    const cambio = activeTicket.esCredito ? 0 : Math.max(0, montoRecibidoTotal - total);
     const cambioUSD = valorDolar > 0 ? cambio / valorDolar : 0;
 
     const addPaymentLine = () => setPaymentLines((prev) => [...prev, { metodo_pago: 'efectivo', monto: '' }]);
@@ -1122,11 +1138,16 @@ export default function Terminal({
             return;
         }
         setPrintTicketMode(shouldPrintTicket);
-        const exactMonto = (isVenezuela ? total * valorDolar : total).toFixed(2);
-        setPagaCon(exactMonto);
-        setPaymentLines([{ metodo_pago: 'efectivo', monto: exactMonto }]);
+        if (activeTicket.esCredito) {
+            setPagaCon('0');
+            setPaymentLines([{ metodo_pago: 'efectivo', monto: '0' }]);
+        } else {
+            const exactMonto = (isVenezuela ? total * valorDolar : total).toFixed(2);
+            setPagaCon(exactMonto);
+            setPaymentLines([{ metodo_pago: 'efectivo', monto: exactMonto }]);
+        }
         setIsPaymentModalOpen(true);
-    }, [activeRegister, activeTicket.cart, total, isVenezuela, valorDolar]);
+    }, [activeRegister, activeTicket.cart, activeTicket.esCredito, total, isVenezuela, valorDolar]);
 
     // Handle Complete Sale
     const executeSale = (printTicket: boolean = true) => {
@@ -1154,9 +1175,9 @@ export default function Terminal({
         setIsProcessingSale(true);
         setProcessingSaleType(printTicket ? 'ticket' : 'no_ticket');
 
-        const montoRecibidoBase = (pagaCon !== '' && !isNaN(pagaConVal) && pagaConVal > 0)
-            ? pagaConMXN
-            : totalPaid;
+        const montoRecibidoBase = activeTicket.esCredito
+            ? totalPaid
+            : ((!isNaN(pagaConVal) && pagaConVal > 0) ? montoRecibidoTotal : totalPaid);
 
         const payload = {
             cliente_nombre: activeTicket.clienteNombre || 'Cliente General',
@@ -2470,7 +2491,18 @@ export default function Terminal({
                                                 className="sr-only peer"
                                                 checked={activeTicket.esCredito}
                                                 disabled={!activeTicket.clienteId}
-                                                onChange={(e) => updateActiveTicket((t) => ({ ...t, esCredito: e.target.checked }))}
+                                                onChange={(e) => {
+                                                    const isCred = e.target.checked;
+                                                    updateActiveTicket((t) => ({ ...t, esCredito: isCred }));
+                                                    if (isCred) {
+                                                        setPaymentLines([{ metodo_pago: 'efectivo', monto: '0' }]);
+                                                        setPagaCon('0');
+                                                    } else {
+                                                        const exactMonto = (isVenezuela ? total * valorDolar : total).toFixed(2);
+                                                        setPaymentLines([{ metodo_pago: 'efectivo', monto: exactMonto }]);
+                                                        setPagaCon(exactMonto);
+                                                    }
+                                                }}
                                             />
                                             <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
                                         </label>
@@ -2556,11 +2588,18 @@ export default function Terminal({
                                     <div className="flex items-center justify-between">
                                         <Label htmlFor="pagaConInput" className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                                             <Coins className="w-4 h-4 text-amber-600" />
-                                            {__('¿Con cuánto paga el cliente?')}:
+                                            {activeTicket.esCredito
+                                                ? __('Abono Inicial / Pago de Entrada (Opcional - $0 si es crédito total):')
+                                                : `${__('¿Con cuánto paga el cliente?')}:`}
                                         </Label>
-                                        {cambio > 0 && (
+                                        {!activeTicket.esCredito && cambio > 0 && (
                                             <span className="text-xs font-mono font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700">
-                                                {__('Cambio:')} {currencySymbol}{cambio.toFixed(2)} {isVenezuela ? 'Bs.' : 'MXN'} {isPrimaryDolar ? `(≈ $${cambioUSD.toFixed(2)} USD)` : ''}
+                                                {__('Cambio:')} {currencySymbol}{cambio.toFixed(2)} {isVenezuela ? 'Bs.' : currencyCode} {isPrimaryDolar ? `(≈ $${cambioUSD.toFixed(2)} USD)` : ''}
+                                            </span>
+                                        )}
+                                        {activeTicket.esCredito && (
+                                            <span className="text-xs font-mono font-black text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-700">
+                                                {__('Crédito:')} {currencySymbol}{Math.max(0, total - totalPaid).toFixed(2)}
                                             </span>
                                         )}
                                     </div>
@@ -2573,7 +2612,7 @@ export default function Terminal({
                                                 type="number"
                                                 step="0.01"
                                                 min="0"
-                                                placeholder={(isVenezuela ? total * valorDolar : (isPrimaryDolar ? totalUSD : total)).toFixed(2)}
+                                                placeholder={activeTicket.esCredito ? "0.00" : (isVenezuela ? total * valorDolar : (isPrimaryDolar ? totalUSD : total)).toFixed(2)}
                                                 value={pagaCon}
                                                 onChange={(e) => handlePagaConChange(e.target.value)}
                                                 onFocus={(e) => e.target.select()}
@@ -2585,22 +2624,34 @@ export default function Terminal({
                                             </span>
                                         </div>
 
-                                        {/* Indicador visual del Cambio / Faltante */}
+                                        {/* Indicador visual del Cambio / Faltante / Saldo a Crédito */}
                                         <div className={cn(
                                             "h-13 rounded-lg px-4 flex flex-col justify-center border font-mono transition-all shadow-2xs",
-                                            cambio > 0
+                                            activeTicket.esCredito
+                                                ? "bg-amber-500/10 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700"
+                                                : cambio > 0
                                                 ? "bg-emerald-600 text-white border-emerald-700 shadow-md"
-                                                : remaining > 0.01 && !activeTicket.esCredito
+                                                : remaining > 0.01
                                                 ? "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800"
                                                 : "bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800"
                                         )}>
                                             <div className="flex items-center justify-between text-[11px] uppercase font-bold tracking-wider opacity-90">
-                                                <span>{cambio > 0 ? __('CAMBIO A ENTREGAR') : (remaining > 0.01 && !activeTicket.esCredito) ? __('FALTA POR COBRAR') : __('PAGO EXACTO')}</span>
+                                                <span>
+                                                    {activeTicket.esCredito
+                                                        ? __('SALDO A CRÉDITO DEL CLIENTE')
+                                                        : cambio > 0
+                                                        ? __('CAMBIO A ENTREGAR')
+                                                        : remaining > 0.01
+                                                        ? __('FALTA POR COBRAR')
+                                                        : __('PAGO EXACTO')}
+                                                </span>
                                             </div>
                                             <div className="text-xl sm:text-2xl font-black leading-tight">
-                                                {cambio > 0
-                                                    ? `${currencySymbol}${cambio.toFixed(2)} ${isVenezuela ? 'Bs.' : 'MXN'}`
-                                                    : (remaining > 0.01 && !activeTicket.esCredito)
+                                                {activeTicket.esCredito
+                                                    ? `${currencySymbol}${Math.max(0, total - totalPaid).toFixed(2)}`
+                                                    : cambio > 0
+                                                    ? `${currencySymbol}${cambio.toFixed(2)} ${isVenezuela ? 'Bs.' : currencyCode}`
+                                                    : remaining > 0.01
                                                     ? `-${currencySymbol}${remaining.toFixed(2)}`
                                                     : `${currencySymbol}0.00`}
                                             </div>
@@ -2681,20 +2732,26 @@ export default function Terminal({
                             {/* RESUMEN DE TOTAL Y CAMBIO */}
                             <div className="rounded-xl border p-3.5 space-y-1.5 text-sm bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground font-medium">{__('Total Abonado (en MXN)')}:</span>
+                                    <span className="text-muted-foreground font-medium">{__('Total Abonado')}:</span>
                                     <span className="font-mono font-bold text-base">{currencySymbol}{totalPaid.toFixed(2)}</span>
                                 </div>
-                                {remaining > 0.01 && !activeTicket.esCredito && (
+                                {activeTicket.esCredito && (
+                                    <div className="flex justify-between items-center text-amber-600 font-bold border-t border-slate-200 dark:border-slate-800 pt-1.5">
+                                        <span>{__('Saldo a Crédito (Deuda a Registrar)')}:</span>
+                                        <span className="font-mono text-base">{currencySymbol}{Math.max(0, total - totalPaid).toFixed(2)}</span>
+                                    </div>
+                                )}
+                                {!activeTicket.esCredito && remaining > 0.01 && (
                                     <div className="flex justify-between items-center text-rose-600 font-bold border-t border-slate-200 dark:border-slate-800 pt-1.5">
                                         <span>{__('Falta por Cobrar')}:</span>
                                         <span className="font-mono text-base">{currencySymbol}{remaining.toFixed(2)}</span>
                                     </div>
                                 )}
-                                {cambio > 0 && (
+                                {!activeTicket.esCredito && cambio > 0 && (
                                     <div className="flex items-center justify-between text-emerald-600 font-bold border-t border-slate-200 dark:border-slate-800 pt-1.5">
                                         <span>{__('Cambio / Vuelto a Entregar')}:</span>
                                         <div className="text-right">
-                                            <span className="font-mono block text-lg font-black">{currencySymbol}{cambio.toFixed(2)} MXN</span>
+                                            <span className="font-mono block text-lg font-black">{currencySymbol}{cambio.toFixed(2)} {isVenezuela ? 'Bs.' : currencyCode}</span>
                                             <span className="font-mono text-xs text-emerald-700 dark:text-emerald-400 block font-semibold">≈ ${cambioUSD.toFixed(2)} USD</span>
                                         </div>
                                     </div>
@@ -3183,7 +3240,7 @@ export default function Terminal({
                                             <span>SALDO / CAMBIO</span>
                                         </div>
                                         <div className="flex justify-between font-bold text-sm text-slate-800 pt-0.5">
-                                            <span>${Number(totalPaid || completedSale.total).toFixed(2)}</span>
+                                            <span>${Number(completedSale.monto_recibido ?? totalPaid ?? completedSale.total).toFixed(2)}</span>
                                             <span className="text-blue-600">${Number(completedSale.cambio || 0).toFixed(2)}</span>
                                         </div>
                                         {completedSale.payments && completedSale.payments.length > 0 && (

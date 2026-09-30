@@ -77,23 +77,23 @@ class SaleService
             $empresa = Empresa::with('pais')->find($empresaId);
             $tasaPais = (float) ($empresa?->pais?->impuesto_predeterminado ?? 16.00);
 
-            $descuento = (float) ($data['descuento'] ?? 0);
+            $descuento = min(max(0, (float) ($data['descuento'] ?? 0)), $subtotal);
             
             if (isset($data['impuesto']) && $data['impuesto'] !== null && $data['impuesto'] !== '') {
-                $impuesto = (float) $data['impuesto'];
+                $impuesto = max(0, (float) $data['impuesto']);
             } else {
                 // Calcular impuesto automáticamente basado en la tasa oficial del país de la empresa
                 $impuesto = round(($subtotal - $descuento) * ($tasaPais / 100), 2);
             }
 
-            $total = $subtotal + $impuesto - $descuento;
+            $total = max(0, $subtotal + $impuesto - $descuento);
 
             // Determine if it's a credit sale
             $esCredito = (bool) ($data['es_credito'] ?? false);
             $payments = $data['payments'] ?? [];
 
-            // If no explicit payments array, build from single metodo_pago
-            if (empty($payments)) {
+            // If no explicit payments array and not a credit sale, build from single metodo_pago
+            if (empty($payments) && !$esCredito) {
                 $payments = [
                     ['metodo_pago' => $data['metodo_pago'] ?? 'efectivo', 'monto' => $total],
                 ];
@@ -102,7 +102,7 @@ class SaleService
             $rawTotalPaid = array_sum(array_column($payments, 'monto'));
             $montoRecibido = isset($data['monto_recibido']) && (float) $data['monto_recibido'] > 0
                 ? (float) $data['monto_recibido']
-                : (float) $rawTotalPaid;
+                : ($esCredito ? (float) $rawTotalPaid : (float) $rawTotalPaid);
 
             $cambio = $esCredito ? 0 : max(0, $montoRecibido - $total);
 
@@ -125,7 +125,7 @@ class SaleService
             $saldoCredito = $esCredito ? max(0, $total - $totalPaid) : 0;
 
             // Primary payment method (highest amount)
-            $primaryMethod = 'efectivo';
+            $primaryMethod = $esCredito ? 'credito' : 'efectivo';
             if (!empty($payments)) {
                 usort($payments, fn($a, $b) => $b['monto'] <=> $a['monto']);
                 $primaryMethod = $payments[0]['metodo_pago'];
@@ -193,7 +193,26 @@ class SaleService
 
                     $producto = Producto::find($item['itemable_id']);
                     if ($producto && $producto->usa_inventario) {
-                        $producto->decrement('stock', $item['cantidad']);
+                        $oldStock = (float) $producto->stock;
+                        $qty = (float) $item['cantidad'];
+                        $newStock = $oldStock - $qty;
+
+                        $producto->update(['stock' => $newStock]);
+
+                        InventoryMovement::create([
+                            'empresa_id' => $empresaId,
+                            'sucursal_id' => $sucursalId,
+                            'producto_id' => $producto->id,
+                            'user_id' => $userId,
+                            'tipo' => 'salida',
+                            'motivo' => 'venta',
+                            'cantidad' => $qty,
+                            'stock_anterior' => $oldStock,
+                            'stock_nuevo' => $newStock,
+                            'costo_unitario' => (float) ($producto->precio_compra ?? 0),
+                            'referencia' => "Venta Ticket {$codigoTicket}",
+                            'notas' => "Salida por venta en mostrador (Ticket: {$codigoTicket}) a " . ($data['cliente_nombre'] ?? 'Cliente General'),
+                        ]);
                     }
                 } elseif (($item['concepto_tipo'] ?? 'servicio') === 'servicio' && !empty($item['itemable_id'])) {
                     $itemableType = Servicio::class;
@@ -351,7 +370,7 @@ class SaleService
                             'cantidad' => $qty,
                             'stock_anterior' => $oldStock,
                             'stock_nuevo' => $newStock,
-                            'costo_unitario' => (float) ($producto->precio_costo ?? 0),
+                            'costo_unitario' => (float) ($producto->precio_compra ?? 0),
                             'referencia' => "Anulación Venta {$sale->codigo_ticket}",
                             'notas' => "Venta {$sale->codigo_ticket} anulada desde POS - existencias devueltas a inventario",
                         ]);
@@ -394,7 +413,8 @@ class SaleService
                                 ($reparacion->costo_mano_obra ?? 0) + ($reparacion->costo_repuestos ?? 0)
                             );
                             $reparacion->sale_id = null;
-                            $reparacion->saldo_restante = $montoPago;
+                            $reparacion->anticipo = max(0, (float) $reparacion->anticipo - $montoPago);
+                            $reparacion->saldo_restante = max(0, $costoTotal - (float) $reparacion->anticipo);
                             if (in_array($reparacion->estado_orden, ['entregado_finalizado', 'entregado'])) {
                                 $reparacion->estado_orden = 'listo_reparado';
                                 $reparacion->fecha_entrega = null;
@@ -464,7 +484,14 @@ class SaleService
                 }
             }
 
-            // 4. Marcar venta como anulada
+            // 4. Anular asiento contable asociado
+            try {
+                app(\App\Services\AccountingService::class)->cancelSaleEntry($sale);
+            } catch (\Throwable $e) {
+                \Log::warning("No se pudo anular el asiento contable de la venta {$sale->id}: " . $e->getMessage());
+            }
+
+            // 5. Marcar venta como anulada
             $sale->update(['estado' => 'anulada']);
 
             return $sale;

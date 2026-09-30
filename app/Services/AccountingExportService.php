@@ -153,7 +153,7 @@ class AccountingExportService
     {
         $cuentas = CuentaContable::where('acepta_movimiento', true)
             ->whereHas('apuntes', function ($q) use ($fromDate, $toDate) {
-                $q->whereHas('asiento', fn($sq) => $sq->whereBetween('fecha', [$fromDate, $toDate]));
+                $q->whereHas('asiento', fn($sq) => $sq->where('estado', '!=', 'anulado')->whereBetween('fecha', [$fromDate, $toDate]));
             })
             ->orderBy('codigo')
             ->get();
@@ -161,7 +161,7 @@ class AccountingExportService
         $result = [];
         foreach ($cuentas as $cuenta) {
             $apuntes = ApunteContable::where('cuenta_id', $cuenta->id)
-                ->whereHas('asiento', fn($sq) => $sq->whereBetween('fecha', [$fromDate, $toDate]))
+                ->whereHas('asiento', fn($sq) => $sq->where('estado', '!=', 'anulado')->whereBetween('fecha', [$fromDate, $toDate]))
                 ->with('asiento')
                 ->get();
 
@@ -201,10 +201,10 @@ class AccountingExportService
     {
         return CuentaContable::where('acepta_movimiento', true)
             ->withSum(['apuntes as total_debe' => function ($q) use ($fromDate, $toDate) {
-                $q->whereHas('asiento', fn($sq) => $sq->whereBetween('fecha', [$fromDate, $toDate]));
+                $q->whereHas('asiento', fn($sq) => $sq->where('estado', '!=', 'anulado')->whereBetween('fecha', [$fromDate, $toDate]));
             }], 'debe')
             ->withSum(['apuntes as total_haber' => function ($q) use ($fromDate, $toDate) {
-                $q->whereHas('asiento', fn($sq) => $sq->whereBetween('fecha', [$fromDate, $toDate]));
+                $q->whereHas('asiento', fn($sq) => $sq->where('estado', '!=', 'anulado')->whereBetween('fecha', [$fromDate, $toDate]));
             }], 'haber')
             ->orderBy('codigo')
             ->get()
@@ -249,7 +249,7 @@ class AccountingExportService
     {
         $config = $empresaId ? ConfiguracionContable::where('empresa_id', $empresaId)->first() : null;
 
-        $filterDates = fn($q) => $q->whereHas('asiento', fn($sq) => $sq->whereBetween('fecha', [$fromDate, $toDate]));
+        $filterDates = fn($q) => $q->whereHas('asiento', fn($sq) => $sq->where('estado', '!=', 'anulado')->whereBetween('fecha', [$fromDate, $toDate]));
 
         if ($config) {
             $ingresosProductos = (float) ApunteContable::where('cuenta_id', $config->cuenta_ventas_productos_id)->where($filterDates)->sum('haber');
@@ -306,10 +306,10 @@ class AccountingExportService
     {
         $cuentas = CuentaContable::where('acepta_movimiento', true)
             ->withSum(['apuntes as total_debe' => function ($q) use ($fromDate, $toDate) {
-                $q->whereHas('asiento', fn($sq) => $sq->whereBetween('fecha', [$fromDate, $toDate]));
+                $q->whereHas('asiento', fn($sq) => $sq->where('estado', '!=', 'anulado')->whereBetween('fecha', [$fromDate, $toDate]));
             }], 'debe')
             ->withSum(['apuntes as total_haber' => function ($q) use ($fromDate, $toDate) {
-                $q->whereHas('asiento', fn($sq) => $sq->whereBetween('fecha', [$fromDate, $toDate]));
+                $q->whereHas('asiento', fn($sq) => $sq->where('estado', '!=', 'anulado')->whereBetween('fecha', [$fromDate, $toDate]));
             }], 'haber')
             ->orderBy('codigo')
             ->get();
@@ -365,7 +365,8 @@ class AccountingExportService
     private function getVentasFiscalesData(?Empresa $empresa, string $fromDate, string $toDate): array
     {
         $query = Sale::with(['cliente', 'user'])
-            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
+            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59'])
+            ->whereNotIn('estado', ['anulada', 'cancelada']);
 
         if ($empresa?->id) {
             $query->where('empresa_id', $empresa->id);
@@ -410,7 +411,8 @@ class AccountingExportService
     private function getComprasFiscalesData(?Empresa $empresa, string $fromDate, string $toDate): array
     {
         $query = Compra::with(['proveedor', 'user'])
-            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
+            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59'])
+            ->whereNotIn('status', ['anulada', 'cancelada']);
 
         if ($empresa?->id) {
             $query->where('empresa_id', $empresa->id);

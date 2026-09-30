@@ -247,6 +247,7 @@ class ContabilidadController extends Controller
         if ($cuentaId) {
             $cuentaSeleccionada = CuentaContable::find($cuentaId);
             $movimientos = ApunteContable::where('cuenta_id', $cuentaId)
+                ->whereHas('asiento', fn($sq) => $sq->where('estado', '!=', 'anulado'))
                 ->with(['asiento'])
                 ->orderBy('created_at', 'desc')
                 ->paginate(20)
@@ -269,10 +270,12 @@ class ContabilidadController extends Controller
         $user = auth()->user();
         $empresaId = $user?->empresa_id;
 
+        $filterActive = fn($q) => $q->whereHas('asiento', fn($sq) => $sq->where('estado', '!=', 'anulado'));
+
         // Balance de Comprobación de Sumas y Saldos
         $cuentasReporte = CuentaContable::where('acepta_movimiento', true)
-            ->withSum('apuntes as total_debe', 'debe')
-            ->withSum('apuntes as total_haber', 'haber')
+            ->withSum(['apuntes as total_debe' => $filterActive], 'debe')
+            ->withSum(['apuntes as total_haber' => $filterActive], 'haber')
             ->get()
             ->map(function ($c) {
                 $debe = (float) ($c->total_debe ?? 0);
@@ -297,10 +300,10 @@ class ContabilidadController extends Controller
         $config = $empresaId ? ConfiguracionContable::where('empresa_id', $empresaId)->first() : null;
 
         if ($config) {
-            $ingresosProductos = (float) ApunteContable::where('cuenta_id', $config->cuenta_ventas_productos_id)->sum('haber');
-            $ingresosServicios = (float) ApunteContable::where('cuenta_id', $config->cuenta_ventas_servicios_id)->sum('haber');
-            $costoProductos = (float) ApunteContable::where('cuenta_id', $config->cuenta_costo_ventas_productos_id)->sum('debe');
-            $costoRepuestos = (float) ApunteContable::where('cuenta_id', $config->cuenta_costo_repuestos_id)->sum('debe');
+            $ingresosProductos = (float) ApunteContable::where('cuenta_id', $config->cuenta_ventas_productos_id)->where($filterActive)->sum('haber');
+            $ingresosServicios = (float) ApunteContable::where('cuenta_id', $config->cuenta_ventas_servicios_id)->where($filterActive)->sum('haber');
+            $costoProductos = (float) ApunteContable::where('cuenta_id', $config->cuenta_costo_ventas_productos_id)->where($filterActive)->sum('debe');
+            $costoRepuestos = (float) ApunteContable::where('cuenta_id', $config->cuenta_costo_repuestos_id)->where($filterActive)->sum('debe');
         } else {
             $ingresosProductos = 0;
             $ingresosServicios = 0;
@@ -310,33 +313,33 @@ class ContabilidadController extends Controller
 
         // Si no se encuentra por ID directo de config, buscar por prefijos de código o tipo
         if ($ingresosProductos == 0) {
-            $ingresosProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '4.1.01%'))->sum('haber');
+            $ingresosProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '4.1.01%'))->where($filterActive)->sum('haber');
         }
         if ($ingresosServicios == 0) {
-            $ingresosServicios = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '4.1.02%'))->sum('haber');
+            $ingresosServicios = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '4.1.02%'))->where($filterActive)->sum('haber');
         }
 
         // Si aún no hay desglose específico pero hay ingresos de tipo 'ingreso', asignarlos a productos
         $totalIngresos = $ingresosProductos + $ingresosServicios;
         if ($totalIngresos == 0) {
-            $ingresosProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('tipo', 'ingreso'))->sum('haber');
+            $ingresosProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('tipo', 'ingreso'))->where($filterActive)->sum('haber');
             $totalIngresos = $ingresosProductos;
         }
 
         if ($costoProductos == 0) {
-            $costoProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '5.1.01%'))->sum('debe');
+            $costoProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '5.1.01%'))->where($filterActive)->sum('debe');
         }
         if ($costoRepuestos == 0) {
-            $costoRepuestos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '5.1.02%'))->sum('debe');
+            $costoRepuestos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('codigo', 'like', '5.1.02%'))->where($filterActive)->sum('debe');
         }
 
         $totalCostos = $costoProductos + $costoRepuestos;
         if ($totalCostos == 0) {
-            $costoProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('tipo', 'costo'))->sum('debe');
+            $costoProductos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('tipo', 'costo'))->where($filterActive)->sum('debe');
             $totalCostos = $costoProductos;
         }
 
-        $gastosGenerales = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('tipo', 'gasto'))->sum('debe');
+        $gastosGenerales = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('tipo', 'gasto'))->where($filterActive)->sum('debe');
 
         $utilidadBruta = $totalIngresos - $totalCostos;
         $utilidadNeta = $utilidadBruta - $gastosGenerales;
@@ -420,7 +423,8 @@ class ContabilidadController extends Controller
 
         // Libro de Compras Fiscales (Proveedores SAT)
         $comprasQuery = \App\Models\Compra::with(['proveedor', 'user'])
-            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
+            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59'])
+            ->whereNotIn('status', ['anulada', 'cancelada']);
 
         if ($empresaId) {
             $comprasQuery->where('empresa_id', $empresaId);

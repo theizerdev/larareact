@@ -250,10 +250,12 @@ export default function LibroDiario({ asientos, cuentasDisponibles = [], filters
     ];
 
     const totalDebeVista = asientos.data.reduce((acc, a) => {
+        if (a.estado === 'anulado') return acc;
         return acc + (a.apuntes?.reduce((sum, item) => sum + Number(item.debe), 0) || 0);
     }, 0);
 
     const totalHaberVista = asientos.data.reduce((acc, a) => {
+        if (a.estado === 'anulado') return acc;
         return acc + (a.apuntes?.reduce((sum, item) => sum + Number(item.haber), 0) || 0);
     }, 0);
 
@@ -674,6 +676,12 @@ export default function LibroDiario({ asientos, cuentasDisponibles = [], filters
                                                     <DollarSign className="w-3 h-3 mr-0.5" />
                                                     Tasa: {Number(asiento.tasa_cambio).toFixed(2)}
                                                 </Badge>
+
+                                                {asiento.estado === 'anulado' && (
+                                                    <Badge variant="destructive" className="text-[11px] font-bold uppercase tracking-wider bg-rose-600 hover:bg-rose-700 text-white shadow-sm">
+                                                        {__('ANULADO')}
+                                                    </Badge>
+                                                )}
                                             </div>
 
                                             <div className="flex items-center gap-2">

@@ -296,8 +296,8 @@ class SaleController extends Controller
             || $user->hasRole('admin')
             || $user->hasRole('super-admin')
             || $user->id === 1
-            || $user->hasPermissionTo('ventas.anular')
-            || $user->hasPermissionTo('ventas.delete');
+            || $user->can('ventas.anular')
+            || $user->can('ventas.delete');
 
         if (! $canDelete) {
             if ($request->wantsJson() || $request->header('Accept') === 'application/json') {

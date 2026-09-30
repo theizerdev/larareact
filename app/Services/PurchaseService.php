@@ -213,6 +213,13 @@ class PurchaseService
                 }
             }
 
+            // Revertir / anular asiento contable de la compra
+            try {
+                app(\App\Services\AccountingService::class)->cancelPurchaseEntry($compra);
+            } catch (\Throwable $e) {
+                \Log::warning("No se pudo anular el asiento contable de la compra {$compra->id}: " . $e->getMessage());
+            }
+
             $compra->update(['status' => 'anulada']);
 
             return $compra;

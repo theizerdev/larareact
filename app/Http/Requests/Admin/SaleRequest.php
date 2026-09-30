@@ -40,4 +40,31 @@ class SaleRequest extends FormRequest
             'items.*.precio_unitario' => ['required', 'numeric', 'min:0'],
         ];
     }
+
+    /**
+     * Configurar validaciones adicionales complejas.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $items = $this->input('items', []);
+            $subtotal = 0;
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    $subtotal += ((float) ($item['precio_unitario'] ?? 0)) * ((float) ($item['cantidad'] ?? 0));
+                }
+            }
+
+            $descuento = (float) $this->input('descuento', 0);
+            if ($descuento > $subtotal) {
+                $validator->errors()->add(
+                    'descuento',
+                    __('El descuento (:descuento) no puede ser mayor que el subtotal de la venta (:subtotal).', [
+                        'descuento' => number_format($descuento, 2),
+                        'subtotal' => number_format($subtotal, 2),
+                    ])
+                );
+            }
+        });
+    }
 }

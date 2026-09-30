@@ -305,6 +305,27 @@ class AccountingService
     }
 
     /**
+     * Anular el asiento contable originado por una venta cancelada.
+     */
+    public function cancelSaleEntry(Sale $sale): ?AsientoContable
+    {
+        $asiento = AsientoContable::withoutGlobalScopes()
+            ->where('origen_type', Sale::class)
+            ->where('origen_id', $sale->id)
+            ->first();
+
+        if ($asiento && $asiento->estado !== 'anulado') {
+            $asiento->update([
+                'estado' => 'anulado',
+                'glosa' => $asiento->glosa . ' [ANULADO]',
+            ]);
+            return $asiento;
+        }
+
+        return $asiento;
+    }
+
+    /**
      * Contabilizar automáticamente una Compra a Proveedor.
      */
     public function recordPurchaseEntry(Compra $compra): ?AsientoContable
@@ -365,6 +386,27 @@ class AccountingService
 
             return $asiento;
         });
+    }
+
+    /**
+     * Anular el asiento contable originado por una compra cancelada.
+     */
+    public function cancelPurchaseEntry(Compra $compra): ?AsientoContable
+    {
+        $asiento = AsientoContable::withoutGlobalScopes()
+            ->where('origen_type', Compra::class)
+            ->where('origen_id', $compra->id)
+            ->first();
+
+        if ($asiento && $asiento->estado !== 'anulado') {
+            $asiento->update([
+                'estado' => 'anulado',
+                'glosa' => $asiento->glosa . ' [ANULADO]',
+            ]);
+            return $asiento;
+        }
+
+        return $asiento;
     }
 
     /**
@@ -494,8 +536,12 @@ class AccountingService
     public function closeFiscalPeriod(int $empresaId, int $userId): ?AsientoContable
     {
         return DB::transaction(function () use ($empresaId, $userId) {
-            $totalIngresos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->where('tipo', 'ingreso'))->sum('haber');
-            $totalGastosCostos = (float) ApunteContable::whereHas('cuenta', fn($q) => $q->whereIn('tipo', ['costo', 'gasto']))->sum('debe');
+            $totalIngresos = (float) ApunteContable::whereHas('asiento', fn($sq) => $sq->where('estado', '!=', 'anulado'))
+                ->whereHas('cuenta', fn($q) => $q->where('tipo', 'ingreso'))
+                ->sum('haber');
+            $totalGastosCostos = (float) ApunteContable::whereHas('asiento', fn($sq) => $sq->where('estado', '!=', 'anulado'))
+                ->whereHas('cuenta', fn($q) => $q->whereIn('tipo', ['costo', 'gasto']))
+                ->sum('debe');
 
             $utilidadNeta = $totalIngresos - $totalGastosCostos;
             if (abs($utilidadNeta) < 0.01) {
