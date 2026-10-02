@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        {{-- Inline script to detect system dark mode preference and apply it immediately --}}
+        <script>
+            (function() {
+                const appearance = '{{ $appearance ?? "system" }}';
+
+                if (appearance === 'system') {
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+                    if (prefersDark) {
+                        document.documentElement.classList.add('dark');
+                    }
+                }
+            })();
+        </script>
+
+        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
+        <style>
+            html {
+                background-color: oklch(1 0 0);
+            }
+
+            html.dark {
+                background-color: oklch(0.145 0 0);
+            }
+        </style>
+
+        @php
+            $favicon = '/image/logo/hosho/favicon.png';
+            $ogDescription = 'Plataforma empresarial de control de accesos con verificación biométrica, prueba de vida y validación documental. Gestión de flota, activos con GPS, ITSM, inventarios, control de jornada laboral y mensajería corporativa.';
+        @endphp
+        <link rel="icon" href="{{ $favicon }}" type="image/png">
+        <link rel="apple-touch-icon" href="/image/logo/hosho/apple-touch-icon.png">
+
+        {{-- Server-rendered title/description/Open Graph so link previews on
+             redes sociales y correo (que no ejecutan JS) siempre encuentren
+             estas etiquetas — la app es 100% client-rendered (sin SSR), por
+             lo que nada de esto puede depender de React/Inertia. --}}
+        <title>Hoshō by Innovación Móvil</title>
+        <meta name="description" content="{{ $ogDescription }}">
+        <meta property="og:site_name" content="Hoshō">
+        <meta property="og:title" content="Hoshō by Innovación Móvil">
+        <meta property="og:description" content="{{ $ogDescription }}">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:image" content="{{ url('/image/logo/hosho/og-image.png') }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta property="og:image:alt" content="Hoshō — plataforma de control de accesos">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="Hoshō by Innovación Móvil">
+        <meta name="twitter:description" content="{{ $ogDescription }}">
+        <meta name="twitter:image" content="{{ url('/image/logo/hosho/og-image.png') }}">
+
+        @if(request()->is('admin/reloj-checador/kiosko*'))
+        {{-- PWA Kiosko --}}
+        <link rel="manifest" href="/pwa/manifest.json">
+        <meta name="theme-color" content="#1a5c38">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="Kiosko Checador">
+        @endif
+
+        @fonts
+
+        @viteReactRefresh
+        @vite(['resources/css/app.css', 'resources/js/app.tsx'])
+        @inertiaHead
+    </head>
+    <body class="font-sans antialiased">
+        <x-inertia::app />
+    </body>
+</html>
