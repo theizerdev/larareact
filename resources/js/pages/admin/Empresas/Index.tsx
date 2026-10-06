@@ -14,7 +14,6 @@ import {
     Upload,
     X,
     Clock,
-    Link2,
 } from 'lucide-react';
 import React, { useState, Suspense, lazy, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -354,19 +353,6 @@ formData.append('logo_mini', logoMiniFile);
                     <div>
                         <p className="font-medium text-sm">{empresa.razon_social}</p>
                         <p className="text-xs text-muted-foreground">{empresa.documento}</p>
-                        {empresa.slug && (
-                            <button
-                                type="button"
-                                title={__('Access link')}
-                                className="mt-0.5 flex items-center gap-1 text-xs text-primary hover:underline"
-                                onClick={() => {
-                                    navigator.clipboard?.writeText(`${window.location.origin}/e/${empresa.slug}`);
-                                    notifySuccess(__('Link copied'));
-                                }}
-                            >
-                                <Link2 className="size-3" />/e/{empresa.slug}
-                            </button>
-                        )}
                     </div>
                 </div>
             ),
@@ -625,29 +611,6 @@ formData.append('logo_mini', logoMiniFile);
                                         />
                                         {errors.nombre_comercial && (
                                             <p className="text-red-500 text-xs mt-1">{errors.nombre_comercial}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Liga de acceso: el login muestra el logo de la empresa */}
-                                    <div>
-                                        <Label htmlFor="slug">{__('Access link identifier')}</Label>
-                                        <div className="flex items-center rounded-md border border-input focus-within:ring-1 focus-within:ring-ring">
-                                            <span className="pl-3 text-sm text-muted-foreground whitespace-nowrap">
-                                                {window.location.host}/e/
-                                            </span>
-                                            <Input
-                                                id="slug"
-                                                value={data.slug || ''}
-                                                onChange={(e) => setData('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                                                placeholder="mi-empresa"
-                                                className="border-0 pl-0.5 shadow-none focus-visible:ring-0"
-                                            />
-                                        </div>
-                                        <p className="text-muted-foreground text-xs mt-1">
-                                            {__("Share this link with the company's users: the login screen will show its logo.")}
-                                        </p>
-                                        {errors.slug && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.slug}</p>
                                         )}
                                     </div>
 

@@ -77,9 +77,6 @@ class HandleInertiaRequests extends Middleware
                         'status' => (bool) $e->status,
                     ]),
             ] : null,
-            // Logo de la pantalla de login: la empresa que el navegador recuerda
-            // de su liga de acceso (/e/{slug}) o del último inicio de sesión.
-            'branding' => fn () => $request->user() ? null : $this->brandingInvitado($request),
             'menuVisibility' => fn () => \App\Models\MenuVisibilitySetting::map(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => $currentLocale,
@@ -128,16 +125,5 @@ class HandleInertiaRequests extends Middleware
     private function vistaGlobal(Request $request): bool
     {
         return $request->user()->isSuperAdmin() && ! $request->user()->empresaActiva;
-    }
-
-    private function brandingInvitado(Request $request): ?array
-    {
-        $slug = $request->cookie(EmpresaActiva::COOKIE);
-        $empresa = $slug ? Empresa::withoutTenant()->where('slug', $slug)->where('status', true)->first() : null;
-
-        return $empresa ? [
-            'nombre' => $empresa->nombre_comercial ?: $empresa->razon_social,
-            'logo' => $empresa->logo ?: $empresa->logo_mini,
-        ] : null;
     }
 }

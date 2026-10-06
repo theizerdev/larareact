@@ -360,6 +360,10 @@ export default function AdminSaasLayout({
     } = useTemplateSettings();
     const collapsed = settings.collapsed;
     const setCollapsed = (val: boolean) => updateSetting('collapsed', val);
+    const empresaActual = (auth as any)?.user?.empresa;
+    const empresaLogo: string | null = collapsed
+        ? empresaActual?.logo_mini || empresaActual?.logo || null
+        : empresaActual?.logo || empresaActual?.logo_mini || null;
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const { __ } = useTranslate();
 
@@ -445,18 +449,35 @@ export default function AdminSaasLayout({
                     </div>
 
                     {/* Logo area */}
-                    <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
+                    <div className={cn('flex h-16 items-center justify-between border-b border-sidebar-border', collapsed ? 'lg:px-2 px-4' : 'px-4')}>
+                        {/* Hoshō | logo de la empresa (en la vista "Todas" del superadmin no hay empresa) */}
                         <Link
                             href={home()}
-                            className="flex items-center gap-3 overflow-hidden"
+                            className={cn('flex min-w-0 items-center overflow-hidden', collapsed ? 'lg:w-full lg:flex-col lg:justify-center lg:gap-1 gap-3' : 'gap-3')}
                         >
-                            <div className="flex shrink-0 items-center justify-center bg-transparent">
-                                <img
-                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/hosho/icon-dark.png"}
-                                    alt={(auth as any)?.user?.empresa?.razon_social || "Hoshō"}
-                                    className="h-9 w-auto object-contain"
-                                />
-                            </div>
+                            <img
+                                src="/image/logo/hosho/lockup.png"
+                                alt="Hoshō"
+                                className={cn('h-7 w-auto shrink-0 object-contain', collapsed && 'lg:hidden')}
+                            />
+                            <img
+                                src="/image/logo/hosho/icon.png"
+                                alt="Hoshō"
+                                className={cn('hidden w-auto shrink-0 object-contain', collapsed && 'lg:block', empresaLogo ? 'h-6' : 'h-9')}
+                            />
+                            {empresaLogo && (
+                                <>
+                                    <span className={cn('h-8 w-px shrink-0 bg-sidebar-border', collapsed && 'lg:hidden')} />
+                                    <img
+                                        src={empresaLogo}
+                                        alt={(auth as any)?.user?.empresa?.razon_social || ''}
+                                        className={cn(
+                                            'h-8 w-auto min-w-0 max-w-[110px] object-contain',
+                                            collapsed && 'lg:h-6 lg:max-w-[48px]',
+                                        )}
+                                    />
+                                </>
+                            )}
                         </Link>
                         <Button
                             variant="ghost"

@@ -84,9 +84,6 @@ Route::get('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::
 Route::post('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::class, 'submitWizard'])->name('preregistro-visita.submit');
 Route::post('/preregistro-visita/{token}/tipo-servicio', [VisitaTemporalPreRegistroController::class, 'storeTipoServicio'])->name('preregistro-visita.tipo-servicio.store');
 
-// Liga de acceso por empresa: el login muestra su logo.
-Route::get('/e/{slug}', [\App\Http\Controllers\EmpresaActivaController::class, 'acceso'])
-    ->name('empresa.acceso')->middleware('throttle:60,1');
 Route::post('/empresa-activa', [\App\Http\Controllers\EmpresaActivaController::class, 'cambiar'])
     ->name('empresa-activa.cambiar')->middleware('auth');
 

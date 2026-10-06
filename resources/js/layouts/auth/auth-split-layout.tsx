@@ -8,10 +8,7 @@ export default function AuthSplitLayout({
     title,
     description,
 }: AuthLayoutProps) {
-    const { name, branding } = usePage<{
-        name: string;
-        branding: { nombre: string; logo: string | null } | null;
-    }>().props;
+    const { name } = usePage<{ name: string }>().props;
 
     return (
         <div className="relative grid min-h-svh w-full lg:grid-cols-2">
@@ -49,19 +46,11 @@ export default function AuthSplitLayout({
                         href={home()}
                         className="mb-8 flex items-center justify-center"
                     >
-                        {branding?.logo ? (
-                            <img
-                                src={branding.logo}
-                                alt={branding.nombre}
-                                className="h-16 w-auto max-w-[240px] object-contain"
-                            />
-                        ) : (
-                            <img
-                                src="/image/logo/hosho/lockup.png"
-                                alt="Hoshō"
-                                className="h-12 w-auto object-contain"
-                            />
-                        )}
+                        <img
+                            src="/image/logo/hosho/lockup.png"
+                            alt="Hoshō"
+                            className="h-12 w-auto object-contain"
+                        />
                     </Link>
 
                     <div className="mb-8 space-y-2 text-center">

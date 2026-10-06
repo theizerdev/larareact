@@ -18,7 +18,7 @@ class Empresa extends Model
 
     protected static function booted(): void
     {
-        // Toda empresa tiene liga de acceso (/e/{slug}); si no se captura, se
+        // Toda empresa tiene un identificador único (slug); si no se captura, se
         // genera del nombre.
         static::saving(function (Empresa $empresa) {
             if (! $empresa->slug) {
