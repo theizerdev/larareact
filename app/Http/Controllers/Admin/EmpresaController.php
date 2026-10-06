@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateEmpresaRequest;
 use App\Http\Resources\EmpresaResource;
 use App\Models\Empresa;
 use App\Models\Pais;
+use App\Services\EmpresaActivityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -16,7 +17,7 @@ use Illuminate\Support\Str;
 
 class EmpresaController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, EmpresaActivityService $activityService)
     {
         Gate::authorize('viewAny', Empresa::class);
 
@@ -41,10 +42,25 @@ class EmpresaController extends Controller
 
         $empresas = $query->orderBy('razon_social', 'asc')->paginate($perPage)->withQueryString();
 
+        $empresaIds = $empresas->pluck('id')->toArray();
+        $activityMetrics = $activityService->getActivityMetricsForEmpresas($empresaIds);
+
+        foreach ($empresas as $empresa) {
+            $empresa->activity_metrics = $activityMetrics[$empresa->id] ?? null;
+        }
+
+        // Estadísticas globales de salud y uso
+        $allEmpresaIds = Empresa::pluck('id')->toArray();
+        $allMetrics = $activityService->getActivityMetricsForEmpresas($allEmpresaIds);
+        $onlineCount = collect($allMetrics)->where('is_online', true)->count();
+        $activeWeekCount = collect($allMetrics)->whereIn('activity_status', ['online', 'active_today', 'recent'])->count();
+
         $stats = [
             'total' => Empresa::count(),
             'activos' => Empresa::where('status', true)->count(),
             'inactivos' => Empresa::where('status', false)->count(),
+            'en_linea' => $onlineCount,
+            'activas_semana' => $activeWeekCount,
         ];
 
         return inertia('admin/Empresas/Index', [
@@ -54,6 +70,19 @@ class EmpresaController extends Controller
                 ->orderBy('nombre', 'asc')
                 ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico', 'latitud', 'longitud']),
             'filters' => $request->only(['search', 'status', 'perPage']),
+        ]);
+    }
+
+    public function show(Empresa $empresa, EmpresaActivityService $activityService)
+    {
+        Gate::authorize('view', $empresa);
+
+        $empresa->load(['pais', 'paisTelefono']);
+        $profile = $activityService->getDetailedActivityProfile($empresa);
+
+        return inertia('admin/Empresas/Show', [
+            'empresa' => (new EmpresaResource($empresa))->resolve(),
+            'profile' => $profile,
         ]);
     }
 

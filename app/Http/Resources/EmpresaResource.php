@@ -34,6 +34,7 @@ class EmpresaResource extends JsonResource
                 'codigo_iso2' => $this->pais->codigo_iso2,
             ]),
             'created_at' => $this->created_at?->toIso8601String(),
+            'activity_metrics' => $this->activity_metrics ?? null,
         ];
     }
 }

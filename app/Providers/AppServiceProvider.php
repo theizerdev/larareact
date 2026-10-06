@@ -70,6 +70,14 @@ class AppServiceProvider extends ServiceProvider
                 ->causedBy($user)
                 ->performedOn($user)
                 ->withProperties($properties)
+                ->tap(function ($activity) use ($user) {
+                    if (! empty($user->empresa_id)) {
+                        $activity->empresa_id = $user->empresa_id;
+                    }
+                    if (! empty($user->sucursal_id)) {
+                        $activity->sucursal_id = $user->sucursal_id;
+                    }
+                })
                 ->log('user_logged_in');
 
             // Resetear el flag de sesión para permitir evaluar el primer ingreso de la sesión

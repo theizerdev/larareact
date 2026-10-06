@@ -22,7 +22,9 @@ import {
     Filter,
     DollarSign,
     BarChart2,
-    PieChart as PieChartIcon
+    PieChart as PieChartIcon,
+    Radio,
+    Activity,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import Chart from 'react-apexcharts';
@@ -45,6 +47,9 @@ interface SuperAdminStats {
     pagos_pendientes: number;
     proximas_vencer: number;
     total_revenue_in_range: number;
+    en_linea?: number;
+    activas_semana?: number;
+    inactivas?: number;
 }
 
 interface EmpresaResumen {
@@ -60,6 +65,16 @@ interface EmpresaResumen {
     fecha_vencimiento: string;
     total_sucursales: number;
     created_at: string;
+    activity?: {
+        is_online: boolean;
+        online_users_count: number;
+        activity_status: 'online' | 'active_today' | 'recent' | 'inactive' | 'never';
+        activity_status_label: string;
+        last_activity_for_humans: string;
+        last_activity_type: string;
+        sales_30d: number;
+        repairs_30d: number;
+    } | null;
 }
 
 interface PagoPendiente {
@@ -391,6 +406,45 @@ export default function SuperAdminDashboard({
                     </Card>
                 </div>
 
+                {/* Indicadores de Conexión y Salud de Adopción SaaS */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border shadow-sm">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                            <Radio className="h-5 w-5 animate-pulse" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground font-semibold">{__('Empresas en Línea Ahora')}</p>
+                            <p className="text-lg font-black text-foreground">
+                                {stats.en_linea ?? 0} <span className="text-xs font-normal text-muted-foreground">{__('con personal navegando')}</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border shadow-sm">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                            <Activity className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground font-semibold">{__('Activas en los Últimos 7 Días')}</p>
+                            <p className="text-lg font-black text-foreground">
+                                {stats.activas_semana ?? 0} <span className="text-xs font-normal text-muted-foreground">({stats.total_empresas > 0 ? Math.round(((stats.activas_semana ?? 0) / stats.total_empresas) * 100) : 0}% {__('de adopción')})</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border shadow-sm">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
+                            <Clock className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground font-semibold">{__('Inactivas / Sin Uso Reciente (+7d)')}</p>
+                            <p className="text-lg font-black text-rose-600 dark:text-rose-400">
+                                {stats.inactivas ?? 0} <span className="text-xs font-normal text-muted-foreground">{__('requieren contacto de soporte')}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Sección de Gráficos Apexcharts */}
                 <div className="grid gap-6 lg:grid-cols-3">
                     {/* Gráfico 1: Flujo de Ingresos por Renovación en Rango de Fechas */}
@@ -662,8 +716,10 @@ export default function SuperAdminDashboard({
                                     <TableHead className="font-bold">{__('Empresa')}</TableHead>
                                     <TableHead className="font-bold">{__('Contacto / RIF')}</TableHead>
                                     <TableHead className="font-bold">{__('Sucursales')}</TableHead>
+                                    <TableHead className="font-bold">{__('Uso y Actividad')}</TableHead>
                                     <TableHead className="font-bold">{__('Vencimiento')}</TableHead>
-                                    <TableHead className="font-bold text-right">{__('Estado')}</TableHead>
+                                    <TableHead className="font-bold">{__('Estado')}</TableHead>
+                                    <TableHead className="font-bold text-right">{__('Acción')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -680,10 +736,54 @@ export default function SuperAdminDashboard({
                                         <TableCell className="py-3 text-xs font-semibold">
                                             {emp.total_sucursales} {__('sucursal(es)')}
                                         </TableCell>
+                                        <TableCell className="py-3">
+                                            {emp.activity ? (
+                                                <div className="space-y-1">
+                                                    {emp.activity.is_online ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 animate-pulse">
+                                                            <span className="relative flex h-2 w-2">
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                            </span>
+                                                            {__('En línea')} ({emp.activity.online_users_count})
+                                                        </span>
+                                                    ) : emp.activity.activity_status === 'active_today' ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800">
+                                                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                                                            {__('Activo hoy')}
+                                                        </span>
+                                                    ) : emp.activity.activity_status === 'recent' ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
+                                                            <Clock className="w-3 h-3 text-amber-500" />
+                                                            {emp.activity.activity_status_label}
+                                                        </span>
+                                                    ) : emp.activity.activity_status === 'inactive' ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-800">
+                                                            <AlertTriangle className="w-3 h-3 text-rose-500" />
+                                                            {emp.activity.activity_status_label}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-400 dark:border-slate-800">
+                                                            {__('Sin actividad')}
+                                                        </span>
+                                                    )}
+                                                    <p className="text-[10px] text-muted-foreground">
+                                                        {emp.activity.last_activity_for_humans}
+                                                        {(emp.activity.sales_30d > 0 || emp.activity.repairs_30d > 0) && (
+                                                            <span className="text-indigo-600 dark:text-indigo-400 font-semibold ml-1">
+                                                                • {emp.activity.sales_30d > 0 ? `${emp.activity.sales_30d} vent.` : ''} {emp.activity.repairs_30d > 0 ? `${emp.activity.repairs_30d} rep.` : ''}
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground">—</span>
+                                            )}
+                                        </TableCell>
                                         <TableCell className="py-3 text-xs font-mono">
                                             {emp.fecha_vencimiento}
                                         </TableCell>
-                                        <TableCell className="py-3 text-right">
+                                        <TableCell className="py-3">
                                             <Badge 
                                                 variant="outline"
                                                 className={`text-xs font-bold ${
@@ -696,12 +796,22 @@ export default function SuperAdminDashboard({
                                                 {emp.estado_legible}
                                             </Badge>
                                         </TableCell>
+                                        <TableCell className="py-3 text-right">
+                                            <Link
+                                                href={`/admin/empresas/${emp.id}`}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 transition-colors shadow-sm"
+                                                title={__('Ver Detalle 360° y Uso')}
+                                            >
+                                                <Eye className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                <span>{__('Detalle')}</span>
+                                            </Link>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
 
                                 {filteredEmpresas.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground text-xs">
+                                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs">
                                             {__('No se encontraron empresas con los filtros aplicados.')}
                                         </TableCell>
                                     </TableRow>

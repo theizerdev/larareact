@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\SubscriptionPayment;
 use App\Services\BcvRateService;
+use App\Services\EmpresaActivityService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -15,7 +16,7 @@ class SuperAdminDashboardController extends Controller
      * Dashboard exclusivo para el Super Administrador centrado únicamente
      * en suscripciones actuales, próximas a vencer y alertas sin métricas de caja.
      */
-    public function index(Request $request, BcvRateService $bcvService)
+    public function index(Request $request, BcvRateService $bcvService, EmpresaActivityService $activityService)
     {
         $user = auth()->user();
 
@@ -121,8 +122,11 @@ class SuperAdminDashboardController extends Controller
             $currentDate->addDay();
         }
 
-        // 5. Listado Resumido de Estado Actual de Todas las Empresas
-        $empresasResumen = $empresas->map(function ($emp) {
+        // 5. Listado Resumido de Estado Actual de Todas las Empresas con Telemetría de Uso
+        $allEmpresaIds = $empresas->pluck('id')->toArray();
+        $activityMetrics = $activityService->getActivityMetricsForEmpresas($allEmpresaIds);
+
+        $empresasResumen = $empresas->map(function ($emp) use ($activityMetrics) {
             $sub = $emp->getLatestSubscriptionRecord();
             return [
                 'id' => $emp->id,
@@ -139,6 +143,7 @@ class SuperAdminDashboardController extends Controller
                     : ($sub?->fecha_vencimiento?->format('d/m/Y') ?? $emp->subscription_expires_at?->format('d/m/Y') ?? $emp->trial_ends_at?->format('d/m/Y') ?? 'N/A'),
                 'total_sucursales' => $emp->sucursales_count,
                 'created_at' => $emp->created_at ? $emp->created_at->format('d/m/Y') : 'N/A',
+                'activity' => $activityMetrics[$emp->id] ?? null,
             ];
         });
 
@@ -172,6 +177,9 @@ class SuperAdminDashboardController extends Controller
                 'pagos_pendientes' => $pagosPendientes->count(),
                 'proximas_vencer' => $proximasAVencer->count(),
                 'total_revenue_in_range' => round($totalRevenueInRange, 2),
+                'en_linea' => collect($activityMetrics)->where('is_online', true)->count(),
+                'activas_semana' => collect($activityMetrics)->whereIn('activity_status', ['online', 'active_today', 'recent'])->count(),
+                'inactivas' => collect($activityMetrics)->whereIn('activity_status', ['inactive', 'never'])->count(),
             ],
             'revenueChart' => [
                 'categories' => $revenueChartCategories,

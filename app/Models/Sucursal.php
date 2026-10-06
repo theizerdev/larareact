@@ -67,6 +67,14 @@ class Sucursal extends Model
     }
 
     /**
+     * Get the users that belong to this sucursal.
+     */
+    public function users(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(User::class, 'sucursal_id');
+    }
+
+    /**
      * Get the pais used for the phone prefix of this sucursal.
      */
     public function paisTelefono(): BelongsTo
