@@ -13,15 +13,15 @@ class EmpresaSucursalSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Crear o actualizar la empresa principal Driscoll's con ID 1
+        // 1. Crear o actualizar la empresa principal (genérica) con ID 1
         $empresa = Empresa::updateOrCreate([
             'id' => 1,
         ], [
-            'razon_social' => "Driscoll's, Inc.",
+            'razon_social' => 'Empresa Uno',
             'documento' => 'J-12345678-0',
-            'direccion' => "Av. Principal Driscoll's",
-            'telefono' => '+52 436 117 4564',
-            'email' => 'contacto@driscolls.com',
+            'direccion' => 'Av. Principal Empresa Uno',
+            'telefono' => '+52 000 000 0000',
+            'email' => 'contacto@empresa-uno.example.com',
             'status' => true,
         ]);
 
@@ -30,9 +30,9 @@ class EmpresaSucursalSeeder extends Seeder
             'id' => 1,
         ], [
             'empresa_id' => $empresa->id,
-            'nombre' => 'Cooler Purépero',
-            'telefono' => '+52 436 117 4564',
-            'direccion' => "Cooler Purépero, Michoacán",
+            'nombre' => 'Sucursal Uno',
+            'telefono' => '+52 000 000 0000',
+            'direccion' => 'Sucursal Uno, Ciudad Genérica',
             'status' => true,
         ]);
     }

@@ -29,7 +29,7 @@ class UsersSeeder extends Seeder
             ], [
                 'name' => "Usuario {$name}",
                 'username' => $username,
-                'password' => Hash::make('password'),
+                'password' => Hash::make(env('SEED_USER_PASSWORD', 'password')),
                 'status' => 'activo',
                 'empresa_id' => $empresa ? $empresa->id : null,
                 'sucursal_id' => $sucursal ? $sucursal->id : null,
