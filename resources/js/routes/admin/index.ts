@@ -1,6 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../wayfinder'
 import testimonios from './testimonios'
 import monitoring from './monitoring'
+import assistant from './assistant'
 import contabilidad from './contabilidad'
 import creditConfig from './credit-config'
 import empresas from './empresas'
@@ -77,6 +78,7 @@ const admin = {
     dashboard: Object.assign(dashboard, dashboard),
     testimonios: Object.assign(testimonios, testimonios),
     monitoring: Object.assign(monitoring, monitoring),
+    assistant: Object.assign(assistant, assistant),
     contabilidad: Object.assign(contabilidad, contabilidad),
     creditConfig: Object.assign(creditConfig, creditConfig),
     empresas: Object.assign(empresas, empresas),

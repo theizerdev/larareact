@@ -301,11 +301,11 @@ export default function FloatingAssistantWidget() {
                                 <h3 className="text-sm font-semibold leading-tight flex items-center gap-1.5">
                                     Copiloto FixSale
                                     <span className="text-[10px] font-medium bg-white/20 px-1.5 py-0.5 rounded-full">
-                                        Fase 1
+                                        Fase 1 y 2
                                     </span>
                                 </h3>
                                 <p className="text-[11px] text-white/80 leading-tight">
-                                    Taller, Órdenes y Stock
+                                    Taller, Stock y Catálogo
                                 </p>
                             </div>
                         </div>
@@ -467,6 +467,18 @@ export default function FloatingAssistantWidget() {
                                     className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
                                 >
                                     📊 Resumen
+                                </button>
+                                <button
+                                    onClick={() => handleSendMessage('ver marcas')}
+                                    className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
+                                >
+                                    🏷️ Marcas
+                                </button>
+                                <button
+                                    onClick={() => handleSendMessage('ver categorias')}
+                                    className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
+                                >
+                                    📁 Categorías
                                 </button>
                                 <button
                                     onClick={() => handleSendMessage('alertas stock')}

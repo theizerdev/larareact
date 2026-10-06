@@ -3,6 +3,7 @@ import SuperAdminDashboardController from './SuperAdminDashboardController'
 import TestimonioController from './TestimonioController'
 import ReparacionController from './ReparacionController'
 import ActivityMonitoringController from './ActivityMonitoringController'
+import AssistantController from './AssistantController'
 import ContabilidadController from './ContabilidadController'
 import CreditConfigController from './CreditConfigController'
 import DbMonitoringController from './DbMonitoringController'
@@ -41,6 +42,7 @@ const Admin = {
     TestimonioController: Object.assign(TestimonioController, TestimonioController),
     ReparacionController: Object.assign(ReparacionController, ReparacionController),
     ActivityMonitoringController: Object.assign(ActivityMonitoringController, ActivityMonitoringController),
+    AssistantController: Object.assign(AssistantController, AssistantController),
     ContabilidadController: Object.assign(ContabilidadController, ContabilidadController),
     CreditConfigController: Object.assign(CreditConfigController, CreditConfigController),
     DbMonitoringController: Object.assign(DbMonitoringController, DbMonitoringController),
