@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     ShieldCheck,
     QrCode,
@@ -85,7 +85,7 @@ interface Acompanante {
 interface GaritaProps {
     searchQuery?: string;
     resultado?: {
-        tipo: 'invitacion' | 'acceso' | 'empleado';
+        tipo: 'invitacion' | 'acceso' | 'empleado' | 'proveedor' | 'proveedor_empleado' | 'productor' | 'productor_empleado';
         data: any;
         acceso_existente?: any;
     } | null;
@@ -598,6 +598,8 @@ export default function GaritaControl({
     timezone = 'America/Mexico_City',
 }: GaritaProps) {
     const { __ } = useTranslate();
+    // Nombre de la empresa en la que se está trabajando (aislamiento por empresa).
+    const empresaNombre = (usePage().props as { auth?: { user?: { empresa?: { razon_social?: string } | null } } }).auth?.user?.empresa?.razon_social || 'Hoshō';
     const searchInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -1003,6 +1005,19 @@ export default function GaritaControl({
     };
 
     // Confirmar ingreso oficial en Garita (1-Clic)
+    const handleMarcarSalida = (accesoId: number) => {
+        playScanBeep();
+        router.patch(`/admin/visitas-accesos/${accesoId}/marcar-salida`, {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                notifySuccess(__('Salida marcada correctamente.'));
+            },
+            onError: () => {
+                notifyError(__('Ocurrió un error al marcar la salida. Intente nuevamente.'));
+            },
+        });
+    };
+
     const handleConfirmIngreso = (invitacionId: number) => {
         playScanBeep();
         const payload: any = {};
@@ -1274,7 +1289,7 @@ export default function GaritaControl({
                             <div>
                                 <div className="flex items-center gap-2">
                                     <h1 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                                        {__("DRISCOLL'S • CONTROL DE GARITA")}
+                                        {`${empresaNombre.toUpperCase()} • ${__('CONTROL DE GARITA')}`}
                                     </h1>
                                     <Badge className="bg-emerald-400 text-emerald-950 font-extrabold text-[10px] uppercase tracking-wider px-2 py-0.5 border-0">
                                         {__('🟢 Lector Activo')}
@@ -1375,7 +1390,7 @@ export default function GaritaControl({
                                     </div>
                                     <div>
                                         <span className="text-xs font-bold uppercase tracking-wider text-emerald-200 block">
-                                            {isEmpleado ? __('Colaborador / Empleado Driscoll\'s') :
+                                            {isEmpleado ? `${__('Colaborador / Empleado')} ${empresaNombre}` :
                                                 resultado?.tipo === 'proveedor' ? __('🪪 Gafete Rojo • Proveedor Autorizado') :
                                                     resultado?.tipo === 'proveedor_empleado' ? __('🪪 Gafete Rojo • Empleado de Proveedor') :
                                                         resultado?.tipo === 'productor' ? __('🪪 Gafete Azul • Productor Autorizado') :

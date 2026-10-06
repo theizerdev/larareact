@@ -2024,5 +2024,11 @@
   "JAAK validates the INE and passports; with a passport or foreign ID, DIDIT validates as well. Without a rule, registrations work exactly as before.": "JAAK valida la INE y el pasaporte; con pasaporte o identificación extranjera, DIDIT valida además. Sin regla, las altas funcionan exactamente igual que antes.",
   "Your INE or passport, validated automatically.": "Tu INE o pasaporte, validado automáticamente.",
   "Camera not working?": "¿No funciona la cámara?",
-  "Finish the steps below without leaving this page.": "Termina los pasos de abajo sin salir de esta página."
+  "Finish the steps below without leaving this page.": "Termina los pasos de abajo sin salir de esta página.",
+  "View as company": "Ver como empresa",
+  "Your user has no company assigned. Contact your administrator.": "Tu usuario no tiene una empresa asignada. Contacta a tu administrador.",
+  "Access link": "Liga de acceso",
+  "Access link identifier": "Identificador de la liga de acceso",
+  "Share this link with the company's users: the login screen will show its logo.": "Comparte esta liga con los usuarios de la empresa: la pantalla de inicio de sesión mostrará su logo.",
+  "Link copied": "Liga copiada"
 }

@@ -42,6 +42,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import type { Paginated } from '@/types/app';
 import Pagination from '@/components/pagination';
 
+// Las rutas guardadas vienen como "marcajes/x.jpg" o ya como "/storage/empleados/x.jpg".
+const storageUrl = (path?: string | null): string =>
+    !path ? '' : /^(https?:)?\/\//.test(path) || path.startsWith('/') ? path : `/storage/${path}`;
+
 interface TiempoRestanteInfo {
     estado: 'en_curso' | 'excedido' | 'completado' | 'normal';
     concepto?: string;
@@ -970,7 +974,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
 
                                                             {m.fotografia_path && (
                                                                 <a
-                                                                    href={`/storage/${m.fotografia_path}`}
+                                                                    href={storageUrl(m.fotografia_path)}
                                                                     target="_blank"
                                                                     rel="noreferrer"
                                                                     className="inline-flex items-center gap-1 text-[11px] text-indigo-600 dark:text-indigo-400 font-medium hover:underline"

@@ -135,9 +135,9 @@ export default function ErrorPage({ status }: ErrorPageProps) {
                         </Button>
                     </div>
 
-                    {/* Subtexto corporativo al pie */}
+                    {/* Subtexto al pie: neutro, lo ven todas las empresas */}
                     <p className="text-[10px] text-slate-600 select-none uppercase tracking-widest pt-8">
-                        Only the Finest Berries™
+                        Hoshō
                     </p>
 
                 </div>

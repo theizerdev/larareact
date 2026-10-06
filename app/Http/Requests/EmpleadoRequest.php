@@ -55,7 +55,7 @@ class EmpleadoRequest extends FormRequest
             'vehiculos' => 'nullable|array',
             'empresa_id' => 'required|exists:empresas,id',
             'sucursal_id' => 'required|exists:sucursales,id',
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'required|exists:users,id',  // quién lo registró; ver prepareForValidation
             'status' => 'nullable|integer|in:0,1',
         ];
     }
@@ -66,6 +66,18 @@ class EmpleadoRequest extends FormRequest
      * responsable_id only checked exists:*, not tenant ownership or
      * parent-consistency.
      */
+    /**
+     * user_id es quién registró al empleado (no se muestra en el formulario).
+     * Los empleados antiguos no lo tienen; sin esto no se podían editar.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! $this->filled('user_id') && $this->user()) {
+            $empleado = $this->route('empleado');
+            $this->merge(['user_id' => (is_object($empleado) ? $empleado->user_id : null) ?? $this->user()->getAuthIdentifier()]);
+        }
+    }
+
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {

@@ -11,7 +11,8 @@ import { toast } from 'sonner';
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifySuccess(title: string) {
-    toast.success(title);
+    // id = texto: si la página y el mensaje del servidor avisan lo mismo, se ve una sola vez.
+    toast.success(title, { id: title });
 }
 
 /**
@@ -19,7 +20,7 @@ export function notifySuccess(title: string) {
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifyError(title: string) {
-    toast.error(title);
+    toast.error(title, { id: title });
 }
 
 /**
@@ -27,7 +28,7 @@ export function notifyError(title: string) {
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifyWarning(title: string) {
-    toast.warning(title);
+    toast.warning(title, { id: title });
 }
 
 /**
@@ -35,5 +36,5 @@ export function notifyWarning(title: string) {
  * @param {string} title - El mensaje a mostrar.
  */
 export function notifyInfo(title: string) {
-    toast.info(title);
+    toast.info(title, { id: title });
 }

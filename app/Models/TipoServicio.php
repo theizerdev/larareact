@@ -11,6 +11,9 @@ class TipoServicio extends Model
 {
     use HasFactory, Multitenantable;
 
+    /** Catálogo de toda la empresa: el scope no lo limita a la sucursal del usuario. */
+    public const TENANT_SOLO_EMPRESA = true;
+
     protected $table = 'tipo_servicios';
 
     protected $fillable = [

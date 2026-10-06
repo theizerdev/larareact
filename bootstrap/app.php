@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EmpresaActiva;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocale;
@@ -61,6 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             SetLocale::class,
             HandleAppearance::class,
+            EmpresaActiva::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
@@ -76,6 +78,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'superadmin' => \App\Http\Middleware\SoloSuperAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

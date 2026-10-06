@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Pais;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -59,6 +60,7 @@ class EmpresaController extends Controller
         $validated = $request->validate([
             'razon_social' => 'required|string|max:255',
             'nombre_comercial' => 'nullable|string|max:255',
+            'slug' => ['nullable', 'string', 'max:60', 'regex:/^[a-z0-9]+(-[a-z0-9]+)*$/', 'unique:empresas,slug'],
             'documento' => 'required|string|max:255|unique:empresas,documento',
             'pais_id' => 'nullable|exists:pais,id',
             'direccion' => 'nullable|string',
@@ -97,6 +99,7 @@ class EmpresaController extends Controller
         $validated = $request->validate([
             'razon_social' => 'required|string|max:255',
             'nombre_comercial' => 'nullable|string|max:255',
+            'slug' => ['nullable', 'string', 'max:60', 'regex:/^[a-z0-9]+(-[a-z0-9]+)*$/', Rule::unique('empresas', 'slug')->ignore($empresa->id)],
             'documento' => 'required|string|max:255|unique:empresas,documento,'.$empresa->id,
             'pais_id' => 'nullable|exists:pais,id',
             'direccion' => 'nullable|string',

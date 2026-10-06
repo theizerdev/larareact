@@ -78,7 +78,7 @@ initializeTheme();
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker
-            .register('/sw.js', { scope: '/' })
+            .register('/build/sw.js', { scope: '/' })
             .then((r) => console.info('[PWA] Service Worker registrado:', r.scope))
             .catch((e) => console.warn('[PWA] SW no disponible en dev:', e));
     });

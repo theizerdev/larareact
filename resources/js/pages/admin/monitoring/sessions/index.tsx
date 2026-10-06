@@ -29,26 +29,63 @@ interface PageProps {
     sessions: SessionItem[];
 }
 
+// Una sola consulta por IP (varias sesiones suelen compartirla) y se recuerda
+// en sessionStorage: el plan gratuito de ipapi.co responde 429 si se repite.
+const ipLookups = new Map<string, Promise<string | null>>();
+
+const lookupIp = (ip: string): Promise<string | null> => {
+    const key = `ipapi:${ip}`;
+    try {
+        const cached = sessionStorage.getItem(key);
+        if (cached !== null) {
+            return Promise.resolve(cached || null);
+        }
+    } catch {
+        // sessionStorage no disponible
+    }
+
+    if (!ipLookups.has(ip)) {
+        ipLookups.set(
+            ip,
+            fetch(`https://ipapi.co/${ip}/json/`)
+                .then((res) => (res.ok ? res.json() : null))
+                .then((data) => {
+                    const label = data?.city && data?.country_name
+                        ? `${data.city}, ${data.country_name} ${data.country_code === 'US' ? '🇺🇸' : data.country_code === 'ES' ? '🇪🇸' : data.country_code === 'VE' ? '🇻🇪' : data.country_code === 'MX' ? '🇲🇽' : '🌐'}`
+                        : null;
+                    try {
+                        sessionStorage.setItem(key, label ?? '');
+                    } catch {
+                        // sessionStorage no disponible
+                    }
+                    return label;
+                })
+                .catch(() => null),
+        );
+    }
+
+    return ipLookups.get(ip)!;
+};
+
 // Sub-componente para resolver la ubicación IP de forma asíncrona y segura (sin bloquear el backend)
 const IpLocation: React.FC<{ ip: string; defaultLocation: string }> = ({ ip, defaultLocation }) => {
     const [location, setLocation] = useState(defaultLocation);
 
     useEffect(() => {
-        if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+        if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
             return;
         }
 
-        // Consultar API de geolocalización IP gratuita
-        fetch(`https://ipapi.co/${ip}/json/`)
-            .then((res) => res.json())
-            .then((data) => {
-                if (data.city && data.country_name) {
-                    setLocation(`${data.city}, ${data.country_name} ${data.country_code === 'US' ? '🇺🇸' : data.country_code === 'ES' ? '🇪🇸' : data.country_code === 'VE' ? '🇻🇪' : '🌐'}`);
-                }
-            })
-            .catch(() => {
-                // Fallback silencioso a la ubicación por defecto en caso de error o límite de cuota
-            });
+        let vigente = true;
+        lookupIp(ip).then((label) => {
+            if (vigente && label) {
+                setLocation(label);
+            }
+        });
+
+        return () => {
+            vigente = false;
+        };
     }, [ip]);
 
     return (

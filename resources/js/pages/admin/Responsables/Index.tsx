@@ -352,7 +352,7 @@ return;
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <Phone className="w-3.5 h-3.5" />
                             <span>
-                                {resp.pais_telefono ? `+${resp.pais_telefono.codigo_telefonico} ` : ''}
+                                {resp.pais_telefono ? `+${String(resp.pais_telefono.codigo_telefonico).replace(/^\+/, "")} ` : ''}
                                 {resp.telefono}
                             </span>
                         </div>

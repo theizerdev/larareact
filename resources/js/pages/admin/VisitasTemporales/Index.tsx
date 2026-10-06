@@ -674,7 +674,7 @@ export default function Index({
             header: __('Phone'),
             cell: (visit) => (
                 <span className="text-xs text-slate-600 dark:text-slate-300">
-                    {visit.pais_telefono ? `+${visit.pais_telefono.codigo_telefonico} ` : ''}{visit.telefono || '-'}
+                    {visit.pais_telefono ? `+${String(visit.pais_telefono.codigo_telefonico).replace(/^\+/, "")} ` : ''}{visit.telefono || '-'}
                 </span>
             )
         },

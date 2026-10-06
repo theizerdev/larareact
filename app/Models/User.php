@@ -48,6 +48,58 @@ class User extends Authenticatable implements PasskeyUser
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, HasSpanishActivityLog, LogsActivity, Multitenantable, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
+    /**
+     * Empresa que el Super Administrador eligió en el selector. Sólo vive en
+     * memoria durante la petición (ver EmpresaActiva): mientras está puesta,
+     * empresa_id apunta a ella y el scope Multitenantable filtra como si fuera
+     * un usuario normal de esa empresa. Nunca se guarda en la base.
+     */
+    public ?Empresa $empresaActiva = null;
+
+    /** @var array{empresa_id: int|null, sucursal_id: int|null} */
+    private array $tenantReal = ['empresa_id' => null, 'sucursal_id' => null];
+
+    protected static function booted(): void
+    {
+        // Si alguien guarda al usuario mientras tiene una empresa prestada,
+        // se persisten sus valores reales y luego se vuelve a prestar.
+        static::saving(function (User $user) {
+            if ($user->empresaActiva) {
+                $user->empresa_id = $user->tenantReal['empresa_id'];
+                $user->sucursal_id = $user->tenantReal['sucursal_id'];
+            }
+        });
+
+        static::saved(function (User $user) {
+            if ($user->empresaActiva) {
+                $user->entrarAEmpresa($user->empresaActiva);
+            }
+        });
+    }
+
+    public function entrarAEmpresa(Empresa $empresa): void
+    {
+        if (! $this->empresaActiva) {
+            $this->tenantReal = [
+                'empresa_id' => $this->getAttribute('empresa_id'),
+                'sucursal_id' => $this->getAttribute('sucursal_id'),
+            ];
+        }
+
+        // Sucursal para los formularios que la piden: la suya si es de esa
+        // empresa, si no la primera. El scope no filtra por sucursal al
+        // superadmin, así que sigue viendo todas las de la empresa.
+        $sucursal = Sucursal::withoutTenant()->where('empresa_id', $empresa->id)
+            ->orderByRaw('id = ? desc', [$this->tenantReal['sucursal_id']])
+            ->orderBy('id')->first();
+
+        $this->empresaActiva = $empresa;
+        $this->empresa_id = $empresa->id;
+        $this->sucursal_id = $sucursal?->id;
+        $this->setRelation('empresa', $empresa);
+        $this->setRelation('sucursal', $sucursal);
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

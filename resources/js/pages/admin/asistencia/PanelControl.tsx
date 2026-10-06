@@ -47,6 +47,10 @@ import {
 import type { Paginated } from '@/types/app';
 import { cleanParams } from '@/lib/utils';
 
+// Las rutas guardadas vienen como "marcajes/x.jpg" o ya como "/storage/empleados/x.jpg".
+const storageUrl = (path?: string | null): string =>
+    !path ? '' : /^(https?:)?\/\//.test(path) || path.startsWith('/') ? path : `/storage/${path}`;
+
 interface SucursalOption {
     id: number;
     nombre: string;
@@ -305,7 +309,7 @@ export default function PanelControlAsistencia({
                     <div className="flex items-center gap-3 py-1">
                         <Avatar className="h-10 w-10 border border-indigo-200 dark:border-indigo-900 shrink-0">
                             {row.foto_empleado ? (
-                                <AvatarImage src={`/storage/${row.foto_empleado}`} alt={row.nombre_completo} />
+                                <AvatarImage src={storageUrl(row.foto_empleado)} alt={row.nombre_completo} />
                             ) : null}
                             <AvatarFallback className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-bold text-xs">
                                 {initials}
@@ -918,7 +922,7 @@ export default function PanelControlAsistencia({
                                 <div className="flex items-center gap-3">
                                     <Avatar className="h-12 w-12 border-2 border-indigo-200 dark:border-indigo-900 shrink-0">
                                         {selectedColaborador.foto_empleado ? (
-                                            <AvatarImage src={`/storage/${selectedColaborador.foto_empleado}`} alt={selectedColaborador.nombre_completo} />
+                                            <AvatarImage src={storageUrl(selectedColaborador.foto_empleado)} alt={selectedColaborador.nombre_completo} />
                                         ) : null}
                                         <AvatarFallback className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-bold text-sm">
                                             {`${selectedColaborador.nombres.charAt(0)}${selectedColaborador.apellidos.charAt(0)}`.toUpperCase()}
@@ -1173,7 +1177,7 @@ export default function PanelControlAsistencia({
                                                         )}
                                                         {ev.fotografia_path && (
                                                             <a
-                                                                href={`/storage/${ev.fotografia_path}`}
+                                                                href={storageUrl(ev.fotografia_path)}
                                                                 target="_blank"
                                                                 rel="noreferrer"
                                                                 className="inline-flex items-center gap-1 text-[11px] text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-200 hover:underline"

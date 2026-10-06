@@ -27,3 +27,12 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# El service worker de la PWA (Kiosko) se compila en /build/sw.js; este header
+# le permite controlar todo el sitio (scope "/") desde esa carpeta.
+<IfModule mod_headers.c>
+    <Files "sw.js">
+        Header set Service-Worker-Allowed "/"
+        Header set Cache-Control "no-cache"
+    </Files>
+</IfModule>

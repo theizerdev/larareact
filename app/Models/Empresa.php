@@ -6,6 +6,7 @@ use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -15,6 +16,22 @@ class Empresa extends Model
 
     protected $table = 'empresas';
 
+    protected static function booted(): void
+    {
+        // Toda empresa tiene liga de acceso (/e/{slug}); si no se captura, se
+        // genera del nombre.
+        static::saving(function (Empresa $empresa) {
+            if (! $empresa->slug) {
+                $base = Str::slug($empresa->nombre_comercial ?: $empresa->razon_social) ?: 'empresa';
+                $slug = $base;
+                for ($i = 2; static::withoutTenant()->where('slug', $slug)->whereKeyNot($empresa->getKey())->exists(); $i++) {
+                    $slug = "{$base}-{$i}";
+                }
+                $empresa->slug = $slug;
+            }
+        });
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -23,10 +40,31 @@ class Empresa extends Model
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
     }
 
+    /**
+     * Llaves y tokens de integraciones: nunca se mandan al navegador al
+     * serializar la empresa (p. ej. como relación en Sucursales). Las pantallas
+     * de Integraciones los leen por nombre y deciden qué mostrar.
+     */
+    protected $hidden = [
+        'api_key',
+        'whatsapp_api_key',
+        'mapbox_api_key',
+        'google_maps_api_key',
+        'control_acceso_app_token',
+        'control_acceso_user_token',
+        'jaak_api_key',
+        'zapsign_api_token',
+        'didit_api_key',
+        'didit_webhook_secret',
+        'zapsign_webhook_secret',
+        'biotime_password',
+    ];
+
     protected $fillable = [
         'pais_id',
         'razon_social',
         'nombre_comercial',
+        'slug',
         'documento',
         'pais_telefono_id',
         'zona_horaria',

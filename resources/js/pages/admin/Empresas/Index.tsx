@@ -14,6 +14,7 @@ import {
     Upload,
     X,
     Clock,
+    Link2,
 } from 'lucide-react';
 import React, { useState, Suspense, lazy, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -70,6 +71,7 @@ interface Empresa {
     pais_id?: number | null;
     razon_social: string;
     nombre_comercial?: string | null;
+    slug?: string | null;
     documento: string;
     logo?: string | null;
     logo_mini?: string | null;
@@ -105,6 +107,7 @@ interface EmpresasPageProps {
 const initialForm = {
     razon_social: '',
     nombre_comercial: '',
+    slug: '',
     documento: '',
     representante_legal: '',
     curp_representante_legal: '',
@@ -125,6 +128,8 @@ const initialForm = {
 
 export default function EmpresasIndexPage({ auth, empresas, stats, paises, filters }: EmpresasPageProps) {
     const { __ } = useTranslate();
+    // Alta y activación de empresas: sólo el Super Administrador.
+    const esSuperAdmin = Boolean((auth as { user?: { is_super_admin?: boolean } })?.user?.is_super_admin);
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -206,6 +211,7 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
         setData({
             razon_social:             empresa.razon_social || '',
             nombre_comercial:         empresa.nombre_comercial || '',
+            slug:                     empresa.slug || '',
             documento:                empresa.documento || '',
             representante_legal:      empresa.representante_legal || '',
             curp_representante_legal: empresa.curp_representante_legal || '',
@@ -348,6 +354,19 @@ formData.append('logo_mini', logoMiniFile);
                     <div>
                         <p className="font-medium text-sm">{empresa.razon_social}</p>
                         <p className="text-xs text-muted-foreground">{empresa.documento}</p>
+                        {empresa.slug && (
+                            <button
+                                type="button"
+                                title={__('Access link')}
+                                className="mt-0.5 flex items-center gap-1 text-xs text-primary hover:underline"
+                                onClick={() => {
+                                    navigator.clipboard?.writeText(`${window.location.origin}/e/${empresa.slug}`);
+                                    notifySuccess(__('Link copied'));
+                                }}
+                            >
+                                <Link2 className="size-3" />/e/{empresa.slug}
+                            </button>
+                        )}
                     </div>
                 </div>
             ),
@@ -400,6 +419,7 @@ formData.append('logo_mini', logoMiniFile);
                 <div className="flex items-center space-x-2">
                     <Switch
                         checked={empresa.status}
+                        disabled={!esSuperAdmin}
                         onCheckedChange={() => handleToggleStatus(empresa)}
                     />
                     <span className={cn(
@@ -430,10 +450,12 @@ formData.append('logo_mini', logoMiniFile);
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(empresa)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
-                            {empresa.status ? __('Deactivate') : __('Activate')}
-                        </DropdownMenuItem>
+                        {esSuperAdmin && (
+                            <DropdownMenuItem onClick={() => handleToggleStatus(empresa)}>
+                                <ToggleRight className="mr-2 h-4 w-4" />
+                                {empresa.status ? __('Deactivate') : __('Activate')}
+                            </DropdownMenuItem>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             ),
@@ -455,10 +477,12 @@ formData.append('logo_mini', logoMiniFile);
                     description={__('Manage companies, their locations and contact information.')}
                     colorClassName="bg-indigo-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Company')}
-                    </Button>
+                    {esSuperAdmin && (
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Company')}
+                        </Button>
+                    )}
                 </ModuleHeader>
 
                 {/* Stat Cards */}
@@ -601,6 +625,29 @@ formData.append('logo_mini', logoMiniFile);
                                         />
                                         {errors.nombre_comercial && (
                                             <p className="text-red-500 text-xs mt-1">{errors.nombre_comercial}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Liga de acceso: el login muestra el logo de la empresa */}
+                                    <div>
+                                        <Label htmlFor="slug">{__('Access link identifier')}</Label>
+                                        <div className="flex items-center rounded-md border border-input focus-within:ring-1 focus-within:ring-ring">
+                                            <span className="pl-3 text-sm text-muted-foreground whitespace-nowrap">
+                                                {window.location.host}/e/
+                                            </span>
+                                            <Input
+                                                id="slug"
+                                                value={data.slug || ''}
+                                                onChange={(e) => setData('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                                                placeholder="mi-empresa"
+                                                className="border-0 pl-0.5 shadow-none focus-visible:ring-0"
+                                            />
+                                        </div>
+                                        <p className="text-muted-foreground text-xs mt-1">
+                                            {__("Share this link with the company's users: the login screen will show its logo.")}
+                                        </p>
+                                        {errors.slug && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.slug}</p>
                                         )}
                                     </div>
 

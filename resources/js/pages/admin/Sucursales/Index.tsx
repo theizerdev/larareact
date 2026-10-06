@@ -146,6 +146,7 @@ export default function SucursalesIndexPage({
     const [deletingSucursal, setDeletingSucursal] = useState<Sucursal | null>(null);
     const [activeTab, setActiveTab]               = useState('general');
     const [isTableLoading, setIsTableLoading]     = useState(false);
+    const [geocoding, setGeocoding]               = useState(false);
 
     // Filtros
     const [searchTerm, setSearchTerm]         = useState(filters.search || '');
@@ -275,7 +276,37 @@ return;
         }));
     };
 
-    // ── Columnas de la tabla ───────────────────────────────────────────────────
+    // Busca la dirección capturada y coloca el marcador en ella.
+    const handleForceGeocode = async () => {
+        const direccion = (data.direccion || '').trim();
+        if (!direccion) {
+            notifyError(__('Write an address first.'));
+            return;
+        }
+
+        setGeocoding(true);
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=es&q=${encodeURIComponent(direccion)}`,
+            );
+            const [hit] = (await res.json()) as { lat: string; lon: string }[];
+            if (!hit) {
+                notifyError(__('Address not found. Place the marker on the map.'));
+                return;
+            }
+            setData((prev) => ({
+                ...prev,
+                latitud:  Number(Number(hit.lat).toFixed(8)),
+                longitud: Number(Number(hit.lon).toFixed(8)),
+            }));
+        } catch {
+            notifyError(__('Address not found. Place the marker on the map.'));
+        } finally {
+            setGeocoding(false);
+        }
+    };
+
+        // ── Columnas de la tabla ───────────────────────────────────────────────────
 
     const columns: ColumnDef<Sucursal>[] = [
         {
@@ -690,7 +721,6 @@ return;
                                             step="any"
                                             value={data.latitud ?? ''}
                                             onChange={(e) => {
-                                                coordsSourceRef.current = 'manual';
                                                 setData('latitud', e.target.value ? parseFloat(e.target.value) : null);
                                             }}
                                             placeholder="19.92"
@@ -705,7 +735,6 @@ return;
                                             step="any"
                                             value={data.longitud ?? ''}
                                             onChange={(e) => {
-                                                coordsSourceRef.current = 'manual';
                                                 setData('longitud', e.target.value ? parseFloat(e.target.value) : null);
                                             }}
                                             placeholder="-102.01"

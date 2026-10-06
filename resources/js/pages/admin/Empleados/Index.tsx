@@ -468,7 +468,7 @@ export default function EmpleadosIndexPage({
 
     // ── Handlers ───────────────────────────────────────────────────────────────
 
-    // const [loadingRenapo, setLoadingRenapo] = useState(false); // RENAPO validation removed
+    const [, setLoadingRenapo] = useState(false);
 
     const handleConsultarRenapo = async () => {
         if (!data.curp || data.curp.length !== 18) {
@@ -658,7 +658,7 @@ export default function EmpleadosIndexPage({
             accessorKey: 'nombres',
             className: 'font-medium',
             cell: (emp) => {
-                const foto = formatImageUrl(emp.foto_empleado) || '/image/avatar-placeholder.png'; // fallback avatar
+                const foto = formatImageUrl(emp.foto_empleado) || '/image/avatar-placeholder.svg'; // fallback avatar
                 return (
                     <div className="flex items-center gap-3">
                         <img
@@ -711,7 +711,7 @@ export default function EmpleadosIndexPage({
                         <div className="flex items-center gap-1.5 text-muted-foreground">
                             <Phone className="w-3.5 h-3.5" />
                             <span>
-                                {emp.pais_telefono?.codigo_telefonico ? `+${emp.pais_telefono.codigo_telefonico} ` : ''}
+                                {emp.pais_telefono?.codigo_telefonico ? `+${String(emp.pais_telefono.codigo_telefonico).replace(/^\+/, "")} ` : ''}
                                 {emp.telefono}
                             </span>
                         </div>
