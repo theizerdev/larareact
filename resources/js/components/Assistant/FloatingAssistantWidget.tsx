@@ -67,6 +67,8 @@ const nowLabel = () => new Date().toLocaleTimeString([], { hour: '2-digit', minu
 
 const WELCOME_ACTIONS: QuickAction[] = [
     { label: '📊 Resumen Taller', action: 'get_summary' },
+    { label: '💰 Estado Caja', action: 'get_cash_status' },
+    { label: '💳 Deudas Clientes', action: 'list_debtors' },
     { label: '👤 Clientes', action: 'list_clientes' },
     { label: '🎯 Metas Ventas', action: 'get_sales_goals' },
     { label: '📦 Ver Kardex', action: 'get_kardex' },
@@ -84,13 +86,13 @@ const buildWelcome = (text: string, id = 'welcome'): ChatMessage => ({
 });
 
 const WELCOME_TEXT =
-    '¡Hola! Soy tu copiloto interno de FixSale. Puedo ayudarte con servicio técnico, clientes, inventario y Kardex, catálogo, metas de ventas, fondo mensual y proveedores.\n\nEscribe un comando o elige una categoría abajo.';
+    '¡Hola! Soy tu copiloto interno de FixSale. Puedo ayudarte con servicio técnico y creación de órdenes, caja chica, cobranzas y clientes, inventario y Kardex, catálogo y finanzas.\n\nEscribe un comando o elige una categoría abajo.';
 
 const toneFor = (type?: string): MessageTone => {
     if (!type) return 'default';
     if (type === 'error') return 'error';
-    if (['not_found', 'unknown', 'need_brand', 'client_exists', 'info'].includes(type)) return 'warning';
-    if (type.endsWith('_created') || ['stock_adjusted', 'whatsapp_sent', 'status_updated', 'updated'].includes(type)) {
+    if (['not_found', 'unknown', 'need_brand', 'client_exists', 'info', 'cash_closed'].includes(type)) return 'warning';
+    if (type.endsWith('_created') || ['stock_adjusted', 'whatsapp_sent', 'status_updated', 'updated', 'cash_opened', 'credit_payment'].includes(type)) {
         return 'success';
     }
     return 'default';

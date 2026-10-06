@@ -7,6 +7,7 @@ use App\Models\CashRegister;
 use App\Models\Categoria;
 use App\Models\Cliente;
 use App\Models\Compra;
+use App\Models\CreditPayment;
 use App\Models\Empresa;
 use App\Models\Familia;
 use App\Models\InventoryMovement;
@@ -21,6 +22,7 @@ use App\Models\Sale;
 use App\Models\SalesGoal;
 use App\Models\Sucursal;
 use App\Models\User;
+use App\Services\CashRegisterService;
 use App\Services\WhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -122,6 +124,69 @@ class InternalAssistantService
             return $this->handleListCompras($user, $empresaId);
         }
 
+        // Movimientos de Caja: Gasto / Egreso / Ingreso (ej: "gasto 10 almuerzo", "ingreso caja 50 fondo")
+        $cashMovementMatch = $this->parseCashMovementCommand($rawQuery, $normalized);
+        if ($cashMovementMatch) {
+            return $this->handleAddCashMovement(
+                $user,
+                $cashMovementMatch['type'],
+                $cashMovementMatch['amount'],
+                $cashMovementMatch['reason']
+            );
+        }
+
+        // Abrir Caja (ej: "abrir caja 50", "apertura caja con 100")
+        $openCashMatch = $this->parseOpenCashCommand($rawQuery, $normalized);
+        if ($openCashMatch !== null) {
+            return $this->handleOpenCashRegister(
+                $user,
+                $empresaId,
+                $sucursalId,
+                $openCashMatch['amount']
+            );
+        }
+
+        // Cerrar Caja (ej: "cerrar caja 250", "cierre de caja")
+        $closeCashMatch = $this->parseCloseCashCommand($rawQuery, $normalized);
+        if ($closeCashMatch !== null) {
+            return $this->handleCloseCashRegister(
+                $user,
+                $empresaId,
+                $sucursalId,
+                $closeCashMatch['counted_amount']
+            );
+        }
+
+        // Estado de Caja (ej: "estado de caja", "ver caja", "caja chica", "como esta la caja")
+        if ($this->isCashRegisterStatusQuery($normalized)) {
+            return $this->handleCashRegisterStatus($user, $empresaId, $sucursalId);
+        }
+
+        // Abonar a Cliente (ej: "abonar 20 a Juan Perez", "abono 15 Pedro", "pagar credito 30 Maria")
+        $creditPaymentMatch = $this->parseCreditPaymentCommand($rawQuery, $normalized);
+        if ($creditPaymentMatch) {
+            return $this->handleClientCreditPayment(
+                $user,
+                $empresaId,
+                $sucursalId,
+                $creditPaymentMatch['client'],
+                $creditPaymentMatch['amount'],
+                $creditPaymentMatch['method'] ?? 'efectivo',
+                $creditPaymentMatch['note'] ?? null
+            );
+        }
+
+        // Deuda de Cliente (ej: "deuda de Juan", "saldo de Carlos", "cuanto debe Pedro")
+        $clientDebtMatch = $this->parseClientDebtCommand($rawQuery, $normalized);
+        if ($clientDebtMatch) {
+            return $this->handleClientDebt($user, $empresaId, $clientDebtMatch['client']);
+        }
+
+        // Cartera de Clientes con Deuda (ej: "clientes con deuda", "deudas pendientes", "morosos", "cuentas por cobrar")
+        if ($this->isDebtorsQuery($normalized)) {
+            return $this->handleListDebtors($user, $empresaId);
+        }
+
         // Clientes (crear, listar o buscar clientes)
         $clientCmd = $this->parseClientCommand($rawQuery, $normalized);
         if ($clientCmd) {
@@ -188,6 +253,17 @@ class InternalAssistantService
         // ==========================================
         // FASE 1: SERVICIO TÉCNICO, ÓRDENES Y STOCK
         // ==========================================
+
+        // Crear Orden de Reparación (ej: "crear reparacion cliente Juan Perez equipo iPhone 11 falla pantalla rota costo 45")
+        $createRepairMatch = $this->parseCreateRepairCommand($rawQuery, $normalized);
+        if ($createRepairMatch) {
+            return $this->handleCreateRepairOrder(
+                $user,
+                $empresaId,
+                $sucursalId,
+                $createRepairMatch
+            );
+        }
 
         // 8. Resumen del taller (Hoy / Activo)
         if ($this->isWorkshopSummary($normalized)) {
@@ -371,6 +447,20 @@ class InternalAssistantService
 
             case 'list_clientes':
                 return $this->handleListClientes($user, $empresaId);
+
+            case 'get_cash_status':
+                return $this->handleCashRegisterStatus($user, $empresaId, $sucursalId);
+
+            case 'open_cash_register':
+                $amount = (float)($params['opening_amount'] ?? 0);
+                return $this->handleOpenCashRegister($user, $empresaId, $sucursalId, $amount);
+
+            case 'close_cash_register':
+                $counted = isset($params['counted_amount']) ? (float)$params['counted_amount'] : null;
+                return $this->handleCloseCashRegister($user, $empresaId, $sucursalId, $counted);
+
+            case 'list_debtors':
+                return $this->handleListDebtors($user, $empresaId);
 
             default:
                 return [
@@ -1723,6 +1813,598 @@ class InternalAssistantService
     }
 
     // ==========================================
+    // MANEJADORES DE CAJA CHICA Y TURNO
+    // ==========================================
+
+    public function handleCashRegisterStatus(User $user, int $empresaId, ?int $sucursalId): array
+    {
+        $register = CashRegister::getActiveRegister($user);
+        $currency = $this->getCurrencySymbol($empresaId);
+
+        if (!$register) {
+            return [
+                'type' => 'cash_closed',
+                'message' => "🔒 **Caja Cerrada**\n\nNo tienes ninguna caja o turno abierto actualmente en esta sucursal.\n\nPuedes abrir tu caja escribiendo `abrir caja [monto]` o con los botones rápidos.",
+                'quick_actions' => [
+                    ['label' => '🟢 Abrir Caja con $0', 'text' => 'abrir caja 0'],
+                    ['label' => '🟢 Abrir Caja con $50', 'text' => 'abrir caja 50'],
+                    ['label' => '🛒 Ir al POS ↗', 'url' => '/admin/pos', 'type' => 'link'],
+                ],
+            ];
+        }
+
+        $cashService = app(CashRegisterService::class);
+        $summary = $cashService->getRegisterFinancialSummary($register);
+
+        $openedAt = $register->opened_at ? Carbon::parse($register->opened_at)->format('h:i A') : 'Hoy';
+        $userName = $register->user?->name ?: $user->name;
+
+        $msg = "💰 **Turno de Caja Activo (#{$register->id})**\n\n"
+            . "• **Cajero:** {$userName}\n"
+            . "• **Hora de Apertura:** {$openedAt}\n"
+            . "• **Monto de Apertura:** {$currency}" . number_format($summary['opening_amount'], 2) . "\n"
+            . "• **Ingresos del Turno:** {$currency}" . number_format($summary['inflows'], 2) . "\n"
+            . "• **Gastos / Egresos:** {$currency}" . number_format($summary['outflows'], 2) . "\n"
+            . "• **Efectivo en Gaveta:** {$currency}" . number_format($summary['expected_cash_balance'], 2) . "\n"
+            . "• **Cobros Electrónicos:** {$currency}" . number_format($summary['electronic_inflows'], 2) . "\n"
+            . "• **Balance Total Turno:** {$currency}" . number_format($summary['total_turn_balance'], 2);
+
+        return [
+            'type' => 'cash_status',
+            'message' => $msg,
+            'quick_actions' => [
+                ['label' => '➕ Registrar Gasto', 'text' => 'gasto 10 motivo '],
+                ['label' => '➕ Ingreso Dinero', 'text' => 'ingreso caja 20 motivo '],
+                ['label' => '🔒 Cerrar Caja', 'text' => 'cerrar caja ' . number_format($summary['expected_cash_balance'], 2, '.', '')],
+                ['label' => '🛒 Ver en POS ↗', 'url' => '/admin/pos', 'type' => 'link'],
+            ],
+        ];
+    }
+
+    public function handleOpenCashRegister(User $user, int $empresaId, ?int $sucursalId, float $openingAmount): array
+    {
+        $existing = CashRegister::getActiveRegister($user);
+        $currency = $this->getCurrencySymbol($empresaId);
+
+        if ($existing) {
+            return [
+                'type' => 'warning',
+                'message' => "⚠️ Ya tienes una caja abierta actualmente (**Caja #{$existing->id}** abierta con {$currency}" . number_format((float)$existing->opening_amount, 2) . ").\n\nDebes cerrar la caja actual antes de iniciar una nueva.",
+                'quick_actions' => [
+                    ['label' => '💰 Ver Estado de Caja', 'action' => 'get_cash_status'],
+                    ['label' => '🔒 Cerrar Caja Actual', 'text' => 'cerrar caja'],
+                ],
+            ];
+        }
+
+        $cashService = app(CashRegisterService::class);
+        $register = $cashService->openRegister($user->id, max(0, $openingAmount));
+
+        return [
+            'type' => 'cash_opened',
+            'message' => "🟢 **¡Caja Abierta Exitosamente!**\n\n"
+                . "• **Número de Caja:** #{$register->id}\n"
+                . "• **Monto Inicial:** {$currency}" . number_format($openingAmount, 2) . "\n"
+                . "• **Hora de Apertura:** " . Carbon::now()->format('h:i A') . "\n"
+                . "• **Responsable:** {$user->name}",
+            'quick_actions' => [
+                ['label' => '💰 Ver Estado', 'action' => 'get_cash_status'],
+                ['label' => '➕ Registrar Gasto', 'text' => 'gasto 10 motivo '],
+                ['label' => '🛒 Ir al POS ↗', 'url' => '/admin/pos', 'type' => 'link'],
+            ],
+        ];
+    }
+
+    public function handleCloseCashRegister(User $user, int $empresaId, ?int $sucursalId, ?float $countedAmount): array
+    {
+        $register = CashRegister::getActiveRegister($user);
+        $currency = $this->getCurrencySymbol($empresaId);
+
+        if (!$register) {
+            return [
+                'type' => 'warning',
+                'message' => "⚠️ No hay ninguna caja abierta en este momento para cerrar.",
+                'quick_actions' => [
+                    ['label' => '🟢 Abrir Caja con $0', 'text' => 'abrir caja 0'],
+                ],
+            ];
+        }
+
+        $cashService = app(CashRegisterService::class);
+        $summary = $cashService->getRegisterFinancialSummary($register);
+        $expectedCash = (float)$summary['expected_cash_balance'];
+
+        $counted = $countedAmount !== null ? $countedAmount : $expectedCash;
+        $closedRegister = $cashService->closeRegister($register, $counted);
+
+        $diff = (float)$closedRegister->difference;
+        $diffText = $diff == 0
+            ? "Exacto (sin diferencia)"
+            : ($diff > 0 ? "Sobrante de {$currency}" . number_format($diff, 2) : "Faltante de {$currency}" . number_format(abs($diff), 2));
+
+        return [
+            'type' => 'cash_closed',
+            'message' => "🔒 **¡Caja #{$closedRegister->id} Cerrada!**\n\n"
+                . "• **Total Ventas / Ingresos:** {$currency}" . number_format($summary['inflows'], 2) . "\n"
+                . "• **Total Gastos:** {$currency}" . number_format($summary['outflows'], 2) . "\n"
+                . "• **Efectivo Esperado:** {$currency}" . number_format($expectedCash, 2) . "\n"
+                . "• **Efectivo Contado:** {$currency}" . number_format($counted, 2) . "\n"
+                . "• **Diferencia:** {$diffText}\n"
+                . "• **Hora de Cierre:** " . Carbon::now()->format('h:i A'),
+            'quick_actions' => [
+                ['label' => '🟢 Abrir Nueva Caja', 'text' => 'abrir caja 0'],
+                ['label' => '🏦 Ver Fondo de Mes', 'action' => 'get_monthly_fund'],
+            ],
+        ];
+    }
+
+    public function handleAddCashMovement(User $user, string $type, float $amount, string $reason): array
+    {
+        $register = CashRegister::getActiveRegister($user);
+        $currency = $this->getCurrencySymbol($user->empresa_id ?: 1);
+
+        if (!$register) {
+            return [
+                'type' => 'warning',
+                'message' => "⚠️ No tienes una caja abierta. Para registrar un " . ($type === 'outflow' ? 'gasto' : 'ingreso') . ", primero abre la caja.",
+                'quick_actions' => [
+                    ['label' => '🟢 Abrir Caja con $0', 'text' => 'abrir caja 0'],
+                ],
+            ];
+        }
+
+        if ($amount <= 0) {
+            return ['type' => 'error', 'message' => 'El monto debe ser mayor a cero.'];
+        }
+
+        $cashService = app(CashRegisterService::class);
+        $concepto = $type === 'outflow' ? 'gasto' : 'ingreso_manual';
+        $movement = $cashService->addMovement(
+            $register,
+            $type,
+            $concepto,
+            'efectivo',
+            $amount,
+            $reason,
+            $user->id
+        );
+
+        $summary = $cashService->getRegisterFinancialSummary($register);
+        $typeLabel = $type === 'outflow' ? '🔴 Gasto registrado' : '🟢 Ingreso registrado';
+
+        return [
+            'type' => 'cash_movement',
+            'message' => "{$typeLabel} en **Caja #{$register->id}**:\n\n"
+                . "• **Monto:** {$currency}" . number_format($amount, 2) . "\n"
+                . "• **Motivo:** {$reason}\n"
+                . "• **Efectivo en Gaveta:** {$currency}" . number_format($summary['expected_cash_balance'], 2),
+            'quick_actions' => [
+                ['label' => '💰 Estado de Caja', 'action' => 'get_cash_status'],
+                ['label' => '➕ Otro Gasto', 'text' => 'gasto '],
+            ],
+        ];
+    }
+
+    // ==========================================
+    // MANEJADORES DE CRÉDITO Y COBRANZAS
+    // ==========================================
+
+    public function handleListDebtors(User $user, int $empresaId): array
+    {
+        $currency = $this->getCurrencySymbol($empresaId);
+        $deudores = Cliente::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('saldo_pendiente', '>', 0)
+            ->orderByDesc('saldo_pendiente')
+            ->take(10)
+            ->get();
+
+        if ($deudores->isEmpty()) {
+            return [
+                'type' => 'info',
+                'message' => "🎉 **Cuentas al Día:** No tienes clientes con saldos pendientes por cobrar en este momento.",
+                'quick_actions' => [
+                    ['label' => '👤 Ver Clientes', 'action' => 'list_clientes'],
+                    ['label' => '🎯 Metas Ventas', 'action' => 'get_sales_goals'],
+                ],
+            ];
+        }
+
+        $totalCartera = (float) Cliente::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('saldo_pendiente', '>', 0)
+            ->sum('saldo_pendiente');
+
+        $lines = ["📋 **Cartera de Cuentas por Cobrar**\n", "• **Total por Cobrar:** {$currency}" . number_format($totalCartera, 2) . "\n"];
+        $actions = [];
+
+        foreach ($deudores as $c) {
+            $tel = $c->telefono ? " (📞 {$c->telefono})" : "";
+            $lines[] = "• **{$c->nombre}**: {$currency}" . number_format((float)$c->saldo_pendiente, 2) . "{$tel}";
+            if (count($actions) < 4) {
+                $actions[] = [
+                    'label' => "💵 Cobrar a " . Str::limit($c->nombre, 12),
+                    'text' => "abonar " . number_format((float)$c->saldo_pendiente, 0, '', '') . " a {$c->nombre}",
+                ];
+            }
+        }
+
+        $actions[] = [
+            'label' => '👤 Directorio Clientes ↗',
+            'url' => '/admin/clientes',
+            'type' => 'link',
+        ];
+
+        return [
+            'type' => 'debtors',
+            'message' => implode("\n", $lines),
+            'quick_actions' => $actions,
+        ];
+    }
+
+    public function handleClientDebt(User $user, int $empresaId, string $clientTerm): array
+    {
+        $clean = trim($clientTerm);
+        $currency = $this->getCurrencySymbol($empresaId);
+
+        $cliente = Cliente::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where(function ($q) use ($clean) {
+                $q->where('nombre', 'like', "%{$clean}%")
+                  ->orWhere('telefono', 'like', "%{$clean}%");
+            })
+            ->first();
+
+        if (!$cliente) {
+            return [
+                'type' => 'not_found',
+                'message' => "❌ No se encontró ningún cliente coincidente con **\"{$clean}\"**.",
+                'quick_actions' => [
+                    ['label' => '📋 Clientes con Deuda', 'action' => 'list_debtors'],
+                    ['label' => '👤 Ver Clientes', 'action' => 'list_clientes'],
+                ],
+            ];
+        }
+
+        $saldo = (float) $cliente->saldo_pendiente;
+        $limite = (float) $cliente->limite_credito;
+
+        $msg = "💳 **Estado de Crédito de {$cliente->nombre}**\n\n"
+            . "• **Saldo Pendiente:** {$currency}" . number_format($saldo, 2) . "\n"
+            . "• **Límite de Crédito:** {$currency}" . number_format($limite, 2) . "\n"
+            . "• **Teléfono:** " . ($cliente->telefono ?: 'No asignado') . "\n"
+            . "• **Email:** " . ($cliente->email ?: 'No asignado');
+
+        $actions = [];
+        if ($saldo > 0) {
+            $actions[] = [
+                'label' => '💵 Abonar Total',
+                'text' => "abonar " . number_format($saldo, 2, '.', '') . " a {$cliente->nombre}",
+            ];
+            $actions[] = [
+                'label' => '💵 Abonar Parcial',
+                'text' => "abonar  a {$cliente->nombre}",
+            ];
+        } else {
+            $msg .= "\n\n✅ Este cliente se encuentra al día con sus pagos.";
+        }
+
+        $actions[] = [
+            'label' => '👤 Ver Ficha ↗',
+            'url' => "/admin/clientes?search=" . urlencode($cliente->nombre),
+            'type' => 'link',
+        ];
+
+        return [
+            'type' => 'client_debt',
+            'message' => $msg,
+            'quick_actions' => $actions,
+        ];
+    }
+
+    public function handleClientCreditPayment(
+        User $user,
+        int $empresaId,
+        ?int $sucursalId,
+        string $clientTerm,
+        float $amount,
+        string $method = 'efectivo',
+        ?string $note = null
+    ): array {
+        $currency = $this->getCurrencySymbol($empresaId);
+        $clean = trim($clientTerm);
+
+        $cliente = Cliente::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where(function ($q) use ($clean) {
+                $q->where('nombre', 'like', "%{$clean}%")
+                  ->orWhere('telefono', 'like', "%{$clean}%");
+            })
+            ->first();
+
+        if (!$cliente) {
+            return [
+                'type' => 'not_found',
+                'message' => "❌ No se encontró ningún cliente coincidente con **\"{$clean}\"**.",
+            ];
+        }
+
+        if ($amount <= 0) {
+            return ['type' => 'error', 'message' => 'El monto del abono debe ser mayor a cero.'];
+        }
+
+        $saldoActual = (float) $cliente->saldo_pendiente;
+        if ($saldoActual <= 0) {
+            return [
+                'type' => 'info',
+                'message' => "ℹ️ El cliente **{$cliente->nombre}** ya está al día (saldo pendiente: {$currency}0.00). No es necesario realizar abonos.",
+            ];
+        }
+
+        $montoPagar = min($amount, $saldoActual);
+
+        // Buscar ventas a crédito pendientes
+        $sales = Sale::withoutGlobalScope('multitenancy')
+            ->where('cliente_id', $cliente->id)
+            ->where('saldo_credito', '>', 0)
+            ->orderBy('id')
+            ->get();
+
+        $restanteParaVentas = $montoPagar;
+        $salesUpdated = 0;
+
+        foreach ($sales as $sale) {
+            if ($restanteParaVentas <= 0) break;
+            $payForSale = min($restanteParaVentas, (float)$sale->saldo_credito);
+            $sale->decrement('saldo_credito', $payForSale);
+            $restanteParaVentas -= $payForSale;
+            $salesUpdated++;
+
+            try {
+                CreditPayment::create([
+                    'sale_id' => $sale->id,
+                    'cliente_id' => $cliente->id,
+                    'metodo_pago' => $method,
+                    'monto' => $payForSale,
+                    'nota' => $note ?: "Abono recibido vía Copiloto FixSale",
+                    'received_by' => $user->id,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning("No se pudo crear CreditPayment para venta {$sale->id}: " . $e->getMessage());
+            }
+        }
+
+        if ($salesUpdated === 0) {
+            $lastSale = Sale::withoutGlobalScope('multitenancy')
+                ->where('cliente_id', $cliente->id)
+                ->latest('id')
+                ->first();
+
+            if ($lastSale) {
+                try {
+                    CreditPayment::create([
+                        'sale_id' => $lastSale->id,
+                        'cliente_id' => $cliente->id,
+                        'metodo_pago' => $method,
+                        'monto' => $montoPagar,
+                        'nota' => $note ?: "Abono general a cuenta cliente vía Copiloto FixSale",
+                        'received_by' => $user->id,
+                    ]);
+                } catch (\Throwable $e) {
+                    // Silencioso
+                }
+            }
+        }
+
+        $cliente->decrement('saldo_pendiente', $montoPagar);
+        $nuevoSaldo = max(0, $saldoActual - $montoPagar);
+
+        $cashRegister = CashRegister::getActiveRegister($user);
+        if ($cashRegister && $montoPagar > 0) {
+            try {
+                app(CashRegisterService::class)->addMovement(
+                    $cashRegister,
+                    'inflow',
+                    'venta',
+                    $method,
+                    $montoPagar,
+                    "Abono crédito de {$cliente->nombre}",
+                    $user->id
+                );
+            } catch (\Throwable $e) {
+                Log::warning("Error ingresando abono a caja: " . $e->getMessage());
+            }
+        }
+
+        $msg = "💵 **¡Abono Registrado Exitosamente!**\n\n"
+            . "• **Cliente:** {$cliente->nombre}\n"
+            . "• **Monto Abonado:** {$currency}" . number_format($montoPagar, 2) . "\n"
+            . "• **Método de Pago:** " . ucfirst($method) . "\n"
+            . "• **Saldo Anterior:** {$currency}" . number_format($saldoActual, 2) . "\n"
+            . "• **Saldo Restante:** {$currency}" . number_format($nuevoSaldo, 2) . "\n"
+            . ($cashRegister ? "• **Caja Activa:** Ingreso registrado en Caja #{$cashRegister->id}\n" : "");
+
+        $actions = [
+            ['label' => '💳 Ver Deuda Cliente', 'text' => "deuda de {$cliente->nombre}"],
+            ['label' => '📋 Cartera de Deudas', 'action' => 'list_debtors'],
+            ['label' => '👤 Ver Ficha ↗', 'url' => "/admin/clientes?search=" . urlencode($cliente->nombre), 'type' => 'link'],
+        ];
+
+        return [
+            'type' => 'credit_payment',
+            'message' => $msg,
+            'quick_actions' => $actions,
+        ];
+    }
+
+    // ==========================================
+    // CREACIÓN RÁPIDA DE ORDEN DE REPARACIÓN
+    // ==========================================
+
+    public function handleCreateRepairOrder(
+        User $user,
+        int $empresaId,
+        ?int $sucursalId,
+        array $data
+    ): array {
+        $currency = $this->getCurrencySymbol($empresaId);
+        $clientName = trim($data['cliente'] ?? '');
+        $device = trim($data['equipo'] ?? '');
+        $falla = trim($data['falla'] ?? '');
+        $costo = (float)($data['costo'] ?? 0);
+        $phone = $data['telefono'] ?? null;
+
+        if ($clientName === '') {
+            return ['type' => 'error', 'message' => 'Por favor indica el nombre del cliente para la orden de reparación.'];
+        }
+        if ($falla === '') {
+            $falla = 'Revisión técnica general';
+        }
+        if ($device === '') {
+            $device = 'Dispositivo móvil';
+        }
+
+        // Buscar o crear cliente
+        $cliente = Cliente::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where(function ($q) use ($clientName, $phone) {
+                $q->where('nombre', 'like', $clientName);
+                if ($phone) {
+                    $q->orWhere('telefono', 'like', "%{$phone}%");
+                }
+            })
+            ->first();
+
+        if (!$cliente) {
+            $cliente = Cliente::create([
+                'empresa_id' => $empresaId,
+                'sucursal_id' => $sucursalId ?: $user->sucursal_id,
+                'nombre' => $clientName,
+                'telefono' => $phone,
+                'estado' => true,
+            ]);
+        } elseif ($phone && !$cliente->telefono) {
+            $cliente->update(['telefono' => $phone]);
+        }
+
+        // Resolver marca y modelo a partir de $device
+        $marcaId = null;
+        $marcaNombre = 'General';
+        $modeloId = null;
+        $modeloNombre = $device;
+
+        $marcas = Marca::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId)->get();
+        foreach ($marcas as $m) {
+            if (stripos($device, $m->nombre) !== false) {
+                $marcaId = $m->id;
+                $marcaNombre = $m->nombre;
+                $remaining = trim(str_ireplace($m->nombre, '', $device));
+                if ($remaining !== '') {
+                    $modeloNombre = $remaining;
+                }
+                break;
+            }
+        }
+
+        // Correlativo folio REP-XXXXXX
+        $lastOrder = OrdenReparacion::withoutGlobalScopes()
+            ->where('empresa_id', $empresaId)
+            ->when($sucursalId, fn($q) => $q->where('sucursal_id', $sucursalId))
+            ->orderByDesc('id')
+            ->first();
+
+        $nextNum = 1;
+        if ($lastOrder && preg_match('/(\d+)$/', $lastOrder->numero_orden, $matches)) {
+            $nextNum = ((int) $matches[1]) + 1;
+        }
+
+        while (OrdenReparacion::withoutGlobalScopes()->where('empresa_id', $empresaId)->where('numero_orden', 'REP-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT))->exists()) {
+            $nextNum++;
+        }
+
+        $numeroOrden = 'REP-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+
+        $orden = OrdenReparacion::create([
+            'empresa_id' => $empresaId,
+            'sucursal_id' => $sucursalId ?: $user->sucursal_id,
+            'numero_orden' => $numeroOrden,
+            'cliente_id' => $cliente->id,
+            'cliente_nombre' => $cliente->nombre,
+            'cliente_telefono' => $cliente->telefono,
+            'tipo_dispositivo' => 'Smartphone',
+            'marca_id' => $marcaId,
+            'marca_nombre' => $marcaNombre,
+            'modelo_id' => $modeloId,
+            'modelo_nombre' => $modeloNombre,
+            'descripcion_falla' => $falla,
+            'costo_estimado' => $costo,
+            'anticipo' => 0.00,
+            'saldo_restante' => $costo,
+            'estado_orden' => 'recibido',
+            'fecha_recepcion' => Carbon::now(),
+        ]);
+
+        OrdenReparacionHistorial::create([
+            'orden_id' => $orden->id,
+            'user_id' => $user->id,
+            'estado_anterior' => null,
+            'estado_nuevo' => 'recibido',
+            'comentario' => 'Orden de recepción creada desde el Copiloto FixSale.',
+        ]);
+
+        $trackingUrl = url("/reparacion/{$empresaId}/consultar?orden={$orden->numero_orden}");
+
+        $msg = "🔧 **¡Orden de Reparación Creada Exitosamente!**\n\n"
+            . "• **Número de Orden:** **{$orden->numero_orden}**\n"
+            . "• **Cliente:** {$cliente->nombre}" . ($cliente->telefono ? " (📞 {$cliente->telefono})" : "") . "\n"
+            . "• **Equipo:** {$marcaNombre} {$modeloNombre}\n"
+            . "• **Falla reportada:** {$falla}\n"
+            . "• **Costo estimado:** {$currency}" . number_format($costo, 2) . "\n"
+            . "• **Estado inicial:** Recibido";
+
+        $actions = [
+            [
+                'label' => "🔍 Ver Orden {$orden->numero_orden} ↗",
+                'url' => "/admin/reparaciones/{$orden->id}",
+                'type' => 'link',
+            ],
+            [
+                'label' => '📋 Ir a Taller ↗',
+                'url' => '/admin/reparaciones',
+                'type' => 'link',
+            ],
+        ];
+
+        if ($cliente->telefono) {
+            $cleanWa = preg_replace('/\D/', '', $cliente->telefono);
+            if (strlen($cleanWa) >= 10) {
+                $waMsg = "Hola {$cliente->nombre}, hemos recibido su equipo {$marcaNombre} {$modeloNombre} (Orden {$orden->numero_orden}). Puede consultar el estado en vivo aquí: {$trackingUrl}";
+                $actions[] = [
+                    'label' => '💬 Notificar por WhatsApp',
+                    'url' => "https://wa.me/{$cleanWa}?text=" . urlencode($waMsg),
+                    'type' => 'link',
+                ];
+            }
+        }
+
+        return [
+            'type' => 'repair_created',
+            'message' => $msg,
+            'order' => [
+                'numero_orden' => $orden->numero_orden,
+                'cliente_nombre' => $cliente->nombre,
+                'cliente_telefono' => $cliente->telefono ?: 'Sin teléfono',
+                'equipo' => "{$marcaNombre} {$modeloNombre}",
+                'falla' => $falla,
+                'estado_label' => 'Recibido',
+                'tecnico' => 'Sin asignar',
+                'saldo_restante' => "{$currency}" . number_format($costo, 2),
+            ],
+            'quick_actions' => $actions,
+        ];
+    }
+
+    // ==========================================
     // FASE 1: BUSCADOR INTELIGENTE DE ORDEN
     // ==========================================
 
@@ -2668,6 +3350,180 @@ class InternalAssistantService
         return null;
     }
 
+    protected function parseCreateRepairCommand(string $raw, string $normalized): ?array
+    {
+        $raw = trim($raw);
+        if (!preg_match('/^(?:crear|nueva|registrar)\s+(?:reparacion|orden)(?:\s+de\s+reparacion)?\s+(.+)$/i', $raw, $m)
+            && !preg_match('/^recibir\s+equipo\s+(.+)$/i', $raw, $m)
+        ) {
+            return null;
+        }
+
+        $rest = trim($m[1]);
+        $data = [
+            'cliente' => null,
+            'telefono' => null,
+            'equipo' => null,
+            'falla' => null,
+            'costo' => 0.0,
+        ];
+
+        // 1. Costo / Precio
+        if (preg_match('/(?:costo|precio|estimado|valor)\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)/i', $rest, $pm)) {
+            $data['costo'] = (float)$pm[1];
+            $rest = str_replace($pm[0], '', $rest);
+        } elseif (preg_match('/\b([0-9]+(?:\.[0-9]+)?)\s*$/', $rest, $pm)) {
+            $data['costo'] = (float)$pm[1];
+            $rest = substr($rest, 0, -strlen($pm[0]));
+        }
+
+        // 2. Teléfono
+        if (preg_match('/(?:telefono|celular|tlf|ws|whatsapp)\s*[:=]?\s*([+\d\s\-]{7,})/i', $rest, $tm)) {
+            $data['telefono'] = trim($tm[1]);
+            $rest = str_replace($tm[0], '', $rest);
+        }
+
+        // 3. Falla / Daño / Motivo
+        if (preg_match('/(?:falla|problema|dano|daño|motivo)\s*[:=]?\s*([^,;]+?)(?=\s+(?:costo|precio|estimado|valor|telefono|cliente|equipo|marca|modelo)|$)/i', $rest, $fm)) {
+            $data['falla'] = trim($fm[1]);
+            $rest = str_replace($fm[0], '', $rest);
+        }
+
+        // 4. Cliente explícito
+        if (preg_match('/(?:cliente)\s*[:=]?\s*([^,;]+?)(?=\s+(?:equipo|marca|modelo|dispositivo|con|falla|costo)|$)/i', $rest, $cm)) {
+            $data['cliente'] = trim($cm[1]);
+            $rest = str_replace($cm[0], '', $rest);
+        }
+
+        // 5. Equipo explícito
+        if (preg_match('/(?:equipo|dispositivo|marca|modelo)\s*[:=]?\s*([^,;]+?)(?=\s+(?:falla|problema|costo|precio|telefono)|$)/i', $rest, $em)) {
+            $data['equipo'] = trim($em[1]);
+            $rest = str_replace($em[0], '', $rest);
+        } elseif (preg_match('/(?:equipo|dispositivo|marca|modelo)\s*[:=]?\s*(.+)$/i', $rest, $em)) {
+            $data['equipo'] = trim($em[1]);
+            $rest = str_replace($em[0], '', $rest);
+        }
+
+        $rest = trim(preg_replace('/\s+/', ' ', $rest));
+        if (!$data['cliente'] && $rest !== '') {
+            $parts = array_map('trim', explode(',', $rest));
+            if (count($parts) >= 2) {
+                $data['cliente'] = $parts[0];
+                if (!$data['equipo']) $data['equipo'] = $parts[1];
+                if (!$data['falla'] && isset($parts[2])) $data['falla'] = $parts[2];
+            } else {
+                $words = explode(' ', $rest);
+                if (count($words) >= 3) {
+                    $data['cliente'] = $words[0] . ' ' . $words[1];
+                    if (!$data['equipo']) {
+                        $data['equipo'] = implode(' ', array_slice($words, 2));
+                    }
+                } else {
+                    $data['cliente'] = $rest;
+                }
+            }
+        }
+
+        if ($data['cliente']) {
+            return $data;
+        }
+
+        return null;
+    }
+
+    protected function parseCashMovementCommand(string $raw, string $normalized): ?array
+    {
+        // Gasto / Egreso
+        if (preg_match('/^(?:registrar\s+)?(?:gasto|egreso|salida(?:\s+de)?\s+caja)\s+([0-9]+(?:\.[0-9]+)?)\s*(?:por|motivo|en)?\s*(.+)$/i', trim($raw), $m)) {
+            return [
+                'type' => 'outflow',
+                'amount' => (float)$m[1],
+                'reason' => trim($m[2]),
+            ];
+        }
+
+        // Ingreso
+        if (preg_match('/^(?:registrar\s+)?(?:ingreso(?:\s+a|\s+de)?\s+caja|entrada(?:\s+a|\s+de)?\s+caja)\s+([0-9]+(?:\.[0-9]+)?)\s*(?:por|motivo|en)?\s*(.+)$/i', trim($raw), $m)) {
+            return [
+                'type' => 'inflow',
+                'amount' => (float)$m[1],
+                'reason' => trim($m[2]),
+            ];
+        }
+
+        return null;
+    }
+
+    protected function parseOpenCashCommand(string $raw, string $normalized): ?array
+    {
+        if (preg_match('/^(?:abrir|apertura)\s+caja(?:\s+con)?(?:\s+([0-9]+(?:\.[0-9]+)?))?$/i', $normalized, $m)) {
+            return [
+                'amount' => isset($m[1]) ? (float)$m[1] : 0.0,
+            ];
+        }
+        return null;
+    }
+
+    protected function parseCloseCashCommand(string $raw, string $normalized): ?array
+    {
+        if (preg_match('/^(?:cerrar|cierre(?:\s+de)?)\s+caja(?:\s+con)?(?:\s+([0-9]+(?:\.[0-9]+)?))?$/i', $normalized, $m)) {
+            return [
+                'counted_amount' => isset($m[1]) ? (float)$m[1] : null,
+            ];
+        }
+        return null;
+    }
+
+    protected function isCashRegisterStatusQuery(string $normalized): bool
+    {
+        return (bool) preg_match('/^(?:estado\s+de\s+caja|ver\s+caja|caja\s+actual|saldo\s+de\s+caja|como\s+esta\s+la\s+caja|caja\s+chica|mi\s+caja|caja)$/i', $normalized);
+    }
+
+    protected function parseCreditPaymentCommand(string $raw, string $normalized): ?array
+    {
+        if (preg_match('/^(?:abonar|abono|pagar(?:\s+credito)?)\s+([0-9]+(?:\.[0-9]+)?)\s+(?:a\s+|de\s+)?(.+)$/i', trim($raw), $m)) {
+            $amount = (float)$m[1];
+            $rest = trim($m[2]);
+            $method = 'efectivo';
+            $note = null;
+
+            if (preg_match('/(?:metodo|forma)\s*[:=]?\s*(\w+)/i', $rest, $mm)) {
+                $method = trim($mm[1]);
+                $rest = str_replace($mm[0], '', $rest);
+            }
+            if (preg_match('/(?:nota|concepto|obs)\s*[:=]?\s*(.+)$/i', $rest, $nm)) {
+                $note = trim($nm[1]);
+                $rest = str_replace($nm[0], '', $rest);
+            }
+
+            $client = trim(preg_replace('/\s+/', ' ', $rest));
+            if ($client !== '') {
+                return [
+                    'amount' => $amount,
+                    'client' => $client,
+                    'method' => $method,
+                    'note' => $note,
+                ];
+            }
+        }
+        return null;
+    }
+
+    protected function parseClientDebtCommand(string $raw, string $normalized): ?array
+    {
+        if (preg_match('/^(?:deuda|saldo|cuenta)\s+de\s+(.+)$/i', trim($raw), $m)
+            || preg_match('/^cuanto\s+debe\s+(.+)$/i', trim($raw), $m)
+        ) {
+            return ['client' => trim($m[1])];
+        }
+        return null;
+    }
+
+    protected function isDebtorsQuery(string $normalized): bool
+    {
+        return (bool) preg_match('/^(?:clientes\s+con\s+deuda|deudas\s+pendientes|morosos|cuentas\s+por\s+cobrar|ver\s+deudas|creditos\s+pendientes|cartera\s+de\s+credito)$/i', $normalized);
+    }
+
     // ==========================================
     // UTILIDADES
     // ==========================================
@@ -2696,42 +3552,45 @@ class InternalAssistantService
     protected function buildHelpResponse(string $intro): array
     {
         $message = "{$intro}\n\n"
-            . "🎯 **1. Servicio Técnico & WhatsApp (Fase 1):**\n"
+            . "🎯 **1. Servicio Técnico & Taller:**\n"
+            . "• **crear reparacion cliente Juan equipo iPhone 11 falla pantalla costo 45**\n"
             . "• **#1** o **orden 1** ➔ Consulta datos y estado de la orden.\n"
-            . "• **estado 1 listo** ➔ Cambia a 'Listo para entregar'.\n"
             . "• **estado 1 listo y notificar** ➔ Actualiza y envía WhatsApp con tracking público.\n"
             . "• **whatsapp 1** ➔ Envía mensaje al cliente con link de seguimiento.\n"
-            . "• **resumen hoy** ➔ Muestra las órdenes del taller hoy.\n"
-            . "• **alertas stock** ➔ Muestra repuestos con existencias bajas.\n\n"
-            . "🏷️ **2. Catálogo Rápido (Fase 2):**\n"
-            . "• **crear marca Xiaomi** ➔ Registra una nueva marca.\n"
-            . "• **crear modelo Redmi Note 13 para Xiaomi** ➔ Registra un modelo.\n"
-            . "• **crear categoria Baterias** ➔ Registra una nueva categoría.\n"
-            . "• **ver marcas** / **ver categorias** / **modelos de Xiaomi**\n\n"
-            . "📦 **3. Inventario y Kardex (Fase 3):**\n"
+            . "• **resumen hoy** ➔ Muestra las órdenes del taller hoy.\n\n"
+            . "💰 **2. Caja Chica & Finanzas:**\n"
+            . "• **estado de caja** ➔ Efectivo en gaveta, ventas y balance del turno.\n"
+            . "• **abrir caja 50** / **cerrar caja 250**\n"
+            . "• **gasto 10 almuerzo** / **ingreso caja 20 cambio**\n"
+            . "• **fondo de mes** ➔ Balance mensual consolidado.\n\n"
+            . "💳 **3. Clientes & Cobranzas:**\n"
+            . "• **clientes con deuda** ➔ Listado de morosos y cuentas por cobrar.\n"
+            . "• **deuda de Juan** ➔ Saldo pendiente y límite de crédito.\n"
+            . "• **abonar 20 a Juan Perez** ➔ Registra abono a cuenta y en caja.\n"
+            . "• **crear cliente Maria Gomez telefono 04141234567**\n"
+            . "• **ver clientes** / **buscar cliente Maria**\n\n"
+            . "📦 **4. Inventario & Kardex:**\n"
             . "• **ajustar stock Bateria a 15 por inventario fisico**\n"
             . "• **sumar 5 stock Pantalla** / **restar 2 stock Mica**\n"
-            . "• **kardex Pantalla** ➔ Consulta movimientos y auditoría.\n"
-            . "• **ver kardex** ➔ Muestra los últimos movimientos globales.\n"
-            . "• **crear producto Mica Vidrio precio 5 stock 20**\n\n"
-            . "💼 **4. Finanzas, Clientes & Proveedores (Fase 4):**\n"
-            . "• **crear cliente Carlos Perez telefono 04121234567**\n"
-            . "• **ver clientes** / **buscar cliente Carlos**\n"
-            . "• **meta de ventas** / **ventas de hoy** ➔ Progreso mensual y diario.\n"
-            . "• **fondo de mes** ➔ Balance de cajas cerradas y compras del mes.\n"
-            . "• **crear proveedor Insumos Tech telefono 04121234567**\n"
-            . "• **ver proveedores** / **ver compras**";
+            . "• **kardex Pantalla** / **ver kardex** ➔ Auditoría de movimientos.\n"
+            . "• **crear producto Mica Vidrio precio 5 stock 20**\n"
+            . "• **alertas stock** ➔ Existencias bajas.\n\n"
+            . "🏷️ **5. Catálogo Rápido:**\n"
+            . "• **crear marca Xiaomi** / **crear categoria Baterias**\n"
+            . "• **crear modelo Redmi Note 13 para Xiaomi**\n"
+            . "• **ver marcas** / **ver categorias** / **modelos de Xiaomi**";
 
         return [
             'type' => 'help',
             'message' => $message,
             'quick_actions' => [
                 ['label' => '📊 Resumen Taller', 'action' => 'get_summary'],
+                ['label' => '💰 Estado Caja', 'action' => 'get_cash_status'],
+                ['label' => '💳 Deudas Clientes', 'action' => 'list_debtors'],
                 ['label' => '👤 Ver Clientes', 'action' => 'list_clientes'],
                 ['label' => '🎯 Metas Ventas', 'action' => 'get_sales_goals'],
                 ['label' => '📦 Ver Kardex', 'action' => 'get_kardex'],
                 ['label' => '🏦 Fondo Mes', 'action' => 'get_monthly_fund'],
-                ['label' => '🏢 Proveedores', 'action' => 'list_proveedores'],
                 ['label' => '⚠️ Alertas Stock', 'action' => 'get_stock_alerts'],
             ],
         ];
@@ -2742,11 +3601,11 @@ class InternalAssistantService
         return [
             'type' => 'unknown',
             'message' => "No comprendí exactamente la instrucción: **\"{$rawQuery}\"**.\n\n"
-                . "Prueba escribiendo el **número de orden** (ej. `1`), **\"ajustar stock [producto] a [cantidad]\"**, **\"kardex [producto]\"**, **\"meta de ventas\"**, **\"fondo de mes\"**, o escribe **\"ayuda\"** para ver todos los comandos.",
+                . "Prueba escribiendo el **número de orden** (ej. `1`), **\"estado de caja\"**, **\"clientes con deuda\"**, **\"abonar 20 a [cliente]\"**, **\"kardex [producto]\"**, **\"meta de ventas\"**, o escribe **\"ayuda\"** para ver todos los comandos.",
             'quick_actions' => [
                 ['label' => '📊 Resumen Taller', 'action' => 'get_summary'],
-                ['label' => '🎯 Metas Ventas', 'action' => 'get_sales_goals'],
-                ['label' => '📦 Ver Kardex', 'action' => 'get_kardex'],
+                ['label' => '💰 Estado Caja', 'action' => 'get_cash_status'],
+                ['label' => '💳 Deudas Clientes', 'action' => 'list_debtors'],
                 ['label' => '❓ Ver Ayuda', 'action' => 'help', 'text' => 'ayuda'],
             ],
         ];
