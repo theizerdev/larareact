@@ -24,6 +24,10 @@ import {
     Trash2,
     Link2,
     UserPlus,
+    Wrench,
+    Tag,
+    TrendingUp,
+    Wallet,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { router } from '@inertiajs/react';
@@ -148,6 +152,35 @@ const ORDER_STATUS_STYLES: Record<string, string> = {
 
 const orderStatusClass = (key?: string) =>
     ORDER_STATUS_STYLES[key ?? ''] ?? 'border-indigo-500/20 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300';
+
+const ORDER_STEPS = [
+    { label: 'Recepción', step: 1 },
+    { label: 'Diagnóstico', step: 2 },
+    { label: 'Reparación', step: 3 },
+    { label: 'Listo', step: 4 },
+    { label: 'Entregado', step: 5 },
+];
+
+const getOrderStep = (key?: string): number => {
+    switch (key) {
+        case 'recibido':
+            return 1;
+        case 'en_diagnostico_presupuesto':
+        case 'confirmacion_presupuesto':
+            return 2;
+        case 'en_reparacion':
+        case 'espera_refaccion':
+            return 3;
+        case 'listo_reparado':
+        case 'listo_sin_solucion':
+            return 4;
+        case 'entregado_finalizado':
+        case 'reincidencia_garantia':
+            return 5;
+        default:
+            return 1;
+    }
+};
 
 const stripMarkdown = (text: string) => text.replace(/\*\*/g, '').replace(/`/g, '');
 
@@ -662,55 +695,257 @@ export default function FloatingAssistantWidget() {
 
                                                         {isUser ? (
                                                             <p className="break-words whitespace-pre-line">{msg.text}</p>
+                                                        ) : msg.id === 'welcome' ? (
+                                                            <div className="space-y-3.5">
+                                                                {/* Hero Header */}
+                                                                <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-background p-3 shadow-xs">
+                                                                    <div className="flex items-center gap-2.5">
+                                                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-500/30">
+                                                                            <Sparkles className="h-5 w-5 text-amber-300" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <h4 className="text-[12.5px] font-bold text-foreground flex items-center gap-1.5">
+                                                                                ¡Bienvenido a Fixy Copilot!
+                                                                                <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.2 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                                                                    Activo
+                                                                                </span>
+                                                                            </h4>
+                                                                            <p className="text-[10.5px] text-muted-foreground leading-tight mt-0.5">
+                                                                                Tu asistente para órdenes de taller, precios al instante, caja chica y clientes.
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Cuadrícula de 4 Módulos Operativos */}
+                                                                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                                                    {/* Taller */}
+                                                                    <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-2.5 space-y-1.5">
+                                                                        <div className="flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400 text-[11px]">
+                                                                            <Wrench className="h-3 w-3" />
+                                                                            <span>Taller & Servicio</span>
+                                                                        </div>
+                                                                        <div className="flex flex-col gap-1 text-[10px]">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    setInput('crear orden ');
+                                                                                    setSuggestionsDismissed(true);
+                                                                                    inputRef.current?.focus();
+                                                                                }}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                ➕ Crear orden
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleSendMessage('resumen taller')}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                📊 Resumen taller
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleSendMessage('ordenes listas')}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                ✅ Listos para entrega
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Precios & Stock */}
+                                                                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-2.5 space-y-1.5">
+                                                                        <div className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400 text-[11px]">
+                                                                            <Tag className="h-3 w-3" />
+                                                                            <span>Precios & Stock</span>
+                                                                        </div>
+                                                                        <div className="flex flex-col gap-1 text-[10px]">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    setInput('precio ');
+                                                                                    setSuggestionsDismissed(true);
+                                                                                    inputRef.current?.focus();
+                                                                                }}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                🔍 Consultar precio
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleSendMessage('alertas de stock')}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                ⚠️ Stock bajo
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    setInput('cotizar ');
+                                                                                    setSuggestionsDismissed(true);
+                                                                                    inputRef.current?.focus();
+                                                                                }}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                💡 Cotizar repuesto
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Caja & Finanzas */}
+                                                                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5 space-y-1.5">
+                                                                        <div className="flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400 text-[11px]">
+                                                                            <Wallet className="h-3 w-3" />
+                                                                            <span>Caja & Ventas</span>
+                                                                        </div>
+                                                                        <div className="flex flex-col gap-1 text-[10px]">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleSendMessage('ventas hoy')}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                📈 Ventas hoy
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleSendMessage('estado de caja')}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                💰 Estado de caja
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleSendMessage('metas de venta')}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                🎯 Metas de venta
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Clientes & Cobros */}
+                                                                    <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-2.5 space-y-1.5">
+                                                                        <div className="flex items-center gap-1 font-bold text-violet-600 dark:text-violet-400 text-[11px]">
+                                                                            <UserPlus className="h-3 w-3" />
+                                                                            <span>Clientes & Deudas</span>
+                                                                        </div>
+                                                                        <div className="flex flex-col gap-1 text-[10px]">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleSendMessage('deudas pendientes')}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                💳 Deudores
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleSendMessage('clientes')}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                👥 Clientes
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleSendMessage('ayuda')}
+                                                                                className="text-left text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                                                                            >
+                                                                                ❓ Comandos
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         ) : (
                                                             <MessageContent text={msg.text} />
                                                         )}
 
-                                                        {/* Tarjeta de Orden Detallada */}
+                                                        {/* Tarjeta de Orden Detallada con Stepper Visual */}
                                                         {msg.order && (
-                                                            <div className="mt-3 space-y-2 rounded-xl border border-border/60 bg-muted/40 p-2.5 text-[11px]">
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-[13px] font-bold text-primary">
-                                                                        #{msg.order.numero_orden}
-                                                                    </span>
+                                                            <div className="mt-3 space-y-2.5 rounded-2xl border border-border/70 bg-gradient-to-b from-muted/50 to-muted/20 p-3 text-[11px] shadow-sm">
+                                                                <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[13px] font-extrabold text-primary tracking-wide">
+                                                                            #{msg.order.numero_orden}
+                                                                        </span>
+                                                                        {msg.order.cliente_id && (
+                                                                            <span
+                                                                                className={cn(
+                                                                                    'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9.5px] font-semibold',
+                                                                                    msg.order.cliente_es_nuevo
+                                                                                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                                                                        : 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300'
+                                                                                )}
+                                                                            >
+                                                                                {msg.order.cliente_es_nuevo ? (
+                                                                                    <UserPlus className="h-3 w-3" />
+                                                                                ) : (
+                                                                                    <Link2 className="h-3 w-3" />
+                                                                                )}
+                                                                                {msg.order.cliente_es_nuevo
+                                                                                    ? `Nuevo · #${msg.order.cliente_id}`
+                                                                                    : `Vinculado · #${msg.order.cliente_id}`}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                     <span
                                                                         className={cn(
-                                                                            'rounded-full border px-2 py-0.5 text-[10px] font-bold',
+                                                                            'rounded-full border px-2.5 py-0.5 text-[10px] font-bold shadow-xs',
                                                                             orderStatusClass(msg.order.estado_clave)
                                                                         )}
                                                                     >
                                                                         {msg.order.estado_label}
                                                                     </span>
                                                                 </div>
-                                                                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-muted-foreground">
-                                                                    <div>👤 {msg.order.cliente_nombre}</div>
-                                                                    <div>📞 {msg.order.cliente_telefono}</div>
-                                                                    <div className="col-span-2">📱 {msg.order.equipo}</div>
-                                                                    <div>👨‍🔧 {msg.order.tecnico}</div>
-                                                                    <div>💰 Saldo: {msg.order.saldo_restante}</div>
-                                                                </div>
-                                                                {msg.order.cliente_id && (
-                                                                    <div
-                                                                        className={cn(
-                                                                            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold',
-                                                                            msg.order.cliente_es_nuevo
-                                                                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                                                                : 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300'
-                                                                        )}
-                                                                    >
-                                                                        {msg.order.cliente_es_nuevo ? (
-                                                                            <UserPlus className="h-3 w-3" />
-                                                                        ) : (
-                                                                            <Link2 className="h-3 w-3" />
-                                                                        )}
-                                                                        {msg.order.cliente_es_nuevo
-                                                                            ? `Cliente nuevo · ID #${msg.order.cliente_id}`
-                                                                            : `Cliente vinculado · ID #${msg.order.cliente_id}`}
+
+                                                                {/* Stepper visual de etapas de reparación */}
+                                                                <div className="py-1">
+                                                                    <div className="flex items-center justify-between relative px-2">
+                                                                        <div className="absolute top-1/2 left-3 right-3 -translate-y-1/2 h-0.5 bg-border/60 -z-0" />
+                                                                        {ORDER_STEPS.map((s) => {
+                                                                            const currentStep = getOrderStep(msg.order.estado_clave);
+                                                                            const isDone = s.step < currentStep;
+                                                                            const isCurrent = s.step === currentStep;
+
+                                                                            return (
+                                                                                <div key={s.step} className="relative z-10 flex flex-col items-center gap-1">
+                                                                                    <div
+                                                                                        className={cn(
+                                                                                            'flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold transition-all shadow-xs',
+                                                                                            isDone
+                                                                                                ? 'bg-emerald-600 text-white'
+                                                                                                : isCurrent
+                                                                                                  ? 'bg-primary text-primary-foreground ring-4 ring-primary/20 scale-110 font-black'
+                                                                                                  : 'bg-muted border border-border/80 text-muted-foreground'
+                                                                                        )}
+                                                                                    >
+                                                                                        {isDone ? <Check className="h-3 w-3 stroke-[3]" /> : s.step}
+                                                                                    </div>
+                                                                                    <span
+                                                                                        className={cn(
+                                                                                            'text-[8.5px] font-semibold tracking-tight',
+                                                                                            isCurrent ? 'text-primary font-bold' : isDone ? 'text-foreground/80' : 'text-muted-foreground/60'
+                                                                                        )}
+                                                                                    >
+                                                                                        {s.label}
+                                                                                    </span>
+                                                                                </div>
+                                                                            );
+                                                                        })}
                                                                     </div>
-                                                                )}
+                                                                </div>
+
+                                                                <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 rounded-xl bg-background/80 border border-border/50 p-2.5 text-muted-foreground">
+                                                                    <div><span className="font-semibold text-foreground">👤 Cliente:</span> {msg.order.cliente_nombre}</div>
+                                                                    <div><span className="font-semibold text-foreground">📞 Tel:</span> {msg.order.cliente_telefono}</div>
+                                                                    <div className="col-span-2"><span className="font-semibold text-foreground">📱 Dispositivo:</span> {msg.order.equipo}</div>
+                                                                    <div><span className="font-semibold text-foreground">👨‍🔧 Técnico:</span> {msg.order.tecnico}</div>
+                                                                    <div><span className="font-semibold text-foreground">💰 Saldo:</span> <span className="font-bold text-foreground">{msg.order.saldo_restante}</span></div>
+                                                                </div>
+
                                                                 {msg.order.falla && (
-                                                                    <div className="rounded-lg border border-border/40 bg-background/70 p-1.5 text-[10.5px]">
-                                                                        <span className="font-semibold">Falla:</span> {msg.order.falla}
+                                                                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-2 text-[10.5px]">
+                                                                        <span className="font-bold text-amber-700 dark:text-amber-400">⚠️ Falla:</span> {msg.order.falla}
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -860,17 +1095,18 @@ export default function FloatingAssistantWidget() {
 
                                                         {/* Tarjeta Destacada de Verificación de Precio */}
                                                         {msg.price_card && (
-                                                            <div className="mt-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-background to-teal-500/5 p-3.5 space-y-2.5 shadow-sm">
+                                                            <div className="mt-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-teal-500/5 to-background p-3.5 space-y-3 shadow-md shadow-emerald-500/5">
                                                                 <div className="flex items-center justify-between border-b border-border/40 pb-2">
                                                                     <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-emerald-600 dark:text-emerald-400">
-                                                                        💰 Precio Verificado
+                                                                        <Tag className="h-3.5 w-3.5" />
+                                                                        Precio Verificado
                                                                     </span>
                                                                     <span
                                                                         className={cn(
-                                                                            'rounded-full px-2 py-0.5 text-[10px] font-bold border',
+                                                                            'rounded-full px-2.5 py-0.5 text-[10px] font-bold border shadow-xs',
                                                                             msg.price_card.disponible
-                                                                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                                                                                : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                                                                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                                                                : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'
                                                                         )}
                                                                     >
                                                                         {msg.price_card.disponible ? '🟢 En Stock' : '🔴 Agotado'}
@@ -878,13 +1114,13 @@ export default function FloatingAssistantWidget() {
                                                                 </div>
 
                                                                 <div>
-                                                                    <div className="text-[13px] font-bold text-foreground">
+                                                                    <div className="text-[13.5px] font-extrabold text-foreground tracking-tight leading-snug">
                                                                         {msg.price_card.nombre}
                                                                     </div>
-                                                                    <div className="flex items-center gap-2 mt-0.5 text-[10.5px] text-muted-foreground flex-wrap">
+                                                                    <div className="flex items-center gap-2 mt-1 text-[10.5px] text-muted-foreground flex-wrap">
                                                                         {msg.price_card.sku && (
                                                                             <span>
-                                                                                SKU: <code className="font-mono text-foreground/80">{msg.price_card.sku}</code>
+                                                                                SKU: <code className="font-mono text-foreground/80 bg-muted/60 px-1 py-0.5 rounded">{msg.price_card.sku}</code>
                                                                             </span>
                                                                         )}
                                                                         {msg.price_card.categoria && (
@@ -896,11 +1132,26 @@ export default function FloatingAssistantWidget() {
                                                                     </div>
                                                                 </div>
 
-                                                                <div className="flex items-center justify-between rounded-xl bg-emerald-600/10 border border-emerald-500/25 px-3 py-2 text-emerald-950 dark:text-emerald-200">
-                                                                    <span className="text-[11.5px] font-semibold">Precio de Venta:</span>
-                                                                    <span className="text-[17px] font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight">
-                                                                        {msg.price_card.precio_formateado}
-                                                                    </span>
+                                                                {/* Barra de estado de disponibilidad */}
+                                                                <div className="rounded-xl border border-border/50 bg-background/80 p-2.5 flex items-center justify-between gap-3">
+                                                                    <div className="text-[11px]">
+                                                                        <div className="text-muted-foreground text-[10px]">Disponibilidad:</div>
+                                                                        <div className="font-bold text-foreground">
+                                                                            {msg.price_card.disponible ? (
+                                                                                <span className="text-emerald-600 dark:text-emerald-400">
+                                                                                    {msg.price_card.stock_badge || 'Existencia en inventario'}
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="text-rose-600 dark:text-rose-400">Sin existencias</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <div className="text-[10px] font-medium text-muted-foreground uppercase">Precio Venta</div>
+                                                                        <div className="text-[19px] font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                                                                            {msg.price_card.precio_formateado}
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1069,21 +1320,26 @@ export default function FloatingAssistantWidget() {
                                     );
                                 })}
 
-                                {/* Indicador de escritura */}
+                                {/* Indicador de IA procesando consulta */}
                                 {loading && (
                                     <div className="animate-in fade-in slide-in-from-bottom-2 flex gap-2.5 duration-200">
-                                        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-sm">
-                                            <Bot className="h-4 w-4" />
+                                        <div className="relative mt-0.5 flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30">
+                                            <Bot className="h-4 w-4 animate-pulse" />
+                                            <span className="absolute -inset-0.5 -z-10 animate-ping rounded-2xl bg-indigo-500/40 [animation-duration:2s]" />
                                         </div>
-                                        <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-md border border-border/70 bg-card px-4 py-3 shadow-sm">
-                                            {[0, 150, 300].map((delay) => (
-                                                <span
-                                                    key={delay}
-                                                    className="h-2 w-2 animate-bounce rounded-full bg-gradient-to-br from-blue-500 to-violet-500"
-                                                    style={{ animationDelay: `${delay}ms`, animationDuration: '900ms' }}
-                                                />
-                                            ))}
-                                            <span className="ml-1 text-[11px] text-muted-foreground">Consultando sistema…</span>
+                                        <div className="flex items-center gap-2.5 rounded-2xl rounded-tl-md border border-border/80 bg-card/90 px-4 py-3 shadow-sm backdrop-blur-md">
+                                            <div className="flex items-center gap-1.5">
+                                                {[0, 150, 300].map((delay) => (
+                                                    <span
+                                                        key={delay}
+                                                        className="h-2 w-2 animate-bounce rounded-full bg-gradient-to-br from-blue-500 to-violet-600 shadow-xs shadow-indigo-500/50"
+                                                        style={{ animationDelay: `${delay}ms`, animationDuration: '900ms' }}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <span className="text-[11.5px] font-medium text-muted-foreground animate-pulse">
+                                                Fixy está consultando el sistema…
+                                            </span>
                                         </div>
                                     </div>
                                 )}
@@ -1192,25 +1448,43 @@ export default function FloatingAssistantWidget() {
                                     }}
                                     className="flex items-center gap-2 p-3"
                                 >
-                                    <input
-                                        id="assistant-input"
-                                        ref={inputRef}
-                                        type="text"
-                                        value={input}
-                                        onChange={(e) => handleInputChange(e.target.value)}
-                                        onKeyDown={handleKeyDown}
-                                        autoComplete="off"
-                                        placeholder={
-                                            isListening
-                                                ? '🎙️ Escuchando tu voz...'
-                                                : "Ej: 'orden 1', 'crear cliente Juan 0412...', 'meta de ventas'"
-                                        }
-                                        disabled={loading}
-                                        className={cn(
-                                            'flex-1 rounded-2xl border border-input bg-muted/40 px-3.5 py-2.5 text-xs transition-all focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none',
-                                            isListening && 'border-rose-500 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                                    <div className="relative flex-1">
+                                        <input
+                                            id="assistant-input"
+                                            ref={inputRef}
+                                            type="text"
+                                            value={input}
+                                            onChange={(e) => handleInputChange(e.target.value)}
+                                            onKeyDown={handleKeyDown}
+                                            autoComplete="off"
+                                            placeholder={
+                                                isListening
+                                                    ? 'Escuchando tu voz... Habla ahora'
+                                                    : "Ej: 'orden 1', 'precio pantalla', 'ventas hoy', 'caja'"
+                                            }
+                                            disabled={loading}
+                                            className={cn(
+                                                'w-full rounded-2xl border border-input bg-muted/40 px-3.5 py-2.5 text-xs transition-all focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none',
+                                                isListening
+                                                    ? 'border-rose-500 bg-rose-500/10 text-rose-700 dark:text-rose-300 pr-14'
+                                                    : 'pr-3.5'
+                                            )}
+                                        />
+                                        {isListening && (
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                                                {[3, 6, 8, 5, 7].map((h, i) => (
+                                                    <span
+                                                        key={i}
+                                                        className="w-0.5 rounded-full bg-rose-500 animate-pulse"
+                                                        style={{
+                                                            height: `${h * 2}px`,
+                                                            animationDuration: `${0.3 + i * 0.15}s`,
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
                                         )}
-                                    />
+                                    </div>
 
                                     {speechSupported && (
                                         <button
@@ -1253,7 +1527,7 @@ export default function FloatingAssistantWidget() {
                 </div>
             )}
 
-            {/* Botón Flotante Principal */}
+            {/* Botón Flotante Principal con Ambient Glow */}
             {!isOpen && (
                 <button
                     id="assistant-launcher"
@@ -1261,20 +1535,28 @@ export default function FloatingAssistantWidget() {
                         setIsOpen(true);
                         setIsMinimized(false);
                     }}
-                    className="group animate-in fade-in zoom-in-90 relative flex items-center gap-2.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-4 py-3 text-white shadow-xl shadow-indigo-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/50 active:scale-95"
+                    className="group relative flex items-center gap-3 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-4 py-2.5 text-white shadow-[0_12px_32px_-6px_rgba(79,70,229,0.55)] ring-1 ring-white/20 transition-all duration-300 hover:scale-105 hover:shadow-[0_16px_40px_-4px_rgba(79,70,229,0.7)] active:scale-95"
                     title="Abrir Fixy · Copilot FixSale"
                     aria-label="Abrir Fixy · Copilot FixSale"
                 >
-                    <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-indigo-500/30 [animation-duration:2.5s]" />
-                    <div className="relative">
-                        <Bot className="h-5 w-5 text-white transition-transform group-hover:rotate-12" />
-                        <Sparkles className="absolute -top-1.5 -right-1.5 h-3 w-3 animate-pulse text-amber-300" />
+                    <span className="absolute -inset-1 -z-10 animate-pulse rounded-full bg-gradient-to-r from-blue-600 to-violet-600 opacity-40 blur-md group-hover:opacity-75 transition duration-500" />
+                    <div className="relative flex h-7.5 w-7.5 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30 backdrop-blur-xs">
+                        <Bot className="h-4.5 w-4.5 text-white transition-transform group-hover:rotate-12" />
+                        <Sparkles className="absolute -top-1 -right-1 h-3 w-3 animate-pulse text-amber-300" />
                     </div>
                     <div className="flex flex-col text-left leading-tight">
-                        <span className="text-xs font-bold tracking-wide">Fixy</span>
-                        <span className="text-[9.5px] text-white/80 font-medium">Copilot FixSale</span>
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold tracking-wide">Fixy</span>
+                            <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[8.5px] font-semibold text-white/95">
+                                Copilot
+                            </span>
+                        </div>
+                        <span className="text-[9.5px] text-white/80 font-medium">Asistente Operativo</span>
                     </div>
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-white/40" />
+                    <span className="relative flex h-2.5 w-2.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-indigo-900" />
+                    </span>
                 </button>
             )}
         </div>
