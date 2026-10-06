@@ -5,6 +5,7 @@ namespace App\Services\Assistant;
 use App\Models\CashMovement;
 use App\Models\CashRegister;
 use App\Models\Categoria;
+use App\Models\Cliente;
 use App\Models\Compra;
 use App\Models\Empresa;
 use App\Models\Familia;
@@ -119,6 +120,28 @@ class InternalAssistantService
         // Compras de Insumos (ej: "ver compras", "compras recientes", "compras del mes")
         if ($this->isPurchasesQuery($normalized)) {
             return $this->handleListCompras($user, $empresaId);
+        }
+
+        // Clientes (crear, listar o buscar clientes)
+        $clientCmd = $this->parseClientCommand($rawQuery, $normalized);
+        if ($clientCmd) {
+            if ($clientCmd['action'] === 'create') {
+                return $this->handleCreateCliente(
+                    $user,
+                    $empresaId,
+                    $sucursalId,
+                    $clientCmd['name'],
+                    $clientCmd['phone'] ?? null,
+                    $clientCmd['email'] ?? null,
+                    $clientCmd['address'] ?? null
+                );
+            }
+            if ($clientCmd['action'] === 'list') {
+                return $this->handleListClientes($user, $empresaId);
+            }
+            if ($clientCmd['action'] === 'search') {
+                return $this->handleSearchCliente($user, $empresaId, $clientCmd['term']);
+            }
         }
 
         // ==========================================
@@ -335,6 +358,19 @@ class InternalAssistantService
 
             case 'list_compras':
                 return $this->handleListCompras($user, $empresaId);
+
+            case 'create_cliente':
+                $name = $params['nombre'] ?? null;
+                $phone = $params['telefono'] ?? null;
+                $email = $params['email'] ?? null;
+                $address = $params['direccion'] ?? null;
+                if (!$name) {
+                    return ['type' => 'error', 'message' => 'El nombre del cliente es obligatorio.'];
+                }
+                return $this->handleCreateCliente($user, $empresaId, $sucursalId, $name, $phone, $email, $address);
+
+            case 'list_clientes':
+                return $this->handleListClientes($user, $empresaId);
 
             default:
                 return [
@@ -1470,6 +1506,223 @@ class InternalAssistantService
     }
 
     // ==========================================
+    // MANEJADORES DE CLIENTES
+    // ==========================================
+
+    public function handleCreateCliente(
+        User $user,
+        int $empresaId,
+        ?int $sucursalId,
+        string $name,
+        ?string $phone = null,
+        ?string $email = null,
+        ?string $address = null
+    ): array {
+        $name = trim($name);
+        if ($name === '') {
+            return ['type' => 'error', 'message' => 'Por favor indica el nombre del cliente.'];
+        }
+
+        // Buscar si ya existe
+        $existente = Cliente::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where(function ($q) use ($name, $phone, $email) {
+                $q->where('nombre', 'like', $name);
+                if ($phone) {
+                    $cleanPhone = preg_replace('/\D/', '', $phone);
+                    if (strlen($cleanPhone) >= 7) {
+                        $q->orWhere('telefono', 'like', "%{$cleanPhone}%");
+                    }
+                }
+                if ($email) {
+                    $q->orWhere('email', 'like', $email);
+                }
+            })
+            ->first();
+
+        if ($existente) {
+            $currency = $this->getCurrencySymbol($empresaId);
+            $msg = "ℹ️ Ya existe un cliente registrado con datos coincidentes:\n\n"
+                . "👤 **{$existente->nombre}**\n"
+                . "📞 Teléfono: " . ($existente->telefono ?: 'No asignado') . "\n"
+                . "✉️ Email: " . ($existente->email ?: 'No asignado') . "\n"
+                . "💰 Saldo Pendiente: {$currency}" . number_format((float)$existente->saldo_pendiente, 2);
+
+            return [
+                'type' => 'client_exists',
+                'message' => $msg,
+                'quick_actions' => [
+                    [
+                        'label' => '👤 Ver en Directorio ↗',
+                        'url' => "/admin/clientes?search=" . urlencode($existente->nombre),
+                        'type' => 'link',
+                    ],
+                    [
+                        'label' => '🔧 Nueva Reparación ↗',
+                        'url' => '/admin/reparaciones/create',
+                        'type' => 'link',
+                    ],
+                ],
+            ];
+        }
+
+        $cliente = Cliente::create([
+            'empresa_id' => $empresaId,
+            'sucursal_id' => $sucursalId ?: $user->sucursal_id,
+            'nombre' => $name,
+            'telefono' => $phone,
+            'email' => $email,
+            'direccion' => $address,
+            'limite_credito' => 0.0,
+            'saldo_pendiente' => 0.0,
+            'estado' => true,
+        ]);
+
+        $msg = "👤 **¡Cliente registrado exitosamente!**\n\n"
+            . "• **Nombre:** {$cliente->nombre}\n"
+            . ($phone ? "• **Teléfono:** {$phone}\n" : '')
+            . ($email ? "• **Email:** {$email}\n" : '')
+            . ($address ? "• **Dirección:** {$address}\n" : '')
+            . "• **Estado:** Activo";
+
+        $actions = [
+            [
+                'label' => '👤 Ver en Directorio ↗',
+                'url' => "/admin/clientes?search=" . urlencode($cliente->nombre),
+                'type' => 'link',
+            ],
+            [
+                'label' => '🔧 Crear Reparación ↗',
+                'url' => '/admin/reparaciones/create',
+                'type' => 'link',
+            ],
+        ];
+
+        if ($phone) {
+            $cleanWa = preg_replace('/\D/', '', $phone);
+            if (strlen($cleanWa) >= 10) {
+                $actions[] = [
+                    'label' => '💬 Abrir WhatsApp',
+                    'url' => "https://wa.me/{$cleanWa}",
+                    'type' => 'link',
+                ];
+            }
+        }
+
+        return [
+            'type' => 'client_created',
+            'message' => $msg,
+            'quick_actions' => $actions,
+        ];
+    }
+
+    public function handleListClientes(User $user, int $empresaId): array
+    {
+        $clientes = Cliente::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->latest()
+            ->take(6)
+            ->get();
+
+        if ($clientes->isEmpty()) {
+            return [
+                'type' => 'clients',
+                'message' => "👤 **Clientes:** No tienes clientes registrados todavía.",
+                'quick_actions' => [
+                    ['label' => '➕ Crear Cliente', 'text' => 'crear cliente Juan Perez 04121234567'],
+                    ['label' => 'Directorio ↗', 'url' => '/admin/clientes', 'type' => 'link'],
+                ],
+            ];
+        }
+
+        $lines = ["👤 **Clientes Registrados Recientes:**\n"];
+        foreach ($clientes as $c) {
+            $tel = $c->telefono ? "📞 {$c->telefono}" : '';
+            $mail = $c->email ? "✉️ {$c->email}" : '';
+            $extra = array_filter([$tel, $mail]);
+            $extraStr = $extra ? ' (' . implode(' | ', $extra) . ')' : '';
+            $lines[] = "• **{$c->nombre}**{$extraStr}";
+        }
+
+        return [
+            'type' => 'clients',
+            'message' => implode("\n", $lines),
+            'quick_actions' => [
+                ['label' => '👤 Directorio Completo ↗', 'url' => '/admin/clientes', 'type' => 'link'],
+                ['label' => '➕ Nuevo Cliente', 'text' => 'crear cliente [Nombre] [Telefono]'],
+                ['label' => '🔧 Nueva Reparación ↗', 'url' => '/admin/reparaciones/create', 'type' => 'link'],
+            ],
+        ];
+    }
+
+    public function handleSearchCliente(User $user, int $empresaId, string $term): array
+    {
+        $clean = trim($term);
+        $clientes = Cliente::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where(function ($q) use ($clean) {
+                $q->where('nombre', 'like', "%{$clean}%")
+                  ->orWhere('telefono', 'like', "%{$clean}%")
+                  ->orWhere('email', 'like', "%{$clean}%");
+            })
+            ->take(5)
+            ->get();
+
+        if ($clientes->isEmpty()) {
+            return [
+                'type' => 'not_found',
+                'message' => "❌ No se encontró ningún cliente que coincida con **\"{$clean}\"**.",
+                'quick_actions' => [
+                    ['label' => "➕ Crear Cliente {$clean}", 'text' => "crear cliente {$clean}"],
+                    ['label' => '👤 Directorio ↗', 'url' => '/admin/clientes', 'type' => 'link'],
+                ],
+            ];
+        }
+
+        if ($clientes->count() === 1) {
+            $c = $clientes->first();
+            $currency = $this->getCurrencySymbol($empresaId);
+            $msg = "👤 **Cliente Encontrado:**\n\n"
+                . "• **Nombre:** **{$c->nombre}**\n"
+                . "• **Teléfono:** " . ($c->telefono ?: 'No asignado') . "\n"
+                . "• **Email:** " . ($c->email ?: 'No asignado') . "\n"
+                . "• **Dirección:** " . ($c->direccion ?: 'No asignada') . "\n"
+                . "• **Saldo Pendiente:** {$currency}" . number_format((float)$c->saldo_pendiente, 2);
+
+            $actions = [
+                ['label' => '👤 Ver Ficha ↗', 'url' => "/admin/clientes?search=" . urlencode($c->nombre), 'type' => 'link'],
+                ['label' => '🔧 Nueva Reparación ↗', 'url' => '/admin/reparaciones/create', 'type' => 'link'],
+            ];
+            if ($c->telefono) {
+                $cleanWa = preg_replace('/\D/', '', $c->telefono);
+                if (strlen($cleanWa) >= 10) {
+                    $actions[] = ['label' => '💬 WhatsApp', 'url' => "https://wa.me/{$cleanWa}", 'type' => 'link'];
+                }
+            }
+
+            return [
+                'type' => 'client_found',
+                'message' => $msg,
+                'quick_actions' => $actions,
+            ];
+        }
+
+        $lines = ["👤 **Clientes encontrados con \"{$clean}\":**\n"];
+        foreach ($clientes as $c) {
+            $tel = $c->telefono ? "📞 {$c->telefono}" : '';
+            $lines[] = "• **{$c->nombre}** {$tel}";
+        }
+
+        return [
+            'type' => 'clients',
+            'message' => implode("\n", $lines),
+            'quick_actions' => [
+                ['label' => '👤 Ver en Directorio ↗', 'url' => "/admin/clientes?search=" . urlencode($clean), 'type' => 'link'],
+            ],
+        ];
+    }
+
+    // ==========================================
     // FASE 1: BUSCADOR INTELIGENTE DE ORDEN
     // ==========================================
 
@@ -2353,6 +2606,68 @@ class InternalAssistantService
         return (bool) preg_match('/^(?:ver|listar|mostrar)?\s*compras(?:\s+recientes|\s+del\s+mes)?$|^ultimas\s+compras$|^gastos\s+en\s+compras$/i', $normalized);
     }
 
+    protected function parseClientCommand(string $raw, string $normalized): ?array
+    {
+        $raw = trim($raw);
+
+        // 1. Crear cliente: "crear cliente Juan Perez telefono 04121234567 email juan@gmail.com", "cliente nuevo Juan...", etc.
+        if (preg_match('/^(?:crear|nuevo|agregar|anadir|añadir|registrar|alta)\s+cliente\s+(.+)$/i', $raw, $m)
+            || preg_match('/^cliente\s+nuevo\s+(.+)$/i', $raw, $m)
+        ) {
+            $rest = trim($m[1]);
+            $phone = null;
+            $email = null;
+            $address = null;
+
+            if (preg_match('/(?:email|correo)\s*[:=]?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i', $rest, $em)) {
+                $email = trim($em[1]);
+                $rest = str_replace($em[0], '', $rest);
+            }
+
+            if (preg_match('/(?:telefono|celular|tlf|movil|móvil|ws|whatsapp)\s*[:=]?\s*([+\d\s\-]{7,})/i', $rest, $pm)) {
+                $phone = trim($pm[1]);
+                $rest = str_replace($pm[0], '', $rest);
+            } elseif (preg_match('/(?:\b)(\+?\d{7,15})(?:\b)/', $rest, $pm)) {
+                $phone = trim($pm[1]);
+                $rest = str_replace($pm[0], '', $rest);
+            }
+
+            if (preg_match('/(?:direccion|dirección|dir)\s*[:=]?\s*(.+)$/i', $rest, $dm)) {
+                $address = trim($dm[1]);
+                $rest = str_replace($dm[0], '', $rest);
+            }
+
+            $name = trim(preg_replace('/\s+/', ' ', $rest));
+            if ($name !== '') {
+                return [
+                    'action' => 'create',
+                    'name' => $name,
+                    'phone' => $phone,
+                    'email' => $email,
+                    'address' => $address,
+                ];
+            }
+        }
+
+        // 2. Listar clientes: "ver clientes", "listar clientes", "clientes", "directorio clientes"
+        if (preg_match('/^(?:ver|listar|mostrar|consultar)?\s*(?:los\s+)?clientes$|^directorio(?:\s+de)?\s+clientes$/i', $normalized)) {
+            return ['action' => 'list'];
+        }
+
+        // 3. Buscar cliente: "buscar cliente [termino]", "consultar cliente [termino]", "cliente [termino]"
+        if (preg_match('/^(?:buscar|consultar|ver|datos\s+del?|info\s+del?)\s+cliente\s+(.+)$/i', $raw, $m)
+            || preg_match('/^cliente\s+([a-zA-Z0-9\s]{3,})$/i', $raw, $m)
+        ) {
+            $term = trim($m[1]);
+            // Evitar confundir con "cliente nuevo" o "clientes"
+            if (!in_array(mb_strtolower($term), ['nuevo', 'nueva', 'crear', 's'])) {
+                return ['action' => 'search', 'term' => $term];
+            }
+        }
+
+        return null;
+    }
+
     // ==========================================
     // UTILIDADES
     // ==========================================
@@ -2399,18 +2714,20 @@ class InternalAssistantService
             . "• **kardex Pantalla** ➔ Consulta movimientos y auditoría.\n"
             . "• **ver kardex** ➔ Muestra los últimos movimientos globales.\n"
             . "• **crear producto Mica Vidrio precio 5 stock 20**\n\n"
-            . "💼 **4. Finanzas, Metas & Proveedores (Fase 4):**\n"
+            . "💼 **4. Finanzas, Clientes & Proveedores (Fase 4):**\n"
+            . "• **crear cliente Carlos Perez telefono 04121234567**\n"
+            . "• **ver clientes** / **buscar cliente Carlos**\n"
             . "• **meta de ventas** / **ventas de hoy** ➔ Progreso mensual y diario.\n"
             . "• **fondo de mes** ➔ Balance de cajas cerradas y compras del mes.\n"
             . "• **crear proveedor Insumos Tech telefono 04121234567**\n"
-            . "• **ver proveedores** ➔ Directorio rápido de proveedores.\n"
-            . "• **ver compras** ➔ Últimas compras de insumos registradas.";
+            . "• **ver proveedores** / **ver compras**";
 
         return [
             'type' => 'help',
             'message' => $message,
             'quick_actions' => [
                 ['label' => '📊 Resumen Taller', 'action' => 'get_summary'],
+                ['label' => '👤 Ver Clientes', 'action' => 'list_clientes'],
                 ['label' => '🎯 Metas Ventas', 'action' => 'get_sales_goals'],
                 ['label' => '📦 Ver Kardex', 'action' => 'get_kardex'],
                 ['label' => '🏦 Fondo Mes', 'action' => 'get_monthly_fund'],

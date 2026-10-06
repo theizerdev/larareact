@@ -63,10 +63,11 @@ export default function FloatingAssistantWidget() {
             {
                 id: 'welcome',
                 sender: 'assistant',
-                text: '¡Hola! Soy tu copiloto interno de FixSale. Puedo ayudarte con servicio técnico (#1, estado 1 listo), alertas y ajustes de stock, Kardex, catálogo, metas de ventas, fondo mensual y proveedores.',
+                text: '¡Hola! Soy tu copiloto interno de FixSale. Puedo ayudarte con servicio técnico (#1, estado 1 listo), clientes, alertas y ajustes de stock, Kardex, catálogo, metas de ventas, fondo mensual y proveedores.',
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 quick_actions: [
                     { label: '📊 Resumen Taller', action: 'get_summary' },
+                    { label: '👤 Clientes', action: 'list_clientes' },
                     { label: '🎯 Metas Ventas', action: 'get_sales_goals' },
                     { label: '📦 Ver Kardex', action: 'get_kardex' },
                     { label: '🏦 Fondo Mes', action: 'get_monthly_fund' },
@@ -278,6 +279,7 @@ export default function FloatingAssistantWidget() {
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             quick_actions: [
                 { label: '📊 Resumen Taller', action: 'get_summary' },
+                { label: '👤 Clientes', action: 'list_clientes' },
                 { label: '🎯 Metas Ventas', action: 'get_sales_goals' },
                 { label: '📦 Ver Kardex', action: 'get_kardex' },
                 { label: '🏦 Fondo Mes', action: 'get_monthly_fund' },
@@ -477,6 +479,12 @@ export default function FloatingAssistantWidget() {
                                     className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
                                 >
                                     📊 Resumen
+                                </button>
+                                <button
+                                    onClick={() => handleSendMessage('ver clientes')}
+                                    className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
+                                >
+                                    👤 Clientes
                                 </button>
                                 <button
                                     onClick={() => handleSendMessage('meta de ventas')}
