@@ -7,7 +7,9 @@ use App\Models\FirmaDocumento;
 use App\Models\KycValidacion;
 use App\Models\OperacionValidacion;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\Validaciones\FirmaService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Resultados de validaciones: submenú Documentos (firmas ZapSign) y detalle
@@ -46,15 +48,49 @@ class OperacionValidacionController extends Controller
                 'estatus' => $d->estatus,
                 'enviado_en' => optional($d->enviado_en)->toDateTimeString(),
                 'firmado_en' => optional($d->firmado_en)->toDateTimeString(),
+                'tiene_pdf' => ! empty($d->pdf_firmado_path),
+                'error_detalle' => $d->error_detalle,
             ]);
 
         return inertia('admin/validaciones/documentos', [
             'documentos' => $documentos,
             'filtros' => $filtros,
+            'puede_gestionar' => $request->user()->can('validaciones.manage'),
         ]);
     }
 
-    public function show(OperacionValidacion $operacion)
+    /** Consulta directa a ZapSign (respaldo si el webhook no llegó). */
+    public function consultarFirma(FirmaDocumento $firmaDocumento)
+    {
+        $cambio = FirmaService::sincronizar($firmaDocumento);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => $cambio ? __('Signature status updated.') : __('ZapSign has no changes for this document.'),
+        ]);
+    }
+
+    public function cancelarFirma(FirmaDocumento $firmaDocumento)
+    {
+        $ok = FirmaService::cancelar($firmaDocumento);
+
+        return back()->with('notification', [
+            'type' => $ok ? 'success' : 'error',
+            'message' => $ok ? __('Document cancelled.') : __('The document could not be cancelled.'),
+        ]);
+    }
+
+    /** PDF firmado desde el disco privado (nunca hay ruta pública). */
+    public function descargarPdf(FirmaDocumento $firmaDocumento)
+    {
+        $ruta = $firmaDocumento->pdf_firmado_path;
+
+        abort_if(empty($ruta) || ! Storage::disk('local')->exists($ruta), 404);
+
+        return Storage::disk('local')->download($ruta, basename($ruta));
+    }
+
+    public function show(Request $request, OperacionValidacion $operacion)
     {
         $operacion->load(['entidad', 'sucursal', 'iniciador']);
 
@@ -66,6 +102,9 @@ class OperacionValidacionController extends Controller
                 'id' => $v->id,
                 'persona_nombre' => $this->nombre($v->validable) ?? ('#'.$v->validable_id),
                 'persona_tipo' => class_basename($v->validable_type),
+                'proveedor' => $v->proveedor ?: KycValidacion::PROVEEDOR_JAAK,
+                'tipo_documento' => $v->tipo_documento,
+                'pais_documento' => $v->pais_documento,
                 'estatus' => $v->estatus,
                 'score_global' => $v->score_global !== null ? (float) $v->score_global : null,
                 'created_at' => optional($v->created_at)->toDateTimeString(),
@@ -83,7 +122,15 @@ class OperacionValidacionController extends Controller
                 'enviado_en' => optional($d->enviado_en)->toDateTimeString(),
                 'firmado_en' => optional($d->firmado_en)->toDateTimeString(),
                 'rechazado_en' => optional($d->rechazado_en)->toDateTimeString(),
+                'tiene_pdf' => ! empty($d->pdf_firmado_path),
+                'error_detalle' => $d->error_detalle,
             ]);
+
+        // Liga de seguimiento (con QR en la vista) mientras la persona tenga
+        // algo por hacer: verificación DIDIT o firma pendiente.
+        $pendientes = $operacion->estatus === OperacionValidacion::ESTATUS_EN_CURSO
+            && ($kycs->contains(fn ($k) => $k['proveedor'] === KycValidacion::PROVEEDOR_DIDIT && in_array($k['estatus'], [KycValidacion::ESTATUS_PENDIENTE, KycValidacion::ESTATUS_PROCESANDO], true))
+                || $documentos->contains(fn ($d) => $d['estatus'] === FirmaDocumento::ESTATUS_PENDIENTE));
 
         return inertia('admin/validaciones/operacion', [
             'operacion' => [
@@ -101,6 +148,9 @@ class OperacionValidacionController extends Controller
             ],
             'kycs' => $kycs,
             'documentos' => $documentos,
+            'seguimiento_url' => $seguimientoUrl = ($pendientes ? $operacion->urlSeguimiento() : null),
+            'seguimiento_qr' => $seguimientoUrl ? OperacionValidacion::qrSvg($seguimientoUrl) : null,
+            'puede_gestionar' => $request->user()->can('validaciones.manage'),
         ]);
     }
 

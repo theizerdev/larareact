@@ -65,6 +65,8 @@ class EmpleadoPreRegistroController extends Controller
         $request->validate([
             'documento_identidad' => 'required|string|max:50|unique:empleados,documento_identidad',
             'curp' => 'nullable|string|size:18',
+            'tipo_documento' => 'nullable|string|in:ine,pasaporte',
+            'pais_documento' => 'nullable|string|size:3|alpha',
             'correo' => 'nullable|email|max:255',
             'genero' => 'nullable|string|in:M,F,Otro',
             'jornada_laboral' => 'nullable|array',
@@ -181,7 +183,11 @@ class EmpleadoPreRegistroController extends Controller
 
             // 3.5 Disparar la validación de identidad (KYC) contra JAAK si la
             // empresa la tiene activa. Nunca bloquea: corre tras la respuesta.
-            $this->dispatchKycValidacion($empleado, $request->curp);
+            $this->dispatchKycValidacion($empleado, $request->curp, null, [
+                'tipo_documento' => $request->input('tipo_documento'),
+                'pais_documento' => $request->input('pais_documento'),
+            ]);
+            $seguimiento = $this->seguimientoValidacion($empleado);
 
             // 4. Enviar mensaje de WhatsApp
             try {
@@ -199,6 +205,12 @@ class EmpleadoPreRegistroController extends Controller
                         . "🪪 *Tu Gafete / Carnet Digital Driscoll's:* \n🔗 {$carnetUrl}\n\n"
                         . "Presenta este carnet o código QR en garita para tu control de accesos.";
 
+                    if (! empty($seguimiento['url'])) {
+                        $message .= "\n\n📝 *Folio {$seguimiento['folio']}* — completa tu validación de identidad y firma aquí:\n🔗 {$seguimiento['url']}";
+                    } elseif (! empty($seguimiento['folio'])) {
+                        $message .= "\n\n📝 Folio de tu registro: *{$seguimiento['folio']}*";
+                    }
+
                     $carnetPath = \App\Services\CarnetGeneratorService::generarCarnetPNG($empleado);
                     if ($carnetPath && file_exists($carnetPath)) {
                         $whatsappService->sendImage($to, $carnetPath, $message);
@@ -212,7 +224,9 @@ class EmpleadoPreRegistroController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pre-registro completado con éxito. Su información está bajo revisión.'
+                'message' => 'Pre-registro completado con éxito. Su información está bajo revisión.',
+                'folio' => $seguimiento['folio'] ?? null,
+                'seguimiento_url' => $seguimiento['url'] ?? null,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

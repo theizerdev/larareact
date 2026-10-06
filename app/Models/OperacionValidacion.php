@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Str;
 
 /**
  * Folio de operación: agrupa bajo un identificador único el alta o
@@ -58,7 +59,23 @@ class OperacionValidacion extends Model
         'origen',
         'iniciado_por',
         'estatus',
+        'token_seguimiento',
+        'token_expira_en',
     ];
+
+    protected $hidden = [
+        'token_seguimiento',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'token_expira_en' => 'datetime',
+        ];
+    }
+
+    /** Horas de vigencia de la liga pública de seguimiento. */
+    public const HORAS_SEGUIMIENTO = 72;
 
     public function entidad(): MorphTo
     {
@@ -130,8 +147,50 @@ class OperacionValidacion extends Model
     }
 
     /**
+     * Liga pública donde la persona termina los pasos pendientes (DIDIT y
+     * firma). Se genera la primera vez que hace falta y se renueva su vigencia.
+     */
+    public function urlSeguimiento(): string
+    {
+        if (empty($this->token_seguimiento)) {
+            $this->token_seguimiento = Str::random(48);
+        }
+
+        $this->token_expira_en = now()->addHours(self::HORAS_SEGUIMIENTO);
+        $this->saveQuietly();
+
+        return route('validacion.seguimiento', $this->token_seguimiento);
+    }
+
+    /**
+     * QR (SVG) de la liga de seguimiento, generado en el servidor: la liga
+     * lleva un token, así que no se manda a un servicio externo de QR.
+     */
+    public static function qrSvg(string $url): string
+    {
+        $writer = new \BaconQrCode\Writer(new \BaconQrCode\Renderer\ImageRenderer(
+            new \BaconQrCode\Renderer\RendererStyle\RendererStyle(220, 1),
+            new \BaconQrCode\Renderer\Image\SvgImageBackEnd(),
+        ));
+
+        return $writer->writeString($url);
+    }
+
+    public static function porTokenSeguimiento(string $token): ?self
+    {
+        if (strlen($token) < 32) {
+            return null;
+        }
+
+        return static::withoutGlobalScopes()
+            ->where('token_seguimiento', $token)
+            ->where('token_expira_en', '>', now())
+            ->first();
+    }
+
+    /**
      * Estatus del folio a partir de la última validación KYC de cada persona
-     * y de cada documento a firma:
+     * y proveedor (JAAK y DIDIT cuentan por separado) y de cada documento a firma:
      *  - rechazado: alguna identidad o documento rechazado
      *  - en_curso: falta alguna identidad o firma
      *  - con_observaciones: identidad en revisión / con error, o firma cancelada / con error
@@ -143,7 +202,7 @@ class OperacionValidacion extends Model
             ->withoutGlobalScopes()
             ->orderBy('id')
             ->get()
-            ->keyBy(fn (KycValidacion $v) => $v->validable_type.'#'.$v->validable_id)
+            ->keyBy(fn (KycValidacion $v) => $v->validable_type.'#'.$v->validable_id.'#'.($v->proveedor ?: KycValidacion::PROVEEDOR_JAAK))
             ->pluck('estatus');
 
         $firmas = $this->firmaDocumentos()->withoutGlobalScopes()->pluck('estatus');

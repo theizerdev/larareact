@@ -78,12 +78,14 @@ export default function Wizard({ preRegistro, paises }: PreRegistroProps) {
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [seguimiento, setSeguimiento] = useState<{ folio: string | null; url: string | null }>({ folio: null, url: null });
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     // Step 1: Profile & Shift Data
     const [profileData, setProfileData] = useState({
         documento_identidad: '',
+        tipo_documento: 'ine' as 'ine' | 'pasaporte',
         curp: '',
         correo: '',
         genero: '',
@@ -267,7 +269,12 @@ export default function Wizard({ preRegistro, paises }: PreRegistroProps) {
             const result = await response.json();
 
             if (response.ok && result.success) {
+                setSeguimiento({ folio: result.folio ?? null, url: result.seguimiento_url ?? null });
                 setIsSuccess(true);
+                // Quedan pasos (DIDIT o firma): se continúa en la liga de seguimiento.
+                if (result.seguimiento_url) {
+                    window.setTimeout(() => (window.location.href = result.seguimiento_url), 2500);
+                }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
                 setErrorMsg(result.message || __('An error occurred while submitting your pre-registration.'));
@@ -298,6 +305,15 @@ export default function Wizard({ preRegistro, paises }: PreRegistroProps) {
                             {__('Your information has been registered and is under administrative review.')}
                         </p>
                     </div>
+                    {seguimiento.folio && (
+                        <p className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">{__('Folio')}: {seguimiento.folio}</p>
+                    )}
+                    {seguimiento.url && (
+                        <div className="space-y-3">
+                            <p className="text-sm text-slate-600 dark:text-slate-300">{__('One more step: verify your identity and sign your documents.')}</p>
+                            <Button className="w-full" onClick={() => (window.location.href = seguimiento.url!)}>{__('Continue')}</Button>
+                        </div>
+                    )}
                     <div className="bg-slate-50 dark:bg-slate-950/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/40 text-xs text-slate-500 dark:text-slate-400 text-left space-y-2">
                         <span className="font-semibold text-slate-800 dark:text-slate-300 block">{__('What happens next?')}</span>
                         <p>{__('1. The security/HR department will validate your details, photos, and shift information.')}</p>
@@ -399,8 +415,32 @@ export default function Wizard({ preRegistro, paises }: PreRegistroProps) {
                                         </SelectContent>
                                     </Select>
                                 </div>
+                                <div className="space-y-1.5 md:col-span-2">
+                                    <Label>{__('Identification document *')}</Label>
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                        {([
+                                            ['ine', __('Mexican voter ID (INE)')],
+                                            ['pasaporte', __('Passport or ID from another country')],
+                                        ] as const).map(([valor, etiqueta]) => (
+                                            <button
+                                                key={valor}
+                                                type="button"
+                                                onClick={() => setProfileData(p => ({ ...p, tipo_documento: valor }))}
+                                                className={cn(
+                                                    "rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors",
+                                                    profileData.tipo_documento === valor
+                                                        ? "border-indigo-600 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-950/40 dark:text-indigo-300"
+                                                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                                                )}
+                                                aria-pressed={profileData.tipo_documento === valor}
+                                            >
+                                                {etiqueta}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                                 <div className="space-y-1.5">
-                                    <Label>{__('National ID / Passport *')}</Label>
+                                    <Label>{profileData.tipo_documento === 'ine' ? __('National ID / Passport *') : __('Passport / ID number *')}</Label>
                                     <Input 
                                         value={profileData.documento_identidad} 
                                         onChange={(e) => setProfileData(p => ({ ...p, documento_identidad: e.target.value }))}
@@ -422,7 +462,9 @@ export default function Wizard({ preRegistro, paises }: PreRegistroProps) {
                                         <span className="text-xs text-amber-600">{__('The CURP should have 18 characters.')}</span>
                                     )}
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        {__('Your CURP and ID will be electronically validated (JAAK / RENAPO / INE) for access control purposes.')}
+                                        {profileData.tipo_documento === 'ine'
+                                            ? __('Your CURP and ID will be electronically validated (JAAK / RENAPO / INE) for access control purposes.')
+                                            : __('Your passport or foreign ID will be validated electronically with a short selfie video after you submit.')}
                                     </p>
                                 </div>
                                 <div className="space-y-1.5">

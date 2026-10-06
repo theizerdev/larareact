@@ -68,6 +68,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'preregistro/*',
             'preregistro-productor/*',
+            'webhooks/didit',
+            'webhooks/zapsign',
         ]);
 
         $middleware->alias([

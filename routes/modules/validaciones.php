@@ -19,6 +19,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/validaciones/documentos', [OperacionValidacionController::class, 'documentos'])
         ->name('validaciones.documentos')->can('validaciones.view');
 
+    Route::post('/validaciones/documentos/{firmaDocumento}/consultar', [OperacionValidacionController::class, 'consultarFirma'])
+        ->name('validaciones.documentos.consultar')->can('validaciones.manage');
+
+    Route::post('/validaciones/documentos/{firmaDocumento}/cancelar', [OperacionValidacionController::class, 'cancelarFirma'])
+        ->name('validaciones.documentos.cancelar')->can('validaciones.manage');
+
+    Route::get('/validaciones/documentos/{firmaDocumento}/pdf', [OperacionValidacionController::class, 'descargarPdf'])
+        ->name('validaciones.documentos.pdf')->can('validaciones.view');
+
     Route::get('/validaciones/operaciones/{operacion}', [OperacionValidacionController::class, 'show'])
         ->name('validaciones.operaciones.show')->can('validaciones.view');
 });

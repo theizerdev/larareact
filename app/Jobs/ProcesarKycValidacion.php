@@ -57,6 +57,10 @@ class ProcesarKycValidacion implements ShouldQueue
             return; // ya no existe o hay otro worker con ella
         }
 
+        if ($val->esDidit()) {
+            return; // DIDIT no se procesa aquí: su resultado llega por webhook
+        }
+
         if (! config('jaak.kyc_enabled', true)) {
             $this->marcarError($val, 'KYC deshabilitado globalmente (jaak.kyc_enabled).');
 
@@ -124,13 +128,17 @@ class ProcesarKycValidacion implements ShouldQueue
             $val->update(['jaak_session_id' => $tok['data']['session_id'] ?? null]);
 
             // Paso 4 - verificación de documento
+            // JAAK detecta solo el tipo y país del documento (INE, pasaporte
+            // mexicano o de otros países soportados): se guarda y se usa ese
+            // país para el OCR en lugar de asumir INE de México.
             $doc = $jaak->verificarDocumento($accessToken, $frontB64, $backB64);
             $val->resultado_documento = $this->depurar($doc);
+            $this->registrarDocumentoDetectado($val, $doc);
 
             // Paso 5 - OCR
             $datosOcr = [];
             if (! $this->sinPresupuesto()) {
-                $ocr = $jaak->extraerOcr($accessToken, $frontB64, $backB64);
+                $ocr = $jaak->extraerOcr($accessToken, $frontB64, $backB64, $val->pais_documento ?: null);
                 $this->ultimoOcr = $this->depurar($ocr);
                 $val->resultado_ocr = $this->ultimoOcr;
                 $datosOcr = $this->extraerDatosOcr($ocr);
@@ -301,7 +309,8 @@ class ProcesarKycValidacion implements ShouldQueue
             $observaciones[] = 'No se pudo determinar la validez de la CURP (sin CURP o RENAPO no respondió).';
         }
 
-        // --- INE / documento ---
+        // --- Documento (INE, pasaporte u otro detectado por JAAK) ---
+        $etiqueta = $this->etiquetaDocumento($val);
         // 'evaluation' es el veredicto global de JAAK y manda sobre 'documentValidity'
         // (que sólo dice que el formato del documento es correcto).
         $ineValida = null;
@@ -323,13 +332,13 @@ class ProcesarKycValidacion implements ShouldQueue
             if ($ineValida !== true) {
                 $motivo = trim((string) data_get($doc, 'data.state.message', ''));
                 if ($motivo !== '') {
-                    $observaciones[] = 'Documento (INE): '.$motivo;
+                    $observaciones[] = 'Documento ('.$etiqueta.'): '.$motivo;
                 }
                 if (($docState['securityFeatures'] ?? null) === false) {
-                    $observaciones[] = 'Documento (INE): sin características de seguridad válidas.';
+                    $observaciones[] = 'Documento ('.$etiqueta.'): sin características de seguridad válidas.';
                 }
                 if (($docState['photoForgery'] ?? null) === true) {
-                    $observaciones[] = 'Documento (INE): posible alteración de la fotografía.';
+                    $observaciones[] = 'Documento ('.$etiqueta.'): posible alteración de la fotografía.';
                 }
             }
         }
@@ -339,7 +348,7 @@ class ProcesarKycValidacion implements ShouldQueue
             $observaciones[] = 'No se pudieron leer los datos del documento (imagen borrosa o incompleta).';
         }
         if ($ineValida === false) {
-            $observaciones[] = 'La verificación del documento de identidad (INE) no fue aprobada por JAAK.';
+            $observaciones[] = 'La verificación del documento de identidad ('.$etiqueta.') no fue aprobada por JAAK.';
         } elseif ($ineValida === null) {
             $observaciones[] = 'No se pudo determinar la validez del documento de identidad.';
         }
@@ -435,6 +444,36 @@ class ProcesarKycValidacion implements ShouldQueue
         ];
     }
 
+    /**
+     * Guarda el tipo y país que JAAK detectó (document.type / icaoCode), p. ej.
+     * MX_INE / MEX o MX_PASSPORT / MEX. Lo capturado en el alta manda sólo si
+     * JAAK no detectó nada.
+     */
+    private function registrarDocumentoDetectado(KycValidacion $val, array $doc): void
+    {
+        $tipo = strtoupper((string) data_get($doc, 'data.document.type', ''));
+        $pais = strtoupper((string) data_get($doc, 'data.document.icaoCode', ''));
+
+        if ($tipo !== '') {
+            $val->tipo_documento = str_contains($tipo, 'PASSPORT')
+                ? KycValidacion::DOCUMENTO_PASAPORTE
+                : ($tipo === 'MX_INE' ? KycValidacion::DOCUMENTO_INE : 'identificacion');
+        }
+
+        if (preg_match('/^[A-Z]{3}$/', $pais)) {
+            $val->pais_documento = $pais;
+        }
+    }
+
+    private function etiquetaDocumento(KycValidacion $val): string
+    {
+        return match ($val->tipo_documento) {
+            KycValidacion::DOCUMENTO_INE => 'INE',
+            KycValidacion::DOCUMENTO_PASAPORTE => 'pasaporte'.($val->pais_documento && $val->pais_documento !== 'MEX' ? ' '.$val->pais_documento : ''),
+            default => 'identificación'.($val->pais_documento ? ' '.$val->pais_documento : ''),
+        };
+    }
+
     private function consolidar(KycValidacion $val, array $datos): void
     {
         $val->fill([
@@ -505,7 +544,7 @@ class ProcesarKycValidacion implements ShouldQueue
             $persona = $val->validable;
             if ($persona) {
                 $persona->forceFill([
-                    'kyc_estatus' => $val->estatus,
+                    'kyc_estatus' => KycValidacion::estatusConsolidado($persona) ?? $val->estatus,
                     'kyc_validado_en' => now(),
                 ])->saveQuietly();
             }

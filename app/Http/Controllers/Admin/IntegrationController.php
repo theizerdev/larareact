@@ -7,11 +7,14 @@ use App\Models\Empresa;
 use App\Models\Pais;
 use App\Services\BioTimeService;
 use App\Services\ControlAccesoService;
+use App\Models\ValidacionRegla;
 use App\Services\DiditService;
+use App\Services\Validaciones\FirmaService;
 use App\Services\JaakService;
 use App\Services\WhatsAppService;
 use App\Services\ZapSignService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Artisan;
 
 class IntegrationController extends Controller
@@ -635,7 +638,132 @@ class IntegrationController extends Controller
             'didit_api_key' => DiditService::tokenDe($empresa),
             'didit_workflow_id' => $empresa->didit_workflow_id ?? config('didit.default_workflow_id'),
             'didit_active' => (bool) $empresa->didit_active,
+            // El secreto nunca viaja al frontend: sólo si hay uno guardado.
+            'didit_webhook_secret_set' => $this->diditSecretoGuardado($empresa),
+            'didit_webhook_url' => route('webhooks.didit'),
+            'reglas' => $this->reglasValidacion($empresa),
+            'zapsign_plantillas' => $this->plantillasZapsign($empresa),
+            'zapsign_variables' => FirmaService::VARIABLES,
         ]);
+    }
+
+    /**
+     * Guarda las reglas de validación por entidad (identidad, antifraude DIDIT,
+     * plantilla ZapSign). Sólo crea / actualiza renglones; nunca borra.
+     */
+    public function updateReglasValidacion(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'reglas' => 'required|array',
+            'reglas.*.entidad' => 'required|string|in:'.implode(',', array_keys(ValidacionRegla::ENTIDADES)),
+            'reglas.*.kyc_activo' => 'required|boolean',
+            'reglas.*.didit_antifraude' => 'required|boolean',
+            'reglas.*.firma_activa' => 'required|boolean',
+            'reglas.*.plantilla_zapsign' => 'nullable|string|max:64|regex:/^[A-Za-z0-9-]+$/',
+            'reglas.*.nombre_documento' => 'nullable|string|max:120',
+            'reglas.*.firma_obligatoria' => 'required|boolean',
+            'reglas.*.firma_valida_identidad' => 'required|boolean',
+        ]);
+
+        foreach ($validated['reglas'] as $i => $r) {
+            $conSeguimiento = in_array($r['entidad'], ValidacionRegla::ENTIDADES_CON_SEGUIMIENTO, true);
+
+            if ($r['firma_activa'] && $conSeguimiento && empty($r['plantilla_zapsign'])) {
+                return back()->withErrors([
+                    "reglas.$i.plantilla_zapsign" => __('Choose a ZapSign template to enable signing.'),
+                ])->with('notification', [
+                    'type' => 'error',
+                    'message' => __('Choose a ZapSign template to enable signing.'),
+                ]);
+            }
+
+            ValidacionRegla::updateOrCreate(
+                ['empresa_id' => $empresa->id, 'entidad' => $r['entidad']],
+                [
+                    'kyc_activo' => $r['kyc_activo'],
+                    // Antifraude y firma sólo donde el alta ya entrega la liga de seguimiento.
+                    'didit_antifraude' => $conSeguimiento && $r['didit_antifraude'],
+                    'firma_activa' => $conSeguimiento && $r['firma_activa'],
+                    'plantilla_zapsign' => $r['plantilla_zapsign'] ?: null,
+                    'nombre_documento' => $r['nombre_documento'] ?: null,
+                    'firma_obligatoria' => $conSeguimiento && $r['firma_obligatoria'],
+                    'firma_valida_identidad' => $conSeguimiento && $r['firma_valida_identidad'],
+                ],
+            );
+        }
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Validation rules saved.'),
+        ]);
+    }
+
+    private function reglasValidacion(Empresa $empresa): array
+    {
+        return collect(array_keys(ValidacionRegla::ENTIDADES))
+            ->map(function (string $entidad) use ($empresa) {
+                $r = ValidacionRegla::para($empresa->id, $entidad);
+
+                return [
+                    'entidad' => $entidad,
+                    'kyc_activo' => (bool) $r->kyc_activo,
+                    'didit_antifraude' => (bool) $r->didit_antifraude,
+                    'firma_activa' => (bool) $r->firma_activa,
+                    'plantilla_zapsign' => $r->plantilla_zapsign,
+                    'nombre_documento' => $r->nombre_documento,
+                    'firma_obligatoria' => (bool) $r->firma_obligatoria,
+                    'firma_valida_identidad' => (bool) $r->firma_valida_identidad,
+                    'con_seguimiento' => $r->conSeguimiento(),
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * Plantillas de la cuenta ZapSign para elegir en las reglas. Cacheado 5
+     * minutos; si ZapSign no responde, la lista llega vacía y la pantalla
+     * sigue funcionando (se puede escribir el token a mano).
+     */
+    private function plantillasZapsign(Empresa $empresa): array
+    {
+        if (! $empresa->zapsign_active || ! ZapSignService::tokenDe($empresa)) {
+            return [];
+        }
+
+        return Cache::remember('zapsign:plantillas:'.$empresa->id, 300, function () use ($empresa) {
+            $res = (new ZapSignService($empresa))->listarPlantillas();
+
+            return $res['ok']
+                ? collect($res['data']['results'] ?? [])
+                    ->filter(fn ($t) => ($t['active'] ?? true))
+                    ->map(fn ($t) => [
+                        'token' => $t['token'] ?? null,
+                        'nombre' => $t['name'] ?? '',
+                        'tipo' => $t['template_type'] ?? null,
+                    ])
+                    ->filter(fn ($t) => $t['token'])
+                    ->values()
+                    ->all()
+                : [];
+        });
+    }
+
+    private function diditSecretoGuardado(Empresa $empresa): bool
+    {
+        try {
+            return ! empty($empresa->didit_webhook_secret);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            return false;
+        }
     }
 
     /**
@@ -832,6 +960,7 @@ class IntegrationController extends Controller
             'didit_api_key' => 'nullable|string|max:4000',
             'didit_workflow_id' => 'nullable|string|max:100',
             'didit_active' => 'required|boolean',
+            'didit_webhook_secret' => 'nullable|string|max:255',
         ]);
 
         $apiKey = $validated['didit_api_key'] !== null ? trim($validated['didit_api_key']) : '';
@@ -851,6 +980,11 @@ class IntegrationController extends Controller
             'didit_workflow_id' => ! empty($validated['didit_workflow_id']) ? trim($validated['didit_workflow_id']) : null,
             'didit_active' => $validated['didit_active'],
         ]);
+
+        // Vacío = conservar el secreto guardado (nunca se manda al frontend).
+        if (! empty($validated['didit_webhook_secret'])) {
+            $empresa->forceFill(['didit_webhook_secret' => trim($validated['didit_webhook_secret'])])->save();
+        }
 
         return back()->with('notification', [
             'type' => 'success',

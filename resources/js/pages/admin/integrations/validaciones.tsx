@@ -21,7 +21,31 @@ interface PageProps {
     didit_api_key?: string | null;
     didit_workflow_id?: string | null;
     didit_active?: boolean;
+    didit_webhook_secret_set?: boolean;
+    didit_webhook_url?: string;
+    reglas?: Regla[];
+    zapsign_plantillas?: { token: string; nombre: string; tipo: string | null }[];
+    zapsign_variables?: string[];
 }
+
+interface Regla {
+    entidad: 'colaboradores' | 'visitas' | 'proveedores' | 'socios';
+    kyc_activo: boolean;
+    didit_antifraude: boolean;
+    firma_activa: boolean;
+    plantilla_zapsign: string | null;
+    nombre_documento: string | null;
+    firma_obligatoria: boolean;
+    firma_valida_identidad: boolean;
+    con_seguimiento: boolean;
+}
+
+const ENTIDAD_LABEL: Record<Regla['entidad'], string> = {
+    colaboradores: 'Employees',
+    visitas: 'Temporary visits',
+    proveedores: 'Suppliers and their staff',
+    socios: 'Business partners and their staff',
+};
 
 export default function Validaciones({
     jaak_api_key,
@@ -33,6 +57,11 @@ export default function Validaciones({
     didit_api_key,
     didit_workflow_id,
     didit_active,
+    didit_webhook_secret_set,
+    didit_webhook_url,
+    reglas = [],
+    zapsign_plantillas = [],
+    zapsign_variables = [],
 }: PageProps) {
     const { __ } = useTranslate();
     const [testingConnection, setTestingConnection] = useState(false);
@@ -55,6 +84,7 @@ export default function Validaciones({
         didit_api_key: didit_api_key || '',
         didit_workflow_id: didit_workflow_id || '',
         didit_active: !!didit_active,
+        didit_webhook_secret: '',
     });
 
     const handleSaveJaak = (e: React.FormEvent) => {
@@ -429,6 +459,23 @@ export default function Validaciones({
                                         {__('ID of the verification flow configured in Didit (e.g. Custom KYC).')}
                                     </p>
                                 </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="didit_webhook_secret">{__('Webhook secret')}</Label>
+                                    <Input
+                                        id="didit_webhook_secret"
+                                        type="password"
+                                        autoComplete="off"
+                                        placeholder={didit_webhook_secret_set ? __('Saved — leave empty to keep it') : __('Paste the secret Didit shows for the webhook')}
+                                        value={diditForm.data.didit_webhook_secret}
+                                        onChange={(e) => diditForm.setData('didit_webhook_secret', e.target.value)}
+                                        disabled={!diditForm.data.didit_active}
+                                    />
+                                    {didit_webhook_url && (
+                                        <p className="text-xs text-muted-foreground break-all">
+                                            {__('Webhook URL to register in Didit:')} <code className="font-mono">{didit_webhook_url}</code>
+                                        </p>
+                                    )}
+                                </div>
                             </CardContent>
                             <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex flex-col gap-2">
                                 <div className="flex w-full justify-between">
@@ -457,8 +504,117 @@ export default function Validaciones({
                         </form>
                     </Card>
                 </div>
+
+                <ReglasValidacion reglas={reglas} plantillas={zapsign_plantillas} variables={zapsign_variables} />
             </div>
         </>
+    );
+}
+
+/**
+ * Reglas por entidad: qué validaciones corren en cada alta. Identidad: INE →
+ * JAAK, pasaporte / extranjero → DIDIT. Antifraude y firma sólo donde el alta
+ * ya entrega la liga de seguimiento a la persona.
+ */
+function ReglasValidacion({ reglas, plantillas, variables }: {
+    reglas: Regla[];
+    plantillas: { token: string; nombre: string; tipo: string | null }[];
+    variables: string[];
+}) {
+    const { __ } = useTranslate();
+    const form = useForm<{ reglas: Regla[] }>({ reglas });
+
+    const set = (i: number, cambios: Partial<Regla>) =>
+        form.setData('reglas', form.data.reglas.map((r, j) => (j === i ? { ...r, ...cambios } : r)));
+
+    const guardar = (e: React.FormEvent) => {
+        e.preventDefault();
+        form.put('/admin/integrations/validaciones/reglas', { preserveScroll: true });
+    };
+
+    return (
+        <Card className="shadow-sm">
+            <form onSubmit={guardar}>
+                <CardHeader>
+                    <CardTitle>{__('Validation rules per entity')}</CardTitle>
+                    <CardDescription>
+                        {__('JAAK validates the INE and passports; with a passport or foreign ID, DIDIT validates as well. Without a rule, registrations work exactly as before.')}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {form.data.reglas.map((r, i) => (
+                        <div key={r.entidad} className="rounded-xl border p-4 space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="font-semibold">{__(ENTIDAD_LABEL[r.entidad])}</span>
+                                {!r.con_seguimiento && (
+                                    <span className="text-xs text-muted-foreground">{__('Identity only for now; anti-fraud and signature arrive in a later phase.')}</span>
+                                )}
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-3">
+                                <label className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                                    {__('Identity validation')}
+                                    <Switch checked={r.kyc_activo} onCheckedChange={(v) => set(i, { kyc_activo: v })} />
+                                </label>
+                                <label className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                                    {__('DIDIT anti-fraud on top of JAAK')}
+                                    <Switch checked={r.didit_antifraude} disabled={!r.con_seguimiento || !r.kyc_activo} onCheckedChange={(v) => set(i, { didit_antifraude: v })} />
+                                </label>
+                                <label className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                                    {__('ZapSign signature')}
+                                    <Switch checked={r.firma_activa} disabled={!r.con_seguimiento} onCheckedChange={(v) => set(i, { firma_activa: v })} />
+                                </label>
+                            </div>
+                            {r.con_seguimiento && r.firma_activa && (
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="space-y-1.5">
+                                        <Label>{__('ZapSign template')}</Label>
+                                        {plantillas.length > 0 ? (
+                                            <Select value={r.plantilla_zapsign ?? ''} onValueChange={(v) => set(i, { plantilla_zapsign: v })}>
+                                                <SelectTrigger><SelectValue placeholder={__('Choose a template')} /></SelectTrigger>
+                                                <SelectContent>
+                                                    {plantillas.map((p) => (
+                                                        <SelectItem key={p.token} value={p.token}>
+                                                            {p.nombre}{p.tipo ? ` (${p.tipo.toUpperCase()})` : ''}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        ) : (
+                                            <Input value={r.plantilla_zapsign ?? ''} placeholder={__('Template token')} onChange={(e) => set(i, { plantilla_zapsign: e.target.value })} />
+                                        )}
+                                        {form.errors[`reglas.${i}.plantilla_zapsign` as keyof typeof form.errors] && (
+                                            <p className="text-xs text-red-600">{form.errors[`reglas.${i}.plantilla_zapsign` as keyof typeof form.errors]}</p>
+                                        )}
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label>{__('Document name')}</Label>
+                                        <Input value={r.nombre_documento ?? ''} placeholder={__('e.g. Privacy notice')} maxLength={120} onChange={(e) => set(i, { nombre_documento: e.target.value })} />
+                                    </div>
+                                    <label className="flex items-start justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm sm:col-span-2">
+                                        <span>
+                                            {__('ZapSign also validates the signer\'s INE or passport')}
+                                            <span className="block text-xs text-muted-foreground">
+                                                {__('INE: biometrics + Mexican government databases (~US$1.00). Passport or foreign ID: biometrics and document anti-fraud, any country (~US$0.90). Charged by ZapSign per signature.')}
+                                            </span>
+                                        </span>
+                                        <Switch checked={r.firma_valida_identidad} onCheckedChange={(v) => set(i, { firma_valida_identidad: v })} />
+                                    </label>
+                                    <p className="text-xs text-muted-foreground sm:col-span-2">
+                                        {__('DOCX templates get their variables filled:')} <code className="font-mono">{variables.join(' ')}</code>. {__('PDF templates are sent as they are.')}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </CardContent>
+                <CardFooter className="border-t px-6 py-4 justify-end">
+                    <Button type="submit" disabled={form.processing || !form.isDirty} className="gap-2">
+                        <Save className="h-4 w-4" />
+                        {__('Save rules')}
+                    </Button>
+                </CardFooter>
+            </form>
+        </Card>
     );
 }
 

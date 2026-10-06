@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcesarKycValidacion;
+use App\Services\Validaciones\DiditSincronizador;
 use App\Models\KycValidacion;
 use App\Models\OperacionValidacion;
 use Illuminate\Http\Request;
@@ -18,16 +19,19 @@ class KycValidacionController extends Controller
     {
         $filtros = $request->validate([
             'estatus' => 'nullable|string|in:pendiente,procesando,aprobado,revision,rechazado,error',
+            'proveedor' => 'nullable|string|in:jaak,didit',
             'q' => 'nullable|string|max:100',
         ]);
 
         $validaciones = KycValidacion::query()
             ->with(['validable', 'operacion'])
             ->when($filtros['estatus'] ?? null, fn ($q, $e) => $q->where('estatus', $e))
+            ->when($filtros['proveedor'] ?? null, fn ($q, $p) => $q->where('proveedor', $p))
             ->when($filtros['q'] ?? null, function ($q, $term) {
                 $q->where(function ($sub) use ($term) {
                     $sub->where('curp_capturada', 'like', "%{$term}%")
                         ->orWhere('jaak_session_id', 'like', "%{$term}%")
+                        ->orWhere('didit_session_id', 'like', "%{$term}%")
                         ->orWhereHas('operacion', fn ($o) => $o->where('folio', 'like', "%{$term}%"));
                 });
             })
@@ -57,6 +61,18 @@ class KycValidacionController extends Controller
             ]);
         }
 
+        // DIDIT: si la persona aún no termina, sólo se consulta el estatus; si
+        // ya terminó, se abre una sesión nueva que se le ofrece en la liga de
+        // seguimiento del folio.
+        if ($kycValidacion->esDidit() && ! $kycValidacion->estaFinalizada()) {
+            $cambio = DiditSincronizador::sincronizar($kycValidacion);
+
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => $cambio ? __('DIDIT status updated.') : __('DIDIT has no new result yet.'),
+            ]);
+        }
+
         // La revalidación se queda en el mismo folio; las validaciones anteriores
         // al folio abren uno nuevo de tipo revalidación.
         $operacion = $kycValidacion->operacion
@@ -74,12 +90,25 @@ class KycValidacionController extends Controller
             'sucursal_id' => $kycValidacion->sucursal_id,
             'operacion_id' => $operacion->id,
             'curp_capturada' => $kycValidacion->curp_capturada,
+            'proveedor' => $kycValidacion->proveedor ?: KycValidacion::PROVEEDOR_JAAK,
+            'tipo_documento' => $kycValidacion->tipo_documento,
+            'pais_documento' => $kycValidacion->pais_documento,
             'jaak_environment' => $kycValidacion->jaak_environment,
             'estatus' => KycValidacion::ESTATUS_PENDIENTE,
         ]);
 
         $persona->forceFill(['kyc_estatus' => KycValidacion::ESTATUS_PENDIENTE])->saveQuietly();
         $operacion->recalcularEstatus();
+
+        if ($nueva->esDidit()) {
+            DiditSincronizador::iniciar($nueva, $operacion->urlSeguimiento());
+            $operacion->recalcularEstatus();
+
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('New DIDIT verification created. Share the folio link with the person: :url', ['url' => $operacion->urlSeguimiento()]),
+            ]);
+        }
 
         ProcesarKycValidacion::dispatch($nueva)->afterResponse();
 
@@ -102,6 +131,11 @@ class KycValidacionController extends Controller
                 : __('(deleted)'),
             'persona_tipo' => class_basename($v->validable_type),
             'curp_capturada' => $v->curp_capturada,
+            'proveedor' => $v->proveedor ?: KycValidacion::PROVEEDOR_JAAK,
+            'tipo_documento' => $v->tipo_documento,
+            'pais_documento' => $v->pais_documento,
+            'didit_estatus' => $v->didit_estatus,
+            'didit_session_id' => $v->didit_session_id,
             'estatus' => $v->estatus,
             'curp_valida' => $v->curp_valida,
             'ine_valida' => $v->ine_valida,

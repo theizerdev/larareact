@@ -65,6 +65,21 @@ class ZapSignService
     }
 
     /**
+     * Secreto del webhook de ZapSign de la empresa (generado por Hoshō); null
+     * si no hay o no se puede descifrar.
+     */
+    public static function secretoWebhookDe(Empresa $empresa): ?string
+    {
+        try {
+            $secreto = $empresa->zapsign_webhook_secret;
+        } catch (DecryptException $e) {
+            return null;
+        }
+
+        return is_string($secreto) && $secreto !== '' ? $secreto : null;
+    }
+
+    /**
      * Indica si hay un API Token guardado para intentar una conexión.
      */
     public function isConfigured(): bool
@@ -205,6 +220,188 @@ class ZapSignService
         return $this->request('get', '/docs/'.rawurlencode($docToken).'/');
     }
 
+    /**
+     * Plantillas de la cuenta (solo lectura, primera página).
+     */
+    public function listarPlantillas(): array
+    {
+        return $this->request('get', '/templates/');
+    }
+
+    /**
+     * Detalle de una plantilla (tipo docx/pdf, archivo, firmantes, variables).
+     */
+    public function detallePlantilla(string $plantillaToken): array
+    {
+        if (trim($plantillaToken) === '') {
+            return ['ok' => false, 'status' => 0, 'data' => [], 'error' => 'plantilla vacía'];
+        }
+
+        return $this->request('get', '/templates/'.rawurlencode($plantillaToken).'/');
+    }
+
+    /**
+     * Crea un documento a firma a partir de una plantilla de la cuenta.
+     *
+     * ZapSign sólo llena variables ({{NOMBRE}}, ...) en plantillas DOCX vía
+     * /models/create-doc/. Una plantilla PDF no admite ese endpoint, así que
+     * se crea un documento normal con /docs/ usando el PDF de la plantilla.
+     * La firma es en pantalla. Sin $identidad no se piden selfie ni foto de
+     * identificación (ya la validan JAAK / DIDIT); con $identidad ZapSign
+     * valida además la INE o el pasaporte del firmante (ver validacionFirmante()).
+     *
+     * @param  array{nombre: string, email?: ?string, telefono_pais?: ?string, telefono?: ?string}  $firmante
+     * @param  array<string, string>  $variables  '{{VARIABLE}}' => valor (sólo DOCX)
+     * @param  array{tipo: string, pais: ?string, numero: ?string}|null  $identidad
+     */
+    public function crearDocumentoDesdePlantilla(
+        string $plantillaToken,
+        string $nombreDocumento,
+        array $firmante,
+        array $variables = [],
+        ?string $externalId = null,
+        ?string $redirectLink = null,
+        ?array $identidad = null,
+    ): array {
+        $validacion = $this->validacionFirmante($identidad);
+
+        $plantilla = $this->detallePlantilla($plantillaToken);
+
+        if (! $plantilla['ok']) {
+            return $plantilla;
+        }
+
+        $tipo = strtolower((string) ($plantilla['data']['template_type'] ?? ''));
+
+        if ($tipo === 'docx') {
+            $res = $this->request('post', '/models/create-doc/', array_filter([
+                'template_id' => $plantillaToken,
+                'signer_name' => $firmante['nombre'],
+                'signer_email' => $firmante['email'] ?? null,
+                'signer_phone_country' => $firmante['telefono_pais'] ?? null,
+                'signer_phone_number' => $firmante['telefono'] ?? null,
+                'lang' => 'es',
+                'external_id' => $externalId,
+                'send_automatic_email' => false,
+                'send_automatic_whatsapp' => false,
+                'data' => collect($variables)
+                    ->map(fn ($valor, $variable) => ['de' => $variable, 'para' => (string) $valor])
+                    ->values()
+                    ->all(),
+            ], fn ($v) => $v !== null && $v !== ''));
+
+            // create-doc no acepta la validación biométrica: se aplica al firmante
+            // recién creado. Si falla, el documento queda sin ella y se avisa.
+            $signerToken = $res['data']['signers'][0]['token'] ?? null;
+
+            if ($res['ok'] && $validacion && $signerToken) {
+                $upd = $this->request('post', '/signers/'.rawurlencode($signerToken).'/', array_intersect_key(
+                    $validacion,
+                    array_flip(['selfie_validation_type', 'require_document_photo'])
+                ));
+                $res['validacion_identidad'] = $upd['ok'] ? 'aplicada' : 'fallo: '.($upd['error'] ?? 'desconocido');
+            }
+
+            return $res;
+        }
+
+        $pdf = $plantilla['data']['template_file'] ?? null;
+
+        if (empty($pdf)) {
+            return ['ok' => false, 'status' => 0, 'data' => [], 'error' => 'la plantilla no tiene archivo PDF'];
+        }
+
+        return $this->request('post', '/docs/', array_filter([
+            'name' => mb_substr($nombreDocumento, 0, 255),
+            'url_pdf' => $pdf,
+            'lang' => 'es',
+            'external_id' => $externalId,
+            'signers' => [array_filter([
+                'name' => $firmante['nombre'],
+                'email' => $firmante['email'] ?? null,
+                'phone_country' => $firmante['telefono_pais'] ?? null,
+                'phone_number' => $firmante['telefono'] ?? null,
+                'auth_mode' => 'assinaturaTela',
+                'lock_name' => true,
+                'require_selfie_photo' => false,
+                'require_document_photo' => false,
+                ...($validacion ?? []),
+                'send_automatic_email' => false,
+                'send_automatic_whatsapp' => false,
+                'redirect_link' => $redirectLink,
+            ], fn ($v) => $v !== null && $v !== '')],
+        ], fn ($v) => $v !== null && $v !== ''));
+    }
+
+    /** ISO alfa-3 → país de documento que acepta ZapSign. */
+    private const PAISES_DOCUMENTO = [
+        'MEX' => 'mx', 'USA' => 'us', 'COL' => 'co', 'ARG' => 'ar',
+        'PER' => 'pe', 'CHL' => 'cl', 'BRA' => 'br',
+    ];
+
+    /**
+     * Campos de firmante para que ZapSign valide la identificación:
+     *  - INE (México): 'identity-verification' — biometría + consulta a bases
+     *    de gobierno (sólo AR, CO, MX, CL, PE); ~US$1.00 por validación.
+     *  - Pasaporte / identificación extranjera: 'identity-verification-global'
+     *    — biometría y antifraude del documento de cualquier país; ~US$0.90.
+     *
+     * @param  array{tipo: string, pais: ?string, numero: ?string}|null  $identidad
+     */
+    public function validacionFirmante(?array $identidad): ?array
+    {
+        if (! $identidad) {
+            return null;
+        }
+
+        $pais = strtoupper((string) ($identidad['pais'] ?? ''));
+        $esIne = ($identidad['tipo'] ?? null) === 'ine' && ($pais === '' || $pais === 'MEX');
+        $paisZap = $esIne ? 'mx' : (self::PAISES_DOCUMENTO[$pais] ?? 'other');
+
+        return [
+            'require_selfie_photo' => true,
+            'require_document_photo' => true,
+            'selfie_validation_type' => $esIne ? 'identity-verification' : 'identity-verification-global',
+            'require_document' => true,
+            'require_document_data' => array_filter([
+                'document_country' => $paisZap,
+                'document_type' => $esIne
+                    ? 'national_id'
+                    : (($identidad['tipo'] ?? null) === 'pasaporte' ? 'ppt' : 'foreign_id'),
+                'document_number' => ! empty($identidad['numero']) ? (string) $identidad['numero'] : null,
+            ]),
+        ];
+    }
+
+    /**
+     * Elimina (cancela) un documento que aún no se firma.
+     */
+    public function eliminarDocumento(string $docToken): array
+    {
+        if (trim($docToken) === '') {
+            return ['ok' => false, 'status' => 0, 'data' => [], 'error' => 'doc token vacío'];
+        }
+
+        return $this->request('delete', '/docs/'.rawurlencode($docToken).'/');
+    }
+
+    /**
+     * Registra un webhook limitado a un documento, con un header secreto que
+     * Hoshō valida al recibirlo. Así no hace falta configurar nada a mano en
+     * el panel de ZapSign.
+     */
+    public function crearWebhookDocumento(string $docToken, string $url, string $secreto): array
+    {
+        return $this->request('post', '/user/company/webhook/', [
+            'url' => $url,
+            'type' => '',
+            'doc_token' => $docToken,
+            'headers' => [
+                ['name' => 'X-Hosho-Secret', 'value' => $secreto],
+            ],
+        ]);
+    }
+
     // ---------------------------------------------------------------------
 
     /**
@@ -230,9 +427,11 @@ class ZapSignService
                 ->withHeaders($this->getHeaders())
                 ->acceptJson();
 
-            $response = $method === 'get'
-                ? $pending->get($url, $payload)
-                : $pending->asJson()->post($url, $payload);
+            $response = match ($method) {
+                'get' => $pending->get($url, $payload),
+                'delete' => $pending->delete($url, $payload),
+                default => $pending->asJson()->post($url, $payload),
+            };
 
             $data = [];
             try {

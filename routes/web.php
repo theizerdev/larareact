@@ -84,6 +84,16 @@ Route::get('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::
 Route::post('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::class, 'submitWizard'])->name('preregistro-visita.submit');
 Route::post('/preregistro-visita/{token}/tipo-servicio', [VisitaTemporalPreRegistroController::class, 'storeTipoServicio'])->name('preregistro-visita.tipo-servicio.store');
 
+// Validaciones: liga pública de seguimiento del folio (DIDIT + firma ZapSign) y webhooks.
+Route::get('/validacion/{token}', [\App\Http\Controllers\ValidacionSeguimientoController::class, 'show'])
+    ->name('validacion.seguimiento')->middleware('throttle:60,1');
+Route::get('/validacion/{token}/estado', [\App\Http\Controllers\ValidacionSeguimientoController::class, 'estado'])
+    ->name('validacion.seguimiento.estado')->middleware('throttle:60,1');
+Route::post('/webhooks/didit', [\App\Http\Controllers\WebhookValidacionController::class, 'didit'])
+    ->name('webhooks.didit')->middleware('throttle:120,1');
+Route::post('/webhooks/zapsign', [\App\Http\Controllers\WebhookValidacionController::class, 'zapsign'])
+    ->name('webhooks.zapsign')->middleware('throttle:120,1');
+
 use App\Http\Controllers\VisitaAccesoAutorizacionController;
 Route::get('/autorizar-acceso/{token}', [VisitaAccesoAutorizacionController::class, 'show'])->name('autorizar-acceso.show');
 Route::post('/autorizar-acceso/{token}', [VisitaAccesoAutorizacionController::class, 'autorizar'])->name('autorizar-acceso.post');

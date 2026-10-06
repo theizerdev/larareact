@@ -1,5 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, FileSignature, FolderOpen, ShieldCheck, UserPlus } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { ArrowLeft, Copy, Download, FileSignature, FolderOpen, RefreshCw, ShieldCheck, Smartphone, UserPlus, XCircle } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,9 @@ interface Kyc {
     id: number;
     persona_nombre: string;
     persona_tipo: string;
+    proveedor: 'jaak' | 'didit';
+    tipo_documento: string | null;
+    pais_documento: string | null;
     estatus: string;
     score_global: number | null;
     created_at: string | null;
@@ -37,12 +40,17 @@ interface Documento {
     enviado_en: string | null;
     firmado_en: string | null;
     rechazado_en: string | null;
+    tiene_pdf: boolean;
+    error_detalle: string | null;
 }
 
 interface PageProps {
     operacion: Operacion;
     kycs: Kyc[];
     documentos: Documento[];
+    seguimiento_url: string | null;
+    seguimiento_qr: string | null;
+    puede_gestionar: boolean;
 }
 
 const OPERACION_ESTATUS_META: Record<string, { label: string; cls: string }> = {
@@ -87,7 +95,9 @@ function Badge({ meta }: { meta: { label: string; cls: string } }) {
     return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${meta.cls}`}>{__(meta.label)}</span>;
 }
 
-export default function OperacionValidacion({ operacion, kycs, documentos }: PageProps) {
+const PROVEEDOR_LABEL: Record<string, string> = { jaak: 'JAAK', didit: 'DIDIT' };
+
+export default function OperacionValidacion({ operacion, kycs, documentos, seguimiento_url, seguimiento_qr, puede_gestionar }: PageProps) {
     const { __ } = useTranslate();
 
     const breadcrumbs = [
@@ -129,6 +139,36 @@ export default function OperacionValidacion({ operacion, kycs, documentos }: Pag
                     </Button>
                 </div>
 
+                {seguimiento_url && (
+                    <Card className="shadow-sm border-indigo-200 dark:border-indigo-900">
+                        <CardContent className="flex flex-col items-center gap-5 pt-6 sm:flex-row">
+                            {seguimiento_qr && (
+                                <div className="w-40 shrink-0 rounded-xl bg-white p-2 [&>svg]:h-auto [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: seguimiento_qr }} />
+                            )}
+                            <div className="min-w-0 space-y-2">
+                                <div className="flex items-center gap-2 font-semibold">
+                                    <Smartphone className="h-5 w-5 text-indigo-600" />
+                                    {__('The person still has steps to complete')}
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    {__('Have them scan the code with their phone to verify their identity and sign. This page shows the result when they finish.')}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <code className="max-w-full truncate rounded bg-muted px-2 py-1 text-xs">{seguimiento_url}</code>
+                                    <Button type="button" size="sm" variant="outline" className="gap-1" onClick={() => navigator.clipboard?.writeText(seguimiento_url)}>
+                                        <Copy className="h-3.5 w-3.5" />
+                                        {__('Copy link')}
+                                    </Button>
+                                    <Button type="button" size="sm" variant="outline" className="gap-1" onClick={() => router.reload({ only: ['operacion', 'kycs', 'documentos', 'seguimiento_url', 'seguimiento_qr'] })}>
+                                        <RefreshCw className="h-3.5 w-3.5" />
+                                        {__('Refresh')}
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 <Card className="shadow-sm">
                     <CardHeader>
                         <CardTitle className="text-lg">{__('Operation')}</CardTitle>
@@ -166,6 +206,11 @@ export default function OperacionValidacion({ operacion, kycs, documentos }: Pag
                                     </span>
                                     <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
                                         {__('Identity')} · {k.persona_nombre}
+                                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold">
+                                            {PROVEEDOR_LABEL[k.proveedor] ?? k.proveedor}
+                                            {k.tipo_documento ? ` · ${k.tipo_documento === 'pasaporte' ? __('Passport') : k.tipo_documento.toUpperCase()}` : ''}
+                                            {k.pais_documento ? ` · ${k.pais_documento}` : ''}
+                                        </span>
                                         <Badge meta={KYC_ESTATUS_META[k.estatus] ?? KYC_ESTATUS_META.error} />
                                         {k.score_global !== null && <span className="text-xs text-muted-foreground">{k.score_global}%</span>}
                                     </div>
@@ -188,6 +233,27 @@ export default function OperacionValidacion({ operacion, kycs, documentos }: Pag
                                         <Badge meta={FIRMA_ESTATUS_META[d.estatus] ?? FIRMA_ESTATUS_META.error} />
                                     </div>
                                     <div className="text-xs text-muted-foreground">{d.firmado_en || d.rechazado_en || d.enviado_en || '—'}</div>
+                                    {d.error_detalle && <div className="text-xs text-rose-600">{d.error_detalle}</div>}
+                                    <div className="mt-1 flex flex-wrap gap-2">
+                                        {d.tiene_pdf && (
+                                            <a href={`/admin/validaciones/documentos/${d.id}/pdf`} className="inline-flex items-center gap-1 text-xs text-teal-700 hover:underline dark:text-teal-400">
+                                                <Download className="h-3 w-3" />
+                                                {__('Signed PDF')}
+                                            </a>
+                                        )}
+                                        {puede_gestionar && d.estatus === 'pendiente' && (
+                                            <>
+                                                <button type="button" className="inline-flex items-center gap-1 text-xs text-teal-700 hover:underline dark:text-teal-400" onClick={() => router.post(`/admin/validaciones/documentos/${d.id}/consultar`, {}, { preserveScroll: true })}>
+                                                    <RefreshCw className="h-3 w-3" />
+                                                    {__('Check status')}
+                                                </button>
+                                                <button type="button" className="inline-flex items-center gap-1 text-xs text-rose-600 hover:underline" onClick={() => confirm(__('Cancel this document in ZapSign?')) && router.post(`/admin/validaciones/documentos/${d.id}/cancelar`, {}, { preserveScroll: true })}>
+                                                    <XCircle className="h-3 w-3" />
+                                                    {__('Cancel')}
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </li>
                             ))}
 

@@ -153,18 +153,18 @@ class DiditService
     }
 
     /**
-     * Crea una sesión de verificación en DIDIT.
+     * Crea una sesión de verificación en DIDIT (página hospedada).
      *
-     * Devuelve los datos de la sesión, incluyendo session_id y la url hospedada
-     * para que el usuario capture su documento y selfie interactivo.
+     * Devuelve session_id y url: la persona captura su documento (INE, pasaporte
+     * o identificación de cualquier país que admita el workflow) y su prueba de
+     * vida en esa página; el resultado llega por webhook.
      *
-     * @param  string  $vendorData  Identificador interno (ej. ID de persona o empleado)
-     * @param  string|null  $callbackUrl  URL a la que DIDIT redirige tras completar
-     * @param  string|null  $workflowId  Workflow UUID específico (opcional)
+     * @param  string  $vendorData  Identificador interno estable (p. ej. "kyc:123")
+     * @param  array{callback?: string, language?: string, metadata?: array, expected_details?: array, workflow_id?: string}  $opciones
      */
-    public function createSession(string $vendorData, ?string $callbackUrl = null, ?string $workflowId = null): array
+    public function createSession(string $vendorData, array $opciones = []): array
     {
-        $targetWorkflow = $workflowId ?: $this->workflowId;
+        $targetWorkflow = ($opciones['workflow_id'] ?? null) ?: $this->workflowId;
 
         if (empty($targetWorkflow)) {
             return [
@@ -175,14 +175,14 @@ class DiditService
             ];
         }
 
-        $payload = [
+        $payload = array_filter([
             'workflow_id' => $targetWorkflow,
             'vendor_data' => $vendorData,
-        ];
-
-        if (! empty($callbackUrl)) {
-            $payload['callback'] = $callbackUrl;
-        }
+            'callback' => $opciones['callback'] ?? null,
+            'language' => $opciones['language'] ?? null,
+            'metadata' => $opciones['metadata'] ?? null,
+            'expected_details' => array_filter($opciones['expected_details'] ?? []) ?: null,
+        ], fn ($v) => $v !== null && $v !== '');
 
         return $this->request('post', '/v3/session/', $payload);
     }
@@ -205,6 +205,55 @@ class DiditService
     public function listSessions(int $page = 1): array
     {
         return $this->request('get', '/v3/sessions/', ['page' => max(1, $page)]);
+    }
+
+    /**
+     * Verifica la firma X-Signature-V2 de un webhook de DIDIT: HMAC-SHA256 en
+     * hex del JSON canónico (llaves ordenadas de forma recursiva, separadores
+     * compactos, Unicode sin escapar y flotantes enteros como enteros), con
+     * X-Timestamp a no más de 5 minutos.
+     */
+    public static function firmaWebhookValida(string $cuerpoCrudo, ?string $firma, ?string $timestamp, string $secreto): bool
+    {
+        if (empty($firma) || empty($timestamp) || $secreto === '' || ! ctype_digit((string) $timestamp)) {
+            return false;
+        }
+
+        if (abs(time() - (int) $timestamp) > 300) {
+            return false;
+        }
+
+        // Se decodifica a objetos (no arreglos) para que un {} vacío siga siendo {}.
+        $datos = json_decode($cuerpoCrudo, false);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return false;
+        }
+
+        $canonico = json_encode(self::canonicalizar($datos), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return $canonico !== false
+            && hash_equals(hash_hmac('sha256', $canonico, $secreto), strtolower(trim($firma)));
+    }
+
+    private static function canonicalizar(mixed $valor): mixed
+    {
+        if (is_float($valor) && floor($valor) === $valor && abs($valor) < PHP_INT_MAX) {
+            return (int) $valor;
+        }
+
+        if (is_array($valor)) {
+            return array_map([self::class, 'canonicalizar'], $valor);
+        }
+
+        if ($valor instanceof \stdClass) {
+            $propiedades = get_object_vars($valor);
+            ksort($propiedades, SORT_STRING);
+
+            return (object) array_map([self::class, 'canonicalizar'], $propiedades);
+        }
+
+        return $valor;
     }
 
     // ---------------------------------------------------------------------

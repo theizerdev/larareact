@@ -109,7 +109,10 @@ class EmpleadoController extends Controller
         $empleado = AccessCodeService::createWithRetry(fn () => Empleado::create($data));
 
         // Validación de identidad (KYC) contra JAAK si la empresa la tiene activa.
-        $this->dispatchKycValidacion($empleado, $data['curp'] ?? null);
+        $this->dispatchKycValidacion($empleado, $data['curp'] ?? null, null, [
+            'tipo_documento' => $request->input('tipo_documento'),
+            'pais_documento' => $request->input('pais_documento'),
+        ]);
 
         $primerVehiculo = null;
         // Guardar vehículos
@@ -139,9 +142,28 @@ class EmpleadoController extends Controller
         // Enviar Gafete / Carnet por WhatsApp al empleado automáticamente
         $this->enviarCarnetWhatsAppInternal($empleado);
 
+        // Si quedan pasos para la persona (DIDIT o firma), se abre el folio:
+        // ahí está el QR para que los termine en su teléfono.
+        $seguimiento = $this->seguimientoValidacion($empleado);
+
+        if (! empty($seguimiento['url']) && $request->user()?->can('validaciones.view')) {
+            $operacionId = \App\Models\OperacionValidacion::withoutGlobalScopes()
+                ->where('folio', $seguimiento['folio'])
+                ->where('empresa_id', $empleado->empresa_id)
+                ->value('id');
+
+            if ($operacionId) {
+                return redirect()->route('admin.validaciones.operaciones.show', $operacionId)->with('notification', [
+                    'type' => 'success',
+                    'message' => __('Employee created successfully.').' '.__('Folio :folio: identity and signature are pending.', ['folio' => $seguimiento['folio']]),
+                ]);
+            }
+        }
+
         return back()->with('notification', [
             'type' => 'success',
-            'message' => __('Employee created successfully.'),
+            'message' => __('Employee created successfully.')
+                .(! empty($seguimiento['folio']) ? ' '.__('Folio: :folio', ['folio' => $seguimiento['folio']]) : ''),
         ]);
     }
 

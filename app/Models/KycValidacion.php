@@ -8,9 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
- * Resultado de una validación de identidad (KYC) ejecutada contra JAAK para una
- * persona pre-registrada. La orquestación de las llamadas vive en
- * App\Jobs\ProcesarKycValidacion; este modelo sólo guarda el resultado.
+ * Resultado de una validación de identidad (KYC) de una persona registrada.
+ * El proveedor es JAAK (INE, orquestado por App\Jobs\ProcesarKycValidacion) o
+ * DIDIT (pasaporte / documento extranjero / capa antifraude, página hospedada,
+ * resultado por App\Services\Validaciones\DiditSincronizador). Este modelo
+ * sólo guarda el resultado.
  */
 class KycValidacion extends Model
 {
@@ -25,12 +27,24 @@ class KycValidacion extends Model
     public const ESTATUS_RECHAZADO = 'rechazado';
     public const ESTATUS_ERROR = 'error';
 
+    public const PROVEEDOR_JAAK = 'jaak';
+    public const PROVEEDOR_DIDIT = 'didit';
+
+    public const DOCUMENTO_INE = 'ine';
+    public const DOCUMENTO_PASAPORTE = 'pasaporte';
+
     protected $fillable = [
         'validable_type',
         'validable_id',
         'empresa_id',
         'sucursal_id',
         'operacion_id',
+        'proveedor',
+        'tipo_documento',
+        'pais_documento',
+        'didit_session_id',
+        'didit_url',
+        'didit_estatus',
         'curp_capturada',
         'jaak_environment',
         'jaak_session_id',
@@ -48,6 +62,10 @@ class KycValidacion extends Model
         'observaciones',
         'error_detalle',
         'procesado_en',
+    ];
+
+    protected $hidden = [
+        'didit_url',
     ];
 
     protected function casts(): array
@@ -84,6 +102,38 @@ class KycValidacion extends Model
     public function operacion(): BelongsTo
     {
         return $this->belongsTo(OperacionValidacion::class, 'operacion_id');
+    }
+
+    /** Severidad para consolidar varias validaciones de una persona (JAAK + DIDIT). */
+    private const SEVERIDAD = [
+        self::ESTATUS_APROBADO => 1,
+        self::ESTATUS_PENDIENTE => 2,
+        self::ESTATUS_PROCESANDO => 2,
+        self::ESTATUS_ERROR => 3,
+        self::ESTATUS_REVISION => 4,
+        self::ESTATUS_RECHAZADO => 5,
+    ];
+
+    /**
+     * Estatus vigente de la persona: el más severo entre la última validación
+     * de cada proveedor. Así un aprobado de JAAK no tapa un rechazo de DIDIT.
+     */
+    public static function estatusConsolidado(Model $persona): ?string
+    {
+        return static::withoutGlobalScopes()
+            ->where('validable_type', $persona->getMorphClass())
+            ->where('validable_id', $persona->getKey())
+            ->orderBy('id')
+            ->get(['id', 'proveedor', 'estatus'])
+            ->keyBy(fn (self $v) => $v->proveedor ?: self::PROVEEDOR_JAAK)
+            ->pluck('estatus')
+            ->sortByDesc(fn ($estatus) => self::SEVERIDAD[$estatus] ?? 0)
+            ->first();
+    }
+
+    public function esDidit(): bool
+    {
+        return $this->proveedor === self::PROVEEDOR_DIDIT;
     }
 
     public function estaFinalizada(): bool

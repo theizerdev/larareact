@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { FileSignature, Search } from 'lucide-react';
+import { Download, FileSignature, RefreshCw, Search, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import Pagination from '@/components/pagination';
@@ -18,6 +18,8 @@ interface Documento {
     estatus: string;
     enviado_en: string | null;
     firmado_en: string | null;
+    tiene_pdf: boolean;
+    error_detalle: string | null;
 }
 
 interface PaginatedDocumentos {
@@ -34,6 +36,7 @@ interface PaginatedDocumentos {
 interface PageProps {
     documentos: PaginatedDocumentos;
     filtros: { estatus?: string; q?: string };
+    puede_gestionar: boolean;
 }
 
 const FIRMA_ESTATUS_META: Record<string, { label: string; cls: string }> = {
@@ -44,7 +47,7 @@ const FIRMA_ESTATUS_META: Record<string, { label: string; cls: string }> = {
     error: { label: 'Error', cls: 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300' },
 };
 
-export default function FirmaDocumentos({ documentos, filtros }: PageProps) {
+export default function FirmaDocumentos({ documentos, filtros, puede_gestionar }: PageProps) {
     const { __ } = useTranslate();
     const [q, setQ] = useState(filtros.q || '');
 
@@ -116,12 +119,13 @@ export default function FirmaDocumentos({ documentos, filtros }: PageProps) {
                                         <th className="py-2 pr-3">{__('Signature Status')}</th>
                                         <th className="py-2 pr-3">{__('Sent at')}</th>
                                         <th className="py-2 pr-3">{__('Signed at')}</th>
+                                        <th className="py-2 pr-3">{__('Actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {documentos.data.length === 0 && (
                                         <tr>
-                                            <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                                            <td colSpan={8} className="py-8 text-center text-muted-foreground">
                                                 {__('No document has been sent to signature yet.')}
                                             </td>
                                         </tr>
@@ -150,6 +154,26 @@ export default function FirmaDocumentos({ documentos, filtros }: PageProps) {
                                                 </td>
                                                 <td className="py-2 pr-3 text-muted-foreground">{d.enviado_en || '—'}</td>
                                                 <td className="py-2 pr-3 text-muted-foreground">{d.firmado_en || '—'}</td>
+                                                <td className="py-2 pr-3">
+                                                    <div className="flex items-center gap-1">
+                                                        {d.tiene_pdf && (
+                                                            <a href={`/admin/validaciones/documentos/${d.id}/pdf`} title={__('Signed PDF')} className="rounded p-1 text-teal-700 hover:bg-muted dark:text-teal-400">
+                                                                <Download className="h-4 w-4" />
+                                                            </a>
+                                                        )}
+                                                        {puede_gestionar && d.estatus === 'pendiente' && (
+                                                            <>
+                                                                <button type="button" title={__('Check status')} className="rounded p-1 text-teal-700 hover:bg-muted dark:text-teal-400" onClick={() => router.post(`/admin/validaciones/documentos/${d.id}/consultar`, {}, { preserveScroll: true })}>
+                                                                    <RefreshCw className="h-4 w-4" />
+                                                                </button>
+                                                                <button type="button" title={__('Cancel')} className="rounded p-1 text-rose-600 hover:bg-muted" onClick={() => confirm(__('Cancel this document in ZapSign?')) && router.post(`/admin/validaciones/documentos/${d.id}/cancelar`, {}, { preserveScroll: true })}>
+                                                                    <XCircle className="h-4 w-4" />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {d.error_detalle && <span className="text-xs text-rose-600" title={d.error_detalle}>{__('Error')}</span>}
+                                                    </div>
+                                                </td>
                                             </tr>
                                         );
                                     })}

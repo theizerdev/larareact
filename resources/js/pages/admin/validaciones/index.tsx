@@ -16,6 +16,11 @@ interface Validacion {
     persona_nombre: string;
     persona_tipo: string;
     curp_capturada: string | null;
+    proveedor: 'jaak' | 'didit';
+    tipo_documento: string | null;
+    pais_documento: string | null;
+    didit_estatus: string | null;
+    didit_session_id: string | null;
     estatus: string;
     curp_valida: boolean | null;
     ine_valida: boolean | null;
@@ -47,7 +52,7 @@ interface PaginatedValidaciones {
 
 interface PageProps {
     validaciones: PaginatedValidaciones;
-    filtros: { estatus?: string; q?: string };
+    filtros: { estatus?: string; q?: string; proveedor?: string };
     puede_revalidar: boolean;
 }
 
@@ -83,7 +88,7 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
-        { title: __('Identity Validations'), href: '/admin/validaciones' },
+        { title: __('Validation Results'), href: '/admin/validaciones' },
     ];
 
     const aplicar = (extra: Record<string, string | undefined>) => {
@@ -146,6 +151,15 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                                     </option>
                                 ))}
                             </select>
+                            <select
+                                value={filtros.proveedor || ''}
+                                onChange={(e) => aplicar({ proveedor: e.target.value || undefined })}
+                                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                            >
+                                <option value="">{__('All providers')}</option>
+                                <option value="jaak">JAAK</option>
+                                <option value="didit">DIDIT</option>
+                            </select>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-2">
@@ -191,7 +205,14 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                                                             <span className="ml-2 font-mono text-[11px] text-muted-foreground">{v.curp_capturada}</span>
                                                         )}
                                                     </td>
-                                                    <td className="py-2 pr-3 text-muted-foreground">{v.persona_tipo}</td>
+                                                    <td className="py-2 pr-3 text-muted-foreground">
+                                                        {v.persona_tipo}
+                                                        <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+                                                            {v.proveedor === 'didit' ? 'DIDIT' : 'JAAK'}
+                                                            {v.tipo_documento === 'pasaporte' ? ` · ${__('Passport')}` : ''}
+                                                            {v.pais_documento && v.pais_documento !== 'MEX' ? ` · ${v.pais_documento}` : ''}
+                                                        </span>
+                                                    </td>
                                                     <td className="py-2 pr-3">
                                                         <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${meta.cls}`}>
                                                             {__(meta.label)}
@@ -227,11 +248,13 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                                                                 <div className="mt-3 text-xs text-rose-600">{v.error_detalle}</div>
                                                             )}
                                                             <div className="mt-3 text-[11px] text-muted-foreground">
-                                                                {__('Environment')}: {v.jaak_environment} · session: {v.jaak_session_id || '—'}
+                                                                {v.proveedor === 'didit'
+                                                                    ? <>DIDIT · {v.didit_estatus || '—'} · session: {v.didit_session_id || '—'}</>
+                                                                    : <>{__('Environment')}: {v.jaak_environment} · session: {v.jaak_session_id || '—'}</>}
                                                             </div>
                                                             <details className="mt-3">
                                                                 <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
-                                                                    {__('JAAK raw response')}
+                                                                    {v.proveedor === 'didit' ? __('DIDIT raw response') : __('JAAK raw response')}
                                                                 </summary>
                                                                 <pre className="mt-2 max-h-96 overflow-auto rounded bg-background p-3 text-[11px]">
                                                                     {JSON.stringify(
