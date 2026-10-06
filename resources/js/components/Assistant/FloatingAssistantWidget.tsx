@@ -63,12 +63,15 @@ export default function FloatingAssistantWidget() {
             {
                 id: 'welcome',
                 sender: 'assistant',
-                text: '¡Hola! Soy tu copiloto interno de FixSale. Puedes consultarme órdenes por número (ej: **orden 1**), cambiar estados (**estado 1 listo**), consultar el resumen del taller o alertas de stock.',
+                text: '¡Hola! Soy tu copiloto interno de FixSale. Puedo ayudarte con servicio técnico (#1, estado 1 listo), alertas y ajustes de stock, Kardex, catálogo, metas de ventas, fondo mensual y proveedores.',
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 quick_actions: [
-                    { label: '📊 Resumen de Hoy', action: 'get_summary' },
-                    { label: '⚠️ Alertas de Stock', action: 'get_stock_alerts' },
-                    { label: '❓ Ver Comandos', text: 'ayuda' },
+                    { label: '📊 Resumen Taller', action: 'get_summary' },
+                    { label: '🎯 Metas Ventas', action: 'get_sales_goals' },
+                    { label: '📦 Ver Kardex', action: 'get_kardex' },
+                    { label: '🏦 Fondo Mes', action: 'get_monthly_fund' },
+                    { label: '⚠️ Alertas Stock', action: 'get_stock_alerts' },
+                    { label: '❓ Comandos', text: 'ayuda' },
                 ],
             },
         ];
@@ -205,6 +208,10 @@ export default function FloatingAssistantWidget() {
 
     const handleQuickAction = async (actionItem: QuickAction) => {
         if (actionItem.url) {
+            if (actionItem.url.startsWith('http://') || actionItem.url.startsWith('https://')) {
+                window.open(actionItem.url, '_blank', 'noopener,noreferrer');
+                return;
+            }
             router.visit(actionItem.url);
             return;
         }
@@ -270,8 +277,11 @@ export default function FloatingAssistantWidget() {
             text: 'Conversación reiniciada. ¿En qué te ayudo ahora?',
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             quick_actions: [
-                { label: '📊 Resumen de Hoy', action: 'get_summary' },
-                { label: '⚠️ Alertas de Stock', action: 'get_stock_alerts' },
+                { label: '📊 Resumen Taller', action: 'get_summary' },
+                { label: '🎯 Metas Ventas', action: 'get_sales_goals' },
+                { label: '📦 Ver Kardex', action: 'get_kardex' },
+                { label: '🏦 Fondo Mes', action: 'get_monthly_fund' },
+                { label: '⚠️ Alertas Stock', action: 'get_stock_alerts' },
                 { label: '❓ Comandos', text: 'ayuda' },
             ],
         };
@@ -301,11 +311,11 @@ export default function FloatingAssistantWidget() {
                                 <h3 className="text-sm font-semibold leading-tight flex items-center gap-1.5">
                                     Copiloto FixSale
                                     <span className="text-[10px] font-medium bg-white/20 px-1.5 py-0.5 rounded-full">
-                                        Fase 1 y 2
+                                        Fases 1, 2, 3 y 4
                                     </span>
                                 </h3>
                                 <p className="text-[11px] text-white/80 leading-tight">
-                                    Taller, Stock y Catálogo
+                                    Taller, Inventario, POS y Finanzas
                                 </p>
                             </div>
                         </div>
@@ -469,22 +479,46 @@ export default function FloatingAssistantWidget() {
                                     📊 Resumen
                                 </button>
                                 <button
-                                    onClick={() => handleSendMessage('ver marcas')}
+                                    onClick={() => handleSendMessage('meta de ventas')}
                                     className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
                                 >
-                                    🏷️ Marcas
+                                    🎯 Metas
                                 </button>
                                 <button
-                                    onClick={() => handleSendMessage('ver categorias')}
+                                    onClick={() => handleSendMessage('ver kardex')}
                                     className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
                                 >
-                                    📁 Categorías
+                                    📦 Kardex
+                                </button>
+                                <button
+                                    onClick={() => handleSendMessage('fondo de mes')}
+                                    className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
+                                >
+                                    🏦 Fondo
+                                </button>
+                                <button
+                                    onClick={() => handleSendMessage('ver proveedores')}
+                                    className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
+                                >
+                                    🏢 Proveedores
+                                </button>
+                                <button
+                                    onClick={() => handleSendMessage('ver compras')}
+                                    className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
+                                >
+                                    🛍️ Compras
                                 </button>
                                 <button
                                     onClick={() => handleSendMessage('alertas stock')}
                                     className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
                                 >
                                     ⚠️ Stock Bajo
+                                </button>
+                                <button
+                                    onClick={() => handleSendMessage('ver marcas')}
+                                    className="px-2 py-0.5 rounded-full bg-background border border-border/60 hover:border-primary text-muted-foreground hover:text-foreground text-[10px] font-medium whitespace-nowrap transition-colors"
+                                >
+                                    🏷️ Marcas
                                 </button>
                                 <button
                                     onClick={() => handleSendMessage('ayuda')}
@@ -510,7 +544,7 @@ export default function FloatingAssistantWidget() {
                                     placeholder={
                                         isListening
                                             ? '🎙️ Escuchando tu voz...'
-                                            : "Ej: 'orden 1', 'estado 1 listo', 'resumen'..."
+                                            : "Ej: 'orden 1', 'kardex pantalla', 'meta de ventas'..."
                                     }
                                     disabled={loading}
                                     className={cn(

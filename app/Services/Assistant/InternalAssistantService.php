@@ -2,14 +2,23 @@
 
 namespace App\Services\Assistant;
 
+use App\Models\CashMovement;
+use App\Models\CashRegister;
 use App\Models\Categoria;
+use App\Models\Compra;
+use App\Models\Empresa;
 use App\Models\Familia;
+use App\Models\InventoryMovement;
 use App\Models\Marca;
 use App\Models\Modelo;
 use App\Models\OrdenReparacion;
 use App\Models\OrdenReparacionHistorial;
 use App\Models\Pais;
 use App\Models\Producto;
+use App\Models\Proveedor;
+use App\Models\Sale;
+use App\Models\SalesGoal;
+use App\Models\Sucursal;
 use App\Models\User;
 use App\Services\WhatsAppService;
 use Carbon\Carbon;
@@ -36,6 +45,80 @@ class InternalAssistantService
         // 1. Saludos o Ayuda
         if ($this->isGreetingOrHelp($normalized)) {
             return $this->buildHelpResponse("¡Hola {$user->name}! Soy tu copiloto interno de FixSale. ¿En qué te ayudo hoy?");
+        }
+
+        // ==========================================
+        // FASE 3: INVENTARIO, AJUSTES DE STOCK Y KARDEX
+        // ==========================================
+
+        // Ajuste de stock (ej: "ajustar stock [prod] a 10", "sumar 5 stock [prod]", "restar 2 stock [prod]")
+        $adjustStockMatch = $this->parseStockAdjustmentCommand($rawQuery);
+        if ($adjustStockMatch) {
+            return $this->handleStockAdjustment(
+                $user,
+                $empresaId,
+                $sucursalId,
+                $adjustStockMatch['product'],
+                $adjustStockMatch['mode'],
+                $adjustStockMatch['quantity'],
+                $adjustStockMatch['reason'] ?? null
+            );
+        }
+
+        // Consulta de Kardex / Movimientos (ej: "kardex bateria iphone", "ver kardex", "movimientos pantalla")
+        $kardexMatch = $this->parseKardexCommand($rawQuery);
+        if ($kardexMatch !== null) {
+            return $this->handleProductKardex($user, $empresaId, $kardexMatch['product'] ?? null);
+        }
+
+        // Crear Producto Rápido (ej: "crear producto Bateria iPhone 11 precio 25 stock 10")
+        $createProdMatch = $this->parseCreateProductCommand($rawQuery);
+        if ($createProdMatch) {
+            return $this->handleQuickProductCreate(
+                $user,
+                $empresaId,
+                $sucursalId,
+                $createProdMatch['name'],
+                $createProdMatch['price'] ?? null,
+                $createProdMatch['stock'] ?? null
+            );
+        }
+
+        // ==========================================
+        // FASE 4: POS, METAS, FONDO DE MES, PROVEEDORES Y COMPRAS
+        // ==========================================
+
+        // Metas de Ventas (ej: "meta de ventas", "metas del mes", "como van las ventas", "ventas de hoy")
+        if ($this->isSalesGoalQuery($normalized)) {
+            return $this->handleSalesGoals($user, $empresaId, $sucursalId);
+        }
+
+        // Fondo de Mes (ej: "fondo de mes", "fondo mensual", "como va el fondo", "gastos de fondo")
+        if ($this->isMonthlyFundQuery($normalized)) {
+            return $this->handleMonthlyFund($user, $empresaId, $sucursalId);
+        }
+
+        // Proveedores (crear o listar)
+        $providerMatch = $this->parseProviderCommand($rawQuery, $normalized);
+        if ($providerMatch) {
+            if ($providerMatch['action'] === 'create') {
+                return $this->handleCreateProveedor(
+                    $user,
+                    $empresaId,
+                    $sucursalId,
+                    $providerMatch['name'],
+                    $providerMatch['phone'] ?? null,
+                    $providerMatch['rif'] ?? null
+                );
+            }
+            if ($providerMatch['action'] === 'list') {
+                return $this->handleListProveedores($user, $empresaId);
+            }
+        }
+
+        // Compras de Insumos (ej: "ver compras", "compras recientes", "compras del mes")
+        if ($this->isPurchasesQuery($normalized)) {
+            return $this->handleListCompras($user, $empresaId);
         }
 
         // ==========================================
@@ -215,6 +298,43 @@ class InternalAssistantService
 
             case 'get_stock_alerts':
                 return $this->handleStockAlerts($user, $empresaId, $user->sucursal_id);
+
+            // Fase 3: Acciones de Inventario
+            case 'adjust_stock':
+                $prodId = $params['producto_id'] ?? null;
+                $mode = $params['mode'] ?? 'set';
+                $qty = isset($params['quantity']) ? (float)$params['quantity'] : null;
+                $reason = $params['motivo'] ?? 'Ajuste asistido por Copiloto';
+                if (!$prodId || $qty === null) {
+                    return ['type' => 'error', 'message' => 'Faltan parámetros para ajustar stock.'];
+                }
+                return $this->handleStockAdjustmentById($user, $empresaId, $sucursalId, (int)$prodId, $mode, $qty, $reason);
+
+            case 'get_kardex':
+                $prodId = $params['producto_id'] ?? null;
+                return $this->handleProductKardexById($user, $empresaId, $prodId ? (int)$prodId : null);
+
+            case 'create_product':
+                $name = $params['name'] ?? null;
+                $price = isset($params['price']) ? (float)$params['price'] : null;
+                $stock = isset($params['stock']) ? (float)$params['stock'] : null;
+                if (!$name) {
+                    return ['type' => 'error', 'message' => 'El nombre del producto es obligatorio.'];
+                }
+                return $this->handleQuickProductCreate($user, $empresaId, $sucursalId, $name, $price, $stock);
+
+            // Fase 4: Acciones Financieras y Proveedores
+            case 'get_sales_goals':
+                return $this->handleSalesGoals($user, $empresaId, $sucursalId);
+
+            case 'get_monthly_fund':
+                return $this->handleMonthlyFund($user, $empresaId, $sucursalId);
+
+            case 'list_proveedores':
+                return $this->handleListProveedores($user, $empresaId);
+
+            case 'list_compras':
+                return $this->handleListCompras($user, $empresaId);
 
             default:
                 return [
@@ -620,6 +740,733 @@ class InternalAssistantService
             ];
         }
         return null;
+    }
+
+    // ==========================================
+    // FASE 3: MANEJADORES DE INVENTARIO, AJUSTES Y KARDEX
+    // ==========================================
+
+    protected function findProduct(int $empresaId, string $identifier): array
+    {
+        $clean = trim($identifier);
+
+        // 1. Coincidencia exacta por SKU o código de barras
+        $exact = Producto::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where(function ($q) use ($clean) {
+                $q->where('sku', $clean)
+                  ->orWhere('codigo_barras', $clean);
+            })
+            ->first();
+
+        if ($exact) {
+            return ['exact' => $exact, 'multiple' => collect([$exact])];
+        }
+
+        // 2. Búsqueda por similitud en SKU, código de barras, variante o modelo
+        $results = Producto::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where(function ($q) use ($clean) {
+                $q->where('sku', 'like', "%{$clean}%")
+                  ->orWhere('codigo_barras', 'like', "%{$clean}%")
+                  ->orWhere('nombre_variante', 'like', "%{$clean}%")
+                  ->orWhereHas('modelo', function ($m) use ($clean) {
+                      $m->withoutGlobalScope('multitenancy')
+                        ->where('nombre_comercial', 'like', "%{$clean}%")
+                        ->orWhere('codigo_modelo', 'like', "%{$clean}%");
+                  });
+            })
+            ->with(['marca', 'modelo', 'categoria'])
+            ->take(5)
+            ->get();
+
+        if ($results->count() === 1) {
+            return ['exact' => $results->first(), 'multiple' => $results];
+        }
+
+        return ['exact' => null, 'multiple' => $results];
+    }
+
+    public function handleStockAdjustment(
+        User $user,
+        int $empresaId,
+        ?int $sucursalId,
+        string $productIdentifier,
+        string $mode,
+        float $quantity,
+        ?string $reason = null
+    ): array {
+        $found = $this->findProduct($empresaId, $productIdentifier);
+        if (!$found['exact']) {
+            if ($found['multiple']->isNotEmpty()) {
+                $actions = [];
+                foreach ($found['multiple'] as $p) {
+                    $label = $p->nombre_variante ?: ($p->modelo?->nombre_comercial ?? "SKU: {$p->sku}");
+                    $actions[] = [
+                        'label' => "{$label} (Disp: " . (float)$p->stock . ")",
+                        'action' => 'adjust_stock',
+                        'params' => [
+                            'producto_id' => $p->id,
+                            'mode' => $mode,
+                            'quantity' => $quantity,
+                            'motivo' => $reason,
+                        ],
+                    ];
+                }
+                return [
+                    'type' => 'product_selection',
+                    'message' => "Encontré varios productos que coinciden con **\"{$productIdentifier}\"**. ¿Cuál deseas ajustar?",
+                    'quick_actions' => $actions,
+                ];
+            }
+
+            return [
+                'type' => 'not_found',
+                'message' => "❌ No se encontró ningún producto con la referencia **\"{$productIdentifier}\"** para realizar el ajuste de inventario.",
+                'quick_actions' => [
+                    ['label' => '📦 Ver Inventario ↗', 'url' => '/admin/productos', 'type' => 'link'],
+                    ['label' => '➕ Crear Producto', 'text' => "crear producto {$productIdentifier}"],
+                ],
+            ];
+        }
+
+        return $this->handleStockAdjustmentById(
+            $user,
+            $empresaId,
+            $sucursalId,
+            $found['exact']->id,
+            $mode,
+            $quantity,
+            $reason
+        );
+    }
+
+    public function handleStockAdjustmentById(
+        User $user,
+        int $empresaId,
+        ?int $sucursalId,
+        int $productoId,
+        string $mode,
+        float $quantity,
+        ?string $reason = null
+    ): array {
+        $result = DB::transaction(function () use ($user, $empresaId, $sucursalId, $productoId, $mode, $quantity, $reason) {
+            $producto = Producto::withoutGlobalScope('multitenancy')
+                ->where('empresa_id', $empresaId)
+                ->lockForUpdate()
+                ->find($productoId);
+
+            if (!$producto) {
+                return null;
+            }
+
+            $stockAnterior = (float) $producto->stock;
+
+            if ($mode === 'set') {
+                $stockNuevo = max(0, $quantity);
+                $tipo = $stockNuevo >= $stockAnterior ? 'entrada' : 'salida';
+                $diff = abs($stockNuevo - $stockAnterior);
+                $motivoFinal = $reason ?: 'Ajuste de inventario físico (fijado)';
+            } elseif ($mode === 'add') {
+                $stockNuevo = $stockAnterior + $quantity;
+                $tipo = 'entrada';
+                $diff = $quantity;
+                $motivoFinal = $reason ?: 'Entrada / Adición manual de stock';
+            } else { // 'sub'
+                $stockNuevo = max(0, $stockAnterior - $quantity);
+                $tipo = 'salida';
+                $diff = min($quantity, $stockAnterior);
+                $motivoFinal = $reason ?: 'Salida / Merma manual de stock';
+            }
+
+            $producto->update(['stock' => $stockNuevo]);
+
+            InventoryMovement::create([
+                'empresa_id' => $empresaId,
+                'sucursal_id' => $sucursalId ?: $producto->sucursal_id,
+                'producto_id' => $producto->id,
+                'user_id' => $user->id,
+                'tipo' => $tipo,
+                'motivo' => $motivoFinal,
+                'cantidad' => $diff,
+                'stock_anterior' => $stockAnterior,
+                'stock_nuevo' => $stockNuevo,
+                'costo_unitario' => (float) $producto->precio_compra,
+                'referencia' => 'COPILOTO-AJUSTE',
+                'notas' => "Ajuste ejecutado vía Copiloto FixSale por {$user->name}",
+            ]);
+
+            return [
+                'producto' => $producto->fresh(['marca', 'modelo']),
+                'stock_anterior' => $stockAnterior,
+                'stock_nuevo' => $stockNuevo,
+                'diff' => $diff,
+                'tipo' => $tipo,
+                'motivo' => $motivoFinal,
+            ];
+        });
+
+        if (!$result) {
+            return ['type' => 'error', 'message' => 'El producto no fue encontrado en la base de datos.'];
+        }
+
+        $prod = $result['producto'];
+        $nombreProd = $prod->nombre_variante ?: ($prod->modelo?->nombre_comercial ?? "SKU: {$prod->sku}");
+        $simbolo = $result['tipo'] === 'entrada' ? '📈 +' : '📉 -';
+
+        $msg = "✅ **Ajuste de Stock registrado con éxito**\n\n"
+            . "📦 **Producto:** {$nombreProd}\n"
+            . "🏷️ **SKU:** `{$prod->sku}`\n"
+            . "🔢 **Stock anterior:** {$result['stock_anterior']} unidades\n"
+            . "📊 **Nuevo Stock:** **{$result['stock_nuevo']}** unidades ({$simbolo}{$result['diff']})\n"
+            . "📝 **Motivo:** {$result['motivo']}\n"
+            . "👤 **Registrado por:** {$user->name}";
+
+        return [
+            'type' => 'stock_adjusted',
+            'message' => $msg,
+            'quick_actions' => [
+                [
+                    'label' => '📜 Ver en Kardex ↗',
+                    'url' => "/admin/inventario/kardex?producto_id={$prod->id}",
+                    'type' => 'link',
+                ],
+                [
+                    'label' => '⚙️ Historial Ajustes ↗',
+                    'url' => '/admin/inventario/ajustes',
+                    'type' => 'link',
+                ],
+                [
+                    'label' => '📦 Ver en Catálogo ↗',
+                    'url' => "/admin/productos?search=" . urlencode($prod->sku),
+                    'type' => 'link',
+                ],
+            ],
+        ];
+    }
+
+    public function handleProductKardex(User $user, int $empresaId, ?string $productIdentifier): array
+    {
+        if (!empty($productIdentifier)) {
+            $found = $this->findProduct($empresaId, $productIdentifier);
+            if (!$found['exact']) {
+                if ($found['multiple']->isNotEmpty()) {
+                    $actions = [];
+                    foreach ($found['multiple'] as $p) {
+                        $label = $p->nombre_variante ?: ($p->modelo?->nombre_comercial ?? "SKU: {$p->sku}");
+                        $actions[] = [
+                            'label' => "Kardex de {$p->sku}",
+                            'action' => 'get_kardex',
+                            'params' => ['producto_id' => $p->id],
+                        ];
+                    }
+                    return [
+                        'type' => 'product_selection',
+                        'message' => "Encontré varios productos coincidentes con **\"{$productIdentifier}\"**. ¿De cuál deseas ver el Kardex?",
+                        'quick_actions' => $actions,
+                    ];
+                }
+
+                return [
+                    'type' => 'not_found',
+                    'message' => "❌ No encontré ningún producto con la referencia **\"{$productIdentifier}\"** para consultar su Kardex.",
+                    'quick_actions' => [
+                        ['label' => '📜 Ver Kardex Global ↗', 'url' => '/admin/inventario/kardex', 'type' => 'link'],
+                        ['label' => '📦 Catálogo de Productos ↗', 'url' => '/admin/productos', 'type' => 'link'],
+                    ],
+                ];
+            }
+
+            return $this->handleProductKardexById($user, $empresaId, $found['exact']->id);
+        }
+
+        // Kardex Global de la empresa
+        return $this->handleProductKardexById($user, $empresaId, null);
+    }
+
+    public function handleProductKardexById(User $user, int $empresaId, ?int $productoId): array
+    {
+        if ($productoId) {
+            $producto = Producto::withoutGlobalScope('multitenancy')
+                ->where('empresa_id', $empresaId)
+                ->with(['marca', 'modelo'])
+                ->find($productoId);
+
+            if (!$producto) {
+                return ['type' => 'error', 'message' => 'Producto no encontrado.'];
+            }
+
+            $movements = InventoryMovement::withoutGlobalScope('multitenancy')
+                ->where('empresa_id', $empresaId)
+                ->where('producto_id', $producto->id)
+                ->with('user')
+                ->latest()
+                ->take(6)
+                ->get();
+
+            $nombreProd = $producto->nombre_variante ?: ($producto->modelo?->nombre_comercial ?? "SKU: {$producto->sku}");
+
+            if ($movements->isEmpty()) {
+                $msg = "📦 **Kardex:** {$nombreProd} (`{$producto->sku}`)\n"
+                    . "📊 **Stock actual:** **{$producto->stock}** unidades\n\n"
+                    . "ℹ️ No se registran movimientos de inventario aún para este producto.";
+
+                return [
+                    'type' => 'kardex',
+                    'message' => $msg,
+                    'quick_actions' => [
+                        [
+                            'label' => '➕ Ajustar Stock',
+                            'text' => "ajustar stock {$producto->sku} a " . (int)$producto->stock,
+                        ],
+                        [
+                            'label' => '📜 Ver en Kardex ↗',
+                            'url' => "/admin/inventario/kardex?producto_id={$producto->id}",
+                            'type' => 'link',
+                        ],
+                    ],
+                ];
+            }
+
+            $lines = ["📦 **Kardex:** {$nombreProd} (`{$producto->sku}`)"];
+            $lines[] = "📊 **Stock Actual:** **{$producto->stock}** unidades\n";
+            $lines[] = "📋 **Últimos movimientos:**";
+
+            foreach ($movements as $m) {
+                $fecha = $m->created_at ? $m->created_at->format('d/m H:i') : '--';
+                $badge = match ($m->tipo) {
+                    'entrada' => '🟢 +' . (float)$m->cantidad,
+                    'salida' => '🔴 -' . (float)$m->cantidad,
+                    default => '🟡 ' . (float)$m->cantidad,
+                };
+                $userStr = $m->user?->name ? "({$m->user->name})" : '';
+                $motivo = $m->motivo ?: 'Sin motivo';
+                $lines[] = "• **{$fecha}** | {$badge} ➔ **{$m->stock_nuevo}** disp. | _{$motivo}_ {$userStr}";
+            }
+
+            return [
+                'type' => 'kardex',
+                'message' => implode("\n", $lines),
+                'quick_actions' => [
+                    [
+                        'label' => '📜 Kardex Completo ↗',
+                        'url' => "/admin/inventario/kardex?producto_id={$producto->id}",
+                        'type' => 'link',
+                    ],
+                    [
+                        'label' => '⚙️ Ajustar Stock',
+                        'text' => "ajustar stock {$producto->sku} a " . (int)$producto->stock,
+                    ],
+                    [
+                        'label' => '📦 Ver en Catálogo ↗',
+                        'url' => "/admin/productos?search=" . urlencode($producto->sku),
+                        'type' => 'link',
+                    ],
+                ],
+            ];
+        }
+
+        // Global Kardex
+        $movements = InventoryMovement::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->with(['producto', 'user'])
+            ->latest()
+            ->take(6)
+            ->get();
+
+        if ($movements->isEmpty()) {
+            return [
+                'type' => 'kardex',
+                'message' => "📋 **Kardex General del Negocio**\n\nNo hay movimientos registrados en el inventario aún.",
+                'quick_actions' => [
+                    ['label' => '📦 Ir a Inventario ↗', 'url' => '/admin/productos', 'type' => 'link'],
+                ],
+            ];
+        }
+
+        $lines = ["📋 **Últimos Movimientos del Kardex General:**\n"];
+        foreach ($movements as $m) {
+            $fecha = $m->created_at ? $m->created_at->format('d/m H:i') : '--';
+            $badge = match ($m->tipo) {
+                'entrada' => '🟢 +' . (float)$m->cantidad,
+                'salida' => '🔴 -' . (float)$m->cantidad,
+                default => '🟡 ' . (float)$m->cantidad,
+            };
+            $prodName = $m->producto?->nombre_variante ?: ($m->producto?->sku ?? 'Producto');
+            $userStr = $m->user?->name ? "👤 {$m->user->name}" : '';
+            $lines[] = "• **{$fecha}** | {$badge} **{$prodName}** (Saldo: {$m->stock_nuevo}) | _{$m->motivo}_ {$userStr}";
+        }
+
+        return [
+            'type' => 'kardex',
+            'message' => implode("\n", $lines),
+            'quick_actions' => [
+                ['label' => '📜 Ver Kardex Completo ↗', 'url' => '/admin/inventario/kardex', 'type' => 'link'],
+                ['label' => '⚙️ Registro de Ajustes ↗', 'url' => '/admin/inventario/ajustes', 'type' => 'link'],
+            ],
+        ];
+    }
+
+    public function handleQuickProductCreate(
+        User $user,
+        int $empresaId,
+        ?int $sucursalId,
+        string $name,
+        ?float $price = null,
+        ?float $stock = null
+    ): array {
+        $name = trim($name);
+        if ($name === '') {
+            return ['type' => 'error', 'message' => 'Por favor indica un nombre para el producto.'];
+        }
+
+        $existente = Producto::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('nombre_variante', 'like', $name)
+            ->first();
+
+        if ($existente) {
+            return [
+                'type' => 'product_exists',
+                'message' => "ℹ️ Ya existe un producto con nombre similar: **\"{$existente->nombre_variante}\"**\n"
+                    . "🏷️ SKU: `{$existente->sku}` | Stock: **{$existente->stock}** | Precio: **{$this->getCurrencySymbol($empresaId)}" . number_format($existente->precio_venta, 2) . "**",
+                'quick_actions' => [
+                    ['label' => '📦 Ver en Catálogo ↗', 'url' => "/admin/productos?search=" . urlencode($existente->sku), 'type' => 'link'],
+                    ['label' => '📜 Ver Kardex ↗', 'url' => "/admin/inventario/kardex?producto_id={$existente->id}", 'type' => 'link'],
+                ],
+            ];
+        }
+
+        $sku = 'PROD-' . strtoupper(Str::random(6));
+        $precioVenta = $price ?: 0.0;
+        $stockInicial = $stock ?: 0.0;
+
+        $producto = Producto::create([
+            'empresa_id' => $empresaId,
+            'sucursal_id' => $sucursalId,
+            'sku' => $sku,
+            'nombre_variante' => $name,
+            'precio_venta' => $precioVenta,
+            'precio_compra' => 0.0,
+            'stock' => $stockInicial,
+            'stock_minimo' => 2.0,
+            'usa_inventario' => true,
+            'estado' => true,
+        ]);
+
+        if ($stockInicial > 0) {
+            InventoryMovement::create([
+                'empresa_id' => $empresaId,
+                'sucursal_id' => $sucursalId,
+                'producto_id' => $producto->id,
+                'user_id' => $user->id,
+                'tipo' => 'entrada',
+                'motivo' => 'Stock inicial de registro rápido',
+                'cantidad' => $stockInicial,
+                'stock_anterior' => 0,
+                'stock_nuevo' => $stockInicial,
+                'costo_unitario' => 0.0,
+                'referencia' => 'ALTA-' . $producto->sku,
+                'notas' => 'Alta rápida asistida por Copiloto FixSale',
+            ]);
+        }
+
+        $currency = $this->getCurrencySymbol($empresaId);
+        $msg = "✨ **¡Producto creado exitosamente!**\n\n"
+            . "📦 **Nombre:** {$producto->nombre_variante}\n"
+            . "🏷️ **SKU generado:** `{$producto->sku}`\n"
+            . "💰 **Precio de venta:** {$currency}" . number_format($precioVenta, 2) . "\n"
+            . "📊 **Stock inicial:** {$stockInicial} unidades\n\n"
+            . "Puedes editar marca, modelo, fotos o precio de costo desde el catálogo.";
+
+        return [
+            'type' => 'product_created',
+            'message' => $msg,
+            'quick_actions' => [
+                ['label' => '📦 Ver en Catálogo ↗', 'url' => "/admin/productos?search=" . urlencode($producto->sku), 'type' => 'link'],
+                ['label' => '⚙️ Ajustar Stock', 'text' => "ajustar stock {$producto->sku} a " . (int)$stockInicial],
+                ['label' => '📜 Ver Kardex ↗', 'url' => "/admin/inventario/kardex?producto_id={$producto->id}", 'type' => 'link'],
+            ],
+        ];
+    }
+
+    // ==========================================
+    // FASE 4: MANEJADORES DE POS, FINANZAS, PROVEEDORES Y COMPRAS
+    // ==========================================
+
+    public function handleSalesGoals(User $user, int $empresaId, ?int $sucursalId): array
+    {
+        $empresa = Empresa::find($empresaId);
+        $timezone = $empresa?->getTimezone() ?? $user->getTimezone() ?? 'America/Mexico_City';
+        $nowInTz = Carbon::now($timezone);
+        $year = (int) $nowInTz->format('Y');
+        $month = (int) $nowInTz->format('n');
+        $currency = $this->getCurrencySymbol($empresaId);
+
+        $startOfMonthUtc = Carbon::createFromDate($year, $month, 1, $timezone)->startOfMonth()->setTimezone('UTC');
+        $endOfMonthUtc = Carbon::createFromDate($year, $month, 1, $timezone)->endOfMonth()->setTimezone('UTC');
+
+        $salesMonth = (float) Sale::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->whereBetween('created_at', [$startOfMonthUtc, $endOfMonthUtc])
+            ->whereNotIn('estado', ['anulada', 'cancelada'])
+            ->sum('total');
+
+        $startOfDayUtc = $nowInTz->copy()->startOfDay()->setTimezone('UTC');
+        $endOfDayUtc = $nowInTz->copy()->endOfDay()->setTimezone('UTC');
+
+        $salesToday = (float) Sale::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->whereBetween('created_at', [$startOfDayUtc, $endOfDayUtc])
+            ->whereNotIn('estado', ['anulada', 'cancelada'])
+            ->sum('total');
+
+        $goal = SalesGoal::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('year', $year)
+            ->where('month', $month)
+            ->first();
+
+        $target = $goal ? (float) $goal->target_amount : 0.0;
+        $mesesNom = [
+            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+            5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+            9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+        ];
+        $nombreMes = $mesesNom[$month] ?? "Mes {$month}";
+
+        $lines = ["🎯 **Progreso de Ventas y Metas ({$nombreMes} {$year})**\n"];
+        $lines[] = "💵 **Ventas de Hoy:** **{$currency}" . number_format($salesToday, 2) . "**";
+        $lines[] = "📈 **Vendido este mes:** **{$currency}" . number_format($salesMonth, 2) . "**";
+
+        if ($target > 0) {
+            $pct = round(($salesMonth / $target) * 100, 1);
+            $faltante = max(0, $target - $salesMonth);
+            $diasMes = $nowInTz->daysInMonth;
+            $diaActual = (int) $nowInTz->format('j');
+            $diasRestantes = max(1, $diasMes - $diaActual);
+            $promedioRequerido = round($faltante / $diasRestantes, 2);
+
+            $barraProgreso = $this->buildProgressBar($pct);
+
+            $lines[] = "🎯 **Meta del Mes:** **{$currency}" . number_format($target, 2) . "**";
+            $lines[] = "📊 **Cumplimiento:** {$pct}% {$barraProgreso}";
+            if ($faltante > 0) {
+                $lines[] = "⏳ **Faltante para cumplir:** {$currency}" . number_format($faltante, 2) . " (~{$currency}" . number_format($promedioRequerido, 2) . "/día en los {$diasRestantes} días restantes)";
+            } else {
+                $lines[] = "🎉 **¡Meta superada en un " . round($pct - 100, 1) . "%! Excelente trabajo.**";
+            }
+        } else {
+            $lines[] = "ℹ️ _No hay una meta configurada aún para este mes._ Puedes definirla en Metas POS.";
+        }
+
+        return [
+            'type' => 'sales_goal',
+            'message' => implode("\n", $lines),
+            'quick_actions' => [
+                ['label' => '🎯 Ver Metas POS ↗', 'url' => '/admin/pos/metas', 'type' => 'link'],
+                ['label' => '💵 Cajas Registradoras ↗', 'url' => '/admin/cajas', 'type' => 'link'],
+            ],
+        ];
+    }
+
+    public function handleMonthlyFund(User $user, int $empresaId, ?int $sucursalId): array
+    {
+        $empresa = Empresa::find($empresaId);
+        $timezone = $empresa?->getTimezone() ?? $user->getTimezone() ?? 'America/Mexico_City';
+        $nowInTz = Carbon::now($timezone);
+        $year = (int) $nowInTz->format('Y');
+        $month = (int) $nowInTz->format('n');
+        $currency = $this->getCurrencySymbol($empresaId);
+
+        $startOfMonthUtc = Carbon::createFromDate($year, $month, 1, $timezone)->startOfMonth()->setTimezone('UTC');
+        $endOfMonthUtc = Carbon::createFromDate($year, $month, 1, $timezone)->endOfMonth()->setTimezone('UTC');
+
+        $cajasCerradas = CashRegister::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('status', 'closed')
+            ->whereBetween('closed_at', [$startOfMonthUtc, $endOfMonthUtc])
+            ->get();
+
+        $totalCajas = (float) $cajasCerradas->sum('closing_amount');
+        $numCajas = $cajasCerradas->count();
+
+        $comprasFondo = Compra::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('usar_fondo_mes', true)
+            ->whereBetween('created_at', [$startOfMonthUtc, $endOfMonthUtc])
+            ->get();
+
+        $totalCompras = (float) $comprasFondo->sum('total');
+        $numCompras = $comprasFondo->count();
+        $balance = $totalCajas - $totalCompras;
+
+        $mesesNom = [
+            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+            5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+            9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+        ];
+        $nombreMes = $mesesNom[$month] ?? "Mes {$month}";
+
+        $lines = ["🏦 **Estado del Fondo Mensual ({$nombreMes} {$year})**\n"];
+        $lines[] = "📥 **Ingresos de Cajas Cerradas:** **{$currency}" . number_format($totalCajas, 2) . "** ({$numCajas} cajas)";
+        $lines[] = "📤 **Compras pagadas con Fondo:** **{$currency}" . number_format($totalCompras, 2) . "** ({$numCompras} compras)";
+        $lines[] = "💰 **Balance Estimado del Mes:** **{$currency}" . number_format($balance, 2) . "**";
+
+        return [
+            'type' => 'monthly_fund',
+            'message' => implode("\n", $lines),
+            'quick_actions' => [
+                ['label' => '🏦 Ver Fondo Mensual ↗', 'url' => '/admin/fondo-mensual', 'type' => 'link'],
+                ['label' => '🛍️ Ver Compras ↗', 'url' => '/admin/compras', 'type' => 'link'],
+            ],
+        ];
+    }
+
+    public function handleCreateProveedor(
+        User $user,
+        int $empresaId,
+        ?int $sucursalId,
+        string $name,
+        ?string $phone = null,
+        ?string $rif = null
+    ): array {
+        $name = trim($name);
+        if ($name === '') {
+            return ['type' => 'error', 'message' => 'Por favor indica la razón social o nombre del proveedor.'];
+        }
+
+        $existente = Proveedor::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where(function ($q) use ($name, $rif) {
+                $q->where('razon_social', 'like', $name)
+                  ->orWhere('nombre_comercial', 'like', $name);
+                if ($rif) {
+                    $q->orWhere('rif_documento', $rif);
+                }
+            })
+            ->first();
+
+        if ($existente) {
+            return [
+                'type' => 'provider_exists',
+                'message' => "ℹ️ El proveedor **\"{$existente->razon_social}\"** ya está registrado.\n"
+                    . "📞 Teléfono: " . ($existente->telefono ?: 'No especificado') . "\n"
+                    . "📄 RIF / Doc: " . ($existente->rif_documento ?: 'No especificado'),
+                'quick_actions' => [
+                    ['label' => '🏢 Directorio Proveedores ↗', 'url' => '/admin/proveedores', 'type' => 'link'],
+                    ['label' => '🛍️ Registrar Compra ↗', 'url' => '/admin/compras/crear', 'type' => 'link'],
+                ],
+            ];
+        }
+
+        $proveedor = Proveedor::create([
+            'empresa_id' => $empresaId,
+            'sucursal_id' => $sucursalId,
+            'razon_social' => $name,
+            'nombre_comercial' => $name,
+            'telefono' => $phone,
+            'rif_documento' => $rif,
+            'estado' => true,
+        ]);
+
+        $msg = "🏢 **¡Proveedor registrado con éxito!**\n\n"
+            . "• **Razón Social:** {$proveedor->razon_social}\n"
+            . ($phone ? "• **Teléfono:** {$phone}\n" : '')
+            . ($rif ? "• **RIF / Documento:** {$rif}\n" : '')
+            . "• **Estado:** Activo";
+
+        return [
+            'type' => 'provider_created',
+            'message' => $msg,
+            'quick_actions' => [
+                ['label' => '🏢 Directorio Proveedores ↗', 'url' => '/admin/proveedores', 'type' => 'link'],
+                ['label' => '🛍️ Nueva Compra ↗', 'url' => '/admin/compras/crear', 'type' => 'link'],
+            ],
+        ];
+    }
+
+    public function handleListProveedores(User $user, int $empresaId): array
+    {
+        $proveedores = Proveedor::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->latest()
+            ->take(6)
+            ->get();
+
+        if ($proveedores->isEmpty()) {
+            return [
+                'type' => 'providers',
+                'message' => "🏢 **Proveedores:** No tienes proveedores registrados todavía.",
+                'quick_actions' => [
+                    ['label' => '➕ Crear Proveedor', 'text' => 'crear proveedor Insumos Global'],
+                    ['label' => '🏢 Directorio ↗', 'url' => '/admin/proveedores', 'type' => 'link'],
+                ],
+            ];
+        }
+
+        $lines = ["🏢 **Proveedores Registrados Recientes:**\n"];
+        foreach ($proveedores as $p) {
+            $tel = $p->telefono ? "📞 {$p->telefono}" : '';
+            $rif = $p->rif_documento ? "📄 {$p->rif_documento}" : '';
+            $extra = array_filter([$tel, $rif]);
+            $extraStr = $extra ? ' (' . implode(' | ', $extra) . ')' : '';
+            $lines[] = "• **{$p->razon_social}**{$extraStr}";
+        }
+
+        return [
+            'type' => 'providers',
+            'message' => implode("\n", $lines),
+            'quick_actions' => [
+                ['label' => '🏢 Directorio Completo ↗', 'url' => '/admin/proveedores', 'type' => 'link'],
+                ['label' => '🛍️ Registrar Compra ↗', 'url' => '/admin/compras/crear', 'type' => 'link'],
+            ],
+        ];
+    }
+
+    public function handleListCompras(User $user, int $empresaId): array
+    {
+        $compras = Compra::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->with('proveedor')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $currency = $this->getCurrencySymbol($empresaId);
+
+        if ($compras->isEmpty()) {
+            return [
+                'type' => 'purchases',
+                'message' => "🛍️ **Compras de Insumos:** No hay compras registradas recientemente.",
+                'quick_actions' => [
+                    ['label' => '➕ Nueva Compra ↗', 'url' => '/admin/compras/crear', 'type' => 'link'],
+                    ['label' => '🛍️ Ver Compras ↗', 'url' => '/admin/compras', 'type' => 'link'],
+                ],
+            ];
+        }
+
+        $lines = ["🛍️ **Últimas Compras de Insumos:**\n"];
+        foreach ($compras as $c) {
+            $prov = $c->proveedor?->razon_social ?: 'Sin proveedor';
+            $fecha = $c->created_at ? $c->created_at->format('d/m') : '--';
+            $estado = match ($c->status) {
+                'completada', 'pagada' => '✅ Pagada',
+                'pendiente', 'parcial' => '⏳ Pendiente',
+                default => ucfirst($c->status ?? 'Registrada'),
+            };
+            $lines[] = "• **#{$c->codigo_compra}** ({$fecha}) | **{$prov}** | **{$currency}" . number_format($c->total, 2) . "** | {$estado}";
+        }
+
+        return [
+            'type' => 'purchases',
+            'message' => implode("\n", $lines),
+            'quick_actions' => [
+                ['label' => '➕ Nueva Compra ↗', 'url' => '/admin/compras/crear', 'type' => 'link'],
+                ['label' => '🛍️ Ver Todas ↗', 'url' => '/admin/compras', 'type' => 'link'],
+                ['label' => '🏦 Fondo Mensual ↗', 'url' => '/admin/fondo-mensual', 'type' => 'link'],
+            ],
+        ];
     }
 
     // ==========================================
@@ -1362,6 +2209,151 @@ class InternalAssistantService
     }
 
     // ==========================================
+    // PARSERS DE FASE 3: INVENTARIO Y KARDEX
+    // ==========================================
+
+    protected function parseStockAdjustmentCommand(string $raw): ?array
+    {
+        $raw = trim($raw);
+
+        // 1. "ajustar stock (de|del producto)? [prod] a [cant] (por/motivo [motivo])"
+        if (preg_match('/^ajustar\s+stock(?:\s+(?:de|del\s+producto))?\s+(.+?)\s+a\s+(\d+(?:\.\d+)?)(?:\s+(?:por|motivo)\s+(.+))?$/i', $raw, $m)) {
+            return [
+                'mode' => 'set',
+                'product' => trim($m[1]),
+                'quantity' => (float)$m[2],
+                'reason' => isset($m[3]) ? trim($m[3]) : null,
+            ];
+        }
+
+        // 2. "sumar/agregar/entrada [cant] (de)? stock (a/de)? [prod] (por [motivo])"
+        if (preg_match('/^(?:sumar|agregar|entrada\s+de?)\s+(\d+(?:\.\d+)?)(?:\s+(?:de\s+)?stock)?(?:\s+(?:a|al\s+producto|de))?\s+(.+?)(?:\s+(?:por|motivo)\s+(.+))?$/i', $raw, $m)) {
+            return [
+                'mode' => 'add',
+                'quantity' => (float)$m[1],
+                'product' => trim($m[2]),
+                'reason' => isset($m[3]) ? trim($m[3]) : null,
+            ];
+        }
+
+        // 3. "restar/quitar/salida [cant] (de)? stock (a/de)? [prod] (por [motivo])"
+        if (preg_match('/^(?:restar|quitar|salida\s+de?)\s+(\d+(?:\.\d+)?)(?:\s+(?:de\s+)?stock)?(?:\s+(?:a|al\s+producto|de))?\s+(.+?)(?:\s+(?:por|motivo)\s+(.+))?$/i', $raw, $m)) {
+            return [
+                'mode' => 'sub',
+                'quantity' => (float)$m[1],
+                'product' => trim($m[2]),
+                'reason' => isset($m[3]) ? trim($m[3]) : null,
+            ];
+        }
+
+        // 4. "ajustar stock [prod] [cant]" (ej: "ajustar stock Bateria 10")
+        if (preg_match('/^ajustar\s+stock\s+(.+?)\s+(\d+(?:\.\d+)?)$/i', $raw, $m)) {
+            return [
+                'mode' => 'set',
+                'product' => trim($m[1]),
+                'quantity' => (float)$m[2],
+                'reason' => null,
+            ];
+        }
+
+        return null;
+    }
+
+    protected function parseKardexCommand(string $raw): ?array
+    {
+        $raw = trim($raw);
+        if (preg_match('/^(?:ver\s+)?kardex(?:\s+(?:de|del\s+producto)?\s*(.+))?$/i', $raw, $m)) {
+            return ['product' => !empty($m[1]) ? trim($m[1]) : null];
+        }
+        if (preg_match('/^(?:ver\s+)?movimientos(?:\s+(?:de|del\s+producto)?\s*(.+))?$/i', $raw, $m)) {
+            return ['product' => !empty($m[1]) ? trim($m[1]) : null];
+        }
+        if (preg_match('/^historial\s+(?:de\s+)?inventario(?:\s+(?:de|del\s+producto)?\s*(.+))?$/i', $raw, $m)) {
+            return ['product' => !empty($m[1]) ? trim($m[1]) : null];
+        }
+        return null;
+    }
+
+    protected function parseCreateProductCommand(string $raw): ?array
+    {
+        if (preg_match('/^(?:crear|nuevo|agregar)\s+producto\s+(.+)$/i', trim($raw), $m)) {
+            $rest = trim($m[1]);
+            $price = null;
+            $stock = null;
+
+            if (preg_match('/precio\s+(\d+(?:\.\d+)?)/i', $rest, $pm)) {
+                $price = (float)$pm[1];
+                $rest = preg_replace('/precio\s+\d+(?:\.\d+)?/i', '', $rest);
+            }
+            if (preg_match('/stock\s+(\d+(?:\.\d+)?)/i', $rest, $sm)) {
+                $stock = (float)$sm[1];
+                $rest = preg_replace('/stock\s+\d+(?:\.\d+)?/i', '', $rest);
+            }
+
+            $name = trim(preg_replace('/\s+/', ' ', $rest));
+            return [
+                'name' => $name,
+                'price' => $price,
+                'stock' => $stock,
+            ];
+        }
+        return null;
+    }
+
+    // ==========================================
+    // PARSERS DE FASE 4: POS, METAS, FONDO Y PROVEEDORES
+    // ==========================================
+
+    protected function isSalesGoalQuery(string $normalized): bool
+    {
+        return (bool) preg_match('/^(?:ver\s+)?metas?(?:\s+de\s+ventas?)?$|^meta\s+del\s+mes$|^como\s+van\s+las\s+ventas$|^ventas\s+del\s+mes$|^ventas\s+de\s+hoy$|^progreso\s+de\s+ventas$/i', $normalized);
+    }
+
+    protected function isMonthlyFundQuery(string $normalized): bool
+    {
+        return (bool) preg_match('/^(?:ver\s+)?fondo\s+(?:de\s+)?mes$|^fondo\s+mensual$|^como\s+va\s+el\s+fondo$|^estado\s+del\s+fondo$|^gastos\s+del\s+fondo$/i', $normalized);
+    }
+
+    protected function parseProviderCommand(string $raw, string $normalized): ?array
+    {
+        // 1. Crear proveedor: "crear proveedor Insumos Caracas (telefono 04121234567) (rif J-12345678-9)"
+        if (preg_match('/^(?:crear|nuevo|agregar)\s+proveedor\s+(.+)$/i', trim($raw), $m)) {
+            $rest = trim($m[1]);
+            $phone = null;
+            $rif = null;
+
+            if (preg_match('/(?:telefono|celular|tlf)\s*[:=]?\s*([+\d\s\-]+)/i', $rest, $pm)) {
+                $phone = trim($pm[1]);
+                $rest = str_replace($pm[0], '', $rest);
+            }
+            if (preg_match('/(?:rif|doc|documento|cuit|rut)\s*[:=]?\s*([\w\d\-]+)/i', $rest, $rm)) {
+                $rif = trim($rm[1]);
+                $rest = str_replace($rm[0], '', $rest);
+            }
+
+            $name = trim(preg_replace('/\s+/', ' ', $rest));
+            return [
+                'action' => 'create',
+                'name' => $name,
+                'phone' => $phone,
+                'rif' => $rif,
+            ];
+        }
+
+        // 2. Listar proveedores
+        if (preg_match('/^(?:ver|listar|mostrar)\s+proveedores$|^proveedores$/i', $normalized)) {
+            return ['action' => 'list'];
+        }
+
+        return null;
+    }
+
+    protected function isPurchasesQuery(string $normalized): bool
+    {
+        return (bool) preg_match('/^(?:ver|listar|mostrar)?\s*compras(?:\s+recientes|\s+del\s+mes)?$|^ultimas\s+compras$|^gastos\s+en\s+compras$/i', $normalized);
+    }
+
+    // ==========================================
     // UTILIDADES
     // ==========================================
 
@@ -1389,28 +2381,41 @@ class InternalAssistantService
     protected function buildHelpResponse(string $intro): array
     {
         $message = "{$intro}\n\n"
-            . "🎯 **Comandos de Servicio Técnico (Fase 1):**\n"
-            . "• **#1** o **orden 1** ➔ Consulta los datos y estado de la orden.\n"
+            . "🎯 **1. Servicio Técnico & WhatsApp (Fase 1):**\n"
+            . "• **#1** o **orden 1** ➔ Consulta datos y estado de la orden.\n"
             . "• **estado 1 listo** ➔ Cambia a 'Listo para entregar'.\n"
-            . "• **estado 1 listo y notificar** ➔ Actualiza y envía WhatsApp al cliente.\n"
-            . "• **whatsapp 1** ➔ Envía la plantilla de WhatsApp al cliente.\n"
-            . "• **resumen hoy** ➔ Muestra las órdenes del taller para hoy.\n"
+            . "• **estado 1 listo y notificar** ➔ Actualiza y envía WhatsApp con tracking público.\n"
+            . "• **whatsapp 1** ➔ Envía mensaje al cliente con link de seguimiento.\n"
+            . "• **resumen hoy** ➔ Muestra las órdenes del taller hoy.\n"
             . "• **alertas stock** ➔ Muestra repuestos con existencias bajas.\n\n"
-            . "🏷️ **Comandos de Catálogo Rápido (Fase 2):**\n"
+            . "🏷️ **2. Catálogo Rápido (Fase 2):**\n"
             . "• **crear marca Xiaomi** ➔ Registra una nueva marca.\n"
             . "• **crear modelo Redmi Note 13 para Xiaomi** ➔ Registra un modelo.\n"
             . "• **crear categoria Baterias** ➔ Registra una nueva categoría.\n"
-            . "• **ver marcas** ➔ Lista las marcas registradas.\n"
-            . "• **modelos de Xiaomi** ➔ Lista los modelos de esa marca.";
+            . "• **ver marcas** / **ver categorias** / **modelos de Xiaomi**\n\n"
+            . "📦 **3. Inventario y Kardex (Fase 3):**\n"
+            . "• **ajustar stock Bateria a 15 por inventario fisico**\n"
+            . "• **sumar 5 stock Pantalla** / **restar 2 stock Mica**\n"
+            . "• **kardex Pantalla** ➔ Consulta movimientos y auditoría.\n"
+            . "• **ver kardex** ➔ Muestra los últimos movimientos globales.\n"
+            . "• **crear producto Mica Vidrio precio 5 stock 20**\n\n"
+            . "💼 **4. Finanzas, Metas & Proveedores (Fase 4):**\n"
+            . "• **meta de ventas** / **ventas de hoy** ➔ Progreso mensual y diario.\n"
+            . "• **fondo de mes** ➔ Balance de cajas cerradas y compras del mes.\n"
+            . "• **crear proveedor Insumos Tech telefono 04121234567**\n"
+            . "• **ver proveedores** ➔ Directorio rápido de proveedores.\n"
+            . "• **ver compras** ➔ Últimas compras de insumos registradas.";
 
         return [
             'type' => 'help',
             'message' => $message,
             'quick_actions' => [
-                ['label' => '📊 Resumen del Taller', 'action' => 'get_summary'],
-                ['label' => '🏷️ Ver Marcas', 'text' => 'ver marcas'],
-                ['label' => '⚠️ Ver Stock Bajo', 'action' => 'get_stock_alerts'],
-                ['label' => '🔧 Ver Reparaciones', 'url' => '/admin/reparaciones', 'type' => 'link'],
+                ['label' => '📊 Resumen Taller', 'action' => 'get_summary'],
+                ['label' => '🎯 Metas Ventas', 'action' => 'get_sales_goals'],
+                ['label' => '📦 Ver Kardex', 'action' => 'get_kardex'],
+                ['label' => '🏦 Fondo Mes', 'action' => 'get_monthly_fund'],
+                ['label' => '🏢 Proveedores', 'action' => 'list_proveedores'],
+                ['label' => '⚠️ Alertas Stock', 'action' => 'get_stock_alerts'],
             ],
         ];
     }
@@ -1420,10 +2425,11 @@ class InternalAssistantService
         return [
             'type' => 'unknown',
             'message' => "No comprendí exactamente la instrucción: **\"{$rawQuery}\"**.\n\n"
-                . "Prueba escribiendo el **número de orden** (ej. `1`), **\"crear marca Xiaomi\"**, **\"resumen\"**, o escribe **\"ayuda\"** para ver la lista de comandos disponibles.",
+                . "Prueba escribiendo el **número de orden** (ej. `1`), **\"ajustar stock [producto] a [cantidad]\"**, **\"kardex [producto]\"**, **\"meta de ventas\"**, **\"fondo de mes\"**, o escribe **\"ayuda\"** para ver todos los comandos.",
             'quick_actions' => [
-                ['label' => '📊 Resumen de Hoy', 'action' => 'get_summary'],
-                ['label' => '🏷️ Ver Marcas', 'text' => 'ver marcas'],
+                ['label' => '📊 Resumen Taller', 'action' => 'get_summary'],
+                ['label' => '🎯 Metas Ventas', 'action' => 'get_sales_goals'],
+                ['label' => '📦 Ver Kardex', 'action' => 'get_kardex'],
                 ['label' => '❓ Ver Ayuda', 'action' => 'help', 'text' => 'ayuda'],
             ],
         ];
