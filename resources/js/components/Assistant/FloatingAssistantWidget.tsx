@@ -544,7 +544,9 @@ export default function FloatingAssistantWidget() {
     };
 
     const categoryCommands = activeCategory
-        ? ASSISTANT_COMMANDS.filter((command) => command.category === activeCategory)
+        ? activeCategory === 'todos'
+            ? ASSISTANT_COMMANDS
+            : ASSISTANT_COMMANDS.filter((command) => command.category === activeCategory)
         : [];
 
     const bubbleMax = isExpanded ? 'max-w-[82%]' : 'max-w-[88%]';
@@ -1383,18 +1385,26 @@ export default function FloatingAssistantWidget() {
                                 </div>
 
                                 {activeCategory && (
-                                    <div className="animate-in fade-in slide-in-from-bottom-1 flex flex-wrap gap-1.5 px-3 pb-2.5 duration-200">
-                                        {categoryCommands.map((command) => (
-                                            <button
-                                                key={`${command.category}-${command.label}`}
-                                                onClick={() => applyCommand(command)}
-                                                title={command.hint}
-                                                className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-[11px] font-medium text-foreground/80 transition-all hover:-translate-y-px hover:border-primary/60 hover:text-primary hover:shadow-sm active:scale-95"
-                                            >
-                                                {command.label}
-                                                {command.prefill && <CornerDownLeft className="h-3 w-3 opacity-50" />}
-                                            </button>
-                                        ))}
+                                    <div className="animate-in fade-in slide-in-from-bottom-1 max-h-56 overflow-y-auto px-3 pb-2.5 [scrollbar-width:thin] duration-200">
+                                        <div className="mb-1 flex items-center justify-between text-[9.5px] font-semibold text-muted-foreground uppercase">
+                                            <span>
+                                                {activeCategory === 'todos' ? 'Todos los comandos' : `Comandos de ${activeCategory}`} ({categoryCommands.length})
+                                            </span>
+                                            <span className="text-[9px] text-muted-foreground/70">Clic para usar o autocompletar</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {categoryCommands.map((command) => (
+                                                <button
+                                                    key={`${command.category}-${command.label}`}
+                                                    onClick={() => applyCommand(command)}
+                                                    title={command.hint}
+                                                    className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-[11px] font-medium text-foreground/80 transition-all hover:-translate-y-px hover:border-primary/60 hover:text-primary hover:shadow-sm active:scale-95"
+                                                >
+                                                    {command.label}
+                                                    {command.prefill && <CornerDownLeft className="h-3 w-3 opacity-50" />}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>

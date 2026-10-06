@@ -4922,45 +4922,61 @@ class InternalAssistantService
     protected function buildHelpResponse(string $intro): array
     {
         $message = "{$intro}\n\n"
-            . "🎯 **1. Servicio Técnico & Taller:**\n"
-            . "• **crear reparacion cliente Juan equipo iPhone 11 falla pantalla costo 45**\n"
-            . "• **#1** o **orden 1** ➔ Consulta datos y estado de la orden.\n"
-            . "• **estado 1 listo y notificar** ➔ Actualiza y envía WhatsApp con tracking público.\n"
-            . "• **whatsapp 1** ➔ Envía mensaje al cliente con link de seguimiento.\n"
-            . "• **resumen hoy** ➔ Muestra las órdenes del taller hoy.\n\n"
-            . "💰 **2. Caja Chica & Finanzas:**\n"
-            . "• **estado de caja** ➔ Efectivo en gaveta, ventas y balance del turno.\n"
-            . "• **abrir caja 50** / **cerrar caja 250**\n"
-            . "• **gasto 10 almuerzo** / **ingreso caja 20 cambio**\n"
-            . "• **fondo de mes** ➔ Balance mensual consolidado.\n\n"
-            . "💳 **3. Clientes & Cobranzas:**\n"
-            . "• **clientes con deuda** ➔ Listado de morosos y cuentas por cobrar.\n"
-            . "• **deuda de Juan** ➔ Saldo pendiente y límite de crédito.\n"
-            . "• **abonar 20 a Juan Perez** ➔ Registra abono a cuenta y en caja.\n"
-            . "• **crear cliente Maria Gomez telefono 04141234567**\n"
-            . "• **ver clientes** / **buscar cliente Maria**\n\n"
-            . "📦 **4. Inventario & Kardex:**\n"
-            . "• **ajustar stock Bateria a 15 por inventario fisico**\n"
-            . "• **sumar 5 stock Pantalla** / **restar 2 stock Mica**\n"
-            . "• **kardex Pantalla** / **ver kardex** ➔ Auditoría de movimientos.\n"
-            . "• **crear producto Mica Vidrio precio 5 stock 20**\n"
-            . "• **alertas stock** ➔ Existencias bajas.\n\n"
-            . "🏷️ **5. Catálogo Rápido:**\n"
-            . "• **crear marca Xiaomi** / **crear categoria Baterias**\n"
-            . "• **crear modelo Redmi Note 13 para Xiaomi**\n"
-            . "• **ver marcas** / **ver categorias** / **modelos de Xiaomi**";
+            . "📋 **Guía Completa de Comandos de Fixy:**\n\n"
+            . "🔧 **1. Servicio Técnico & Taller:**\n"
+            . "• `crear orden cliente Juan Perez telefono 04141234567 equipo iPhone 11 falla pantalla costo 45`\n"
+            . "• `#1` o `orden 1` ➔ Consulta ficha completa, técnico, saldo y estado.\n"
+            . "• `estado 1 listo y notificar` ➔ Actualiza orden y envía WhatsApp con tracking público.\n"
+            . "• `cotizar pantalla iphone 13` ➔ Calcula repuesto + mano de obra de taller.\n"
+            . "• `eliminar orden 1` ➔ Cancela y elimina orden restaurando repuestos al inventario.\n"
+            . "• `whatsapp 1` ➔ Notifica al cliente con enlace de seguimiento en vivo.\n"
+            . "• `resumen hoy` / `resumen taller` ➔ Métricas y balance del taller.\n"
+            . "• `ordenes listas` / `equipos listos` ➔ Dispositivos terminados para entrega.\n"
+            . "• `equipos en taller` ➔ Equipos actualmente en revisión o reparación.\n\n"
+            . "🏷️ **2. Precios, Inventario & Kardex:**\n"
+            . "• `precio pantalla iphone 13` o `cuanto cuesta cargador` ➔ Tarjeta de precio y stock.\n"
+            . "• `stock Pantalla` o `cuanto hay de bateria` ➔ Existencias físicas y disponibilidad.\n"
+            . "• `repuestos Bateria` / `repuestos agotados` ➔ Filtrar piezas físicas de taller.\n"
+            . "• `categoria Display` ➔ Artículos y repuestos por categoría.\n"
+            . "• `kardex Pantalla` o `ver kardex` ➔ Auditoría de movimientos de almacén.\n"
+            . "• `ajustar stock Bateria a 15 por inventario` ➔ Fijar conteo físico.\n"
+            . "• `sumar 5 stock Pantalla` / `restar 2 stock Mica` ➔ Entradas y salidas rápidas.\n"
+            . "• `crear producto Mica Vidrio precio 5 stock 20` ➔ Alta rápida en catálogo.\n"
+            . "• `alertas stock` ➔ Repuestos y productos bajo el stock mínimo.\n\n"
+            . "💼 **3. Caja Chica & Finanzas:**\n"
+            . "• `ventas hoy` / `facturacion hoy` ➔ Total cobrado, tickets y desglose de pagos.\n"
+            . "• `estado de caja` ➔ Efectivo en gaveta, ventas y balance del turno actual.\n"
+            . "• `abrir caja 50` ➔ Apertura de turno con monto base.\n"
+            . "• `cerrar caja 250` ➔ Cierre de turno y arqueo de caja.\n"
+            . "• `gasto 10 almuerzo` ➔ Registro de egreso con motivo.\n"
+            . "• `ingreso caja 20 cambio` ➔ Registro de entrada a caja chica.\n"
+            . "• `meta de ventas` ➔ Progreso respecto a metas diarias y mensuales.\n"
+            . "• `fondo de mes` ➔ Balance consolidado de compras y gastos del mes.\n"
+            . "• `ver compras` ➔ Compras recientes de insumos y mercadería.\n"
+            . "• `ver proveedores` / `crear proveedor Insumos Tech telefono 04121234567`\n\n"
+            . "👤 **4. Clientes & Cuentas por Cobrar:**\n"
+            . "• `ver clientes` / `buscar cliente Juan` ➔ Directorio y búsqueda.\n"
+            . "• `crear cliente Juan Perez telefono 04141234567 email juan@ejemplo.com`\n"
+            . "• `clientes con deuda` / `deudores` ➔ Listado de saldos pendientes por cobrar.\n"
+            . "• `deuda de Carlos` ➔ Saldo exacto y límite de crédito de un cliente.\n"
+            . "• `abonar 20 a Juan Perez` ➔ Registra abono a crédito y entrada en caja.\n\n"
+            . "⚙️ **5. Catálogo & Servicios:**\n"
+            . "• `servicios` / `servicio cambio de pantalla` ➔ Tarifas de mano de obra técnica.\n"
+            . "• `ver marcas` / `crear marca Xiaomi`\n"
+            . "• `ver categorias` / `crear categoria Baterias`\n"
+            . "• `modelos de Xiaomi` / `crear modelo Redmi Note 13 para Xiaomi`";
 
         return [
             'type' => 'help',
             'message' => $message,
             'quick_actions' => [
                 ['label' => '📊 Resumen Taller', 'action' => 'get_summary'],
+                ['label' => '📈 Ventas Hoy', 'text' => 'ventas hoy'],
+                ['label' => '🔍 Verificar Precio', 'text' => 'precio ', 'prefill' => true],
+                ['label' => '💡 Cotizar Reparación', 'text' => 'cotizar ', 'prefill' => true],
                 ['label' => '💰 Estado Caja', 'action' => 'get_cash_status'],
                 ['label' => '💳 Deudas Clientes', 'action' => 'list_debtors'],
-                ['label' => '👤 Ver Clientes', 'action' => 'list_clientes'],
-                ['label' => '🎯 Metas Ventas', 'action' => 'get_sales_goals'],
                 ['label' => '📦 Ver Kardex', 'action' => 'get_kardex'],
-                ['label' => '🏦 Fondo Mes', 'action' => 'get_monthly_fund'],
                 ['label' => '⚠️ Alertas Stock', 'action' => 'get_stock_alerts'],
             ],
         ];
