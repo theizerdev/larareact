@@ -31,6 +31,7 @@ import { Building2, GitBranch, Briefcase, Calendar, Smartphone, Wallet, Boxes, C
 import * as React from 'react';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
+import FloatingAssistantWidget from '@/components/Assistant/FloatingAssistantWidget';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -1305,6 +1306,7 @@ export default function AdminSaasLayout({
                     </main>
                 </div>
                 <TemplateCustomizer />
+                <FloatingAssistantWidget />
             </div>
         </TooltipProvider>
     );
