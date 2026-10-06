@@ -17,11 +17,11 @@ class EmpresaSucursalSeeder extends Seeder
         $empresa = Empresa::updateOrCreate([
             'id' => 1,
         ], [
-            'razon_social' => 'Empresa Uno',
+            'razon_social' => 'Smurfit Westrock',
             'documento' => 'J-12345678-0',
-            'direccion' => 'Av. Principal Empresa Uno',
+            'direccion' => 'Av. Principal Smurfit Westrock',
             'telefono' => '+52 000 000 0000',
-            'email' => 'contacto@empresa-uno.example.com',
+            'email' => 'contacto@smurfit-westrock.example.com',
             'status' => true,
         ]);
 

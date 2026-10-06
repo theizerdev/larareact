@@ -779,7 +779,7 @@ class VisitaAccesoController extends Controller
                     $prefix     = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
                     $to         = $prefix . $cleanPhone;
                     $paseUrl    = url("/pase-digital/{$invitacion->uuid}");
-                    $terminos    = url("https://www.driscolls.com/Privacy-and-Terms  ");
+                    $terminos    = url("https://www.smurfitwestrock.com");
                     $msg  = "Hola *{$invitacion->visitante_nombre}*,\n\n";
                     $msg .= "Se ha generado tu Pre-Registro  de visita a las instalaciones de *{$empresa->razon_social}*.\n\n";
                     $msg .= "📅 *Fecha:* {$invitacion->fecha_estimada}\n";

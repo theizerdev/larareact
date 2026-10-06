@@ -152,7 +152,7 @@ class ProveedorController extends Controller
             $whatsappService = new \App\Services\WhatsAppService($empresa);
 
             $link = url("/preregistro/{$token}");
-            $terminos    = url("https://www.driscolls.com/Privacy-and-Terms  ");
+            $terminos    = url("https://www.smurfitwestrock.com");
 
             $sucursalNombre = $user->sucursal?->nombre ?? ($empresa->razon_social ?? $empresa->nombre_comercial ?? 'Nuestras Instalaciones');
 

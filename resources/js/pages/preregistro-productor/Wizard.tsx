@@ -1331,7 +1331,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
             </Dialog>
 
             <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-200 dark:border-slate-800">
-                &copy; {new Date().getFullYear()} Driscolls App. {__('All rights reserved.')}
+                &copy; {new Date().getFullYear()} Smurfit Westrock. {__('All rights reserved.')}
             </footer>
         </div>
     );

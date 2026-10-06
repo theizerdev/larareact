@@ -190,7 +190,7 @@ class EmpleadoController extends Controller
                 $carnetUrl = url("/carnet-empleado/{$empleado->id}");
                 $deptoNombre = $empleado->departamento->nombre ?? 'General';
 
-                $msg  = "🪪 *¡TU GAFETE / CARNET DIGITAL DRISCOLL'S ESTÁ LISTO!*\n\n";
+                $msg  = "🪪 *¡TU GAFETE / CARNET DIGITAL SMURFIT WESTROCK ESTÁ LISTO!*\n\n";
                 $msg .= "Hola *{$empleado->nombres} {$empleado->apellidos}*,\n";
                 $msg .= "Se ha generado tu Carnet de Identificación de Empleado.\n\n";
                 $msg .= "📌 *Documento:* {$empleado->documento_identidad}\n";

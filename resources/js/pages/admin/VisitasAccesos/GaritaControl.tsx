@@ -1274,7 +1274,7 @@ export default function GaritaControl({
                             <div>
                                 <div className="flex items-center gap-2">
                                     <h1 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                                        {__("DRISCOLL'S • CONTROL DE GARITA")}
+                                        {__("SMURFIT WESTROCK • CONTROL DE GARITA")}
                                     </h1>
                                     <Badge className="bg-emerald-400 text-emerald-950 font-extrabold text-[10px] uppercase tracking-wider px-2 py-0.5 border-0">
                                         {__('🟢 Lector Activo')}
@@ -1375,7 +1375,7 @@ export default function GaritaControl({
                                     </div>
                                     <div>
                                         <span className="text-xs font-bold uppercase tracking-wider text-emerald-200 block">
-                                            {isEmpleado ? __('Colaborador / Empleado Driscoll\'s') :
+                                            {isEmpleado ? __('Colaborador / Empleado Smurfit Westrock') :
                                                 resultado?.tipo === 'proveedor' ? __('🪪 Gafete Rojo • Proveedor Autorizado') :
                                                     resultado?.tipo === 'proveedor_empleado' ? __('🪪 Gafete Rojo • Empleado de Proveedor') :
                                                         resultado?.tipo === 'productor' ? __('🪪 Gafete Azul • Productor Autorizado') :
