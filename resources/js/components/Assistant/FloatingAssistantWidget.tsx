@@ -21,6 +21,9 @@ import {
     HelpCircle,
     CornerDownLeft,
     ChevronRight,
+    Trash2,
+    Link2,
+    UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { router } from '@inertiajs/react';
@@ -39,8 +42,9 @@ interface QuickAction {
     params?: Record<string, any>;
     url?: string;
     type?: 'link' | 'action';
-    variant?: 'primary' | 'success' | 'warning' | 'default';
+    variant?: 'primary' | 'success' | 'warning' | 'danger' | 'default';
     text?: string;
+    prefill?: boolean;
 }
 
 interface ChatMessage {
@@ -56,10 +60,11 @@ interface ChatMessage {
     summary?: any;
     items?: any[];
     quote?: any;
+    deleted_order?: any;
     today_sales?: any;
 }
 
-type MessageTone = 'default' | 'success' | 'warning' | 'error';
+type MessageTone = 'default' | 'success' | 'warning' | 'error' | 'danger';
 
 const STORAGE_MESSAGES = 'fixsale_assistant_chat';
 const STORAGE_HISTORY = 'fixsale_assistant_history';
@@ -95,7 +100,8 @@ const WELCOME_TEXT =
 const toneFor = (type?: string): MessageTone => {
     if (!type) return 'default';
     if (type === 'error') return 'error';
-    if (['not_found', 'unknown', 'need_brand', 'client_exists', 'info', 'cash_closed'].includes(type)) return 'warning';
+    if (type === 'repair_deleted') return 'danger';
+    if (['not_found', 'unknown', 'need_brand', 'client_exists', 'info', 'cash_closed', 'confirm_delete'].includes(type)) return 'warning';
     if (type.endsWith('_created') || ['stock_adjusted', 'whatsapp_sent', 'status_updated', 'updated', 'cash_opened', 'credit_payment'].includes(type)) {
         return 'success';
     }
@@ -119,7 +125,28 @@ const TONE_STYLES: Record<MessageTone, { bar: string; badge: string; label: stri
         badge: 'bg-rose-500/10 text-rose-700 dark:text-rose-300',
         label: 'Error',
     },
+    danger: {
+        bar: 'border-l-4 border-l-red-600',
+        badge: 'bg-red-600/10 text-red-700 dark:text-red-300',
+        label: 'Eliminado',
+    },
 };
+
+/** Colores del badge de estado según la clave de estado de la orden */
+const ORDER_STATUS_STYLES: Record<string, string> = {
+    recibido: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
+    en_diagnostico_presupuesto: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+    confirmacion_presupuesto: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
+    espera_refaccion: 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300',
+    en_reparacion: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    listo_reparado: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+    listo_sin_solucion: 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300',
+    entregado_finalizado: 'border-green-700/30 bg-green-700/10 text-green-800 dark:text-green-300',
+    reincidencia_garantia: 'border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300',
+};
+
+const orderStatusClass = (key?: string) =>
+    ORDER_STATUS_STYLES[key ?? ''] ?? 'border-indigo-500/20 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300';
 
 const stripMarkdown = (text: string) => text.replace(/\*\*/g, '').replace(/`/g, '');
 
@@ -280,6 +307,7 @@ export default function FloatingAssistantWidget() {
         summary: data?.summary,
         items: data?.items,
         quote: data?.quote,
+        deleted_order: data?.deleted_order,
         today_sales: data?.today_sales,
     });
 
@@ -625,6 +653,7 @@ export default function FloatingAssistantWidget() {
                                                                 {tone === 'success' && <CheckCircle2 className="h-3 w-3" />}
                                                                 {tone === 'warning' && <AlertTriangle className="h-3 w-3" />}
                                                                 {tone === 'error' && <XCircle className="h-3 w-3" />}
+                                                                {tone === 'danger' && <Trash2 className="h-3 w-3" />}
                                                                 {toneStyle.label}
                                                             </div>
                                                         )}
@@ -642,7 +671,12 @@ export default function FloatingAssistantWidget() {
                                                                     <span className="text-[13px] font-bold text-primary">
                                                                         #{msg.order.numero_orden}
                                                                     </span>
-                                                                    <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+                                                                    <span
+                                                                        className={cn(
+                                                                            'rounded-full border px-2 py-0.5 text-[10px] font-bold',
+                                                                            orderStatusClass(msg.order.estado_clave)
+                                                                        )}
+                                                                    >
                                                                         {msg.order.estado_label}
                                                                     </span>
                                                                 </div>
@@ -653,11 +687,46 @@ export default function FloatingAssistantWidget() {
                                                                     <div>👨‍🔧 {msg.order.tecnico}</div>
                                                                     <div>💰 Saldo: {msg.order.saldo_restante}</div>
                                                                 </div>
+                                                                {msg.order.cliente_id && (
+                                                                    <div
+                                                                        className={cn(
+                                                                            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold',
+                                                                            msg.order.cliente_es_nuevo
+                                                                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                                                                : 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300'
+                                                                        )}
+                                                                    >
+                                                                        {msg.order.cliente_es_nuevo ? (
+                                                                            <UserPlus className="h-3 w-3" />
+                                                                        ) : (
+                                                                            <Link2 className="h-3 w-3" />
+                                                                        )}
+                                                                        {msg.order.cliente_es_nuevo
+                                                                            ? `Cliente nuevo · ID #${msg.order.cliente_id}`
+                                                                            : `Cliente vinculado · ID #${msg.order.cliente_id}`}
+                                                                    </div>
+                                                                )}
                                                                 {msg.order.falla && (
                                                                     <div className="rounded-lg border border-border/40 bg-background/70 p-1.5 text-[10.5px]">
                                                                         <span className="font-semibold">Falla:</span> {msg.order.falla}
                                                                     </div>
                                                                 )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Tarjeta de Orden Eliminada */}
+                                                        {msg.deleted_order && (
+                                                            <div className="mt-3 space-y-1.5 rounded-xl border border-red-500/30 bg-red-500/5 p-2.5 text-[11px]">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-[13px] font-bold text-red-700 line-through decoration-2 dark:text-red-300">
+                                                                        #{msg.deleted_order.numero_orden}
+                                                                    </span>
+                                                                    <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:text-red-300">
+                                                                        <Trash2 className="h-3 w-3" /> Eliminada
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-muted-foreground line-through">👤 {msg.deleted_order.cliente}</div>
+                                                                <div className="text-muted-foreground line-through">📱 {msg.deleted_order.equipo}</div>
                                                             </div>
                                                         )}
 
@@ -914,7 +983,9 @@ export default function FloatingAssistantWidget() {
                                                                                   ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                                                                                   : qa.variant === 'warning'
                                                                                     ? 'bg-amber-500 text-white hover:bg-amber-600'
-                                                                                    : 'border border-border/70 bg-background text-foreground/80 hover:border-primary/60 hover:text-primary'
+                                                                                    : qa.variant === 'danger'
+                                                                                      ? 'bg-red-600 text-white shadow-sm shadow-red-600/30 hover:bg-red-700'
+                                                                                      : 'border border-border/70 bg-background text-foreground/80 hover:border-primary/60 hover:text-primary'
                                                                         )}
                                                                     >
                                                                         {qa.label}

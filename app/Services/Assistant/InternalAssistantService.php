@@ -446,7 +446,16 @@ class InternalAssistantService
                 if (!$orderNumber) {
                     return ['type' => 'error', 'message' => 'No se especificó la orden que deseas eliminar.'];
                 }
+                if (empty($params['confirmed'])) {
+                    return $this->buildDeleteConfirmation($empresaId, (string)$orderNumber);
+                }
                 return $this->handleDeleteRepairOrder($user, $empresaId, (string)$orderNumber);
+
+            case 'cancel_action':
+                return [
+                    'type' => 'info',
+                    'message' => '👍 Operación cancelada. No se realizó ningún cambio.',
+                ];
 
             case 'get_summary':
                 return $this->handleWorkshopSummary($user, $empresaId, $user->sucursal_id);
@@ -2664,7 +2673,7 @@ class InternalAssistantService
             'label' => '🗑️ Eliminar Orden',
             'action' => 'delete_order',
             'params' => ['order_number' => $orden->numero_orden],
-            'variant' => 'warning',
+            'variant' => 'danger',
         ];
 
         return [
@@ -2679,6 +2688,7 @@ class InternalAssistantService
                 'cliente_es_nuevo' => $isNewClient,
                 'equipo' => "{$marcaNombre} {$modeloNombre}",
                 'falla' => $falla,
+                'estado_clave' => 'recibido',
                 'estado_label' => 'Recibido',
                 'tecnico' => 'Sin asignar',
                 'saldo_restante' => "{$currency}" . number_format($costo, 2),
@@ -2690,6 +2700,41 @@ class InternalAssistantService
     // ==========================================
     // ELIMINACIÓN DE ORDEN DE REPARACIÓN / SERVICIO
     // ==========================================
+
+    protected function buildDeleteConfirmation(int $empresaId, string $orderIdentifier): array
+    {
+        $orden = $this->findOrderModel($empresaId, $orderIdentifier);
+
+        if (!$orden) {
+            return [
+                'type' => 'error',
+                'message' => "❌ No se encontró ninguna orden de reparación con el código o número **#{$orderIdentifier}**.",
+            ];
+        }
+
+        $clienteNombre = $orden->cliente?->nombre ?: ($orden->cliente_nombre ?: 'Cliente');
+        $equipo = trim(($orden->marca_nombre ?? '') . ' ' . ($orden->modelo_nombre ?? '')) ?: 'Dispositivo';
+
+        return [
+            'type' => 'confirm_delete',
+            'message' => "⚠️ **¿Eliminar la orden {$orden->numero_orden}?**\n\n"
+                . "• **Cliente:** {$clienteNombre}\n"
+                . "• **Equipo:** {$equipo}\n\n"
+                . "Esta acción no se puede deshacer. Se eliminarán también su historial, fotos y repuestos asignados (el stock se devolverá al inventario).",
+            'quick_actions' => [
+                [
+                    'label' => '🗑️ Sí, eliminar',
+                    'action' => 'delete_order',
+                    'params' => ['order_number' => $orden->numero_orden, 'confirmed' => true],
+                    'variant' => 'danger',
+                ],
+                [
+                    'label' => 'Cancelar',
+                    'action' => 'cancel_action',
+                ],
+            ],
+        ];
+    }
 
     public function handleDeleteRepairOrder(
         User $user,
@@ -2915,7 +2960,7 @@ class InternalAssistantService
             'label' => '🗑️ Eliminar Orden',
             'action' => 'delete_order',
             'params' => ['order_number' => $orden->numero_orden],
-            'variant' => 'warning',
+            'variant' => 'danger',
         ];
 
         return [
