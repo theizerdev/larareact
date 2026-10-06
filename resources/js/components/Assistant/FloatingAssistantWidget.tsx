@@ -55,6 +55,8 @@ interface ChatMessage {
     order?: any;
     summary?: any;
     items?: any[];
+    quote?: any;
+    today_sales?: any;
 }
 
 type MessageTone = 'default' | 'success' | 'warning' | 'error';
@@ -67,6 +69,8 @@ const nowLabel = () => new Date().toLocaleTimeString([], { hour: '2-digit', minu
 
 const WELCOME_ACTIONS: QuickAction[] = [
     { label: '📊 Resumen Taller', action: 'get_summary' },
+    { label: '📈 Ventas Hoy', text: 'ventas hoy' },
+    { label: '💡 Cotizar', text: 'cotizar pantalla', prefill: true },
     { label: '💰 Estado Caja', action: 'get_cash_status' },
     { label: '💳 Deudas Clientes', action: 'list_debtors' },
     { label: '👤 Clientes', action: 'list_clientes' },
@@ -275,6 +279,8 @@ export default function FloatingAssistantWidget() {
         order: data?.order,
         summary: data?.summary,
         items: data?.items,
+        quote: data?.quote,
+        today_sales: data?.today_sales,
     });
 
     const pushError = (text: string) =>
@@ -690,6 +696,205 @@ export default function FloatingAssistantWidget() {
                                                                         </div>
                                                                     </div>
                                                                 ))}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Tarjeta de Ventas de Hoy */}
+                                                        {msg.today_sales && (
+                                                            <div className="mt-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-background to-teal-500/5 p-3 space-y-2.5 shadow-sm">
+                                                                <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                                                                    <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                                        📈 Ventas y Facturación de Hoy
+                                                                    </span>
+                                                                    <span className="text-[10px] text-muted-foreground font-medium">
+                                                                        {msg.today_sales.fecha}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="grid grid-cols-2 gap-2 text-center">
+                                                                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2">
+                                                                        <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
+                                                                            {msg.today_sales.total_formateado}
+                                                                        </div>
+                                                                        <div className="text-[9px] uppercase font-bold text-muted-foreground mt-0.5">Total Facturado</div>
+                                                                    </div>
+                                                                    <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-2">
+                                                                        <div className="text-base font-extrabold text-blue-600 dark:text-blue-400">
+                                                                            {msg.today_sales.cantidad}
+                                                                        </div>
+                                                                        <div className="text-[9px] uppercase font-bold text-muted-foreground mt-0.5">Tickets Cobrados</div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {msg.today_sales.desglose && msg.today_sales.desglose.length > 0 && (
+                                                                    <div className="space-y-1 pt-1 border-t border-border/30">
+                                                                        <div className="text-[9.5px] font-bold text-muted-foreground uppercase">Métodos de Pago:</div>
+                                                                        <div className="grid grid-cols-2 gap-1.5">
+                                                                            {msg.today_sales.desglose.map((m: any, i: number) => (
+                                                                                <div key={i} className="flex items-center justify-between rounded-lg bg-muted/50 px-2 py-1 text-[10.5px]">
+                                                                                    <span className="text-muted-foreground font-medium">{m.metodo}</span>
+                                                                                    <span className="font-bold text-foreground">{m.formateado}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Tarjeta de Cotización / Presupuesto Rápido */}
+                                                        {msg.quote && (
+                                                            <div className="mt-3 rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 via-background to-purple-500/5 p-3 space-y-2.5 shadow-sm">
+                                                                <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                                                                    <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-indigo-600 dark:text-indigo-400">
+                                                                        💡 Presupuesto Estimado
+                                                                    </span>
+                                                                    <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 border border-indigo-500/20">
+                                                                        {msg.quote.query}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="space-y-1.5 text-[11px]">
+                                                                    {msg.quote.repuesto_nombre && (
+                                                                        <div className="flex items-center justify-between rounded-lg bg-muted/50 px-2.5 py-1.5">
+                                                                            <div>
+                                                                                <div className="font-semibold text-foreground">🛠️ Repuesto: {msg.quote.repuesto_nombre}</div>
+                                                                                {msg.quote.repuesto_stock_badge && (
+                                                                                    <div className="text-[10px] text-muted-foreground">{stripMarkdown(msg.quote.repuesto_stock_badge)}</div>
+                                                                                )}
+                                                                            </div>
+                                                                            <span className="font-bold text-foreground">{msg.quote.repuesto_precio}</span>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {msg.quote.servicio_nombre && (
+                                                                        <div className="flex items-center justify-between rounded-lg bg-muted/50 px-2.5 py-1.5">
+                                                                            <div>
+                                                                                <div className="font-semibold text-foreground">⚙️ Mano de obra: {msg.quote.servicio_nombre}</div>
+                                                                                <div className="text-[10px] text-muted-foreground">Instalación y garantía de taller</div>
+                                                                            </div>
+                                                                            <span className="font-bold text-foreground">{msg.quote.servicio_precio}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="flex items-center justify-between rounded-xl bg-indigo-600/10 border border-indigo-500/20 px-3 py-2 text-indigo-900 dark:text-indigo-200">
+                                                                    <span className="text-[11.5px] font-bold">Total al Cliente:</span>
+                                                                    <span className="text-[15px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                                                                        {msg.quote.total_formateado}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Tarjetas Interactivas de Productos / Repuestos / Servicios */}
+                                                        {msg.items && msg.items.length > 0 && (
+                                                            <div className="mt-3 space-y-2">
+                                                                <div className="text-[10.5px] font-semibold text-muted-foreground flex items-center justify-between px-0.5">
+                                                                    <span>Tarjetas interactivas ({msg.items.length})</span>
+                                                                    <span className="text-[9.5px] text-muted-foreground/70">Acciones con 1 clic</span>
+                                                                </div>
+                                                                <div className="space-y-1.5 max-h-72 overflow-y-auto pr-0.5">
+                                                                    {msg.items.map((item: any, idx: number) => {
+                                                                        const isRepuesto = item.tipo === 'repuesto';
+                                                                        const isServicio = item.tipo === 'servicio';
+                                                                        const isAgotado = item.stock_status === 'out_of_stock' || (item.usa_inventario && item.stock <= 0);
+                                                                        const isBajo = item.stock_status === 'low';
+
+                                                                        return (
+                                                                            <div
+                                                                                key={item.id || idx}
+                                                                                className="rounded-xl border border-border/60 bg-muted/40 hover:bg-muted/60 p-2.5 transition-all text-[11px]"
+                                                                            >
+                                                                                <div className="flex items-start justify-between gap-1.5 mb-1">
+                                                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                        <span
+                                                                                            className={cn(
+                                                                                                'rounded-full px-2 py-0.5 text-[9.5px] font-bold',
+                                                                                                isRepuesto && 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20',
+                                                                                                isServicio && 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/20',
+                                                                                                !isRepuesto && !isServicio && 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/20'
+                                                                                            )}
+                                                                                        >
+                                                                                            {isRepuesto ? '🛠️ Repuesto' : isServicio ? '⚙️ Servicio' : '📦 Producto'}
+                                                                                        </span>
+                                                                                        {item.categoria && (
+                                                                                            <span className="rounded-full bg-background px-2 py-0.5 text-[9.5px] text-muted-foreground border border-border/40 font-medium">
+                                                                                                📁 {item.categoria}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                    <span className="font-bold text-[12px] text-foreground shrink-0">
+                                                                                        {item.precio}
+                                                                                    </span>
+                                                                                </div>
+
+                                                                                <div className="font-medium text-[11.5px] text-foreground/95 mb-1.5">
+                                                                                    {item.nombre}
+                                                                                    {item.sku && <span className="ml-1 text-[10px] text-muted-foreground font-mono">({item.sku})</span>}
+                                                                                </div>
+
+                                                                                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/30">
+                                                                                    <div>
+                                                                                        {isServicio ? (
+                                                                                            <span className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">
+                                                                                                🛠️ Mano de obra técnica
+                                                                                            </span>
+                                                                                        ) : isAgotado ? (
+                                                                                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400">
+                                                                                                🔴 Agotado (0 uds)
+                                                                                            </span>
+                                                                                        ) : isBajo ? (
+                                                                                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                                                                                ⚠️ Stock bajo ({item.stock} uds)
+                                                                                            </span>
+                                                                                        ) : (
+                                                                                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                                                                                🟢 {item.stock} uds disponibles
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        {!isServicio && (
+                                                                                            <>
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={() => handleSendMessage(`kardex ${item.sku || item.nombre}`)}
+                                                                                                    className="px-2 py-0.5 rounded-md bg-background hover:bg-primary/10 border border-border/60 hover:border-primary/40 text-[10px] font-medium text-foreground transition-colors"
+                                                                                                    title="Ver movimientos en Kardex"
+                                                                                                >
+                                                                                                    📊 Kardex
+                                                                                                </button>
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={() => {
+                                                                                                        setInput(`sumar 1 stock ${item.sku || item.nombre}`);
+                                                                                                        setSuggestionsDismissed(true);
+                                                                                                        inputRef.current?.focus();
+                                                                                                    }}
+                                                                                                    className="px-2 py-0.5 rounded-md bg-background hover:bg-emerald-500/10 border border-border/60 hover:border-emerald-500/40 text-[10px] font-medium text-emerald-700 dark:text-emerald-300 transition-colors"
+                                                                                                    title="Agregar stock"
+                                                                                                >
+                                                                                                    ➕ +1
+                                                                                                </button>
+                                                                                            </>
+                                                                                        )}
+                                                                                        {isServicio && (
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => handleSendMessage(`cotizar ${item.nombre}`)}
+                                                                                                className="px-2 py-0.5 rounded-md bg-background hover:bg-violet-500/10 border border-border/60 hover:border-violet-500/40 text-[10px] font-medium text-violet-700 dark:text-violet-300 transition-colors"
+                                                                                            >
+                                                                                                💡 Cotizar
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
                                                             </div>
                                                         )}
 

@@ -92,7 +92,12 @@ class InternalAssistantService
         // FASE 4: POS, METAS, FONDO DE MES, PROVEEDORES Y COMPRAS
         // ==========================================
 
-        // Metas de Ventas (ej: "meta de ventas", "metas del mes", "como van las ventas", "ventas de hoy")
+        // Ventas de Hoy / Facturación Diaria (ej: "ventas hoy", "cuanto vendimos hoy", "facturacion hoy")
+        if ($this->isTodaySalesQuery($normalized)) {
+            return $this->handleTodaySales($user, $empresaId, $sucursalId);
+        }
+
+        // Metas de Ventas (ej: "meta de ventas", "metas del mes", "como van las ventas")
         if ($this->isSalesGoalQuery($normalized)) {
             return $this->handleSalesGoals($user, $empresaId, $sucursalId);
         }
@@ -260,7 +265,7 @@ class InternalAssistantService
         // FASE 1: SERVICIO TÉCNICO, ÓRDENES Y STOCK
         // ==========================================
 
-        // Crear Orden de Reparación (ej: "crear reparacion cliente Juan Perez equipo iPhone 11 falla pantalla rota costo 45")
+        // Crear Orden de Reparación (ej: "crear orden cliente Juan Perez telefono 04141234567 equipo iPhone 11 falla pantalla rota costo 45")
         $createRepairMatch = $this->parseCreateRepairCommand($rawQuery, $normalized);
         if ($createRepairMatch) {
             return $this->handleCreateRepairOrder(
@@ -269,6 +274,27 @@ class InternalAssistantService
                 $sucursalId,
                 $createRepairMatch
             );
+        }
+
+        // Eliminar Orden de Servicio / Reparación (ej: "eliminar orden 1", "borrar orden REP-000001", "eliminar orden #5")
+        $deleteOrderMatch = $this->parseDeleteOrderCommand($rawQuery, $normalized);
+        if ($deleteOrderMatch) {
+            if (!empty($deleteOrderMatch['missing_order'])) {
+                return [
+                    'type' => 'info',
+                    'message' => "🗑️ **Eliminar Orden de Servicio**\n\n"
+                        . "Por favor especifica el número o folio de la orden que deseas eliminar.\n\n"
+                        . "👉 **Ejemplos:**\n"
+                        . "• `eliminar orden 1`\n"
+                        . "• `borrar orden REP-000001`\n"
+                        . "• `eliminar orden de servicio #5`",
+                    'quick_actions' => [
+                        ['label' => '📋 Ir a Lista de Órdenes ↗', 'url' => '/admin/reparaciones', 'type' => 'link'],
+                        ['label' => '📊 Resumen de Hoy', 'action' => 'get_summary'],
+                    ],
+                ];
+            }
+            return $this->handleDeleteRepairOrder($user, $empresaId, $deleteOrderMatch['order_number']);
         }
 
         // 8. Resumen del taller (Hoy / Activo)
@@ -303,6 +329,16 @@ class InternalAssistantService
         $orderNumber = $this->parseOrderNumber($normalized, $rawQuery);
         if ($orderNumber !== null) {
             return $this->handleFindOrder($user, $empresaId, $orderNumber);
+        }
+
+        // Cotizador / Presupuesto Rápido (ej: "cotizar pantalla iphone 13", "presupuesto bateria samsung a14")
+        if (preg_match('/^(?:cotizar|cotizacion|presupuesto)\s+(?:de\s+|para\s+)?(.+)$/i', $normalized, $m)) {
+            return $this->handleQuickQuote($user, $empresaId, $sucursalId, trim($m[1]));
+        }
+
+        // Repuestos Agotados (ej: "repuestos agotados", "repuestos sin stock", "sin stock repuestos")
+        if (preg_match('/^(?:repuestos?\s+agotados?|repuestos?\s+sin\s+stock|sin\s+stock\s+repuestos?)$/i', $normalized)) {
+            return $this->handleRepuestosAgotados($user, $empresaId, $sucursalId);
         }
 
         // 13. Consultar Stock de un producto o repuesto (ej: "stock pantalla iphone", "precio bateria")
@@ -401,6 +437,17 @@ class InternalAssistantService
                 }
                 return $this->handleFindOrder($user, $empresaId, (string)$orderNumber);
 
+            case 'delete_order':
+                $orderNumber = $params['order_number'] ?? null;
+                if (!$orderNumber && !empty($params['orden_id'])) {
+                    $orden = $this->findOrderModel($empresaId, (string)$params['orden_id']);
+                    $orderNumber = $orden?->numero_orden;
+                }
+                if (!$orderNumber) {
+                    return ['type' => 'error', 'message' => 'No se especificó la orden que deseas eliminar.'];
+                }
+                return $this->handleDeleteRepairOrder($user, $empresaId, (string)$orderNumber);
+
             case 'get_summary':
                 return $this->handleWorkshopSummary($user, $empresaId, $user->sucursal_id);
 
@@ -470,6 +517,12 @@ class InternalAssistantService
 
             case 'list_debtors':
                 return $this->handleListDebtors($user, $empresaId);
+
+            case 'get_today_sales':
+                return $this->handleTodaySales($user, $empresaId, $sucursalId);
+
+            case 'list_repuestos_agotados':
+                return $this->handleRepuestosAgotados($user, $empresaId, $sucursalId);
 
             default:
                 return [
@@ -1449,6 +1502,93 @@ class InternalAssistantService
         ];
     }
 
+    public function handleTodaySales(User $user, int $empresaId, ?int $sucursalId): array
+    {
+        $empresa = Empresa::find($empresaId);
+        $timezone = $empresa?->getTimezone() ?? $user->getTimezone() ?? 'America/Mexico_City';
+        $nowInTz = Carbon::now($timezone);
+        $currency = $this->getCurrencySymbol($empresaId);
+
+        $startOfDayUtc = $nowInTz->copy()->startOfDay()->setTimezone('UTC');
+        $endOfDayUtc = $nowInTz->copy()->endOfDay()->setTimezone('UTC');
+
+        $salesQuery = Sale::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->whereBetween('created_at', [$startOfDayUtc, $endOfDayUtc])
+            ->whereNotIn('estado', ['anulada', 'cancelada']);
+
+        if ($sucursalId) {
+            $salesQuery->where('sucursal_id', $sucursalId);
+        }
+
+        $totalVentas = (float) $salesQuery->sum('total');
+        $cantidadVentas = $salesQuery->count();
+
+        // Desglose por método de pago
+        $desgloseRaw = (clone $salesQuery)
+            ->select('metodo_pago', DB::raw('SUM(total) as monto'), DB::raw('COUNT(*) as total_ops'))
+            ->groupBy('metodo_pago')
+            ->get();
+
+        $desglose = [];
+        foreach ($desgloseRaw as $d) {
+            $metodo = ucfirst(str_replace('_', ' ', $d->metodo_pago ?: 'otro'));
+            $desglose[] = [
+                'metodo' => $metodo,
+                'monto' => (float)$d->monto,
+                'formateado' => "{$currency} " . number_format((float)$d->monto, 2),
+                'operaciones' => (int)$d->total_ops,
+            ];
+        }
+
+        // Órdenes de taller entregadas hoy
+        $ordenesEntregadasQuery = OrdenReparacion::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('estado_orden', OrdenReparacion::ESTADO_ENTREGADO_FINALIZADO)
+            ->whereBetween('updated_at', [$startOfDayUtc, $endOfDayUtc]);
+
+        if ($sucursalId) {
+            $ordenesEntregadasQuery->where('sucursal_id', $sucursalId);
+        }
+        $ordenesEntregadas = $ordenesEntregadasQuery->count();
+
+        $ticketPromedio = $cantidadVentas > 0 ? ($totalVentas / $cantidadVentas) : 0.0;
+        $fechaHoy = $nowInTz->translatedFormat('d \d\e F, Y');
+
+        $message = "📊 **Resumen Financiero y Ventas de Hoy ({$fechaHoy}):**\n\n";
+        $message .= "💰 **Total Facturado:** **{$currency} " . number_format($totalVentas, 2) . "**\n";
+        $message .= "🧾 **Transacciones:** **{$cantidadVentas}** ventas cerradas\n";
+        $message .= "📱 **Órdenes Entregadas:** **{$ordenesEntregadas}** reparaciones finalizadas\n";
+        $message .= "🎯 **Ticket Promedio:** {$currency} " . number_format($ticketPromedio, 2) . "\n\n";
+
+        if (!empty($desglose)) {
+            $message .= "💳 **Desglose por Método de Pago:**\n";
+            foreach ($desglose as $m) {
+                $message .= "• **{$m['metodo']}:** {$m['formateado']} ({$m['operaciones']} ops)\n";
+            }
+        }
+
+        return [
+            'type' => 'today_sales',
+            'message' => trim($message),
+            'today_sales' => [
+                'fecha' => $fechaHoy,
+                'total' => $totalVentas,
+                'total_formateado' => "{$currency} " . number_format($totalVentas, 2),
+                'cantidad' => $cantidadVentas,
+                'ordenes_entregadas' => $ordenesEntregadas,
+                'ticket_promedio' => "{$currency} " . number_format($ticketPromedio, 2),
+                'desglose' => $desglose,
+            ],
+            'quick_actions' => [
+                ['label' => '💰 Estado de Caja', 'action' => 'get_cash_status'],
+                ['label' => '🎯 Metas de Ventas', 'action' => 'get_sales_goals'],
+                ['label' => '📊 Resumen Taller', 'action' => 'get_summary'],
+                ['label' => 'Ir a Ventas ↗', 'url' => '/admin/ventas', 'type' => 'link'],
+            ],
+        ];
+    }
+
     public function handleMonthlyFund(User $user, int $empresaId, ?int $sucursalId): array
     {
         $empresa = Empresa::find($empresaId);
@@ -2302,14 +2442,69 @@ class InternalAssistantService
     ): array {
         $currency = $this->getCurrencySymbol($empresaId);
         $clientName = trim($data['cliente'] ?? '');
+        $phone = trim($data['telefono'] ?? '');
         $device = trim($data['equipo'] ?? '');
         $falla = trim($data['falla'] ?? '');
         $costo = (float)($data['costo'] ?? 0);
-        $phone = $data['telefono'] ?? null;
 
-        if ($clientName === '') {
-            return ['type' => 'error', 'message' => 'Por favor indica el nombre del cliente para la orden de reparación.'];
+        // 1. Validación de comando vacío o sin datos mínimos
+        if (!empty($data['missing_required'])) {
+            return [
+                'type' => 'error',
+                'message' => "⚠️ **Datos requeridos para crear orden de servicio**\n\n"
+                    . "Para registrar una nueva orden en el taller, es obligatorio indicar el **Nombre** y el **Teléfono** del cliente.\n\n"
+                    . "👉 **Formato requerido:**\n"
+                    . "`crear orden cliente [Nombre] telefono [Teléfono] equipo [Dispositivo] falla [Problema] costo [Monto]`\n\n"
+                    . "💡 **Ejemplo real:**\n"
+                    . "`crear orden cliente Carlos Mendoza telefono 04141234567 equipo iPhone 11 falla pantalla rota costo 45`\n\n"
+                    . "🔍 *Si el cliente ya existe en el sistema se asociará automáticamente por su teléfono o nombre (Cliente ID); si no existe, se creará su ficha al instante.*",
+                'quick_actions' => [
+                    [
+                        'label' => '➕ Usar formato de ejemplo',
+                        'text' => 'crear orden cliente Carlos Mendoza telefono 04141234567 equipo iPhone 11 falla pantalla rota costo 45',
+                    ],
+                    [
+                        'label' => '📋 Ir a Taller ↗',
+                        'url' => '/admin/reparaciones',
+                        'type' => 'link',
+                    ],
+                ],
+            ];
         }
+
+        // 2. Obligatoriedad estricta de Nombre y Teléfono del cliente
+        if ($clientName === '' || $phone === '') {
+            $missing = [];
+            if ($clientName === '') {
+                $missing[] = 'el **Nombre**';
+            }
+            if ($phone === '') {
+                $missing[] = 'el **Teléfono**';
+            }
+            $missingText = implode(' y ', $missing);
+
+            return [
+                'type' => 'error',
+                'message' => "⚠️ **Datos obligatorios incompletos**\n\n"
+                    . "Para registrar una orden de servicio es obligatorio indicar {$missingText} del cliente.\n\n"
+                    . "👉 **Formato requerido:**\n"
+                    . "`crear orden cliente [Nombre] telefono [Teléfono] equipo [Dispositivo] falla [Problema] costo [Monto]`\n\n"
+                    . "💡 **Ejemplo:**\n"
+                    . "`crear orden cliente " . ($clientName ?: 'Carlos Mendoza') . " telefono 04141234567 equipo " . ($device ?: 'iPhone 11') . " falla " . ($falla ?: 'pantalla rota') . " costo " . ($costo > 0 ? $costo : '45') . "`\n\n"
+                    . "🔍 *Si el cliente ya existe en el sistema se asociará su ficha (`cliente_id`); si no existe, se registrará como nuevo automáticamente.*",
+            ];
+        }
+
+        $cleanPhoneDigits = preg_replace('/\D/', '', $phone);
+        if (strlen($cleanPhoneDigits) < 7) {
+            return [
+                'type' => 'error',
+                'message' => "⚠️ **Teléfono de cliente inválido**\n\n"
+                    . "El teléfono indicado (`{$phone}`) debe tener al menos 7 dígitos para poder contactar al cliente o enviarle el tracking de su orden.\n\n"
+                    . "👉 **Ejemplo:** `crear orden cliente {$clientName} telefono 04141234567 equipo " . ($device ?: 'iPhone 11') . " falla " . ($falla ?: 'pantalla rota') . "`",
+            ];
+        }
+
         if ($falla === '') {
             $falla = 'Revisión técnica general';
         }
@@ -2317,17 +2512,32 @@ class InternalAssistantService
             $device = 'Dispositivo móvil';
         }
 
-        // Buscar o crear cliente
-        $cliente = Cliente::withoutGlobalScope('multitenancy')
-            ->where('empresa_id', $empresaId)
-            ->where(function ($q) use ($clientName, $phone) {
-                $q->where('nombre', 'like', $clientName);
-                if ($phone) {
-                    $q->orWhere('telefono', 'like', "%{$phone}%");
-                }
-            })
-            ->first();
+        // 3. Buscar si el cliente ya existe (primero por teléfono, luego por nombre)
+        $cliente = null;
+        if (strlen($cleanPhoneDigits) >= 7) {
+            $last7Digits = substr($cleanPhoneDigits, -7);
+            $cliente = Cliente::withoutGlobalScope('multitenancy')
+                ->where('empresa_id', $empresaId)
+                ->where(function ($q) use ($phone, $cleanPhoneDigits, $last7Digits) {
+                    $q->where('telefono', $phone)
+                      ->orWhere('telefono', 'like', "%{$cleanPhoneDigits}%")
+                      ->orWhere('telefono', 'like', "%{$last7Digits}%");
+                })
+                ->first();
+        }
 
+        if (!$cliente && $clientName !== '') {
+            $cliente = Cliente::withoutGlobalScope('multitenancy')
+                ->where('empresa_id', $empresaId)
+                ->where(function ($q) use ($clientName) {
+                    $q->whereRaw('LOWER(TRIM(nombre)) = ?', [strtolower(trim($clientName))])
+                      ->orWhere('nombre', 'like', $clientName);
+                })
+                ->first();
+        }
+
+        // 4. Si no existe se crea; si existe se asocia su cliente_id
+        $isNewClient = false;
         if (!$cliente) {
             $cliente = Cliente::create([
                 'empresa_id' => $empresaId,
@@ -2336,11 +2546,15 @@ class InternalAssistantService
                 'telefono' => $phone,
                 'estado' => true,
             ]);
-        } elseif ($phone && !$cliente->telefono) {
-            $cliente->update(['telefono' => $phone]);
+            $isNewClient = true;
+        } else {
+            // Cliente existente: si no tenía teléfono, se lo actualizamos
+            if (empty($cliente->telefono) && !empty($phone)) {
+                $cliente->update(['telefono' => $phone]);
+            }
         }
 
-        // Resolver marca y modelo a partir de $device
+        // 5. Resolver marca y modelo a partir de $device
         $marcaId = null;
         $marcaNombre = 'General';
         $modeloId = null;
@@ -2359,7 +2573,7 @@ class InternalAssistantService
             }
         }
 
-        // Correlativo folio REP-XXXXXX
+        // 6. Correlativo folio REP-XXXXXX
         $lastOrder = OrdenReparacion::withoutGlobalScopes()
             ->where('empresa_id', $empresaId)
             ->when($sucursalId, fn($q) => $q->where('sucursal_id', $sucursalId))
@@ -2377,13 +2591,14 @@ class InternalAssistantService
 
         $numeroOrden = 'REP-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
 
+        // 7. Crear la orden de servicio vinculando cliente_id
         $orden = OrdenReparacion::create([
             'empresa_id' => $empresaId,
             'sucursal_id' => $sucursalId ?: $user->sucursal_id,
             'numero_orden' => $numeroOrden,
-            'cliente_id' => $cliente->id,
+            'cliente_id' => $cliente->id, // <<-- Asociado cliente_id
             'cliente_nombre' => $cliente->nombre,
-            'cliente_telefono' => $cliente->telefono,
+            'cliente_telefono' => $cliente->telefono ?: $phone,
             'tipo_dispositivo' => 'Smartphone',
             'marca_id' => $marcaId,
             'marca_nombre' => $marcaNombre,
@@ -2407,9 +2622,14 @@ class InternalAssistantService
 
         $trackingUrl = url("/reparacion/{$empresaId}/consultar?orden={$orden->numero_orden}");
 
-        $msg = "🔧 **¡Orden de Reparación Creada Exitosamente!**\n\n"
+        $clientStatusBadge = $isNewClient
+            ? "*(Nuevo cliente registrado #{$cliente->id})*"
+            : "*(Cliente existente vinculado #{$cliente->id})*";
+
+        $msg = "🔧 **¡Orden de Servicio Creada Exitosamente!**\n\n"
             . "• **Número de Orden:** **{$orden->numero_orden}**\n"
-            . "• **Cliente:** {$cliente->nombre}" . ($cliente->telefono ? " (📞 {$cliente->telefono})" : "") . "\n"
+            . "• **Cliente:** {$cliente->nombre} (📞 {$cliente->telefono}) {$clientStatusBadge}\n"
+            . "• **Cliente ID:** #{$cliente->id}\n"
             . "• **Equipo:** {$marcaNombre} {$modeloNombre}\n"
             . "• **Falla reportada:** {$falla}\n"
             . "• **Costo estimado:** {$currency}" . number_format($costo, 2) . "\n"
@@ -2440,13 +2660,23 @@ class InternalAssistantService
             }
         }
 
+        $actions[] = [
+            'label' => '🗑️ Eliminar Orden',
+            'action' => 'delete_order',
+            'params' => ['order_number' => $orden->numero_orden],
+            'variant' => 'warning',
+        ];
+
         return [
             'type' => 'repair_created',
             'message' => $msg,
             'order' => [
+                'id' => $orden->id,
                 'numero_orden' => $orden->numero_orden,
+                'cliente_id' => $cliente->id,
                 'cliente_nombre' => $cliente->nombre,
                 'cliente_telefono' => $cliente->telefono ?: 'Sin teléfono',
+                'cliente_es_nuevo' => $isNewClient,
                 'equipo' => "{$marcaNombre} {$modeloNombre}",
                 'falla' => $falla,
                 'estado_label' => 'Recibido',
@@ -2454,6 +2684,106 @@ class InternalAssistantService
                 'saldo_restante' => "{$currency}" . number_format($costo, 2),
             ],
             'quick_actions' => $actions,
+        ];
+    }
+
+    // ==========================================
+    // ELIMINACIÓN DE ORDEN DE REPARACIÓN / SERVICIO
+    // ==========================================
+
+    public function handleDeleteRepairOrder(
+        User $user,
+        int $empresaId,
+        string $orderIdentifier
+    ): array {
+        $orden = $this->findOrderModel($empresaId, $orderIdentifier);
+
+        if (!$orden) {
+            return [
+                'type' => 'error',
+                'message' => "❌ No se encontró ninguna orden de reparación con el código o número **#{$orderIdentifier}**.",
+                'quick_actions' => [
+                    ['label' => '📋 Ir al Taller ↗', 'url' => '/admin/reparaciones', 'type' => 'link'],
+                    ['label' => '📊 Resumen de Hoy', 'action' => 'get_summary'],
+                ],
+            ];
+        }
+
+        // Si la orden ya está facturada o cobrada en Caja/POS
+        if ($orden->sale_id) {
+            return [
+                'type' => 'error',
+                'message' => "⚠️ La orden **{$orden->numero_orden}** no puede eliminarse porque está vinculada a una venta o cobro registrado en caja (Ticket/Venta #{$orden->sale_id}).\n\n"
+                    . "💡 Para preservar la coherencia contable y de caja, primero gestiona o cancela el cobro asociado antes de eliminar la orden.",
+                'quick_actions' => [
+                    ['label' => "🔍 Ver Venta #{$orden->sale_id} ↗", 'url' => "/admin/pos?sale_id={$orden->sale_id}", 'type' => 'link'],
+                    ['label' => "🔍 Ver Orden {$orden->numero_orden} ↗", 'url' => "/admin/reparaciones/{$orden->id}", 'type' => 'link'],
+                ],
+            ];
+        }
+
+        $numeroOrden = $orden->numero_orden;
+        $clienteNombre = $orden->cliente?->nombre ?: ($orden->cliente_nombre ?: 'Cliente');
+        $clienteTelefono = $orden->cliente?->telefono ?: ($orden->cliente_telefono ?: '');
+        $equipo = trim(($orden->marca_nombre ?? '') . ' ' . ($orden->modelo_nombre ?? ''));
+        if ($equipo === '') {
+            $equipo = $orden->tipo_dispositivo ?? 'Dispositivo';
+        }
+        $falla = $orden->descripcion_falla ?: 'Revisión técnica';
+        $estadoPrevio = $orden->estado_orden ?? 'recibido';
+        $itemsCount = $orden->items()->count();
+
+        DB::transaction(function () use ($orden) {
+            // 1. Restaurar stock de repuestos del inventario si habían sido descontados
+            foreach ($orden->items as $item) {
+                if ($item->producto_id && $item->cantidad > 0) {
+                    $producto = Producto::withoutGlobalScope('multitenancy')->find($item->producto_id);
+                    if ($producto) {
+                        $producto->increment('stock', $item->cantidad);
+                    }
+                }
+            }
+
+            // 2. Eliminar relaciones dependientes
+            $orden->items()->delete();
+            $orden->historial()->delete();
+            $orden->fotos()->delete();
+
+            // 3. Eliminar la orden
+            $orden->delete();
+        });
+
+        $msg = "🗑️ **¡Orden de Servicio Eliminada Exitosamente!**\n\n"
+            . "• **Número de Orden:** **{$numeroOrden}**\n"
+            . "• **Cliente:** {$clienteNombre}" . ($clienteTelefono ? " (📞 {$clienteTelefono})" : "") . "\n"
+            . "• **Equipo:** {$equipo}\n"
+            . "• **Falla:** {$falla}\n"
+            . "• **Estado que tenía:** " . ucfirst(str_replace('_', ' ', $estadoPrevio)) . "\n\n"
+            . "✅ Se liberaron del sistema los registros, el historial" . ($itemsCount > 0 ? " y el stock de repuestos asignados" : "") . ".";
+
+        return [
+            'type' => 'repair_deleted',
+            'message' => $msg,
+            'deleted_order' => [
+                'numero_orden' => $numeroOrden,
+                'cliente' => $clienteNombre,
+                'equipo' => $equipo,
+            ],
+            'quick_actions' => [
+                [
+                    'label' => '📋 Ir a Lista de Órdenes ↗',
+                    'url' => '/admin/reparaciones',
+                    'type' => 'link',
+                ],
+                [
+                    'label' => '➕ Crear Nueva Orden',
+                    'text' => 'crear orden ',
+                ],
+                [
+                    'label' => '📊 Resumen del Taller',
+                    'action' => 'get_summary',
+                ],
+            ],
         ];
     }
 
@@ -2580,6 +2910,13 @@ class InternalAssistantService
                 'variant' => 'primary',
             ];
         }
+
+        $quickActions[] = [
+            'label' => '🗑️ Eliminar Orden',
+            'action' => 'delete_order',
+            'params' => ['order_number' => $orden->numero_orden],
+            'variant' => 'warning',
+        ];
 
         return [
             'type' => 'order_detail',
@@ -3104,16 +3441,21 @@ class InternalAssistantService
                 $nombre = $p->nombre_variante ?: trim(($p->marca?->nombre ?? '') . ' ' . ($p->modelo?->nombre_comercial ?? '') . ' ' . $p->sku);
                 $cat = $p->categoria?->nombre ?? 'Sin categoría';
 
+                $stockStatus = 'ok';
                 if ($p->usa_inventario) {
                     if ($p->stock <= 0) {
                         $stockBadge = "🔴 **Agotado (0 uds)**";
+                        $stockStatus = 'out_of_stock';
                     } elseif ($p->stock_minimo > 0 && $p->stock <= $p->stock_minimo) {
                         $stockBadge = "⚠️ **Stock bajo: {$p->stock} uds** (Mín: {$p->stock_minimo})";
+                        $stockStatus = 'low';
                     } else {
                         $stockBadge = "🟢 **Existencia: {$p->stock} uds**";
+                        $stockStatus = 'ok';
                     }
                 } else {
                     $stockBadge = "ℹ️ Sin control de existencias";
+                    $stockStatus = 'service';
                 }
 
                 $message .= "• **{$nombre}**\n";
@@ -3123,10 +3465,13 @@ class InternalAssistantService
                     'id' => $p->id,
                     'nombre' => $nombre,
                     'sku' => $p->sku,
-                    'stock' => $p->stock,
+                    'stock' => (float)$p->stock,
+                    'stock_minimo' => (float)$p->stock_minimo,
+                    'stock_status' => $stockStatus,
                     'tipo' => 'repuesto',
                     'categoria' => $cat,
                     'precio' => "{$currency} " . number_format($p->precio_venta, 2),
+                    'precio_num' => (float)$p->precio_venta,
                     'usa_inventario' => $p->usa_inventario,
                 ];
             }
@@ -3140,16 +3485,21 @@ class InternalAssistantService
                 $nombre = $p->nombre_variante ?: trim(($p->marca?->nombre ?? '') . ' ' . ($p->modelo?->nombre_comercial ?? '') . ' ' . $p->sku);
                 $cat = $p->categoria?->nombre ?? 'Sin categoría';
 
+                $stockStatus = 'ok';
                 if ($p->usa_inventario) {
                     if ($p->stock <= 0) {
                         $stockBadge = "🔴 **Agotado (0 uds)**";
+                        $stockStatus = 'out_of_stock';
                     } elseif ($p->stock_minimo > 0 && $p->stock <= $p->stock_minimo) {
                         $stockBadge = "⚠️ **Stock bajo: {$p->stock} uds** (Mín: {$p->stock_minimo})";
+                        $stockStatus = 'low';
                     } else {
                         $stockBadge = "🟢 **Existencia: {$p->stock} uds**";
+                        $stockStatus = 'ok';
                     }
                 } else {
                     $stockBadge = "ℹ️ Sin control de existencias";
+                    $stockStatus = 'service';
                 }
 
                 $message .= "• **{$nombre}**\n";
@@ -3159,10 +3509,13 @@ class InternalAssistantService
                     'id' => $p->id,
                     'nombre' => $nombre,
                     'sku' => $p->sku,
-                    'stock' => $p->stock,
+                    'stock' => (float)$p->stock,
+                    'stock_minimo' => (float)$p->stock_minimo,
+                    'stock_status' => $stockStatus,
                     'tipo' => 'producto',
                     'categoria' => $cat,
                     'precio' => "{$currency} " . number_format($p->precio_venta, 2),
+                    'precio_num' => (float)$p->precio_venta,
                     'usa_inventario' => $p->usa_inventario,
                 ];
             }
@@ -3182,9 +3535,13 @@ class InternalAssistantService
                     'id' => $s->id,
                     'nombre' => $s->nombre,
                     'codigo' => $s->codigo,
+                    'sku' => $s->codigo,
+                    'stock' => null,
+                    'stock_status' => 'service',
                     'tipo' => 'servicio',
                     'categoria' => $cat,
                     'precio' => "{$currency} " . number_format($s->precio, 2),
+                    'precio_num' => (float)$s->precio,
                     'usa_inventario' => false,
                 ];
             }
@@ -3231,6 +3588,212 @@ class InternalAssistantService
             'message' => trim($message),
             'items' => $productsData,
             'quick_actions' => $quickActions,
+        ];
+    }
+
+    public function handleQuickQuote(User $user, int $empresaId, ?int $sucursalId, string $query): array
+    {
+        $term = trim($query);
+        $currency = $this->getCurrencySymbol($empresaId);
+
+        // 1. Buscar repuesto físico
+        $prodQuery = Producto::withoutGlobalScope('multitenancy')
+            ->with(['categoria', 'marca', 'modelo'])
+            ->where('empresa_id', $empresaId)
+            ->where('estado', true);
+
+        if ($sucursalId) {
+            $prodQuery->where('sucursal_id', $sucursalId);
+        }
+
+        // Buscar primero repuestos específicos
+        $repuesto = (clone $prodQuery)
+            ->where('tipo_producto', 'repuesto')
+            ->where(function ($q) use ($term) {
+                $q->where('nombre_variante', 'like', "%{$term}%")
+                    ->orWhere('sku', 'like', "%{$term}%")
+                    ->orWhereHas('categoria', fn($c) => $c->where('nombre', 'like', "%{$term}%"))
+                    ->orWhereHas('marca', fn($m) => $m->where('nombre', 'like', "%{$term}%"))
+                    ->orWhereHas('modelo', fn($m) => $m->where('nombre_comercial', 'like', "%{$term}%"));
+            })
+            ->first();
+
+        // Si no encontró marcado como repuesto, buscar en productos generales
+        if (!$repuesto) {
+            $repuesto = (clone $prodQuery)
+                ->where(function ($q) use ($term) {
+                    $q->where('nombre_variante', 'like', "%{$term}%")
+                        ->orWhere('sku', 'like', "%{$term}%")
+                        ->orWhereHas('categoria', fn($c) => $c->where('nombre', 'like', "%{$term}%"));
+                })
+                ->first();
+        }
+
+        // 2. Buscar servicio técnico de mano de obra
+        $servQuery = Servicio::withoutGlobalScope('multitenancy')
+            ->with(['categoria', 'marca', 'modelo'])
+            ->where('empresa_id', $empresaId)
+            ->where('estado', true);
+
+        $serviceSearchTerm = $term;
+        if (preg_match('/\b(pantalla|display|modulo|cristal)\b/i', $term, $match)) {
+            $serviceSearchTerm = $match[1];
+        } elseif (preg_match('/\b(bateria|pila)\b/i', $term, $match)) {
+            $serviceSearchTerm = 'bateria';
+        } elseif (preg_match('/\b(carga|pin|puerto)\b/i', $term, $match)) {
+            $serviceSearchTerm = 'carga';
+        }
+
+        $servicio = (clone $servQuery)
+            ->where(function ($q) use ($serviceSearchTerm) {
+                $q->where('nombre', 'like', "%{$serviceSearchTerm}%")
+                    ->orWhere('descripcion', 'like', "%{$serviceSearchTerm}%");
+            })
+            ->first();
+
+        if (!$repuesto && !$servicio) {
+            return [
+                'type' => 'not_found',
+                'message' => "No encontré repuestos ni servicios para cotizar **\"{$term}\"**.\n\n" .
+                    "💡 *Prueba con: `cotizar pantalla iphone 13`, `presupuesto bateria samsung`, o `cotizar pin de carga`.*",
+                'quick_actions' => [
+                    ['label' => '🛠️ Ver Repuestos', 'text' => 'repuestos'],
+                    ['label' => '⚙️ Ver Servicios', 'text' => 'servicios'],
+                    ['label' => '📦 Ir a Inventario ↗', 'url' => '/admin/productos', 'type' => 'link'],
+                ],
+            ];
+        }
+
+        $costoRepuesto = $repuesto ? (float)$repuesto->precio_venta : 0.0;
+        $costoServicio = $servicio ? (float)$servicio->precio : 0.0;
+        $totalCotizacion = $costoRepuesto + $costoServicio;
+
+        $repuestoNombre = $repuesto ? ($repuesto->nombre_variante ?: $repuesto->sku) : 'No especificado (cliente trae pieza o no requerida)';
+        $repuestoStock = $repuesto ? ($repuesto->usa_inventario ? (int)$repuesto->stock : 'Sin control') : 0;
+        $servicioNombre = $servicio ? $servicio->nombre : 'Mano de obra estándar';
+
+        $stockBadge = '';
+        if ($repuesto && $repuesto->usa_inventario) {
+            if ($repuesto->stock <= 0) {
+                $stockBadge = "🔴 **Pieza agotada en bodega**";
+            } elseif ($repuesto->stock <= $repuesto->stock_minimo) {
+                $stockBadge = "⚠️ **Quedan {$repuesto->stock} uds (Stock bajo)**";
+            } else {
+                $stockBadge = "🟢 **Stock disponible: {$repuesto->stock} uds**";
+            }
+        }
+
+        $message = "💡 **Cotización / Presupuesto Rápido para \"{$term}\":**\n\n";
+        if ($repuesto) {
+            $message .= "🛠️ **Repuesto Físico:** {$repuestoNombre}\n";
+            $message .= "   {$stockBadge} | Precio: **{$currency} " . number_format($costoRepuesto, 2) . "**\n\n";
+        }
+        if ($servicio) {
+            $message .= "⚙️ **Mano de Obra:** {$servicioNombre}\n";
+            $message .= "   Tarifa: **{$currency} " . number_format($costoServicio, 2) . "**\n\n";
+        }
+        $message .= "━━━━━━━━━━━━━━━━━━━━━\n";
+        $message .= "💵 **TOTAL ESTIMADO AL CLIENTE:** **{$currency} " . number_format($totalCotizacion, 2) . "**\n\n";
+        $message .= "*(Puedes crear una orden técnica inmediatamente con este costo estimado)*";
+
+        $createRepairPrefill = "crear orden cliente [Nombre] telefono [Telefono] equipo {$term} falla reparacion costo " . number_format($totalCotizacion, 2, '.', '');
+
+        return [
+            'type' => 'quick_quote',
+            'message' => trim($message),
+            'quote' => [
+                'query' => $term,
+                'repuesto_nombre' => $repuestoNombre,
+                'repuesto_precio' => "{$currency} " . number_format($costoRepuesto, 2),
+                'repuesto_stock' => $repuestoStock,
+                'repuesto_stock_badge' => $stockBadge,
+                'servicio_nombre' => $servicioNombre,
+                'servicio_precio' => "{$currency} " . number_format($costoServicio, 2),
+                'total' => $totalCotizacion,
+                'total_formateado' => "{$currency} " . number_format($totalCotizacion, 2),
+            ],
+            'quick_actions' => [
+                [
+                    'label' => "➕ Crear Orden ({$currency}" . number_format($totalCotizacion, 2) . ")",
+                    'text' => $createRepairPrefill,
+                ],
+                [
+                    'label' => 'Ver Repuesto ↗',
+                    'url' => $repuesto ? "/admin/productos?search=" . urlencode($repuesto->sku) : '/admin/productos',
+                    'type' => 'link',
+                ],
+                [
+                    'label' => 'Ver Servicios ↗',
+                    'url' => '/admin/servicios',
+                    'type' => 'link',
+                ],
+            ],
+        ];
+    }
+
+    public function handleRepuestosAgotados(User $user, int $empresaId, ?int $sucursalId): array
+    {
+        $currency = $this->getCurrencySymbol($empresaId);
+        $query = Producto::withoutGlobalScope('multitenancy')
+            ->with(['categoria', 'marca', 'modelo'])
+            ->where('empresa_id', $empresaId)
+            ->where('estado', true)
+            ->where('tipo_producto', 'repuesto')
+            ->where('usa_inventario', true)
+            ->where('stock', '<=', 0);
+
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
+
+        $items = $query->limit(10)->get();
+        $totalAgotados = (clone $query)->count();
+
+        if ($items->isEmpty()) {
+            return [
+                'type' => 'success',
+                'message' => "🎉 **¡Excelente noticia!** No tienes repuestos de taller agotados en este momento. Todas las piezas cuentan con existencias registradas.",
+                'quick_actions' => [
+                    ['label' => '⚠️ Ver Stock Bajo', 'action' => 'get_stock_alerts'],
+                    ['label' => '📦 Ir a Inventario ↗', 'url' => '/admin/productos', 'type' => 'link'],
+                ],
+            ];
+        }
+
+        $message = "🔴 **Repuestos Agotados en Taller ({$totalAgotados} piezas sin stock):**\n";
+        $message .= "*Piezas que requieren reabastecimiento o pedido a proveedores:*\n\n";
+
+        $productsData = [];
+        foreach ($items as $p) {
+            $nombre = $p->nombre_variante ?: trim(($p->marca?->nombre ?? '') . ' ' . ($p->modelo?->nombre_comercial ?? '') . ' ' . $p->sku);
+            $cat = $p->categoria?->nombre ?? 'Sin categoría';
+
+            $message .= "• **{$nombre}** (`{$p->sku}`)\n";
+            $message .= "  📁 Categoría: *{$cat}* | 🔴 **Stock: 0** | Precio Venta: {$currency} " . number_format($p->precio_venta, 2) . "\n";
+
+            $productsData[] = [
+                'id' => $p->id,
+                'nombre' => $nombre,
+                'sku' => $p->sku,
+                'stock' => 0,
+                'stock_status' => 'out_of_stock',
+                'tipo' => 'repuesto',
+                'categoria' => $cat,
+                'precio' => "{$currency} " . number_format($p->precio_venta, 2),
+                'precio_num' => (float)$p->precio_venta,
+                'usa_inventario' => true,
+            ];
+        }
+
+        return [
+            'type' => 'stock_search',
+            'message' => trim($message),
+            'items' => $productsData,
+            'quick_actions' => [
+                ['label' => '📦 Directorio Proveedores', 'action' => 'list_proveedores'],
+                ['label' => '⚠️ Alertas Stock Bajo', 'action' => 'get_stock_alerts'],
+                ['label' => 'Ir a Inventario ↗', 'url' => '/admin/productos', 'type' => 'link'],
+            ],
         ];
     }
 
@@ -3606,9 +4169,14 @@ class InternalAssistantService
     // PARSERS DE FASE 4: POS, METAS, FONDO Y PROVEEDORES
     // ==========================================
 
+    protected function isTodaySalesQuery(string $normalized): bool
+    {
+        return (bool) preg_match('/^(?:ver\s+)?ventas(?:\s+de)?\s+hoy$|^cuanto\s+vendimos\s+hoy$|^facturacion\s+hoy$|^ingresos\s+hoy$|^ventas\s+del\s+dia$|^resumen\s+de\s+ventas\s+hoy$/i', $normalized);
+    }
+
     protected function isSalesGoalQuery(string $normalized): bool
     {
-        return (bool) preg_match('/^(?:ver\s+)?metas?(?:\s+de\s+ventas?)?$|^meta\s+del\s+mes$|^como\s+van\s+las\s+ventas$|^ventas\s+del\s+mes$|^ventas\s+de\s+hoy$|^progreso\s+de\s+ventas$/i', $normalized);
+        return (bool) preg_match('/^(?:ver\s+)?metas?(?:\s+de\s+ventas?)?$|^meta\s+del\s+mes$|^como\s+van\s+las\s+ventas$|^ventas\s+del\s+mes$|^progreso\s+de\s+ventas$/i', $normalized);
     }
 
     protected function isMonthlyFundQuery(string $normalized): bool
@@ -3720,7 +4288,23 @@ class InternalAssistantService
     protected function parseCreateRepairCommand(string $raw, string $normalized): ?array
     {
         $raw = trim($raw);
-        if (!preg_match('/^(?:crear|nueva|registrar)\s+(?:reparacion|orden)(?:\s+de\s+reparacion)?\s+(.+)$/i', $raw, $m)
+        $normalized = trim($normalized);
+
+        // Si escribe sólo "crear orden", "nueva orden", "registrar reparacion", etc. sin datos:
+        if (preg_match('/^(?:crear|nueva|registrar)\s+(?:reparacion|orden)(?:\s+de\s+(?:servicio|reparacion))?$/i', $raw)
+            || preg_match('/^recibir\s+equipo$/i', $raw)
+        ) {
+            return [
+                'missing_required' => true,
+                'cliente' => null,
+                'telefono' => null,
+                'equipo' => null,
+                'falla' => null,
+                'costo' => 0.0,
+            ];
+        }
+
+        if (!preg_match('/^(?:crear|nueva|registrar)\s+(?:reparacion|orden)(?:\s+de\s+(?:servicio|reparacion))?\s+(.+)$/i', $raw, $m)
             && !preg_match('/^recibir\s+equipo\s+(.+)$/i', $raw, $m)
         ) {
             return null;
@@ -3744,26 +4328,32 @@ class InternalAssistantService
             $rest = substr($rest, 0, -strlen($pm[0]));
         }
 
-        // 2. Teléfono
-        if (preg_match('/(?:telefono|celular|tlf|ws|whatsapp)\s*[:=]?\s*([+\d\s\-]{7,})/i', $rest, $tm)) {
+        // 2. Teléfono explícito (con palabra clave)
+        if (preg_match('/(?:telefono|celular|tlf|tel|ws|whatsapp|contacto)\s*[:=]?\s*([+\d\s\-()]{7,})/i', $rest, $tm)) {
             $data['telefono'] = trim($tm[1]);
             $rest = str_replace($tm[0], '', $rest);
         }
 
         // 3. Falla / Daño / Motivo
-        if (preg_match('/(?:falla|problema|dano|daño|motivo)\s*[:=]?\s*([^,;]+?)(?=\s+(?:costo|precio|estimado|valor|telefono|cliente|equipo|marca|modelo)|$)/i', $rest, $fm)) {
+        if (preg_match('/(?:falla|problema|dano|daño|motivo|detalle)\s*[:=]?\s*([^,;]+?)(?=\s+(?:costo|precio|estimado|valor|telefono|celular|tlf|tel|ws|whatsapp|contacto|cliente|equipo|marca|modelo)|$)/i', $rest, $fm)) {
             $data['falla'] = trim($fm[1]);
             $rest = str_replace($fm[0], '', $rest);
         }
 
         // 4. Cliente explícito
-        if (preg_match('/(?:cliente)\s*[:=]?\s*([^,;]+?)(?=\s+(?:equipo|marca|modelo|dispositivo|con|falla|costo)|$)/i', $rest, $cm)) {
+        if (preg_match('/(?:cliente|usuario|nombre)\s*[:=]?\s*([^,;]+?)(?=\s+(?:telefono|celular|tlf|tel|ws|whatsapp|contacto|equipo|marca|modelo|dispositivo|con|falla|costo)|$)/i', $rest, $cm)) {
             $data['cliente'] = trim($cm[1]);
             $rest = str_replace($cm[0], '', $rest);
         }
 
-        // 5. Equipo explícito
-        if (preg_match('/(?:equipo|dispositivo|marca|modelo)\s*[:=]?\s*([^,;]+?)(?=\s+(?:falla|problema|costo|precio|telefono)|$)/i', $rest, $em)) {
+        // 5. Teléfono suelto (si aún no se detectó y hay un bloque numérico de 7+ dígitos)
+        if (!$data['telefono'] && preg_match('/\b((?:\+?\d{1,3}[\s-]?)?\(?\d{3,4}\)?[\s-]?\d{3}[\s-]?\d{3,4}|\d{7,15})\b/', $rest, $tm)) {
+            $data['telefono'] = trim($tm[1]);
+            $rest = str_replace($tm[0], '', $rest);
+        }
+
+        // 6. Equipo explícito
+        if (preg_match('/(?:equipo|dispositivo|marca|modelo)\s*[:=]?\s*([^,;]+?)(?=\s+(?:falla|problema|costo|precio|telefono|celular|tlf|tel|ws|whatsapp|contacto)|$)/i', $rest, $em)) {
             $data['equipo'] = trim($em[1]);
             $rest = str_replace($em[0], '', $rest);
         } elseif (preg_match('/(?:equipo|dispositivo|marca|modelo)\s*[:=]?\s*(.+)$/i', $rest, $em)) {
@@ -3791,8 +4381,36 @@ class InternalAssistantService
             }
         }
 
-        if ($data['cliente']) {
-            return $data;
+        return $data;
+    }
+
+    protected function parseDeleteOrderCommand(string $raw, string $normalized): ?array
+    {
+        $raw = trim($raw);
+        $normalized = trim($normalized);
+
+        // Caso sin número o código: "eliminar orden", "borrar orden", "eliminar orden de servicio", "borrar reparacion"
+        if (preg_match('/^(?:eliminar|borrar|suprimir|remover)\s+(?:la\s+)?(?:orden(?:\s+de\s+(?:servicio|reparacion))?|reparacion|ticket)\s*$/i', $normalized)) {
+            return [
+                'missing_order' => true,
+                'order_number' => null,
+            ];
+        }
+
+        // Caso con número o folio: "eliminar orden 1", "borrar orden REP-000001", "eliminar orden #5", "borrar reparacion 2", "eliminar orden de servicio 3"
+        if (preg_match('/^(?:eliminar|borrar|suprimir|remover)\s+(?:la\s+)?(?:orden(?:\s+de\s+(?:servicio|reparacion))?|reparacion|ticket)\s+#?((?:rep[-_ ]*)?\d+|rep[-_]\w+)\b/i', $raw, $m)) {
+            return [
+                'missing_order' => false,
+                'order_number' => trim($m[1]),
+            ];
+        }
+
+        // Variación invertida: "orden 1 eliminar", "orden #1 borrar", "reparacion REP-000001 borrar"
+        if (preg_match('/^(?:orden(?:\s+de\s+(?:servicio|reparacion))?|reparacion|ticket)\s+#?((?:rep[-_ ]*)?\d+|rep[-_]\w+)\s+(?:eliminar|borrar|suprimir|remover)$/i', $raw, $m)) {
+            return [
+                'missing_order' => false,
+                'order_number' => trim($m[1]),
+            ];
         }
 
         return null;

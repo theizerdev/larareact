@@ -28,7 +28,10 @@ export const COMMAND_CATEGORIES: CommandCategory[] = [
 
 export const ASSISTANT_COMMANDS: AssistantCommand[] = [
     // Taller
+    { category: 'taller', label: 'Crear orden', text: 'crear orden ', prefill: true, hint: 'crear orden cliente Juan Perez telefono 04141234567 equipo iPhone 11 falla pantalla costo 45' },
+    { category: 'taller', label: 'Eliminar orden', text: 'eliminar orden ', prefill: true, hint: 'eliminar orden 1 · cancela y elimina una orden de servicio' },
     { category: 'taller', label: 'Resumen hoy', text: 'resumen hoy', hint: 'Órdenes del taller del día' },
+    { category: 'taller', label: 'Cotizar reparación', text: 'cotizar ', prefill: true, hint: 'cotizar pantalla iphone 13 · repuesto y mano de obra' },
     { category: 'taller', label: 'Consultar orden', text: 'orden ', prefill: true, hint: 'orden 1 · datos y estado de una orden' },
     { category: 'taller', label: 'Cambiar estado', text: 'estado ', prefill: true, hint: 'estado 1 listo · actualiza una orden' },
     { category: 'taller', label: 'Notificar WhatsApp', text: 'whatsapp ', prefill: true, hint: 'whatsapp 1 · avisa al cliente con tracking' },
@@ -42,6 +45,7 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
     // Inventario
     { category: 'inventario', label: 'Consultar existencias', text: 'stock ', prefill: true, hint: 'stock Pantalla · existencias, categoría y tipo' },
     { category: 'inventario', label: 'Ver repuestos', text: 'repuestos ', prefill: true, hint: 'repuestos Bateria · piezas físicas para taller' },
+    { category: 'inventario', label: 'Repuestos agotados', text: 'repuestos agotados', hint: 'Piezas de taller sin stock físico' },
     { category: 'inventario', label: 'Por categoría', text: 'categoria ', prefill: true, hint: 'categoria Display · artículos de una categoría' },
     { category: 'inventario', label: 'Ver Kardex', text: 'ver kardex', hint: 'Últimos movimientos de inventario' },
     { category: 'inventario', label: 'Kardex de producto', text: 'kardex ', prefill: true, hint: 'kardex Pantalla · movimientos de un producto' },
@@ -52,6 +56,7 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
     { category: 'inventario', label: 'Stock bajo', text: 'alertas stock', hint: 'Repuestos con existencias bajas' },
 
     // Finanzas
+    { category: 'finanzas', label: 'Ventas de hoy', text: 'ventas hoy', hint: 'Facturación, tickets y métodos de pago del día' },
     { category: 'finanzas', label: 'Metas de ventas', text: 'meta de ventas', hint: 'Progreso mensual y diario' },
     { category: 'finanzas', label: 'Fondo de mes', text: 'fondo de mes', hint: 'Balance de cajas y compras del mes' },
     { category: 'finanzas', label: 'Proveedores', text: 'ver proveedores', hint: 'Directorio de proveedores' },
