@@ -1,4 +1,5 @@
 import { usePage } from '@inertiajs/react';
+import ClientLogo from '@/components/client-logo';
 
 export default function AppLogo() {
     const { auth } = usePage().props as any;
@@ -16,20 +17,11 @@ export default function AppLogo() {
                     className="size-8 object-contain"
                 />
             </div>
-            <div className="ml-2 grid flex-1 text-left text-sm">
-                <span className="mb-0.5 truncate leading-tight font-bold text-black dark:text-white">
-                    {companyName ? (
-                        companyName
-                    ) : (
-                        <>
-                            Hosh
-                            <span className="bg-gradient-to-r from-[#3B4FE0] to-[#7C3AED] bg-clip-text text-transparent">
-                                ō
-                            </span>
-                        </>
-                    )}
-                </span>
-            </div>
+            <span className="mx-2 h-6 w-px bg-border" />
+            <ClientLogo
+                className="h-7 max-w-28 w-auto object-contain"
+                textClassName="truncate text-sm font-bold text-black dark:text-white"
+            />
         </>
     );
 }

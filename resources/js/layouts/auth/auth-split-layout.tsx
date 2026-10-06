@@ -1,4 +1,5 @@
-import { Link, usePage } from '@inertiajs/react';
+import ClientLogo from '@/components/client-logo';
+import { Link } from '@inertiajs/react';
 import { ShieldCheck } from 'lucide-react';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
@@ -8,7 +9,6 @@ export default function AuthSplitLayout({
     title,
     description,
 }: AuthLayoutProps) {
-    const { name } = usePage().props;
 
     return (
         <div className="relative grid min-h-svh w-full lg:grid-cols-2">
@@ -31,10 +31,15 @@ export default function AuthSplitLayout({
                         alt="Hoshō"
                         className="h-9 w-auto object-contain"
                     />
+                    <span className="mx-4 h-8 w-px bg-white/40" />
+                    <ClientLogo
+                        className="h-9 w-auto object-contain"
+                        onDarkBackground
+                    />
                 </Link>
 
                 <p className="relative z-10 text-sm text-white/70 font-medium drop-shadow-sm">
-                    © {new Date().getFullYear()} {name}. Todos los derechos
+                    © {new Date().getFullYear()} Hoshō. Todos los derechos
                     reservados.
                 </p>
             </div>
@@ -51,6 +56,8 @@ export default function AuthSplitLayout({
                             alt="Hoshō"
                             className="h-12 w-auto object-contain"
                         />
+                        <span className="mx-4 h-10 w-px bg-border" />
+                        <ClientLogo className="h-12 w-auto object-contain" />
                     </Link>
 
                     <div className="mb-8 space-y-2 text-center">
