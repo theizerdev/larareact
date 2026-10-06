@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::quickStock
-* @see app/Http/Controllers/Admin/ProductoController.php:264
+* @see app/Http/Controllers/Admin/ProductoController.php:282
 * @route '/admin/productos/{producto}/quick-stock'
 */
 export const quickStock = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ quickStock.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::quickStock
-* @see app/Http/Controllers/Admin/ProductoController.php:264
+* @see app/Http/Controllers/Admin/ProductoController.php:282
 * @route '/admin/productos/{producto}/quick-stock'
 */
 quickStock.url = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -49,7 +49,7 @@ quickStock.url = (args: { producto: number | { id: number } } | [producto: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::quickStock
-* @see app/Http/Controllers/Admin/ProductoController.php:264
+* @see app/Http/Controllers/Admin/ProductoController.php:282
 * @route '/admin/productos/{producto}/quick-stock'
 */
 quickStock.post = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -103,7 +103,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::store
-* @see app/Http/Controllers/Admin/ProductoController.php:163
+* @see app/Http/Controllers/Admin/ProductoController.php:181
 * @route '/admin/productos'
 */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -118,7 +118,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::store
-* @see app/Http/Controllers/Admin/ProductoController.php:163
+* @see app/Http/Controllers/Admin/ProductoController.php:181
 * @route '/admin/productos'
 */
 store.url = (options?: RouteQueryOptions) => {
@@ -127,7 +127,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::store
-* @see app/Http/Controllers/Admin/ProductoController.php:163
+* @see app/Http/Controllers/Admin/ProductoController.php:181
 * @route '/admin/productos'
 */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -199,7 +199,7 @@ show.head = (args: { producto: string | number } | [producto: string | number ] 
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::update
-* @see app/Http/Controllers/Admin/ProductoController.php:207
+* @see app/Http/Controllers/Admin/ProductoController.php:225
 * @route '/admin/productos/{producto}'
 */
 export const update = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -214,7 +214,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::update
-* @see app/Http/Controllers/Admin/ProductoController.php:207
+* @see app/Http/Controllers/Admin/ProductoController.php:225
 * @route '/admin/productos/{producto}'
 */
 update.url = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -247,7 +247,7 @@ update.url = (args: { producto: number | { id: number } } | [producto: number | 
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::update
-* @see app/Http/Controllers/Admin/ProductoController.php:207
+* @see app/Http/Controllers/Admin/ProductoController.php:225
 * @route '/admin/productos/{producto}'
 */
 update.put = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -257,7 +257,7 @@ update.put = (args: { producto: number | { id: number } } | [producto: number | 
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::update
-* @see app/Http/Controllers/Admin/ProductoController.php:207
+* @see app/Http/Controllers/Admin/ProductoController.php:225
 * @route '/admin/productos/{producto}'
 */
 update.patch = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -267,7 +267,7 @@ update.patch = (args: { producto: number | { id: number } } | [producto: number 
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::destroy
-* @see app/Http/Controllers/Admin/ProductoController.php:251
+* @see app/Http/Controllers/Admin/ProductoController.php:269
 * @route '/admin/productos/{producto}'
 */
 export const destroy = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -282,7 +282,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::destroy
-* @see app/Http/Controllers/Admin/ProductoController.php:251
+* @see app/Http/Controllers/Admin/ProductoController.php:269
 * @route '/admin/productos/{producto}'
 */
 destroy.url = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -315,7 +315,7 @@ destroy.url = (args: { producto: number | { id: number } } | [producto: number |
 
 /**
 * @see \App\Http\Controllers\Admin\ProductoController::destroy
-* @see app/Http/Controllers/Admin/ProductoController.php:251
+* @see app/Http/Controllers/Admin/ProductoController.php:269
 * @route '/admin/productos/{producto}'
 */
 destroy.delete = (args: { producto: number | { id: number } } | [producto: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({

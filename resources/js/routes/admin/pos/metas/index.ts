@@ -45,7 +45,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\GoalController::store
-* @see app/Http/Controllers/Admin/PointOfSale/GoalController.php:183
+* @see app/Http/Controllers/Admin/PointOfSale/GoalController.php:221
 * @route '/admin/pos/metas'
 */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -60,7 +60,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\GoalController::store
-* @see app/Http/Controllers/Admin/PointOfSale/GoalController.php:183
+* @see app/Http/Controllers/Admin/PointOfSale/GoalController.php:221
 * @route '/admin/pos/metas'
 */
 store.url = (options?: RouteQueryOptions) => {
@@ -69,7 +69,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\GoalController::store
-* @see app/Http/Controllers/Admin/PointOfSale/GoalController.php:183
+* @see app/Http/Controllers/Admin/PointOfSale/GoalController.php:221
 * @route '/admin/pos/metas'
 */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({

@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../wayfinder'
 /**
-* @see routes/larareact-settings.php:30
+* @see [serialized-closure]:2
 * @route '/.well-known/passkey-endpoints'
 */
 export const passkeys = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -14,7 +14,7 @@ passkeys.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see routes/larareact-settings.php:30
+* @see [serialized-closure]:2
 * @route '/.well-known/passkey-endpoints'
 */
 passkeys.url = (options?: RouteQueryOptions) => {
@@ -22,7 +22,7 @@ passkeys.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see routes/larareact-settings.php:30
+* @see [serialized-closure]:2
 * @route '/.well-known/passkey-endpoints'
 */
 passkeys.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -31,7 +31,7 @@ passkeys.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 
 /**
-* @see routes/larareact-settings.php:30
+* @see [serialized-closure]:2
 * @route '/.well-known/passkey-endpoints'
 */
 passkeys.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({

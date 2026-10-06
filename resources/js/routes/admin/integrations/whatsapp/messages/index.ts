@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::retry
-* @see app/Http/Controllers/Admin/IntegrationController.php:1007
+* @see app/Http/Controllers/Admin/IntegrationController.php:1083
 * @route '/admin/integrations/whatsapp/messages/{id}/retry'
 */
 export const retry = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ retry.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::retry
-* @see app/Http/Controllers/Admin/IntegrationController.php:1007
+* @see app/Http/Controllers/Admin/IntegrationController.php:1083
 * @route '/admin/integrations/whatsapp/messages/{id}/retry'
 */
 retry.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -43,7 +43,7 @@ retry.url = (args: { id: string | number } | [id: string | number ] | string | n
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::retry
-* @see app/Http/Controllers/Admin/IntegrationController.php:1007
+* @see app/Http/Controllers/Admin/IntegrationController.php:1083
 * @route '/admin/integrations/whatsapp/messages/{id}/retry'
 */
 retry.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({

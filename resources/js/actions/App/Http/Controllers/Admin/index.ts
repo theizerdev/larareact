@@ -23,6 +23,7 @@ import MonthlyFundController from './MonthlyFundController'
 import StockAlertController from './StockAlertController'
 import ProveedorController from './ProveedorController'
 import QueueMonitoringController from './QueueMonitoringController'
+import ReparacionPreservicioChecklistController from './ReparacionPreservicioChecklistController'
 import ReparacionChecklistController from './ReparacionChecklistController'
 import RoleController from './RoleController'
 import ServerMonitoringController from './ServerMonitoringController'
@@ -60,6 +61,7 @@ const Admin = {
     StockAlertController: Object.assign(StockAlertController, StockAlertController),
     ProveedorController: Object.assign(ProveedorController, ProveedorController),
     QueueMonitoringController: Object.assign(QueueMonitoringController, QueueMonitoringController),
+    ReparacionPreservicioChecklistController: Object.assign(ReparacionPreservicioChecklistController, ReparacionPreservicioChecklistController),
     ReparacionChecklistController: Object.assign(ReparacionChecklistController, ReparacionChecklistController),
     RoleController: Object.assign(RoleController, RoleController),
     ServerMonitoringController: Object.assign(ServerMonitoringController, ServerMonitoringController),

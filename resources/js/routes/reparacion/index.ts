@@ -3,7 +3,7 @@ import empresa from './empresa'
 import consultar6b5ae4 from './consultar'
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparacion/consultar/{numero_orden?}'
 */
 export const consultar = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -18,7 +18,7 @@ consultar.definition = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparacion/consultar/{numero_orden?}'
 */
 consultar.url = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -49,7 +49,7 @@ consultar.url = (args?: { numero_orden?: string | number } | [numero_orden: stri
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparacion/consultar/{numero_orden?}'
 */
 consultar.get = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -59,7 +59,7 @@ consultar.get = (args?: { numero_orden?: string | number } | [numero_orden: stri
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparacion/consultar/{numero_orden?}'
 */
 consultar.head = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({

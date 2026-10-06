@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\SuperAdminDashboardController::index
-* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:18
+* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:19
 * @route '/superadministrador/dashboard0'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SuperAdminDashboardController::index
-* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:18
+* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:19
 * @route '/superadministrador/dashboard0'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\SuperAdminDashboardController::index
-* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:18
+* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:19
 * @route '/superadministrador/dashboard0'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\SuperAdminDashboardController::index
-* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:18
+* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:19
 * @route '/superadministrador/dashboard0'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({

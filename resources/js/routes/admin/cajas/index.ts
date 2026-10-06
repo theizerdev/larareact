@@ -191,7 +191,7 @@ show.head = (args: { caja: number | { id: number } } | [caja: number | { id: num
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::movement
-* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:167
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:162
 * @route '/admin/cajas/{caja}/movement'
 */
 export const movement = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -206,7 +206,7 @@ movement.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::movement
-* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:167
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:162
 * @route '/admin/cajas/{caja}/movement'
 */
 movement.url = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -239,7 +239,7 @@ movement.url = (args: { caja: number | { id: number } } | [caja: number | { id: 
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::movement
-* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:167
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:162
 * @route '/admin/cajas/{caja}/movement'
 */
 movement.post = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -249,7 +249,7 @@ movement.post = (args: { caja: number | { id: number } } | [caja: number | { id:
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::close
-* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:200
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:199
 * @route '/admin/cajas/{caja}/close'
 */
 export const close = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -264,7 +264,7 @@ close.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::close
-* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:200
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:199
 * @route '/admin/cajas/{caja}/close'
 */
 close.url = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -297,7 +297,7 @@ close.url = (args: { caja: number | { id: number } } | [caja: number | { id: num
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::close
-* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:200
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:199
 * @route '/admin/cajas/{caja}/close'
 */
 close.post = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({

@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::index
-* @see app/Http/Controllers/Admin/TestimonioController.php:15
+* @see app/Http/Controllers/Admin/TestimonioController.php:28
 * @route '/admin/testimonios'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::index
-* @see app/Http/Controllers/Admin/TestimonioController.php:15
+* @see app/Http/Controllers/Admin/TestimonioController.php:28
 * @route '/admin/testimonios'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::index
-* @see app/Http/Controllers/Admin/TestimonioController.php:15
+* @see app/Http/Controllers/Admin/TestimonioController.php:28
 * @route '/admin/testimonios'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::index
-* @see app/Http/Controllers/Admin/TestimonioController.php:15
+* @see app/Http/Controllers/Admin/TestimonioController.php:28
 * @route '/admin/testimonios'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -45,7 +45,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::store
-* @see app/Http/Controllers/Admin/TestimonioController.php:29
+* @see app/Http/Controllers/Admin/TestimonioController.php:44
 * @route '/admin/testimonios'
 */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -60,7 +60,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::store
-* @see app/Http/Controllers/Admin/TestimonioController.php:29
+* @see app/Http/Controllers/Admin/TestimonioController.php:44
 * @route '/admin/testimonios'
 */
 store.url = (options?: RouteQueryOptions) => {
@@ -69,7 +69,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::store
-* @see app/Http/Controllers/Admin/TestimonioController.php:29
+* @see app/Http/Controllers/Admin/TestimonioController.php:44
 * @route '/admin/testimonios'
 */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -79,7 +79,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::update
-* @see app/Http/Controllers/Admin/TestimonioController.php:63
+* @see app/Http/Controllers/Admin/TestimonioController.php:80
 * @route '/admin/testimonios/{testimonio}'
 */
 export const update = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -94,7 +94,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::update
-* @see app/Http/Controllers/Admin/TestimonioController.php:63
+* @see app/Http/Controllers/Admin/TestimonioController.php:80
 * @route '/admin/testimonios/{testimonio}'
 */
 update.url = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -127,7 +127,7 @@ update.url = (args: { testimonio: number | { id: number } } | [testimonio: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::update
-* @see app/Http/Controllers/Admin/TestimonioController.php:63
+* @see app/Http/Controllers/Admin/TestimonioController.php:80
 * @route '/admin/testimonios/{testimonio}'
 */
 update.put = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -137,7 +137,7 @@ update.put = (args: { testimonio: number | { id: number } } | [testimonio: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::update
-* @see app/Http/Controllers/Admin/TestimonioController.php:63
+* @see app/Http/Controllers/Admin/TestimonioController.php:80
 * @route '/admin/testimonios/{testimonio}'
 */
 update.patch = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -147,7 +147,7 @@ update.patch = (args: { testimonio: number | { id: number } } | [testimonio: num
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::destroy
-* @see app/Http/Controllers/Admin/TestimonioController.php:110
+* @see app/Http/Controllers/Admin/TestimonioController.php:133
 * @route '/admin/testimonios/{testimonio}'
 */
 export const destroy = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -162,7 +162,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::destroy
-* @see app/Http/Controllers/Admin/TestimonioController.php:110
+* @see app/Http/Controllers/Admin/TestimonioController.php:133
 * @route '/admin/testimonios/{testimonio}'
 */
 destroy.url = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -195,7 +195,7 @@ destroy.url = (args: { testimonio: number | { id: number } } | [testimonio: numb
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::destroy
-* @see app/Http/Controllers/Admin/TestimonioController.php:110
+* @see app/Http/Controllers/Admin/TestimonioController.php:133
 * @route '/admin/testimonios/{testimonio}'
 */
 destroy.delete = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -205,7 +205,7 @@ destroy.delete = (args: { testimonio: number | { id: number } } | [testimonio: n
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::toggleStatus
-* @see app/Http/Controllers/Admin/TestimonioController.php:86
+* @see app/Http/Controllers/Admin/TestimonioController.php:105
 * @route '/admin/testimonios/{testimonio}/toggle-status'
 */
 export const toggleStatus = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -220,7 +220,7 @@ toggleStatus.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::toggleStatus
-* @see app/Http/Controllers/Admin/TestimonioController.php:86
+* @see app/Http/Controllers/Admin/TestimonioController.php:105
 * @route '/admin/testimonios/{testimonio}/toggle-status'
 */
 toggleStatus.url = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -253,7 +253,7 @@ toggleStatus.url = (args: { testimonio: number | { id: number } } | [testimonio:
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::toggleStatus
-* @see app/Http/Controllers/Admin/TestimonioController.php:86
+* @see app/Http/Controllers/Admin/TestimonioController.php:105
 * @route '/admin/testimonios/{testimonio}/toggle-status'
 */
 toggleStatus.patch = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -263,7 +263,7 @@ toggleStatus.patch = (args: { testimonio: number | { id: number } } | [testimoni
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::toggleFeatured
-* @see app/Http/Controllers/Admin/TestimonioController.php:98
+* @see app/Http/Controllers/Admin/TestimonioController.php:119
 * @route '/admin/testimonios/{testimonio}/toggle-featured'
 */
 export const toggleFeatured = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -278,7 +278,7 @@ toggleFeatured.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::toggleFeatured
-* @see app/Http/Controllers/Admin/TestimonioController.php:98
+* @see app/Http/Controllers/Admin/TestimonioController.php:119
 * @route '/admin/testimonios/{testimonio}/toggle-featured'
 */
 toggleFeatured.url = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -311,7 +311,7 @@ toggleFeatured.url = (args: { testimonio: number | { id: number } } | [testimoni
 
 /**
 * @see \App\Http\Controllers\Admin\TestimonioController::toggleFeatured
-* @see app/Http/Controllers/Admin/TestimonioController.php:98
+* @see app/Http/Controllers/Admin/TestimonioController.php:119
 * @route '/admin/testimonios/{testimonio}/toggle-featured'
 */
 toggleFeatured.patch = (args: { testimonio: number | { id: number } } | [testimonio: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({

@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
-* @see app/Http/Controllers/Admin/IntegrationController.php:77
+* @see app/Http/Controllers/Admin/IntegrationController.php:83
 * @route '/admin/integrations/map'
 */
 export const map = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ map.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
-* @see app/Http/Controllers/Admin/IntegrationController.php:77
+* @see app/Http/Controllers/Admin/IntegrationController.php:83
 * @route '/admin/integrations/map'
 */
 map.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ map.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
-* @see app/Http/Controllers/Admin/IntegrationController.php:77
+* @see app/Http/Controllers/Admin/IntegrationController.php:83
 * @route '/admin/integrations/map'
 */
 map.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ map.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::map
-* @see app/Http/Controllers/Admin/IntegrationController.php:77
+* @see app/Http/Controllers/Admin/IntegrationController.php:83
 * @route '/admin/integrations/map'
 */
 map.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -45,7 +45,7 @@ map.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
-* @see app/Http/Controllers/Admin/IntegrationController.php:99
+* @see app/Http/Controllers/Admin/IntegrationController.php:105
 * @route '/admin/integrations/map/navigation'
 */
 export const navigation = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -60,7 +60,7 @@ navigation.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
-* @see app/Http/Controllers/Admin/IntegrationController.php:99
+* @see app/Http/Controllers/Admin/IntegrationController.php:105
 * @route '/admin/integrations/map/navigation'
 */
 navigation.url = (options?: RouteQueryOptions) => {
@@ -69,7 +69,7 @@ navigation.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
-* @see app/Http/Controllers/Admin/IntegrationController.php:99
+* @see app/Http/Controllers/Admin/IntegrationController.php:105
 * @route '/admin/integrations/map/navigation'
 */
 navigation.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -79,7 +79,7 @@ navigation.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::navigation
-* @see app/Http/Controllers/Admin/IntegrationController.php:99
+* @see app/Http/Controllers/Admin/IntegrationController.php:105
 * @route '/admin/integrations/map/navigation'
 */
 navigation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -89,7 +89,7 @@ navigation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:121
+* @see app/Http/Controllers/Admin/IntegrationController.php:127
 * @route '/admin/integrations/mapbox'
 */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -104,7 +104,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:121
+* @see app/Http/Controllers/Admin/IntegrationController.php:127
 * @route '/admin/integrations/mapbox'
 */
 update.url = (options?: RouteQueryOptions) => {
@@ -113,7 +113,7 @@ update.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:121
+* @see app/Http/Controllers/Admin/IntegrationController.php:127
 * @route '/admin/integrations/mapbox'
 */
 update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({

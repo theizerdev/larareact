@@ -279,7 +279,7 @@ mayor.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::reportes
-* @see app/Http/Controllers/Admin/ContabilidadController.php:267
+* @see app/Http/Controllers/Admin/ContabilidadController.php:268
 * @route '/admin/contabilidad/reportes'
 */
 export const reportes = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -294,7 +294,7 @@ reportes.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::reportes
-* @see app/Http/Controllers/Admin/ContabilidadController.php:267
+* @see app/Http/Controllers/Admin/ContabilidadController.php:268
 * @route '/admin/contabilidad/reportes'
 */
 reportes.url = (options?: RouteQueryOptions) => {
@@ -303,7 +303,7 @@ reportes.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::reportes
-* @see app/Http/Controllers/Admin/ContabilidadController.php:267
+* @see app/Http/Controllers/Admin/ContabilidadController.php:268
 * @route '/admin/contabilidad/reportes'
 */
 reportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -313,7 +313,7 @@ reportes.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::reportes
-* @see app/Http/Controllers/Admin/ContabilidadController.php:267
+* @see app/Http/Controllers/Admin/ContabilidadController.php:268
 * @route '/admin/contabilidad/reportes'
 */
 reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -323,7 +323,7 @@ reportes.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::impuestos
-* @see app/Http/Controllers/Admin/ContabilidadController.php:366
+* @see app/Http/Controllers/Admin/ContabilidadController.php:369
 * @route '/admin/contabilidad/impuestos'
 */
 export const impuestos = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -338,7 +338,7 @@ impuestos.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::impuestos
-* @see app/Http/Controllers/Admin/ContabilidadController.php:366
+* @see app/Http/Controllers/Admin/ContabilidadController.php:369
 * @route '/admin/contabilidad/impuestos'
 */
 impuestos.url = (options?: RouteQueryOptions) => {
@@ -347,7 +347,7 @@ impuestos.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::impuestos
-* @see app/Http/Controllers/Admin/ContabilidadController.php:366
+* @see app/Http/Controllers/Admin/ContabilidadController.php:369
 * @route '/admin/contabilidad/impuestos'
 */
 impuestos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -357,7 +357,7 @@ impuestos.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::impuestos
-* @see app/Http/Controllers/Admin/ContabilidadController.php:366
+* @see app/Http/Controllers/Admin/ContabilidadController.php:369
 * @route '/admin/contabilidad/impuestos'
 */
 impuestos.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -401,7 +401,7 @@ cierreEjercicio.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =>
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::exportarExcelCompleto
-* @see app/Http/Controllers/Admin/ContabilidadController.php:492
+* @see app/Http/Controllers/Admin/ContabilidadController.php:497
 * @route '/admin/contabilidad/exportar-excel'
 */
 export const exportarExcelCompleto = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -416,7 +416,7 @@ exportarExcelCompleto.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::exportarExcelCompleto
-* @see app/Http/Controllers/Admin/ContabilidadController.php:492
+* @see app/Http/Controllers/Admin/ContabilidadController.php:497
 * @route '/admin/contabilidad/exportar-excel'
 */
 exportarExcelCompleto.url = (options?: RouteQueryOptions) => {
@@ -425,7 +425,7 @@ exportarExcelCompleto.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::exportarExcelCompleto
-* @see app/Http/Controllers/Admin/ContabilidadController.php:492
+* @see app/Http/Controllers/Admin/ContabilidadController.php:497
 * @route '/admin/contabilidad/exportar-excel'
 */
 exportarExcelCompleto.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -435,7 +435,7 @@ exportarExcelCompleto.get = (options?: RouteQueryOptions): RouteDefinition<'get'
 
 /**
 * @see \App\Http\Controllers\Admin\ContabilidadController::exportarExcelCompleto
-* @see app/Http/Controllers/Admin/ContabilidadController.php:492
+* @see app/Http/Controllers/Admin/ContabilidadController.php:497
 * @route '/admin/contabilidad/exportar-excel'
 */
 exportarExcelCompleto.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({

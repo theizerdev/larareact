@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::store
-* @see app/Http/Controllers/Admin/IntegrationController.php:1037
+* @see app/Http/Controllers/Admin/IntegrationController.php:1113
 * @route '/admin/integrations/whatsapp/templates'
 */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::store
-* @see app/Http/Controllers/Admin/IntegrationController.php:1037
+* @see app/Http/Controllers/Admin/IntegrationController.php:1113
 * @route '/admin/integrations/whatsapp/templates'
 */
 store.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::store
-* @see app/Http/Controllers/Admin/IntegrationController.php:1037
+* @see app/Http/Controllers/Admin/IntegrationController.php:1113
 * @route '/admin/integrations/whatsapp/templates'
 */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +35,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:1067
+* @see app/Http/Controllers/Admin/IntegrationController.php:1143
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 export const update = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -50,7 +50,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:1067
+* @see app/Http/Controllers/Admin/IntegrationController.php:1143
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 update.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -77,7 +77,7 @@ update.url = (args: { id: string | number } | [id: string | number ] | string | 
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:1067
+* @see app/Http/Controllers/Admin/IntegrationController.php:1143
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 update.put = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -87,7 +87,7 @@ update.put = (args: { id: string | number } | [id: string | number ] | string | 
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::destroy
-* @see app/Http/Controllers/Admin/IntegrationController.php:1092
+* @see app/Http/Controllers/Admin/IntegrationController.php:1168
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 export const destroy = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -102,7 +102,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::destroy
-* @see app/Http/Controllers/Admin/IntegrationController.php:1092
+* @see app/Http/Controllers/Admin/IntegrationController.php:1168
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 destroy.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -129,7 +129,7 @@ destroy.url = (args: { id: string | number } | [id: string | number ] | string |
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::destroy
-* @see app/Http/Controllers/Admin/IntegrationController.php:1092
+* @see app/Http/Controllers/Admin/IntegrationController.php:1168
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 destroy.delete = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({

@@ -45,7 +45,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Auth\WhatsAppVerificationController::verify
-* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:50
+* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:52
 * @route '/verify-whatsapp/verify'
 */
 export const verify = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -60,7 +60,7 @@ verify.definition = {
 
 /**
 * @see \App\Http\Controllers\Auth\WhatsAppVerificationController::verify
-* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:50
+* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:52
 * @route '/verify-whatsapp/verify'
 */
 verify.url = (options?: RouteQueryOptions) => {
@@ -69,7 +69,7 @@ verify.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Auth\WhatsAppVerificationController::verify
-* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:50
+* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:52
 * @route '/verify-whatsapp/verify'
 */
 verify.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -79,7 +79,7 @@ verify.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Auth\WhatsAppVerificationController::resend
-* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:95
+* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:97
 * @route '/verify-whatsapp/resend'
 */
 export const resend = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -94,7 +94,7 @@ resend.definition = {
 
 /**
 * @see \App\Http\Controllers\Auth\WhatsAppVerificationController::resend
-* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:95
+* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:97
 * @route '/verify-whatsapp/resend'
 */
 resend.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ resend.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Auth\WhatsAppVerificationController::resend
-* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:95
+* @see app/Http/Controllers/Auth/WhatsAppVerificationController.php:97
 * @route '/verify-whatsapp/resend'
 */
 resend.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({

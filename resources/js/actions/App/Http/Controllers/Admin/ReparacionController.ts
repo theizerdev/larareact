@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
-* @see app/Http/Controllers/Admin/ReparacionController.php:677
+* @see app/Http/Controllers/Admin/ReparacionController.php:903
 * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
 */
 export const reportePdf = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ reportePdf.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
-* @see app/Http/Controllers/Admin/ReparacionController.php:677
+* @see app/Http/Controllers/Admin/ReparacionController.php:903
 * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
 */
 reportePdf.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -49,7 +49,7 @@ reportePdf.url = (args: { reparacion: number | { id: number } } | [reparacion: n
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
-* @see app/Http/Controllers/Admin/ReparacionController.php:677
+* @see app/Http/Controllers/Admin/ReparacionController.php:903
 * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
 */
 reportePdf.get = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -59,7 +59,7 @@ reportePdf.get = (args: { reparacion: number | { id: number } } | [reparacion: n
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
-* @see app/Http/Controllers/Admin/ReparacionController.php:677
+* @see app/Http/Controllers/Admin/ReparacionController.php:903
 * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
 */
 reportePdf.head = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -69,7 +69,7 @@ reportePdf.head = (args: { reparacion: number | { id: number } } | [reparacion: 
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeCliente
-* @see app/Http/Controllers/Admin/ReparacionController.php:216
+* @see app/Http/Controllers/Admin/ReparacionController.php:366
 * @route '/admin/reparaciones/quick-cliente'
 */
 export const storeCliente = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -84,7 +84,7 @@ storeCliente.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeCliente
-* @see app/Http/Controllers/Admin/ReparacionController.php:216
+* @see app/Http/Controllers/Admin/ReparacionController.php:366
 * @route '/admin/reparaciones/quick-cliente'
 */
 storeCliente.url = (options?: RouteQueryOptions) => {
@@ -93,7 +93,7 @@ storeCliente.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeCliente
-* @see app/Http/Controllers/Admin/ReparacionController.php:216
+* @see app/Http/Controllers/Admin/ReparacionController.php:366
 * @route '/admin/reparaciones/quick-cliente'
 */
 storeCliente.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -102,8 +102,42 @@ storeCliente.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeCategoria
+* @see app/Http/Controllers/Admin/ReparacionController.php:1358
+* @route '/admin/reparaciones/quick-categoria'
+*/
+export const storeCategoria = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: storeCategoria.url(options),
+    method: 'post',
+})
+
+storeCategoria.definition = {
+    methods: ["post"],
+    url: '/admin/reparaciones/quick-categoria',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeCategoria
+* @see app/Http/Controllers/Admin/ReparacionController.php:1358
+* @route '/admin/reparaciones/quick-categoria'
+*/
+storeCategoria.url = (options?: RouteQueryOptions) => {
+    return storeCategoria.definition.url + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeCategoria
+* @see app/Http/Controllers/Admin/ReparacionController.php:1358
+* @route '/admin/reparaciones/quick-categoria'
+*/
+storeCategoria.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: storeCategoria.url(options),
+    method: 'post',
+})
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeMarca
-* @see app/Http/Controllers/Admin/ReparacionController.php:1040
+* @see app/Http/Controllers/Admin/ReparacionController.php:1391
 * @route '/admin/reparaciones/quick-marca'
 */
 export const storeMarca = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -118,7 +152,7 @@ storeMarca.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeMarca
-* @see app/Http/Controllers/Admin/ReparacionController.php:1040
+* @see app/Http/Controllers/Admin/ReparacionController.php:1391
 * @route '/admin/reparaciones/quick-marca'
 */
 storeMarca.url = (options?: RouteQueryOptions) => {
@@ -127,7 +161,7 @@ storeMarca.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeMarca
-* @see app/Http/Controllers/Admin/ReparacionController.php:1040
+* @see app/Http/Controllers/Admin/ReparacionController.php:1391
 * @route '/admin/reparaciones/quick-marca'
 */
 storeMarca.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -137,7 +171,7 @@ storeMarca.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeModelo
-* @see app/Http/Controllers/Admin/ReparacionController.php:1066
+* @see app/Http/Controllers/Admin/ReparacionController.php:1422
 * @route '/admin/reparaciones/quick-modelo'
 */
 export const storeModelo = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -152,7 +186,7 @@ storeModelo.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeModelo
-* @see app/Http/Controllers/Admin/ReparacionController.php:1066
+* @see app/Http/Controllers/Admin/ReparacionController.php:1422
 * @route '/admin/reparaciones/quick-modelo'
 */
 storeModelo.url = (options?: RouteQueryOptions) => {
@@ -161,7 +195,7 @@ storeModelo.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeModelo
-* @see app/Http/Controllers/Admin/ReparacionController.php:1066
+* @see app/Http/Controllers/Admin/ReparacionController.php:1422
 * @route '/admin/reparaciones/quick-modelo'
 */
 storeModelo.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -171,7 +205,7 @@ storeModelo.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeServicio
-* @see app/Http/Controllers/Admin/ReparacionController.php:238
+* @see app/Http/Controllers/Admin/ReparacionController.php:391
 * @route '/admin/reparaciones/quick-servicio'
 */
 export const storeServicio = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -186,7 +220,7 @@ storeServicio.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeServicio
-* @see app/Http/Controllers/Admin/ReparacionController.php:238
+* @see app/Http/Controllers/Admin/ReparacionController.php:391
 * @route '/admin/reparaciones/quick-servicio'
 */
 storeServicio.url = (options?: RouteQueryOptions) => {
@@ -195,7 +229,7 @@ storeServicio.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeServicio
-* @see app/Http/Controllers/Admin/ReparacionController.php:238
+* @see app/Http/Controllers/Admin/ReparacionController.php:391
 * @route '/admin/reparaciones/quick-servicio'
 */
 storeServicio.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -205,7 +239,7 @@ storeServicio.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::checkImei
-* @see app/Http/Controllers/Admin/ReparacionController.php:285
+* @see app/Http/Controllers/Admin/ReparacionController.php:441
 * @route '/admin/reparaciones/check-imei'
 */
 export const checkImei = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -220,7 +254,7 @@ checkImei.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::checkImei
-* @see app/Http/Controllers/Admin/ReparacionController.php:285
+* @see app/Http/Controllers/Admin/ReparacionController.php:441
 * @route '/admin/reparaciones/check-imei'
 */
 checkImei.url = (options?: RouteQueryOptions) => {
@@ -229,7 +263,7 @@ checkImei.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::checkImei
-* @see app/Http/Controllers/Admin/ReparacionController.php:285
+* @see app/Http/Controllers/Admin/ReparacionController.php:441
 * @route '/admin/reparaciones/check-imei'
 */
 checkImei.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -239,7 +273,7 @@ checkImei.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::apiFind
-* @see app/Http/Controllers/Admin/ReparacionController.php:1385
+* @see app/Http/Controllers/Admin/ReparacionController.php:1750
 * @route '/admin/reparaciones/api-find'
 */
 export const apiFind = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -254,7 +288,7 @@ apiFind.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::apiFind
-* @see app/Http/Controllers/Admin/ReparacionController.php:1385
+* @see app/Http/Controllers/Admin/ReparacionController.php:1750
 * @route '/admin/reparaciones/api-find'
 */
 apiFind.url = (options?: RouteQueryOptions) => {
@@ -263,7 +297,7 @@ apiFind.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::apiFind
-* @see app/Http/Controllers/Admin/ReparacionController.php:1385
+* @see app/Http/Controllers/Admin/ReparacionController.php:1750
 * @route '/admin/reparaciones/api-find'
 */
 apiFind.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -273,7 +307,7 @@ apiFind.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::apiFind
-* @see app/Http/Controllers/Admin/ReparacionController.php:1385
+* @see app/Http/Controllers/Admin/ReparacionController.php:1750
 * @route '/admin/reparaciones/api-find'
 */
 apiFind.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -283,7 +317,7 @@ apiFind.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::index
-* @see app/Http/Controllers/Admin/ReparacionController.php:40
+* @see app/Http/Controllers/Admin/ReparacionController.php:41
 * @route '/admin/reparaciones'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -298,7 +332,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::index
-* @see app/Http/Controllers/Admin/ReparacionController.php:40
+* @see app/Http/Controllers/Admin/ReparacionController.php:41
 * @route '/admin/reparaciones'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -307,7 +341,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::index
-* @see app/Http/Controllers/Admin/ReparacionController.php:40
+* @see app/Http/Controllers/Admin/ReparacionController.php:41
 * @route '/admin/reparaciones'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -317,7 +351,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::index
-* @see app/Http/Controllers/Admin/ReparacionController.php:40
+* @see app/Http/Controllers/Admin/ReparacionController.php:41
 * @route '/admin/reparaciones'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -327,7 +361,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::create
-* @see app/Http/Controllers/Admin/ReparacionController.php:176
+* @see app/Http/Controllers/Admin/ReparacionController.php:288
 * @route '/admin/reparaciones/create'
 */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -342,7 +376,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::create
-* @see app/Http/Controllers/Admin/ReparacionController.php:176
+* @see app/Http/Controllers/Admin/ReparacionController.php:288
 * @route '/admin/reparaciones/create'
 */
 create.url = (options?: RouteQueryOptions) => {
@@ -351,7 +385,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::create
-* @see app/Http/Controllers/Admin/ReparacionController.php:176
+* @see app/Http/Controllers/Admin/ReparacionController.php:288
 * @route '/admin/reparaciones/create'
 */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -361,7 +395,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::create
-* @see app/Http/Controllers/Admin/ReparacionController.php:176
+* @see app/Http/Controllers/Admin/ReparacionController.php:288
 * @route '/admin/reparaciones/create'
 */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -371,7 +405,7 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::store
-* @see app/Http/Controllers/Admin/ReparacionController.php:441
+* @see app/Http/Controllers/Admin/ReparacionController.php:604
 * @route '/admin/reparaciones'
 */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -386,7 +420,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::store
-* @see app/Http/Controllers/Admin/ReparacionController.php:441
+* @see app/Http/Controllers/Admin/ReparacionController.php:604
 * @route '/admin/reparaciones'
 */
 store.url = (options?: RouteQueryOptions) => {
@@ -395,7 +429,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::store
-* @see app/Http/Controllers/Admin/ReparacionController.php:441
+* @see app/Http/Controllers/Admin/ReparacionController.php:604
 * @route '/admin/reparaciones'
 */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -405,7 +439,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::show
-* @see app/Http/Controllers/Admin/ReparacionController.php:612
+* @see app/Http/Controllers/Admin/ReparacionController.php:822
 * @route '/admin/reparaciones/{reparacione}'
 */
 export const show = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -420,7 +454,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::show
-* @see app/Http/Controllers/Admin/ReparacionController.php:612
+* @see app/Http/Controllers/Admin/ReparacionController.php:822
 * @route '/admin/reparaciones/{reparacione}'
 */
 show.url = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -447,7 +481,7 @@ show.url = (args: { reparacione: string | number } | [reparacione: string | numb
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::show
-* @see app/Http/Controllers/Admin/ReparacionController.php:612
+* @see app/Http/Controllers/Admin/ReparacionController.php:822
 * @route '/admin/reparaciones/{reparacione}'
 */
 show.get = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -457,7 +491,7 @@ show.get = (args: { reparacione: string | number } | [reparacione: string | numb
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::show
-* @see app/Http/Controllers/Admin/ReparacionController.php:612
+* @see app/Http/Controllers/Admin/ReparacionController.php:822
 * @route '/admin/reparaciones/{reparacione}'
 */
 show.head = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -529,7 +563,7 @@ edit.head = (args: { reparacione: string | number } | [reparacione: string | num
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::update
-* @see app/Http/Controllers/Admin/ReparacionController.php:1019
+* @see app/Http/Controllers/Admin/ReparacionController.php:1337
 * @route '/admin/reparaciones/{reparacione}'
 */
 export const update = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -544,7 +578,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::update
-* @see app/Http/Controllers/Admin/ReparacionController.php:1019
+* @see app/Http/Controllers/Admin/ReparacionController.php:1337
 * @route '/admin/reparaciones/{reparacione}'
 */
 update.url = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -571,7 +605,7 @@ update.url = (args: { reparacione: string | number } | [reparacione: string | nu
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::update
-* @see app/Http/Controllers/Admin/ReparacionController.php:1019
+* @see app/Http/Controllers/Admin/ReparacionController.php:1337
 * @route '/admin/reparaciones/{reparacione}'
 */
 update.put = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -581,7 +615,7 @@ update.put = (args: { reparacione: string | number } | [reparacione: string | nu
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::update
-* @see app/Http/Controllers/Admin/ReparacionController.php:1019
+* @see app/Http/Controllers/Admin/ReparacionController.php:1337
 * @route '/admin/reparaciones/{reparacione}'
 */
 update.patch = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -643,10 +677,10 @@ destroy.delete = (args: { reparacione: string | number } | [reparacione: string 
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
-* @see app/Http/Controllers/Admin/ReparacionController.php:826
+* @see app/Http/Controllers/Admin/ReparacionController.php:1056
 * @route '/admin/reparaciones/{reparacion}/estado'
 */
-const updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+const updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url(args, options),
     method: 'post',
 })
@@ -658,16 +692,12 @@ updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
-* @see app/Http/Controllers/Admin/ReparacionController.php:826
+* @see app/Http/Controllers/Admin/ReparacionController.php:1056
 * @route '/admin/reparaciones/{reparacion}/estado'
 */
-updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
-    }
-
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { reparacion: args.id }
     }
 
     if (Array.isArray(args)) {
@@ -679,9 +709,7 @@ updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url = (args: { reparacion: number |
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        reparacion: typeof args.reparacion === 'object'
-        ? args.reparacion.id
-        : args.reparacion,
+        reparacion: args.reparacion,
     }
 
     return updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.definition.url
@@ -691,20 +719,20 @@ updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url = (args: { reparacion: number |
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
-* @see app/Http/Controllers/Admin/ReparacionController.php:826
+* @see app/Http/Controllers/Admin/ReparacionController.php:1056
 * @route '/admin/reparaciones/{reparacion}/estado'
 */
-updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url(args, options),
     method: 'post',
 })
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
-* @see app/Http/Controllers/Admin/ReparacionController.php:826
+* @see app/Http/Controllers/Admin/ReparacionController.php:1056
 * @route '/admin/reparaciones/{reparacion}/update-estado'
 */
-const updateEstado29b560c301d92324e41f156a1e4e8d5f = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+const updateEstado29b560c301d92324e41f156a1e4e8d5f = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateEstado29b560c301d92324e41f156a1e4e8d5f.url(args, options),
     method: 'post',
 })
@@ -716,16 +744,12 @@ updateEstado29b560c301d92324e41f156a1e4e8d5f.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
-* @see app/Http/Controllers/Admin/ReparacionController.php:826
+* @see app/Http/Controllers/Admin/ReparacionController.php:1056
 * @route '/admin/reparaciones/{reparacion}/update-estado'
 */
-updateEstado29b560c301d92324e41f156a1e4e8d5f.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+updateEstado29b560c301d92324e41f156a1e4e8d5f.url = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
-    }
-
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { reparacion: args.id }
     }
 
     if (Array.isArray(args)) {
@@ -737,9 +761,7 @@ updateEstado29b560c301d92324e41f156a1e4e8d5f.url = (args: { reparacion: number |
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        reparacion: typeof args.reparacion === 'object'
-        ? args.reparacion.id
-        : args.reparacion,
+        reparacion: args.reparacion,
     }
 
     return updateEstado29b560c301d92324e41f156a1e4e8d5f.definition.url
@@ -749,10 +771,10 @@ updateEstado29b560c301d92324e41f156a1e4e8d5f.url = (args: { reparacion: number |
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
-* @see app/Http/Controllers/Admin/ReparacionController.php:826
+* @see app/Http/Controllers/Admin/ReparacionController.php:1056
 * @route '/admin/reparaciones/{reparacion}/update-estado'
 */
-updateEstado29b560c301d92324e41f156a1e4e8d5f.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+updateEstado29b560c301d92324e41f156a1e4e8d5f.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateEstado29b560c301d92324e41f156a1e4e8d5f.url(args, options),
     method: 'post',
 })
@@ -769,7 +791,7 @@ export const updateEstado = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateDatos
-* @see app/Http/Controllers/Admin/ReparacionController.php:712
+* @see app/Http/Controllers/Admin/ReparacionController.php:939
 * @route '/admin/reparaciones/{reparacion}/update-datos'
 */
 export const updateDatos = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -784,7 +806,7 @@ updateDatos.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateDatos
-* @see app/Http/Controllers/Admin/ReparacionController.php:712
+* @see app/Http/Controllers/Admin/ReparacionController.php:939
 * @route '/admin/reparaciones/{reparacion}/update-datos'
 */
 updateDatos.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -817,7 +839,7 @@ updateDatos.url = (args: { reparacion: number | { id: number } } | [reparacion: 
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateDatos
-* @see app/Http/Controllers/Admin/ReparacionController.php:712
+* @see app/Http/Controllers/Admin/ReparacionController.php:939
 * @route '/admin/reparaciones/{reparacion}/update-datos'
 */
 updateDatos.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -827,7 +849,7 @@ updateDatos.post = (args: { reparacion: number | { id: number } } | [reparacion:
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::uploadFotoProceso
-* @see app/Http/Controllers/Admin/ReparacionController.php:766
+* @see app/Http/Controllers/Admin/ReparacionController.php:994
 * @route '/admin/reparaciones/{reparacion}/add-foto'
 */
 export const uploadFotoProceso = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -842,7 +864,7 @@ uploadFotoProceso.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::uploadFotoProceso
-* @see app/Http/Controllers/Admin/ReparacionController.php:766
+* @see app/Http/Controllers/Admin/ReparacionController.php:994
 * @route '/admin/reparaciones/{reparacion}/add-foto'
 */
 uploadFotoProceso.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -875,7 +897,7 @@ uploadFotoProceso.url = (args: { reparacion: number | { id: number } } | [repara
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::uploadFotoProceso
-* @see app/Http/Controllers/Admin/ReparacionController.php:766
+* @see app/Http/Controllers/Admin/ReparacionController.php:994
 * @route '/admin/reparaciones/{reparacion}/add-foto'
 */
 uploadFotoProceso.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -885,7 +907,7 @@ uploadFotoProceso.post = (args: { reparacion: number | { id: number } } | [repar
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::deleteFoto
-* @see app/Http/Controllers/Admin/ReparacionController.php:814
+* @see app/Http/Controllers/Admin/ReparacionController.php:1043
 * @route '/admin/reparaciones/{reparacion}/fotos/{foto}'
 */
 export const deleteFoto = (args: { reparacion: number | { id: number }, foto: number | { id: number } } | [reparacion: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -900,7 +922,7 @@ deleteFoto.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::deleteFoto
-* @see app/Http/Controllers/Admin/ReparacionController.php:814
+* @see app/Http/Controllers/Admin/ReparacionController.php:1043
 * @route '/admin/reparaciones/{reparacion}/fotos/{foto}'
 */
 deleteFoto.url = (args: { reparacion: number | { id: number }, foto: number | { id: number } } | [reparacion: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -930,7 +952,7 @@ deleteFoto.url = (args: { reparacion: number | { id: number }, foto: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::deleteFoto
-* @see app/Http/Controllers/Admin/ReparacionController.php:814
+* @see app/Http/Controllers/Admin/ReparacionController.php:1043
 * @route '/admin/reparaciones/{reparacion}/fotos/{foto}'
 */
 deleteFoto.delete = (args: { reparacion: number | { id: number }, foto: number | { id: number } } | [reparacion: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -940,7 +962,7 @@ deleteFoto.delete = (args: { reparacion: number | { id: number }, foto: number |
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::addItem
-* @see app/Http/Controllers/Admin/ReparacionController.php:930
+* @see app/Http/Controllers/Admin/ReparacionController.php:1174
 * @route '/admin/reparaciones/{reparacion}/items'
 */
 export const addItem = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -955,7 +977,7 @@ addItem.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::addItem
-* @see app/Http/Controllers/Admin/ReparacionController.php:930
+* @see app/Http/Controllers/Admin/ReparacionController.php:1174
 * @route '/admin/reparaciones/{reparacion}/items'
 */
 addItem.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -988,7 +1010,7 @@ addItem.url = (args: { reparacion: number | { id: number } } | [reparacion: numb
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::addItem
-* @see app/Http/Controllers/Admin/ReparacionController.php:930
+* @see app/Http/Controllers/Admin/ReparacionController.php:1174
 * @route '/admin/reparaciones/{reparacion}/items'
 */
 addItem.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -998,7 +1020,7 @@ addItem.post = (args: { reparacion: number | { id: number } } | [reparacion: num
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::removeItem
-* @see app/Http/Controllers/Admin/ReparacionController.php:973
+* @see app/Http/Controllers/Admin/ReparacionController.php:1218
 * @route '/admin/reparaciones/{reparacion}/items/{item}'
 */
 export const removeItem = (args: { reparacion: number | { id: number }, item: number | { id: number } } | [reparacion: number | { id: number }, item: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -1013,7 +1035,7 @@ removeItem.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::removeItem
-* @see app/Http/Controllers/Admin/ReparacionController.php:973
+* @see app/Http/Controllers/Admin/ReparacionController.php:1218
 * @route '/admin/reparaciones/{reparacion}/items/{item}'
 */
 removeItem.url = (args: { reparacion: number | { id: number }, item: number | { id: number } } | [reparacion: number | { id: number }, item: number | { id: number } ], options?: RouteQueryOptions) => {
@@ -1043,7 +1065,7 @@ removeItem.url = (args: { reparacion: number | { id: number }, item: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::removeItem
-* @see app/Http/Controllers/Admin/ReparacionController.php:973
+* @see app/Http/Controllers/Admin/ReparacionController.php:1218
 * @route '/admin/reparaciones/{reparacion}/items/{item}'
 */
 removeItem.delete = (args: { reparacion: number | { id: number }, item: number | { id: number } } | [reparacion: number | { id: number }, item: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -1053,7 +1075,7 @@ removeItem.delete = (args: { reparacion: number | { id: number }, item: number |
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateCostos
-* @see app/Http/Controllers/Admin/ReparacionController.php:992
+* @see app/Http/Controllers/Admin/ReparacionController.php:1238
 * @route '/admin/reparaciones/{reparacion}/costos'
 */
 export const updateCostos = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1068,7 +1090,7 @@ updateCostos.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateCostos
-* @see app/Http/Controllers/Admin/ReparacionController.php:992
+* @see app/Http/Controllers/Admin/ReparacionController.php:1238
 * @route '/admin/reparaciones/{reparacion}/costos'
 */
 updateCostos.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1101,7 +1123,7 @@ updateCostos.url = (args: { reparacion: number | { id: number } } | [reparacion:
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateCostos
-* @see app/Http/Controllers/Admin/ReparacionController.php:992
+* @see app/Http/Controllers/Admin/ReparacionController.php:1238
 * @route '/admin/reparaciones/{reparacion}/costos'
 */
 updateCostos.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1110,8 +1132,60 @@ updateCostos.post = (args: { reparacion: number | { id: number } } | [reparacion
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::savePreservicio
+* @see app/Http/Controllers/Admin/ReparacionController.php:1061
+* @route '/admin/reparaciones/{reparacion}/preservicio'
+*/
+export const savePreservicio = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: savePreservicio.url(args, options),
+    method: 'post',
+})
+
+savePreservicio.definition = {
+    methods: ["post"],
+    url: '/admin/reparaciones/{reparacion}/preservicio',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::savePreservicio
+* @see app/Http/Controllers/Admin/ReparacionController.php:1061
+* @route '/admin/reparaciones/{reparacion}/preservicio'
+*/
+savePreservicio.url = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { reparacion: args }
+    }
+
+    if (Array.isArray(args)) {
+        args = {
+            reparacion: args[0],
+        }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+        reparacion: args.reparacion,
+    }
+
+    return savePreservicio.definition.url
+            .replace('{reparacion}', parsedArgs.reparacion.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::savePreservicio
+* @see app/Http/Controllers/Admin/ReparacionController.php:1061
+* @route '/admin/reparaciones/{reparacion}/preservicio'
+*/
+savePreservicio.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: savePreservicio.url(args, options),
+    method: 'post',
+})
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::postServicioForm
-* @see app/Http/Controllers/Admin/ReparacionController.php:1118
+* @see app/Http/Controllers/Admin/ReparacionController.php:1481
 * @route '/admin/reparaciones/{reparacion}/post-servicio'
 */
 export const postServicioForm = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1126,7 +1200,7 @@ postServicioForm.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::postServicioForm
-* @see app/Http/Controllers/Admin/ReparacionController.php:1118
+* @see app/Http/Controllers/Admin/ReparacionController.php:1481
 * @route '/admin/reparaciones/{reparacion}/post-servicio'
 */
 postServicioForm.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1159,7 +1233,7 @@ postServicioForm.url = (args: { reparacion: number | { id: number } } | [reparac
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::postServicioForm
-* @see app/Http/Controllers/Admin/ReparacionController.php:1118
+* @see app/Http/Controllers/Admin/ReparacionController.php:1481
 * @route '/admin/reparaciones/{reparacion}/post-servicio'
 */
 postServicioForm.get = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1169,7 +1243,7 @@ postServicioForm.get = (args: { reparacion: number | { id: number } } | [reparac
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::postServicioForm
-* @see app/Http/Controllers/Admin/ReparacionController.php:1118
+* @see app/Http/Controllers/Admin/ReparacionController.php:1481
 * @route '/admin/reparaciones/{reparacion}/post-servicio'
 */
 postServicioForm.head = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1179,7 +1253,7 @@ postServicioForm.head = (args: { reparacion: number | { id: number } } | [repara
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::savePostServicio
-* @see app/Http/Controllers/Admin/ReparacionController.php:1151
+* @see app/Http/Controllers/Admin/ReparacionController.php:1515
 * @route '/admin/reparaciones/{reparacion}/post-servicio'
 */
 export const savePostServicio = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1194,7 +1268,7 @@ savePostServicio.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::savePostServicio
-* @see app/Http/Controllers/Admin/ReparacionController.php:1151
+* @see app/Http/Controllers/Admin/ReparacionController.php:1515
 * @route '/admin/reparaciones/{reparacion}/post-servicio'
 */
 savePostServicio.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -1227,7 +1301,7 @@ savePostServicio.url = (args: { reparacion: number | { id: number } } | [reparac
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::savePostServicio
-* @see app/Http/Controllers/Admin/ReparacionController.php:1151
+* @see app/Http/Controllers/Admin/ReparacionController.php:1515
 * @route '/admin/reparaciones/{reparacion}/post-servicio'
 */
 savePostServicio.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1235,6 +1309,58 @@ savePostServicio.post = (args: { reparacion: number | { id: number } } | [repara
     method: 'post',
 })
 
-const ReparacionController = { reportePdf, storeCliente, storeMarca, storeModelo, storeServicio, checkImei, apiFind, index, create, store, show, edit, update, destroy, updateEstado, updateDatos, uploadFotoProceso, deleteFoto, addItem, removeItem, updateCostos, postServicioForm, savePostServicio }
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::notificarWhatsApp
+* @see app/Http/Controllers/Admin/ReparacionController.php:1266
+* @route '/admin/reparaciones/{reparacion}/notificar-whatsapp'
+*/
+export const notificarWhatsApp = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: notificarWhatsApp.url(args, options),
+    method: 'post',
+})
+
+notificarWhatsApp.definition = {
+    methods: ["post"],
+    url: '/admin/reparaciones/{reparacion}/notificar-whatsapp',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::notificarWhatsApp
+* @see app/Http/Controllers/Admin/ReparacionController.php:1266
+* @route '/admin/reparaciones/{reparacion}/notificar-whatsapp'
+*/
+notificarWhatsApp.url = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { reparacion: args }
+    }
+
+    if (Array.isArray(args)) {
+        args = {
+            reparacion: args[0],
+        }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+        reparacion: args.reparacion,
+    }
+
+    return notificarWhatsApp.definition.url
+            .replace('{reparacion}', parsedArgs.reparacion.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::notificarWhatsApp
+* @see app/Http/Controllers/Admin/ReparacionController.php:1266
+* @route '/admin/reparaciones/{reparacion}/notificar-whatsapp'
+*/
+notificarWhatsApp.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: notificarWhatsApp.url(args, options),
+    method: 'post',
+})
+
+const ReparacionController = { reportePdf, storeCliente, storeCategoria, storeMarca, storeModelo, storeServicio, checkImei, apiFind, index, create, store, show, edit, update, destroy, updateEstado, updateDatos, uploadFotoProceso, deleteFoto, addItem, removeItem, updateCostos, savePreservicio, postServicioForm, savePostServicio, notificarWhatsApp }
 
 export default ReparacionController

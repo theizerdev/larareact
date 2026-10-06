@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::index
-* @see app/Http/Controllers/Admin/CategoriaController.php:27
+* @see app/Http/Controllers/Admin/CategoriaController.php:28
 * @route '/admin/categorias'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::index
-* @see app/Http/Controllers/Admin/CategoriaController.php:27
+* @see app/Http/Controllers/Admin/CategoriaController.php:28
 * @route '/admin/categorias'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::index
-* @see app/Http/Controllers/Admin/CategoriaController.php:27
+* @see app/Http/Controllers/Admin/CategoriaController.php:28
 * @route '/admin/categorias'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::index
-* @see app/Http/Controllers/Admin/CategoriaController.php:27
+* @see app/Http/Controllers/Admin/CategoriaController.php:28
 * @route '/admin/categorias'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -45,7 +45,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::store
-* @see app/Http/Controllers/Admin/CategoriaController.php:56
+* @see app/Http/Controllers/Admin/CategoriaController.php:57
 * @route '/admin/categorias'
 */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -60,7 +60,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::store
-* @see app/Http/Controllers/Admin/CategoriaController.php:56
+* @see app/Http/Controllers/Admin/CategoriaController.php:57
 * @route '/admin/categorias'
 */
 store.url = (options?: RouteQueryOptions) => {
@@ -69,7 +69,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::store
-* @see app/Http/Controllers/Admin/CategoriaController.php:56
+* @see app/Http/Controllers/Admin/CategoriaController.php:57
 * @route '/admin/categorias'
 */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -141,7 +141,7 @@ show.head = (args: { categoria: string | number } | [categoria: string | number 
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::update
-* @see app/Http/Controllers/Admin/CategoriaController.php:78
+* @see app/Http/Controllers/Admin/CategoriaController.php:95
 * @route '/admin/categorias/{categoria}'
 */
 export const update = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -156,7 +156,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::update
-* @see app/Http/Controllers/Admin/CategoriaController.php:78
+* @see app/Http/Controllers/Admin/CategoriaController.php:95
 * @route '/admin/categorias/{categoria}'
 */
 update.url = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -189,7 +189,7 @@ update.url = (args: { categoria: number | { id: number } } | [categoria: number 
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::update
-* @see app/Http/Controllers/Admin/CategoriaController.php:78
+* @see app/Http/Controllers/Admin/CategoriaController.php:95
 * @route '/admin/categorias/{categoria}'
 */
 update.put = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -199,7 +199,7 @@ update.put = (args: { categoria: number | { id: number } } | [categoria: number 
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::update
-* @see app/Http/Controllers/Admin/CategoriaController.php:78
+* @see app/Http/Controllers/Admin/CategoriaController.php:95
 * @route '/admin/categorias/{categoria}'
 */
 update.patch = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -209,7 +209,7 @@ update.patch = (args: { categoria: number | { id: number } } | [categoria: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::destroy
-* @see app/Http/Controllers/Admin/CategoriaController.php:92
+* @see app/Http/Controllers/Admin/CategoriaController.php:119
 * @route '/admin/categorias/{categoria}'
 */
 export const destroy = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -224,7 +224,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::destroy
-* @see app/Http/Controllers/Admin/CategoriaController.php:92
+* @see app/Http/Controllers/Admin/CategoriaController.php:119
 * @route '/admin/categorias/{categoria}'
 */
 destroy.url = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -257,7 +257,7 @@ destroy.url = (args: { categoria: number | { id: number } } | [categoria: number
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::destroy
-* @see app/Http/Controllers/Admin/CategoriaController.php:92
+* @see app/Http/Controllers/Admin/CategoriaController.php:119
 * @route '/admin/categorias/{categoria}'
 */
 destroy.delete = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({

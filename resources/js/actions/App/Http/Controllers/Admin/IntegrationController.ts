@@ -45,7 +45,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::mapboxMap
-* @see app/Http/Controllers/Admin/IntegrationController.php:77
+* @see app/Http/Controllers/Admin/IntegrationController.php:83
 * @route '/admin/integrations/map'
 */
 export const mapboxMap = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -60,7 +60,7 @@ mapboxMap.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::mapboxMap
-* @see app/Http/Controllers/Admin/IntegrationController.php:77
+* @see app/Http/Controllers/Admin/IntegrationController.php:83
 * @route '/admin/integrations/map'
 */
 mapboxMap.url = (options?: RouteQueryOptions) => {
@@ -69,7 +69,7 @@ mapboxMap.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::mapboxMap
-* @see app/Http/Controllers/Admin/IntegrationController.php:77
+* @see app/Http/Controllers/Admin/IntegrationController.php:83
 * @route '/admin/integrations/map'
 */
 mapboxMap.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -79,7 +79,7 @@ mapboxMap.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::mapboxMap
-* @see app/Http/Controllers/Admin/IntegrationController.php:77
+* @see app/Http/Controllers/Admin/IntegrationController.php:83
 * @route '/admin/integrations/map'
 */
 mapboxMap.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -89,7 +89,7 @@ mapboxMap.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::mapboxNavigation
-* @see app/Http/Controllers/Admin/IntegrationController.php:99
+* @see app/Http/Controllers/Admin/IntegrationController.php:105
 * @route '/admin/integrations/map/navigation'
 */
 export const mapboxNavigation = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -104,7 +104,7 @@ mapboxNavigation.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::mapboxNavigation
-* @see app/Http/Controllers/Admin/IntegrationController.php:99
+* @see app/Http/Controllers/Admin/IntegrationController.php:105
 * @route '/admin/integrations/map/navigation'
 */
 mapboxNavigation.url = (options?: RouteQueryOptions) => {
@@ -113,7 +113,7 @@ mapboxNavigation.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::mapboxNavigation
-* @see app/Http/Controllers/Admin/IntegrationController.php:99
+* @see app/Http/Controllers/Admin/IntegrationController.php:105
 * @route '/admin/integrations/map/navigation'
 */
 mapboxNavigation.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -123,7 +123,7 @@ mapboxNavigation.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => 
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::mapboxNavigation
-* @see app/Http/Controllers/Admin/IntegrationController.php:99
+* @see app/Http/Controllers/Admin/IntegrationController.php:105
 * @route '/admin/integrations/map/navigation'
 */
 mapboxNavigation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -133,7 +133,7 @@ mapboxNavigation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateMapbox
-* @see app/Http/Controllers/Admin/IntegrationController.php:121
+* @see app/Http/Controllers/Admin/IntegrationController.php:127
 * @route '/admin/integrations/mapbox'
 */
 export const updateMapbox = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -148,7 +148,7 @@ updateMapbox.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateMapbox
-* @see app/Http/Controllers/Admin/IntegrationController.php:121
+* @see app/Http/Controllers/Admin/IntegrationController.php:127
 * @route '/admin/integrations/mapbox'
 */
 updateMapbox.url = (options?: RouteQueryOptions) => {
@@ -157,7 +157,7 @@ updateMapbox.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateMapbox
-* @see app/Http/Controllers/Admin/IntegrationController.php:121
+* @see app/Http/Controllers/Admin/IntegrationController.php:127
 * @route '/admin/integrations/mapbox'
 */
 updateMapbox.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -167,7 +167,7 @@ updateMapbox.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateGoogleMaps
-* @see app/Http/Controllers/Admin/IntegrationController.php:151
+* @see app/Http/Controllers/Admin/IntegrationController.php:157
 * @route '/admin/integrations/google-maps'
 */
 export const updateGoogleMaps = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -182,7 +182,7 @@ updateGoogleMaps.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateGoogleMaps
-* @see app/Http/Controllers/Admin/IntegrationController.php:151
+* @see app/Http/Controllers/Admin/IntegrationController.php:157
 * @route '/admin/integrations/google-maps'
 */
 updateGoogleMaps.url = (options?: RouteQueryOptions) => {
@@ -191,7 +191,7 @@ updateGoogleMaps.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateGoogleMaps
-* @see app/Http/Controllers/Admin/IntegrationController.php:151
+* @see app/Http/Controllers/Admin/IntegrationController.php:157
 * @route '/admin/integrations/google-maps'
 */
 updateGoogleMaps.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -201,7 +201,7 @@ updateGoogleMaps.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => 
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateControlAcceso
-* @see app/Http/Controllers/Admin/IntegrationController.php:181
+* @see app/Http/Controllers/Admin/IntegrationController.php:187
 * @route '/admin/integrations/control-acceso'
 */
 export const updateControlAcceso = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -216,7 +216,7 @@ updateControlAcceso.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateControlAcceso
-* @see app/Http/Controllers/Admin/IntegrationController.php:181
+* @see app/Http/Controllers/Admin/IntegrationController.php:187
 * @route '/admin/integrations/control-acceso'
 */
 updateControlAcceso.url = (options?: RouteQueryOptions) => {
@@ -225,7 +225,7 @@ updateControlAcceso.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateControlAcceso
-* @see app/Http/Controllers/Admin/IntegrationController.php:181
+* @see app/Http/Controllers/Admin/IntegrationController.php:187
 * @route '/admin/integrations/control-acceso'
 */
 updateControlAcceso.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -235,7 +235,7 @@ updateControlAcceso.put = (options?: RouteQueryOptions): RouteDefinition<'put'> 
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::controlAccesoTest
-* @see app/Http/Controllers/Admin/IntegrationController.php:215
+* @see app/Http/Controllers/Admin/IntegrationController.php:221
 * @route '/admin/integrations/control-acceso/test'
 */
 export const controlAccesoTest = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -250,7 +250,7 @@ controlAccesoTest.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::controlAccesoTest
-* @see app/Http/Controllers/Admin/IntegrationController.php:215
+* @see app/Http/Controllers/Admin/IntegrationController.php:221
 * @route '/admin/integrations/control-acceso/test'
 */
 controlAccesoTest.url = (options?: RouteQueryOptions) => {
@@ -259,7 +259,7 @@ controlAccesoTest.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::controlAccesoTest
-* @see app/Http/Controllers/Admin/IntegrationController.php:215
+* @see app/Http/Controllers/Admin/IntegrationController.php:221
 * @route '/admin/integrations/control-acceso/test'
 */
 controlAccesoTest.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -269,7 +269,7 @@ controlAccesoTest.post = (options?: RouteQueryOptions): RouteDefinition<'post'> 
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappIndex
-* @see app/Http/Controllers/Admin/IntegrationController.php:267
+* @see app/Http/Controllers/Admin/IntegrationController.php:317
 * @route '/admin/integrations/whatsapp'
 */
 export const whatsappIndex = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -284,7 +284,7 @@ whatsappIndex.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappIndex
-* @see app/Http/Controllers/Admin/IntegrationController.php:267
+* @see app/Http/Controllers/Admin/IntegrationController.php:317
 * @route '/admin/integrations/whatsapp'
 */
 whatsappIndex.url = (options?: RouteQueryOptions) => {
@@ -293,7 +293,7 @@ whatsappIndex.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappIndex
-* @see app/Http/Controllers/Admin/IntegrationController.php:267
+* @see app/Http/Controllers/Admin/IntegrationController.php:317
 * @route '/admin/integrations/whatsapp'
 */
 whatsappIndex.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -303,7 +303,7 @@ whatsappIndex.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappIndex
-* @see app/Http/Controllers/Admin/IntegrationController.php:267
+* @see app/Http/Controllers/Admin/IntegrationController.php:317
 * @route '/admin/integrations/whatsapp'
 */
 whatsappIndex.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -313,7 +313,7 @@ whatsappIndex.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => (
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappDocs
-* @see app/Http/Controllers/Admin/IntegrationController.php:244
+* @see app/Http/Controllers/Admin/IntegrationController.php:250
 * @route '/admin/integrations/whatsapp/docs'
 */
 export const whatsappDocs = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -328,7 +328,7 @@ whatsappDocs.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappDocs
-* @see app/Http/Controllers/Admin/IntegrationController.php:244
+* @see app/Http/Controllers/Admin/IntegrationController.php:250
 * @route '/admin/integrations/whatsapp/docs'
 */
 whatsappDocs.url = (options?: RouteQueryOptions) => {
@@ -337,7 +337,7 @@ whatsappDocs.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappDocs
-* @see app/Http/Controllers/Admin/IntegrationController.php:244
+* @see app/Http/Controllers/Admin/IntegrationController.php:250
 * @route '/admin/integrations/whatsapp/docs'
 */
 whatsappDocs.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -347,7 +347,7 @@ whatsappDocs.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappDocs
-* @see app/Http/Controllers/Admin/IntegrationController.php:244
+* @see app/Http/Controllers/Admin/IntegrationController.php:250
 * @route '/admin/integrations/whatsapp/docs'
 */
 whatsappDocs.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -357,7 +357,7 @@ whatsappDocs.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappStatus
-* @see app/Http/Controllers/Admin/IntegrationController.php:334
+* @see app/Http/Controllers/Admin/IntegrationController.php:398
 * @route '/admin/integrations/whatsapp/status'
 */
 export const whatsappStatus = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -372,7 +372,7 @@ whatsappStatus.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappStatus
-* @see app/Http/Controllers/Admin/IntegrationController.php:334
+* @see app/Http/Controllers/Admin/IntegrationController.php:398
 * @route '/admin/integrations/whatsapp/status'
 */
 whatsappStatus.url = (options?: RouteQueryOptions) => {
@@ -381,7 +381,7 @@ whatsappStatus.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappStatus
-* @see app/Http/Controllers/Admin/IntegrationController.php:334
+* @see app/Http/Controllers/Admin/IntegrationController.php:398
 * @route '/admin/integrations/whatsapp/status'
 */
 whatsappStatus.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -391,7 +391,7 @@ whatsappStatus.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappStatus
-* @see app/Http/Controllers/Admin/IntegrationController.php:334
+* @see app/Http/Controllers/Admin/IntegrationController.php:398
 * @route '/admin/integrations/whatsapp/status'
 */
 whatsappStatus.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -401,7 +401,7 @@ whatsappStatus.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => 
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappQueueStats
-* @see app/Http/Controllers/Admin/IntegrationController.php:563
+* @see app/Http/Controllers/Admin/IntegrationController.php:642
 * @route '/admin/integrations/whatsapp/queue-stats'
 */
 export const whatsappQueueStats = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -416,7 +416,7 @@ whatsappQueueStats.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappQueueStats
-* @see app/Http/Controllers/Admin/IntegrationController.php:563
+* @see app/Http/Controllers/Admin/IntegrationController.php:642
 * @route '/admin/integrations/whatsapp/queue-stats'
 */
 whatsappQueueStats.url = (options?: RouteQueryOptions) => {
@@ -425,7 +425,7 @@ whatsappQueueStats.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappQueueStats
-* @see app/Http/Controllers/Admin/IntegrationController.php:563
+* @see app/Http/Controllers/Admin/IntegrationController.php:642
 * @route '/admin/integrations/whatsapp/queue-stats'
 */
 whatsappQueueStats.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -435,7 +435,7 @@ whatsappQueueStats.get = (options?: RouteQueryOptions): RouteDefinition<'get'> =
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappQueueStats
-* @see app/Http/Controllers/Admin/IntegrationController.php:563
+* @see app/Http/Controllers/Admin/IntegrationController.php:642
 * @route '/admin/integrations/whatsapp/queue-stats'
 */
 whatsappQueueStats.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -445,7 +445,7 @@ whatsappQueueStats.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappUpdate
-* @see app/Http/Controllers/Admin/IntegrationController.php:361
+* @see app/Http/Controllers/Admin/IntegrationController.php:428
 * @route '/admin/integrations/whatsapp/update'
 */
 export const whatsappUpdate = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -460,7 +460,7 @@ whatsappUpdate.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappUpdate
-* @see app/Http/Controllers/Admin/IntegrationController.php:361
+* @see app/Http/Controllers/Admin/IntegrationController.php:428
 * @route '/admin/integrations/whatsapp/update'
 */
 whatsappUpdate.url = (options?: RouteQueryOptions) => {
@@ -469,7 +469,7 @@ whatsappUpdate.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappUpdate
-* @see app/Http/Controllers/Admin/IntegrationController.php:361
+* @see app/Http/Controllers/Admin/IntegrationController.php:428
 * @route '/admin/integrations/whatsapp/update'
 */
 whatsappUpdate.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -479,7 +479,7 @@ whatsappUpdate.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappUpdateAntiBan
-* @see app/Http/Controllers/Admin/IntegrationController.php:637
+* @see app/Http/Controllers/Admin/IntegrationController.php:721
 * @route '/admin/integrations/whatsapp/antiban'
 */
 export const whatsappUpdateAntiBan = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -494,7 +494,7 @@ whatsappUpdateAntiBan.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappUpdateAntiBan
-* @see app/Http/Controllers/Admin/IntegrationController.php:637
+* @see app/Http/Controllers/Admin/IntegrationController.php:721
 * @route '/admin/integrations/whatsapp/antiban'
 */
 whatsappUpdateAntiBan.url = (options?: RouteQueryOptions) => {
@@ -503,7 +503,7 @@ whatsappUpdateAntiBan.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappUpdateAntiBan
-* @see app/Http/Controllers/Admin/IntegrationController.php:637
+* @see app/Http/Controllers/Admin/IntegrationController.php:721
 * @route '/admin/integrations/whatsapp/antiban'
 */
 whatsappUpdateAntiBan.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -513,7 +513,7 @@ whatsappUpdateAntiBan.post = (options?: RouteQueryOptions): RouteDefinition<'pos
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappGenerateToken
-* @see app/Http/Controllers/Admin/IntegrationController.php:409
+* @see app/Http/Controllers/Admin/IntegrationController.php:489
 * @route '/admin/integrations/whatsapp/generate-token'
 */
 export const whatsappGenerateToken = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -528,7 +528,7 @@ whatsappGenerateToken.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappGenerateToken
-* @see app/Http/Controllers/Admin/IntegrationController.php:409
+* @see app/Http/Controllers/Admin/IntegrationController.php:489
 * @route '/admin/integrations/whatsapp/generate-token'
 */
 whatsappGenerateToken.url = (options?: RouteQueryOptions) => {
@@ -537,7 +537,7 @@ whatsappGenerateToken.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappGenerateToken
-* @see app/Http/Controllers/Admin/IntegrationController.php:409
+* @see app/Http/Controllers/Admin/IntegrationController.php:489
 * @route '/admin/integrations/whatsapp/generate-token'
 */
 whatsappGenerateToken.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -547,7 +547,7 @@ whatsappGenerateToken.post = (options?: RouteQueryOptions): RouteDefinition<'pos
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappSync
-* @see app/Http/Controllers/Admin/IntegrationController.php:436
+* @see app/Http/Controllers/Admin/IntegrationController.php:516
 * @route '/admin/integrations/whatsapp/sync'
 */
 export const whatsappSync = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -562,7 +562,7 @@ whatsappSync.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappSync
-* @see app/Http/Controllers/Admin/IntegrationController.php:436
+* @see app/Http/Controllers/Admin/IntegrationController.php:516
 * @route '/admin/integrations/whatsapp/sync'
 */
 whatsappSync.url = (options?: RouteQueryOptions) => {
@@ -571,7 +571,7 @@ whatsappSync.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappSync
-* @see app/Http/Controllers/Admin/IntegrationController.php:436
+* @see app/Http/Controllers/Admin/IntegrationController.php:516
 * @route '/admin/integrations/whatsapp/sync'
 */
 whatsappSync.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -581,7 +581,7 @@ whatsappSync.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappConnect
-* @see app/Http/Controllers/Admin/IntegrationController.php:474
+* @see app/Http/Controllers/Admin/IntegrationController.php:556
 * @route '/admin/integrations/whatsapp/connect'
 */
 export const whatsappConnect = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -596,7 +596,7 @@ whatsappConnect.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappConnect
-* @see app/Http/Controllers/Admin/IntegrationController.php:474
+* @see app/Http/Controllers/Admin/IntegrationController.php:556
 * @route '/admin/integrations/whatsapp/connect'
 */
 whatsappConnect.url = (options?: RouteQueryOptions) => {
@@ -605,7 +605,7 @@ whatsappConnect.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappConnect
-* @see app/Http/Controllers/Admin/IntegrationController.php:474
+* @see app/Http/Controllers/Admin/IntegrationController.php:556
 * @route '/admin/integrations/whatsapp/connect'
 */
 whatsappConnect.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -615,7 +615,7 @@ whatsappConnect.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =>
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappDisconnect
-* @see app/Http/Controllers/Admin/IntegrationController.php:511
+* @see app/Http/Controllers/Admin/IntegrationController.php:592
 * @route '/admin/integrations/whatsapp/disconnect'
 */
 export const whatsappDisconnect = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -630,7 +630,7 @@ whatsappDisconnect.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappDisconnect
-* @see app/Http/Controllers/Admin/IntegrationController.php:511
+* @see app/Http/Controllers/Admin/IntegrationController.php:592
 * @route '/admin/integrations/whatsapp/disconnect'
 */
 whatsappDisconnect.url = (options?: RouteQueryOptions) => {
@@ -639,7 +639,7 @@ whatsappDisconnect.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappDisconnect
-* @see app/Http/Controllers/Admin/IntegrationController.php:511
+* @see app/Http/Controllers/Admin/IntegrationController.php:592
 * @route '/admin/integrations/whatsapp/disconnect'
 */
 whatsappDisconnect.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -649,7 +649,7 @@ whatsappDisconnect.post = (options?: RouteQueryOptions): RouteDefinition<'post'>
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappReconnect
-* @see app/Http/Controllers/Admin/IntegrationController.php:540
+* @see app/Http/Controllers/Admin/IntegrationController.php:620
 * @route '/admin/integrations/whatsapp/reconnect'
 */
 export const whatsappReconnect = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -664,7 +664,7 @@ whatsappReconnect.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappReconnect
-* @see app/Http/Controllers/Admin/IntegrationController.php:540
+* @see app/Http/Controllers/Admin/IntegrationController.php:620
 * @route '/admin/integrations/whatsapp/reconnect'
 */
 whatsappReconnect.url = (options?: RouteQueryOptions) => {
@@ -673,7 +673,7 @@ whatsappReconnect.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappReconnect
-* @see app/Http/Controllers/Admin/IntegrationController.php:540
+* @see app/Http/Controllers/Admin/IntegrationController.php:620
 * @route '/admin/integrations/whatsapp/reconnect'
 */
 whatsappReconnect.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -683,7 +683,7 @@ whatsappReconnect.post = (options?: RouteQueryOptions): RouteDefinition<'post'> 
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappSendMessage
-* @see app/Http/Controllers/Admin/IntegrationController.php:751
+* @see app/Http/Controllers/Admin/IntegrationController.php:833
 * @route '/admin/integrations/whatsapp/send-message'
 */
 export const whatsappSendMessage = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -698,7 +698,7 @@ whatsappSendMessage.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappSendMessage
-* @see app/Http/Controllers/Admin/IntegrationController.php:751
+* @see app/Http/Controllers/Admin/IntegrationController.php:833
 * @route '/admin/integrations/whatsapp/send-message'
 */
 whatsappSendMessage.url = (options?: RouteQueryOptions) => {
@@ -707,7 +707,7 @@ whatsappSendMessage.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappSendMessage
-* @see app/Http/Controllers/Admin/IntegrationController.php:751
+* @see app/Http/Controllers/Admin/IntegrationController.php:833
 * @route '/admin/integrations/whatsapp/send-message'
 */
 whatsappSendMessage.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -717,7 +717,7 @@ whatsappSendMessage.post = (options?: RouteQueryOptions): RouteDefinition<'post'
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappCheckNumber
-* @see app/Http/Controllers/Admin/IntegrationController.php:583
+* @see app/Http/Controllers/Admin/IntegrationController.php:665
 * @route '/admin/integrations/whatsapp/check-number'
 */
 export const whatsappCheckNumber = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -732,7 +732,7 @@ whatsappCheckNumber.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappCheckNumber
-* @see app/Http/Controllers/Admin/IntegrationController.php:583
+* @see app/Http/Controllers/Admin/IntegrationController.php:665
 * @route '/admin/integrations/whatsapp/check-number'
 */
 whatsappCheckNumber.url = (options?: RouteQueryOptions) => {
@@ -741,7 +741,7 @@ whatsappCheckNumber.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappCheckNumber
-* @see app/Http/Controllers/Admin/IntegrationController.php:583
+* @see app/Http/Controllers/Admin/IntegrationController.php:665
 * @route '/admin/integrations/whatsapp/check-number'
 */
 whatsappCheckNumber.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -751,7 +751,7 @@ whatsappCheckNumber.post = (options?: RouteQueryOptions): RouteDefinition<'post'
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappPreviewSpintax
-* @see app/Http/Controllers/Admin/IntegrationController.php:607
+* @see app/Http/Controllers/Admin/IntegrationController.php:690
 * @route '/admin/integrations/whatsapp/preview-spintax'
 */
 export const whatsappPreviewSpintax = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -766,7 +766,7 @@ whatsappPreviewSpintax.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappPreviewSpintax
-* @see app/Http/Controllers/Admin/IntegrationController.php:607
+* @see app/Http/Controllers/Admin/IntegrationController.php:690
 * @route '/admin/integrations/whatsapp/preview-spintax'
 */
 whatsappPreviewSpintax.url = (options?: RouteQueryOptions) => {
@@ -775,7 +775,7 @@ whatsappPreviewSpintax.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappPreviewSpintax
-* @see app/Http/Controllers/Admin/IntegrationController.php:607
+* @see app/Http/Controllers/Admin/IntegrationController.php:690
 * @route '/admin/integrations/whatsapp/preview-spintax'
 */
 whatsappPreviewSpintax.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -785,7 +785,7 @@ whatsappPreviewSpintax.post = (options?: RouteQueryOptions): RouteDefinition<'po
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappAddToBlacklist
-* @see app/Http/Controllers/Admin/IntegrationController.php:700
+* @see app/Http/Controllers/Admin/IntegrationController.php:784
 * @route '/admin/integrations/whatsapp/blacklist'
 */
 export const whatsappAddToBlacklist = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -800,7 +800,7 @@ whatsappAddToBlacklist.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappAddToBlacklist
-* @see app/Http/Controllers/Admin/IntegrationController.php:700
+* @see app/Http/Controllers/Admin/IntegrationController.php:784
 * @route '/admin/integrations/whatsapp/blacklist'
 */
 whatsappAddToBlacklist.url = (options?: RouteQueryOptions) => {
@@ -809,7 +809,7 @@ whatsappAddToBlacklist.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappAddToBlacklist
-* @see app/Http/Controllers/Admin/IntegrationController.php:700
+* @see app/Http/Controllers/Admin/IntegrationController.php:784
 * @route '/admin/integrations/whatsapp/blacklist'
 */
 whatsappAddToBlacklist.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -819,7 +819,7 @@ whatsappAddToBlacklist.post = (options?: RouteQueryOptions): RouteDefinition<'po
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappRemoveFromBlacklist
-* @see app/Http/Controllers/Admin/IntegrationController.php:728
+* @see app/Http/Controllers/Admin/IntegrationController.php:811
 * @route '/admin/integrations/whatsapp/blacklist/{phone}'
 */
 export const whatsappRemoveFromBlacklist = (args: { phone: string | number } | [phone: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -834,7 +834,7 @@ whatsappRemoveFromBlacklist.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappRemoveFromBlacklist
-* @see app/Http/Controllers/Admin/IntegrationController.php:728
+* @see app/Http/Controllers/Admin/IntegrationController.php:811
 * @route '/admin/integrations/whatsapp/blacklist/{phone}'
 */
 whatsappRemoveFromBlacklist.url = (args: { phone: string | number } | [phone: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -861,7 +861,7 @@ whatsappRemoveFromBlacklist.url = (args: { phone: string | number } | [phone: st
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappRemoveFromBlacklist
-* @see app/Http/Controllers/Admin/IntegrationController.php:728
+* @see app/Http/Controllers/Admin/IntegrationController.php:811
 * @route '/admin/integrations/whatsapp/blacklist/{phone}'
 */
 whatsappRemoveFromBlacklist.delete = (args: { phone: string | number } | [phone: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -871,7 +871,7 @@ whatsappRemoveFromBlacklist.delete = (args: { phone: string | number } | [phone:
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappDiagnostic
-* @see app/Http/Controllers/Admin/IntegrationController.php:915
+* @see app/Http/Controllers/Admin/IntegrationController.php:990
 * @route '/admin/integrations/whatsapp/diagnostic'
 */
 export const whatsappDiagnostic = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -886,7 +886,7 @@ whatsappDiagnostic.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappDiagnostic
-* @see app/Http/Controllers/Admin/IntegrationController.php:915
+* @see app/Http/Controllers/Admin/IntegrationController.php:990
 * @route '/admin/integrations/whatsapp/diagnostic'
 */
 whatsappDiagnostic.url = (options?: RouteQueryOptions) => {
@@ -895,7 +895,7 @@ whatsappDiagnostic.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappDiagnostic
-* @see app/Http/Controllers/Admin/IntegrationController.php:915
+* @see app/Http/Controllers/Admin/IntegrationController.php:990
 * @route '/admin/integrations/whatsapp/diagnostic'
 */
 whatsappDiagnostic.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -905,7 +905,7 @@ whatsappDiagnostic.get = (options?: RouteQueryOptions): RouteDefinition<'get'> =
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappDiagnostic
-* @see app/Http/Controllers/Admin/IntegrationController.php:915
+* @see app/Http/Controllers/Admin/IntegrationController.php:990
 * @route '/admin/integrations/whatsapp/diagnostic'
 */
 whatsappDiagnostic.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -915,7 +915,7 @@ whatsappDiagnostic.head = (options?: RouteQueryOptions): RouteDefinition<'head'>
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappMessages
-* @see app/Http/Controllers/Admin/IntegrationController.php:951
+* @see app/Http/Controllers/Admin/IntegrationController.php:1027
 * @route '/admin/integrations/whatsapp/messages'
 */
 export const whatsappMessages = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -930,7 +930,7 @@ whatsappMessages.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappMessages
-* @see app/Http/Controllers/Admin/IntegrationController.php:951
+* @see app/Http/Controllers/Admin/IntegrationController.php:1027
 * @route '/admin/integrations/whatsapp/messages'
 */
 whatsappMessages.url = (options?: RouteQueryOptions) => {
@@ -939,7 +939,7 @@ whatsappMessages.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappMessages
-* @see app/Http/Controllers/Admin/IntegrationController.php:951
+* @see app/Http/Controllers/Admin/IntegrationController.php:1027
 * @route '/admin/integrations/whatsapp/messages'
 */
 whatsappMessages.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -949,7 +949,7 @@ whatsappMessages.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => 
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappMessages
-* @see app/Http/Controllers/Admin/IntegrationController.php:951
+* @see app/Http/Controllers/Admin/IntegrationController.php:1027
 * @route '/admin/integrations/whatsapp/messages'
 */
 whatsappMessages.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -959,7 +959,7 @@ whatsappMessages.head = (options?: RouteQueryOptions): RouteDefinition<'head'> =
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappRetryMessage
-* @see app/Http/Controllers/Admin/IntegrationController.php:1007
+* @see app/Http/Controllers/Admin/IntegrationController.php:1083
 * @route '/admin/integrations/whatsapp/messages/{id}/retry'
 */
 export const whatsappRetryMessage = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -974,7 +974,7 @@ whatsappRetryMessage.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappRetryMessage
-* @see app/Http/Controllers/Admin/IntegrationController.php:1007
+* @see app/Http/Controllers/Admin/IntegrationController.php:1083
 * @route '/admin/integrations/whatsapp/messages/{id}/retry'
 */
 whatsappRetryMessage.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -1001,7 +1001,7 @@ whatsappRetryMessage.url = (args: { id: string | number } | [id: string | number
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappRetryMessage
-* @see app/Http/Controllers/Admin/IntegrationController.php:1007
+* @see app/Http/Controllers/Admin/IntegrationController.php:1083
 * @route '/admin/integrations/whatsapp/messages/{id}/retry'
 */
 whatsappRetryMessage.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1011,7 +1011,7 @@ whatsappRetryMessage.post = (args: { id: string | number } | [id: string | numbe
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappTemplatesStore
-* @see app/Http/Controllers/Admin/IntegrationController.php:1037
+* @see app/Http/Controllers/Admin/IntegrationController.php:1113
 * @route '/admin/integrations/whatsapp/templates'
 */
 export const whatsappTemplatesStore = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1026,7 +1026,7 @@ whatsappTemplatesStore.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappTemplatesStore
-* @see app/Http/Controllers/Admin/IntegrationController.php:1037
+* @see app/Http/Controllers/Admin/IntegrationController.php:1113
 * @route '/admin/integrations/whatsapp/templates'
 */
 whatsappTemplatesStore.url = (options?: RouteQueryOptions) => {
@@ -1035,7 +1035,7 @@ whatsappTemplatesStore.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappTemplatesStore
-* @see app/Http/Controllers/Admin/IntegrationController.php:1037
+* @see app/Http/Controllers/Admin/IntegrationController.php:1113
 * @route '/admin/integrations/whatsapp/templates'
 */
 whatsappTemplatesStore.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1045,7 +1045,7 @@ whatsappTemplatesStore.post = (options?: RouteQueryOptions): RouteDefinition<'po
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappTemplatesUpdate
-* @see app/Http/Controllers/Admin/IntegrationController.php:1067
+* @see app/Http/Controllers/Admin/IntegrationController.php:1143
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 export const whatsappTemplatesUpdate = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -1060,7 +1060,7 @@ whatsappTemplatesUpdate.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappTemplatesUpdate
-* @see app/Http/Controllers/Admin/IntegrationController.php:1067
+* @see app/Http/Controllers/Admin/IntegrationController.php:1143
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 whatsappTemplatesUpdate.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -1087,7 +1087,7 @@ whatsappTemplatesUpdate.url = (args: { id: string | number } | [id: string | num
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappTemplatesUpdate
-* @see app/Http/Controllers/Admin/IntegrationController.php:1067
+* @see app/Http/Controllers/Admin/IntegrationController.php:1143
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 whatsappTemplatesUpdate.put = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -1097,7 +1097,7 @@ whatsappTemplatesUpdate.put = (args: { id: string | number } | [id: string | num
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappTemplatesDestroy
-* @see app/Http/Controllers/Admin/IntegrationController.php:1092
+* @see app/Http/Controllers/Admin/IntegrationController.php:1168
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 export const whatsappTemplatesDestroy = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -1112,7 +1112,7 @@ whatsappTemplatesDestroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappTemplatesDestroy
-* @see app/Http/Controllers/Admin/IntegrationController.php:1092
+* @see app/Http/Controllers/Admin/IntegrationController.php:1168
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 whatsappTemplatesDestroy.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -1139,7 +1139,7 @@ whatsappTemplatesDestroy.url = (args: { id: string | number } | [id: string | nu
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappTemplatesDestroy
-* @see app/Http/Controllers/Admin/IntegrationController.php:1092
+* @see app/Http/Controllers/Admin/IntegrationController.php:1168
 * @route '/admin/integrations/whatsapp/templates/{id}'
 */
 whatsappTemplatesDestroy.delete = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -1149,7 +1149,7 @@ whatsappTemplatesDestroy.delete = (args: { id: string | number } | [id: string |
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappBroadcastRecipients
-* @see app/Http/Controllers/Admin/IntegrationController.php:1108
+* @see app/Http/Controllers/Admin/IntegrationController.php:1184
 * @route '/admin/integrations/whatsapp/broadcast/recipients'
 */
 export const whatsappBroadcastRecipients = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1164,7 +1164,7 @@ whatsappBroadcastRecipients.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappBroadcastRecipients
-* @see app/Http/Controllers/Admin/IntegrationController.php:1108
+* @see app/Http/Controllers/Admin/IntegrationController.php:1184
 * @route '/admin/integrations/whatsapp/broadcast/recipients'
 */
 whatsappBroadcastRecipients.url = (options?: RouteQueryOptions) => {
@@ -1173,7 +1173,7 @@ whatsappBroadcastRecipients.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappBroadcastRecipients
-* @see app/Http/Controllers/Admin/IntegrationController.php:1108
+* @see app/Http/Controllers/Admin/IntegrationController.php:1184
 * @route '/admin/integrations/whatsapp/broadcast/recipients'
 */
 whatsappBroadcastRecipients.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1183,7 +1183,7 @@ whatsappBroadcastRecipients.get = (options?: RouteQueryOptions): RouteDefinition
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappBroadcastRecipients
-* @see app/Http/Controllers/Admin/IntegrationController.php:1108
+* @see app/Http/Controllers/Admin/IntegrationController.php:1184
 * @route '/admin/integrations/whatsapp/broadcast/recipients'
 */
 whatsappBroadcastRecipients.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1193,7 +1193,7 @@ whatsappBroadcastRecipients.head = (options?: RouteQueryOptions): RouteDefinitio
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappBroadcastSend
-* @see app/Http/Controllers/Admin/IntegrationController.php:1234
+* @see app/Http/Controllers/Admin/IntegrationController.php:1310
 * @route '/admin/integrations/whatsapp/broadcast/send'
 */
 export const whatsappBroadcastSend = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1208,7 +1208,7 @@ whatsappBroadcastSend.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappBroadcastSend
-* @see app/Http/Controllers/Admin/IntegrationController.php:1234
+* @see app/Http/Controllers/Admin/IntegrationController.php:1310
 * @route '/admin/integrations/whatsapp/broadcast/send'
 */
 whatsappBroadcastSend.url = (options?: RouteQueryOptions) => {
@@ -1217,7 +1217,7 @@ whatsappBroadcastSend.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::whatsappBroadcastSend
-* @see app/Http/Controllers/Admin/IntegrationController.php:1234
+* @see app/Http/Controllers/Admin/IntegrationController.php:1310
 * @route '/admin/integrations/whatsapp/broadcast/send'
 */
 whatsappBroadcastSend.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1227,7 +1227,7 @@ whatsappBroadcastSend.post = (options?: RouteQueryOptions): RouteDefinition<'pos
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::validacionesIndex
-* @see app/Http/Controllers/Admin/IntegrationController.php:797
+* @see app/Http/Controllers/Admin/IntegrationController.php:877
 * @route '/admin/integrations/validaciones'
 */
 export const validacionesIndex = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1242,7 +1242,7 @@ validacionesIndex.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::validacionesIndex
-* @see app/Http/Controllers/Admin/IntegrationController.php:797
+* @see app/Http/Controllers/Admin/IntegrationController.php:877
 * @route '/admin/integrations/validaciones'
 */
 validacionesIndex.url = (options?: RouteQueryOptions) => {
@@ -1251,7 +1251,7 @@ validacionesIndex.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::validacionesIndex
-* @see app/Http/Controllers/Admin/IntegrationController.php:797
+* @see app/Http/Controllers/Admin/IntegrationController.php:877
 * @route '/admin/integrations/validaciones'
 */
 validacionesIndex.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -1261,7 +1261,7 @@ validacionesIndex.get = (options?: RouteQueryOptions): RouteDefinition<'get'> =>
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::validacionesIndex
-* @see app/Http/Controllers/Admin/IntegrationController.php:797
+* @see app/Http/Controllers/Admin/IntegrationController.php:877
 * @route '/admin/integrations/validaciones'
 */
 validacionesIndex.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -1271,7 +1271,7 @@ validacionesIndex.head = (options?: RouteQueryOptions): RouteDefinition<'head'> 
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateJaak
-* @see app/Http/Controllers/Admin/IntegrationController.php:818
+* @see app/Http/Controllers/Admin/IntegrationController.php:898
 * @route '/admin/integrations/jaak'
 */
 export const updateJaak = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -1286,7 +1286,7 @@ updateJaak.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateJaak
-* @see app/Http/Controllers/Admin/IntegrationController.php:818
+* @see app/Http/Controllers/Admin/IntegrationController.php:898
 * @route '/admin/integrations/jaak'
 */
 updateJaak.url = (options?: RouteQueryOptions) => {
@@ -1295,7 +1295,7 @@ updateJaak.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::updateJaak
-* @see app/Http/Controllers/Admin/IntegrationController.php:818
+* @see app/Http/Controllers/Admin/IntegrationController.php:898
 * @route '/admin/integrations/jaak'
 */
 updateJaak.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -1305,7 +1305,7 @@ updateJaak.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::jaakTest
-* @see app/Http/Controllers/Admin/IntegrationController.php:850
+* @see app/Http/Controllers/Admin/IntegrationController.php:930
 * @route '/admin/integrations/jaak/test'
 */
 export const jaakTest = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -1320,7 +1320,7 @@ jaakTest.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::jaakTest
-* @see app/Http/Controllers/Admin/IntegrationController.php:850
+* @see app/Http/Controllers/Admin/IntegrationController.php:930
 * @route '/admin/integrations/jaak/test'
 */
 jaakTest.url = (options?: RouteQueryOptions) => {
@@ -1329,7 +1329,7 @@ jaakTest.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::jaakTest
-* @see app/Http/Controllers/Admin/IntegrationController.php:850
+* @see app/Http/Controllers/Admin/IntegrationController.php:930
 * @route '/admin/integrations/jaak/test'
 */
 jaakTest.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({

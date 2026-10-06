@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../wayfinder'
 /**
-* @see routes/web.php:43
+* @see [serialized-closure]:2
 * @route '/locale'
 */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -14,7 +14,7 @@ update.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see routes/web.php:43
+* @see [serialized-closure]:2
 * @route '/locale'
 */
 update.url = (options?: RouteQueryOptions) => {
@@ -22,7 +22,7 @@ update.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see routes/web.php:43
+* @see [serialized-closure]:2
 * @route '/locale'
 */
 update.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({

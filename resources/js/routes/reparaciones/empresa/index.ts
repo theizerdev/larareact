@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults, validateParameters } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparaciones/{empresa}/consultar/{numero_orden?}'
 */
 export const consultar = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ consultar.definition = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparaciones/{empresa}/consultar/{numero_orden?}'
 */
 consultar.url = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions) => {
@@ -46,7 +46,7 @@ consultar.url = (args: { empresa: string | number, numero_orden?: string | numbe
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparaciones/{empresa}/consultar/{numero_orden?}'
 */
 consultar.get = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -56,7 +56,7 @@ consultar.get = (args: { empresa: string | number, numero_orden?: string | numbe
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparaciones/{empresa}/consultar/{numero_orden?}'
 */
 consultar.head = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'head'> => ({

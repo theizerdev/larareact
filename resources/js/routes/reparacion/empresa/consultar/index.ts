@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::presupuesto
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:210
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:208
 * @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
 */
 export const presupuesto = (args: { empresa: string | number, numero_orden: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ presupuesto.definition = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::presupuesto
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:210
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:208
 * @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
 */
 presupuesto.url = (args: { empresa: string | number, numero_orden: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions) => {
@@ -42,7 +42,7 @@ presupuesto.url = (args: { empresa: string | number, numero_orden: string | numb
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::presupuesto
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:210
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:208
 * @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
 */
 presupuesto.post = (args: { empresa: string | number, numero_orden: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({

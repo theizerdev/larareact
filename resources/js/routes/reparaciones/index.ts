@@ -2,7 +2,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefa
 import empresa from './empresa'
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
-* @see app/Http/Controllers/Admin/ReparacionController.php:677
+* @see app/Http/Controllers/Admin/ReparacionController.php:903
 * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
 */
 export const reportePdf = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -17,7 +17,7 @@ reportePdf.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
-* @see app/Http/Controllers/Admin/ReparacionController.php:677
+* @see app/Http/Controllers/Admin/ReparacionController.php:903
 * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
 */
 reportePdf.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -50,7 +50,7 @@ reportePdf.url = (args: { reparacion: number | { id: number } } | [reparacion: n
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
-* @see app/Http/Controllers/Admin/ReparacionController.php:677
+* @see app/Http/Controllers/Admin/ReparacionController.php:903
 * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
 */
 reportePdf.get = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -60,7 +60,7 @@ reportePdf.get = (args: { reparacion: number | { id: number } } | [reparacion: n
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
-* @see app/Http/Controllers/Admin/ReparacionController.php:677
+* @see app/Http/Controllers/Admin/ReparacionController.php:903
 * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
 */
 reportePdf.head = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -70,7 +70,7 @@ reportePdf.head = (args: { reparacion: number | { id: number } } | [reparacion: 
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparaciones/consultar/{numero_orden?}'
 */
 export const consultar = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -85,7 +85,7 @@ consultar.definition = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparaciones/consultar/{numero_orden?}'
 */
 consultar.url = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -116,7 +116,7 @@ consultar.url = (args?: { numero_orden?: string | number } | [numero_orden: stri
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparaciones/consultar/{numero_orden?}'
 */
 consultar.get = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -126,7 +126,7 @@ consultar.get = (args?: { numero_orden?: string | number } | [numero_orden: stri
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::consultar
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparaciones/consultar/{numero_orden?}'
 */
 consultar.head = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({

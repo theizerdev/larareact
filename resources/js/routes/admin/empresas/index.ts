@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::index
-* @see app/Http/Controllers/Admin/EmpresaController.php:19
+* @see app/Http/Controllers/Admin/EmpresaController.php:20
 * @route '/admin/empresas'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::index
-* @see app/Http/Controllers/Admin/EmpresaController.php:19
+* @see app/Http/Controllers/Admin/EmpresaController.php:20
 * @route '/admin/empresas'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::index
-* @see app/Http/Controllers/Admin/EmpresaController.php:19
+* @see app/Http/Controllers/Admin/EmpresaController.php:20
 * @route '/admin/empresas'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::index
-* @see app/Http/Controllers/Admin/EmpresaController.php:19
+* @see app/Http/Controllers/Admin/EmpresaController.php:20
 * @route '/admin/empresas'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -44,8 +44,76 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
 /**
+* @see \App\Http\Controllers\Admin\EmpresaController::show
+* @see app/Http/Controllers/Admin/EmpresaController.php:76
+* @route '/admin/empresas/{empresa}'
+*/
+export const show = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: show.url(args, options),
+    method: 'get',
+})
+
+show.definition = {
+    methods: ["get","head"],
+    url: '/admin/empresas/{empresa}',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Admin\EmpresaController::show
+* @see app/Http/Controllers/Admin/EmpresaController.php:76
+* @route '/admin/empresas/{empresa}'
+*/
+show.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { empresa: args }
+    }
+
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { empresa: args.id }
+    }
+
+    if (Array.isArray(args)) {
+        args = {
+            empresa: args[0],
+        }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+        empresa: typeof args.empresa === 'object'
+        ? args.empresa.id
+        : args.empresa,
+    }
+
+    return show.definition.url
+            .replace('{empresa}', parsedArgs.empresa.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Admin\EmpresaController::show
+* @see app/Http/Controllers/Admin/EmpresaController.php:76
+* @route '/admin/empresas/{empresa}'
+*/
+show.get = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: show.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\EmpresaController::show
+* @see app/Http/Controllers/Admin/EmpresaController.php:76
+* @route '/admin/empresas/{empresa}'
+*/
+show.head = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: show.url(args, options),
+    method: 'head',
+})
+
+/**
 * @see \App\Http\Controllers\Admin\EmpresaController::store
-* @see app/Http/Controllers/Admin/EmpresaController.php:60
+* @see app/Http/Controllers/Admin/EmpresaController.php:89
 * @route '/admin/empresas'
 */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -60,7 +128,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::store
-* @see app/Http/Controllers/Admin/EmpresaController.php:60
+* @see app/Http/Controllers/Admin/EmpresaController.php:89
 * @route '/admin/empresas'
 */
 store.url = (options?: RouteQueryOptions) => {
@@ -69,7 +137,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::store
-* @see app/Http/Controllers/Admin/EmpresaController.php:60
+* @see app/Http/Controllers/Admin/EmpresaController.php:89
 * @route '/admin/empresas'
 */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -79,7 +147,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::update
-* @see app/Http/Controllers/Admin/EmpresaController.php:103
+* @see app/Http/Controllers/Admin/EmpresaController.php:147
 * @route '/admin/empresas/{empresa}'
 */
 export const update = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -94,7 +162,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::update
-* @see app/Http/Controllers/Admin/EmpresaController.php:103
+* @see app/Http/Controllers/Admin/EmpresaController.php:147
 * @route '/admin/empresas/{empresa}'
 */
 update.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -127,7 +195,7 @@ update.url = (args: { empresa: number | { id: number } } | [empresa: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::update
-* @see app/Http/Controllers/Admin/EmpresaController.php:103
+* @see app/Http/Controllers/Admin/EmpresaController.php:147
 * @route '/admin/empresas/{empresa}'
 */
 update.put = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -137,7 +205,7 @@ update.put = (args: { empresa: number | { id: number } } | [empresa: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::toggleStatus
-* @see app/Http/Controllers/Admin/EmpresaController.php:126
+* @see app/Http/Controllers/Admin/EmpresaController.php:170
 * @route '/admin/empresas/{empresa}/toggle-status'
 */
 export const toggleStatus = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -152,7 +220,7 @@ toggleStatus.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::toggleStatus
-* @see app/Http/Controllers/Admin/EmpresaController.php:126
+* @see app/Http/Controllers/Admin/EmpresaController.php:170
 * @route '/admin/empresas/{empresa}/toggle-status'
 */
 toggleStatus.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -185,7 +253,7 @@ toggleStatus.url = (args: { empresa: number | { id: number } } | [empresa: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::toggleStatus
-* @see app/Http/Controllers/Admin/EmpresaController.php:126
+* @see app/Http/Controllers/Admin/EmpresaController.php:170
 * @route '/admin/empresas/{empresa}/toggle-status'
 */
 toggleStatus.patch = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -195,7 +263,7 @@ toggleStatus.patch = (args: { empresa: number | { id: number } } | [empresa: num
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::logos
-* @see app/Http/Controllers/Admin/EmpresaController.php:146
+* @see app/Http/Controllers/Admin/EmpresaController.php:190
 * @route '/admin/empresas/{empresa}/logos'
 */
 export const logos = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -210,7 +278,7 @@ logos.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::logos
-* @see app/Http/Controllers/Admin/EmpresaController.php:146
+* @see app/Http/Controllers/Admin/EmpresaController.php:190
 * @route '/admin/empresas/{empresa}/logos'
 */
 logos.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -243,7 +311,7 @@ logos.url = (args: { empresa: number | { id: number } } | [empresa: number | { i
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::logos
-* @see app/Http/Controllers/Admin/EmpresaController.php:146
+* @see app/Http/Controllers/Admin/EmpresaController.php:190
 * @route '/admin/empresas/{empresa}/logos'
 */
 logos.post = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -253,6 +321,7 @@ logos.post = (args: { empresa: number | { id: number } } | [empresa: number | { 
 
 const empresas = {
     index: Object.assign(index, index),
+    show: Object.assign(show, show),
     store: Object.assign(store, store),
     update: Object.assign(update, update),
     toggleStatus: Object.assign(toggleStatus, toggleStatus),

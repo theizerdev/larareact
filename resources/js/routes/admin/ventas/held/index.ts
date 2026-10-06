@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::deleteMethod
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:330
+* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:390
 * @route '/admin/ventas/held/{heldSale}'
 */
 export const deleteMethod = (args: { heldSale: number | { id: number } } | [heldSale: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -16,7 +16,7 @@ deleteMethod.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::deleteMethod
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:330
+* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:390
 * @route '/admin/ventas/held/{heldSale}'
 */
 deleteMethod.url = (args: { heldSale: number | { id: number } } | [heldSale: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -49,7 +49,7 @@ deleteMethod.url = (args: { heldSale: number | { id: number } } | [heldSale: num
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::deleteMethod
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:330
+* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:390
 * @route '/admin/ventas/held/{heldSale}'
 */
 deleteMethod.delete = (args: { heldSale: number | { id: number } } | [heldSale: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({

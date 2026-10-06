@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults, validateParameters } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::show
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparacion/{empresa}/consultar/{numero_orden?}'
 */
 const showa3c6757cd98b401fcaccf1faa45f7861 = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ showa3c6757cd98b401fcaccf1faa45f7861.definition = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::show
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparacion/{empresa}/consultar/{numero_orden?}'
 */
 showa3c6757cd98b401fcaccf1faa45f7861.url = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions) => {
@@ -46,7 +46,7 @@ showa3c6757cd98b401fcaccf1faa45f7861.url = (args: { empresa: string | number, nu
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::show
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparacion/{empresa}/consultar/{numero_orden?}'
 */
 showa3c6757cd98b401fcaccf1faa45f7861.get = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -56,7 +56,7 @@ showa3c6757cd98b401fcaccf1faa45f7861.get = (args: { empresa: string | number, nu
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::show
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparacion/{empresa}/consultar/{numero_orden?}'
 */
 showa3c6757cd98b401fcaccf1faa45f7861.head = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -66,7 +66,7 @@ showa3c6757cd98b401fcaccf1faa45f7861.head = (args: { empresa: string | number, n
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::show
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparaciones/{empresa}/consultar/{numero_orden?}'
 */
 const showbe6c17884d0a9fe40b755ecf1cbac3d8 = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -81,7 +81,7 @@ showbe6c17884d0a9fe40b755ecf1cbac3d8.definition = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::show
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparaciones/{empresa}/consultar/{numero_orden?}'
 */
 showbe6c17884d0a9fe40b755ecf1cbac3d8.url = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions) => {
@@ -111,7 +111,7 @@ showbe6c17884d0a9fe40b755ecf1cbac3d8.url = (args: { empresa: string | number, nu
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::show
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparaciones/{empresa}/consultar/{numero_orden?}'
 */
 showbe6c17884d0a9fe40b755ecf1cbac3d8.get = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -121,7 +121,7 @@ showbe6c17884d0a9fe40b755ecf1cbac3d8.get = (args: { empresa: string | number, nu
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::show
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:19
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:18
 * @route '/reparaciones/{empresa}/consultar/{numero_orden?}'
 */
 showbe6c17884d0a9fe40b755ecf1cbac3d8.head = (args: { empresa: string | number, numero_orden?: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -141,7 +141,7 @@ export const show = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::responderPresupuesto
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:210
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:208
 * @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
 */
 export const responderPresupuesto = (args: { empresa: string | number, numero_orden: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -156,7 +156,7 @@ responderPresupuesto.definition = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::responderPresupuesto
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:210
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:208
 * @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
 */
 responderPresupuesto.url = (args: { empresa: string | number, numero_orden: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions) => {
@@ -182,7 +182,7 @@ responderPresupuesto.url = (args: { empresa: string | number, numero_orden: stri
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::responderPresupuesto
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:210
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:208
 * @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
 */
 responderPresupuesto.post = (args: { empresa: string | number, numero_orden: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -192,7 +192,7 @@ responderPresupuesto.post = (args: { empresa: string | number, numero_orden: str
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::showFallback
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparacion/consultar/{numero_orden?}'
 */
 const showFallbackf726ee58b0d66d093efbb59c77a8c649 = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -207,7 +207,7 @@ showFallbackf726ee58b0d66d093efbb59c77a8c649.definition = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::showFallback
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparacion/consultar/{numero_orden?}'
 */
 showFallbackf726ee58b0d66d093efbb59c77a8c649.url = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -238,7 +238,7 @@ showFallbackf726ee58b0d66d093efbb59c77a8c649.url = (args?: { numero_orden?: stri
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::showFallback
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparacion/consultar/{numero_orden?}'
 */
 showFallbackf726ee58b0d66d093efbb59c77a8c649.get = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -248,7 +248,7 @@ showFallbackf726ee58b0d66d093efbb59c77a8c649.get = (args?: { numero_orden?: stri
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::showFallback
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparacion/consultar/{numero_orden?}'
 */
 showFallbackf726ee58b0d66d093efbb59c77a8c649.head = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -258,7 +258,7 @@ showFallbackf726ee58b0d66d093efbb59c77a8c649.head = (args?: { numero_orden?: str
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::showFallback
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparaciones/consultar/{numero_orden?}'
 */
 const showFallback6b29b06e7b0f6891321ddcb280edd4b6 = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -273,7 +273,7 @@ showFallback6b29b06e7b0f6891321ddcb280edd4b6.definition = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::showFallback
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparaciones/consultar/{numero_orden?}'
 */
 showFallback6b29b06e7b0f6891321ddcb280edd4b6.url = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -304,7 +304,7 @@ showFallback6b29b06e7b0f6891321ddcb280edd4b6.url = (args?: { numero_orden?: stri
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::showFallback
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparaciones/consultar/{numero_orden?}'
 */
 showFallback6b29b06e7b0f6891321ddcb280edd4b6.get = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -314,7 +314,7 @@ showFallback6b29b06e7b0f6891321ddcb280edd4b6.get = (args?: { numero_orden?: stri
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::showFallback
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:42
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:41
 * @route '/reparaciones/consultar/{numero_orden?}'
 */
 showFallback6b29b06e7b0f6891321ddcb280edd4b6.head = (args?: { numero_orden?: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -334,7 +334,7 @@ export const showFallback = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::responderPresupuestoFallback
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:218
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:216
 * @route '/reparacion/consultar/{numero_orden}/presupuesto'
 */
 export const responderPresupuestoFallback = (args: { numero_orden: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -349,7 +349,7 @@ responderPresupuestoFallback.definition = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::responderPresupuestoFallback
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:218
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:216
 * @route '/reparacion/consultar/{numero_orden}/presupuesto'
 */
 responderPresupuestoFallback.url = (args: { numero_orden: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -376,7 +376,7 @@ responderPresupuestoFallback.url = (args: { numero_orden: string | number } | [n
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::responderPresupuestoFallback
-* @see app/Http/Controllers/PublicReparacionTrackingController.php:218
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:216
 * @route '/reparacion/consultar/{numero_orden}/presupuesto'
 */
 responderPresupuestoFallback.post = (args: { numero_orden: string | number } | [numero_orden: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({

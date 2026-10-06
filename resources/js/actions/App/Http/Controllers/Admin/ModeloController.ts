@@ -141,7 +141,7 @@ show.head = (args: { modelo: string | number } | [modelo: string | number ] | st
 
 /**
 * @see \App\Http\Controllers\Admin\ModeloController::update
-* @see app/Http/Controllers/Admin/ModeloController.php:103
+* @see app/Http/Controllers/Admin/ModeloController.php:136
 * @route '/admin/modelos/{modelo}'
 */
 export const update = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -156,7 +156,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ModeloController::update
-* @see app/Http/Controllers/Admin/ModeloController.php:103
+* @see app/Http/Controllers/Admin/ModeloController.php:136
 * @route '/admin/modelos/{modelo}'
 */
 update.url = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -189,7 +189,7 @@ update.url = (args: { modelo: number | { id: number } } | [modelo: number | { id
 
 /**
 * @see \App\Http\Controllers\Admin\ModeloController::update
-* @see app/Http/Controllers/Admin/ModeloController.php:103
+* @see app/Http/Controllers/Admin/ModeloController.php:136
 * @route '/admin/modelos/{modelo}'
 */
 update.put = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -199,7 +199,7 @@ update.put = (args: { modelo: number | { id: number } } | [modelo: number | { id
 
 /**
 * @see \App\Http\Controllers\Admin\ModeloController::update
-* @see app/Http/Controllers/Admin/ModeloController.php:103
+* @see app/Http/Controllers/Admin/ModeloController.php:136
 * @route '/admin/modelos/{modelo}'
 */
 update.patch = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
@@ -209,7 +209,7 @@ update.patch = (args: { modelo: number | { id: number } } | [modelo: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\ModeloController::destroy
-* @see app/Http/Controllers/Admin/ModeloController.php:126
+* @see app/Http/Controllers/Admin/ModeloController.php:159
 * @route '/admin/modelos/{modelo}'
 */
 export const destroy = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -224,7 +224,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ModeloController::destroy
-* @see app/Http/Controllers/Admin/ModeloController.php:126
+* @see app/Http/Controllers/Admin/ModeloController.php:159
 * @route '/admin/modelos/{modelo}'
 */
 destroy.url = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -257,7 +257,7 @@ destroy.url = (args: { modelo: number | { id: number } } | [modelo: number | { i
 
 /**
 * @see \App\Http\Controllers\Admin\ModeloController::destroy
-* @see app/Http/Controllers/Admin/ModeloController.php:126
+* @see app/Http/Controllers/Admin/ModeloController.php:159
 * @route '/admin/modelos/{modelo}'
 */
 destroy.delete = (args: { modelo: number | { id: number } } | [modelo: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({

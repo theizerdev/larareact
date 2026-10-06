@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\SuperAdminDashboardController::dashboard
-* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:18
+* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:19
 * @route '/superadministrador/dashboard0'
 */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ dashboard.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SuperAdminDashboardController::dashboard
-* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:18
+* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:19
 * @route '/superadministrador/dashboard0'
 */
 dashboard.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\SuperAdminDashboardController::dashboard
-* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:18
+* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:19
 * @route '/superadministrador/dashboard0'
 */
 dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\SuperAdminDashboardController::dashboard
-* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:18
+* @see app/Http/Controllers/Admin/SuperAdminDashboardController.php:19
 * @route '/superadministrador/dashboard0'
 */
 dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({

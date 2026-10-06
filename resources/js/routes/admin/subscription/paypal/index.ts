@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::createOrder
-* @see app/Http/Controllers/Admin/SubscriptionController.php:192
+* @see app/Http/Controllers/Admin/SubscriptionController.php:198
 * @route '/admin/monitoring/subscription/paypal/create-order'
 */
 export const createOrder = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ createOrder.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::createOrder
-* @see app/Http/Controllers/Admin/SubscriptionController.php:192
+* @see app/Http/Controllers/Admin/SubscriptionController.php:198
 * @route '/admin/monitoring/subscription/paypal/create-order'
 */
 createOrder.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ createOrder.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::createOrder
-* @see app/Http/Controllers/Admin/SubscriptionController.php:192
+* @see app/Http/Controllers/Admin/SubscriptionController.php:198
 * @route '/admin/monitoring/subscription/paypal/create-order'
 */
 createOrder.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +35,7 @@ createOrder.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::captureOrder
-* @see app/Http/Controllers/Admin/SubscriptionController.php:254
+* @see app/Http/Controllers/Admin/SubscriptionController.php:262
 * @route '/admin/monitoring/subscription/paypal/capture-order/{orderId}'
 */
 export const captureOrder = (args: { orderId: string | number } | [orderId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -50,7 +50,7 @@ captureOrder.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::captureOrder
-* @see app/Http/Controllers/Admin/SubscriptionController.php:254
+* @see app/Http/Controllers/Admin/SubscriptionController.php:262
 * @route '/admin/monitoring/subscription/paypal/capture-order/{orderId}'
 */
 captureOrder.url = (args: { orderId: string | number } | [orderId: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -77,7 +77,7 @@ captureOrder.url = (args: { orderId: string | number } | [orderId: string | numb
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::captureOrder
-* @see app/Http/Controllers/Admin/SubscriptionController.php:254
+* @see app/Http/Controllers/Admin/SubscriptionController.php:262
 * @route '/admin/monitoring/subscription/paypal/capture-order/{orderId}'
 */
 captureOrder.post = (args: { orderId: string | number } | [orderId: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({

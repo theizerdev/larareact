@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::index
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:67
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:22
 * @route '/admin/monitoring/activities'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::index
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:67
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:22
 * @route '/admin/monitoring/activities'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::index
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:67
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:22
 * @route '/admin/monitoring/activities'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::index
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:67
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:22
 * @route '/admin/monitoring/activities'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -45,7 +45,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::exportMethod
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:419
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:274
 * @route '/admin/monitoring/activities/export'
 */
 export const exportMethod = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -60,7 +60,7 @@ exportMethod.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::exportMethod
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:419
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:274
 * @route '/admin/monitoring/activities/export'
 */
 exportMethod.url = (options?: RouteQueryOptions) => {
@@ -69,7 +69,7 @@ exportMethod.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::exportMethod
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:419
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:274
 * @route '/admin/monitoring/activities/export'
 */
 exportMethod.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -79,7 +79,7 @@ exportMethod.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::exportMethod
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:419
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:274
 * @route '/admin/monitoring/activities/export'
 */
 exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -89,7 +89,7 @@ exportMethod.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::clear
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:390
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:333
 * @route '/admin/monitoring/activities/clear'
 */
 export const clear = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -104,7 +104,7 @@ clear.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::clear
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:390
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:333
 * @route '/admin/monitoring/activities/clear'
 */
 clear.url = (options?: RouteQueryOptions) => {
@@ -113,7 +113,7 @@ clear.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::clear
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:390
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:333
 * @route '/admin/monitoring/activities/clear'
 */
 clear.delete = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -123,7 +123,7 @@ clear.delete = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::destroy
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:363
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:0
 * @route '/admin/monitoring/activities/{id}'
 */
 export const destroy = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -138,7 +138,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::destroy
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:363
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:0
 * @route '/admin/monitoring/activities/{id}'
 */
 destroy.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -165,7 +165,7 @@ destroy.url = (args: { id: string | number } | [id: string | number ] | string |
 
 /**
 * @see \App\Http\Controllers\Admin\ActivityMonitoringController::destroy
-* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:363
+* @see app/Http/Controllers/Admin/ActivityMonitoringController.php:0
 * @route '/admin/monitoring/activities/{id}'
 */
 destroy.delete = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({

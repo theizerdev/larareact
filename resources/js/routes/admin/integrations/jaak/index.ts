@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:818
+* @see app/Http/Controllers/Admin/IntegrationController.php:898
 * @route '/admin/integrations/jaak'
 */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -16,7 +16,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:818
+* @see app/Http/Controllers/Admin/IntegrationController.php:898
 * @route '/admin/integrations/jaak'
 */
 update.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ update.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:818
+* @see app/Http/Controllers/Admin/IntegrationController.php:898
 * @route '/admin/integrations/jaak'
 */
 update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -35,7 +35,7 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
-* @see app/Http/Controllers/Admin/IntegrationController.php:850
+* @see app/Http/Controllers/Admin/IntegrationController.php:930
 * @route '/admin/integrations/jaak/test'
 */
 export const test = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -50,7 +50,7 @@ test.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
-* @see app/Http/Controllers/Admin/IntegrationController.php:850
+* @see app/Http/Controllers/Admin/IntegrationController.php:930
 * @route '/admin/integrations/jaak/test'
 */
 test.url = (options?: RouteQueryOptions) => {
@@ -59,7 +59,7 @@ test.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
-* @see app/Http/Controllers/Admin/IntegrationController.php:850
+* @see app/Http/Controllers/Admin/IntegrationController.php:930
 * @route '/admin/integrations/jaak/test'
 */
 test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({

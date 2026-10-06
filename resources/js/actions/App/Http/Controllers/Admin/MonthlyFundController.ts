@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\MonthlyFundController::index
-* @see app/Http/Controllers/Admin/MonthlyFundController.php:40
+* @see app/Http/Controllers/Admin/MonthlyFundController.php:41
 * @route '/admin/fondo-mensual'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\MonthlyFundController::index
-* @see app/Http/Controllers/Admin/MonthlyFundController.php:40
+* @see app/Http/Controllers/Admin/MonthlyFundController.php:41
 * @route '/admin/fondo-mensual'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\MonthlyFundController::index
-* @see app/Http/Controllers/Admin/MonthlyFundController.php:40
+* @see app/Http/Controllers/Admin/MonthlyFundController.php:41
 * @route '/admin/fondo-mensual'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\MonthlyFundController::index
-* @see app/Http/Controllers/Admin/MonthlyFundController.php:40
+* @see app/Http/Controllers/Admin/MonthlyFundController.php:41
 * @route '/admin/fondo-mensual'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -45,7 +45,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\MonthlyFundController::closeMonth
-* @see app/Http/Controllers/Admin/MonthlyFundController.php:226
+* @see app/Http/Controllers/Admin/MonthlyFundController.php:251
 * @route '/admin/fondo-mensual/cerrar'
 */
 export const closeMonth = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -60,7 +60,7 @@ closeMonth.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\MonthlyFundController::closeMonth
-* @see app/Http/Controllers/Admin/MonthlyFundController.php:226
+* @see app/Http/Controllers/Admin/MonthlyFundController.php:251
 * @route '/admin/fondo-mensual/cerrar'
 */
 closeMonth.url = (options?: RouteQueryOptions) => {
@@ -69,7 +69,7 @@ closeMonth.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Admin\MonthlyFundController::closeMonth
-* @see app/Http/Controllers/Admin/MonthlyFundController.php:226
+* @see app/Http/Controllers/Admin/MonthlyFundController.php:251
 * @route '/admin/fondo-mensual/cerrar'
 */
 closeMonth.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
