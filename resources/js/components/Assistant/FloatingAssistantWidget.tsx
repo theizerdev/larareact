@@ -60,6 +60,7 @@ interface ChatMessage {
     summary?: any;
     items?: any[];
     quote?: any;
+    price_card?: any;
     deleted_order?: any;
     today_sales?: any;
 }
@@ -102,7 +103,7 @@ const toneFor = (type?: string): MessageTone => {
     if (type === 'error') return 'error';
     if (type === 'repair_deleted') return 'danger';
     if (['not_found', 'unknown', 'need_brand', 'client_exists', 'info', 'cash_closed', 'confirm_delete'].includes(type)) return 'warning';
-    if (type.endsWith('_created') || ['stock_adjusted', 'whatsapp_sent', 'status_updated', 'updated', 'cash_opened', 'credit_payment'].includes(type)) {
+    if (type === 'product_price' || type.endsWith('_created') || ['stock_adjusted', 'whatsapp_sent', 'status_updated', 'updated', 'cash_opened', 'credit_payment'].includes(type)) {
         return 'success';
     }
     return 'default';
@@ -307,6 +308,7 @@ export default function FloatingAssistantWidget() {
         summary: data?.summary,
         items: data?.items,
         quote: data?.quote,
+        price_card: data?.price_card,
         deleted_order: data?.deleted_order,
         today_sales: data?.today_sales,
     });
@@ -851,6 +853,53 @@ export default function FloatingAssistantWidget() {
                                                                     <span className="text-[11.5px] font-bold">Total al Cliente:</span>
                                                                     <span className="text-[15px] font-extrabold text-indigo-600 dark:text-indigo-400">
                                                                         {msg.quote.total_formateado}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Tarjeta Destacada de Verificación de Precio */}
+                                                        {msg.price_card && (
+                                                            <div className="mt-3 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-background to-teal-500/5 p-3.5 space-y-2.5 shadow-sm">
+                                                                <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                                                                    <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                                        💰 Precio Verificado
+                                                                    </span>
+                                                                    <span
+                                                                        className={cn(
+                                                                            'rounded-full px-2 py-0.5 text-[10px] font-bold border',
+                                                                            msg.price_card.disponible
+                                                                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                                                                : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                                                                        )}
+                                                                    >
+                                                                        {msg.price_card.disponible ? '🟢 En Stock' : '🔴 Agotado'}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div>
+                                                                    <div className="text-[13px] font-bold text-foreground">
+                                                                        {msg.price_card.nombre}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 mt-0.5 text-[10.5px] text-muted-foreground flex-wrap">
+                                                                        {msg.price_card.sku && (
+                                                                            <span>
+                                                                                SKU: <code className="font-mono text-foreground/80">{msg.price_card.sku}</code>
+                                                                            </span>
+                                                                        )}
+                                                                        {msg.price_card.categoria && (
+                                                                            <span>· 📁 {msg.price_card.categoria}</span>
+                                                                        )}
+                                                                        <span>
+                                                                            · {msg.price_card.tipo === 'repuesto' ? '🛠️ Repuesto de taller' : '📦 Producto comercial'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex items-center justify-between rounded-xl bg-emerald-600/10 border border-emerald-500/25 px-3 py-2 text-emerald-950 dark:text-emerald-200">
+                                                                    <span className="text-[11.5px] font-semibold">Precio de Venta:</span>
+                                                                    <span className="text-[17px] font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                                                                        {msg.price_card.precio_formateado}
                                                                     </span>
                                                                 </div>
                                                             </div>

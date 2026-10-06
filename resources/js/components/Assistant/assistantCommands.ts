@@ -43,6 +43,8 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
     { category: 'clientes', label: 'Buscar cliente', text: 'buscar cliente ', prefill: true, hint: 'por nombre, teléfono o email' },
 
     // Inventario
+    { category: 'inventario', label: 'Verificar precio', text: 'precio ', prefill: true, hint: 'precio pantalla iphone 11 · consulta precio y existencia' },
+    { category: 'inventario', label: '¿Cuánto cuesta?', text: 'cuanto cuesta ', prefill: true, hint: 'cuanto cuesta cargador samsung · precio rápido' },
     { category: 'inventario', label: 'Consultar existencias', text: 'stock ', prefill: true, hint: 'stock Pantalla · existencias, categoría y tipo' },
     { category: 'inventario', label: 'Ver repuestos', text: 'repuestos ', prefill: true, hint: 'repuestos Bateria · piezas físicas para taller' },
     { category: 'inventario', label: 'Repuestos agotados', text: 'repuestos agotados', hint: 'Piezas de taller sin stock físico' },

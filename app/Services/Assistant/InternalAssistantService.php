@@ -341,7 +341,13 @@ class InternalAssistantService
             return $this->handleRepuestosAgotados($user, $empresaId, $sucursalId);
         }
 
-        // 13. Consultar Stock de un producto o repuesto (ej: "stock pantalla iphone", "precio bateria")
+        // 13. Consulta específica de Precio (ej: "precio pantalla iphone 11", "cuanto cuesta cargador samsung", "cuanto vale el display")
+        $priceTerm = $this->parsePriceQuery($rawQuery, $normalized);
+        if ($priceTerm !== null) {
+            return $this->handlePriceCheck($user, $empresaId, $sucursalId, $priceTerm);
+        }
+
+        // 14. Consultar Stock de un producto o repuesto (ej: "stock pantalla iphone", "existencias bateria")
         $stockSearch = $this->parseStockSearch($normalized, $rawQuery);
         if ($stockSearch !== null) {
             return $this->handleStockSearch($user, $empresaId, $sucursalId, $stockSearch);
@@ -486,6 +492,13 @@ class InternalAssistantService
                     return ['type' => 'error', 'message' => 'El nombre del producto es obligatorio.'];
                 }
                 return $this->handleQuickProductCreate($user, $empresaId, $sucursalId, $name, $price, $stock);
+
+            case 'get_price':
+                $term = $params['term'] ?? $params['query'] ?? null;
+                if (!$term) {
+                    return ['type' => 'error', 'message' => 'Por favor indica el producto para consultar su precio.'];
+                }
+                return $this->handlePriceCheck($user, $empresaId, $sucursalId, (string)$term);
 
             // Fase 4: Acciones Financieras y Proveedores
             case 'get_sales_goals':
@@ -3842,6 +3855,303 @@ class InternalAssistantService
         ];
     }
 
+    /**
+     * Consulta y verifica el precio de venta de un producto, repuesto o servicio técnico.
+     */
+    public function handlePriceCheck(User $user, int $empresaId, ?int $sucursalId, string $term): array
+    {
+        $term = trim($term);
+        // Limpiar preposiciones y artículos iniciales
+        $cleanTerm = preg_replace('/^(?:de\s+|del\s+)?(?:el\s+|la\s+|los\s+|las\s+|un\s+|una\s+)?/i', '', $term);
+        $cleanTerm = trim($cleanTerm);
+
+        if ($cleanTerm === '') {
+            return [
+                'type' => 'info',
+                'message' => "💡 **Verificar Precio de Producto**\n\n"
+                    . "Por favor indica qué producto, repuesto o servicio deseas consultar.\n\n"
+                    . "👉 **Ejemplos:**\n"
+                    . "• `precio pantalla iphone 11`\n"
+                    . "• `cuanto cuesta cargador samsung`\n"
+                    . "• `cuanto vale bateria redmi note 10`\n"
+                    . "• `precio display samsung a14`",
+                'quick_actions' => [
+                    ['label' => '📦 Ver Catálogo ↗', 'url' => '/admin/productos', 'type' => 'link'],
+                    ['label' => '💡 Cotizar Reparación', 'text' => 'cotizar pantalla', 'prefill' => true],
+                    ['label' => '⚠️ Alertas de Stock', 'action' => 'get_stock_alerts'],
+                ],
+            ];
+        }
+
+        $currency = $this->getCurrencySymbol($empresaId);
+
+        // 1. Buscar en Productos / Repuestos de la empresa
+        $prodQuery = Producto::withoutGlobalScope('multitenancy')
+            ->with(['marca', 'modelo', 'categoria'])
+            ->where('empresa_id', $empresaId)
+            ->where('estado', true);
+
+        if ($sucursalId) {
+            $prodQuery->where('sucursal_id', $sucursalId);
+        }
+
+        $tokens = array_filter(preg_split('/\s+/', $cleanTerm), fn($t) => mb_strlen($t) >= 2);
+
+        $prodQuery->where(function ($q) use ($cleanTerm, $tokens) {
+            $q->where('nombre_variante', 'like', "%{$cleanTerm}%")
+                ->orWhere('sku', 'like', "%{$cleanTerm}%")
+                ->orWhere('codigo_barras', 'like', "%{$cleanTerm}%")
+                ->orWhereHas('categoria', fn($sub) => $sub->where('nombre', 'like', "%{$cleanTerm}%"))
+                ->orWhereHas('marca', fn($sub) => $sub->where('nombre', 'like', "%{$cleanTerm}%"))
+                ->orWhereHas('modelo', fn($sub) => $sub->where('nombre_comercial', 'like', "%{$cleanTerm}%"));
+
+            if (count($tokens) > 1) {
+                $q->orWhere(function ($allTokensQ) use ($tokens) {
+                    foreach ($tokens as $token) {
+                        $allTokensQ->where(function ($sub) use ($token) {
+                            $sub->where('nombre_variante', 'like', "%{$token}%")
+                                ->orWhere('sku', 'like', "%{$token}%")
+                                ->orWhere('codigo_barras', 'like', "%{$token}%")
+                                ->orWhereHas('categoria', fn($c) => $c->where('nombre', 'like', "%{$token}%"))
+                                ->orWhereHas('marca', fn($m) => $m->where('nombre', 'like', "%{$token}%"))
+                                ->orWhereHas('modelo', fn($mod) => $mod->where('nombre_comercial', 'like', "%{$token}%"));
+                        });
+                    }
+                });
+            }
+        });
+
+        $products = $prodQuery->limit(6)->get();
+
+        // Si no encontró en la sucursal específica pero el usuario tiene sucursal, buscar en toda la empresa
+        if ($products->isEmpty() && $sucursalId) {
+            $productsFallback = Producto::withoutGlobalScope('multitenancy')
+                ->with(['marca', 'modelo', 'categoria'])
+                ->where('empresa_id', $empresaId)
+                ->where('estado', true)
+                ->where(function ($q) use ($cleanTerm, $tokens) {
+                    $q->where('nombre_variante', 'like', "%{$cleanTerm}%")
+                        ->orWhere('sku', 'like', "%{$cleanTerm}%")
+                        ->orWhere('codigo_barras', 'like', "%{$cleanTerm}%")
+                        ->orWhereHas('categoria', fn($sub) => $sub->where('nombre', 'like', "%{$cleanTerm}%"))
+                        ->orWhereHas('marca', fn($sub) => $sub->where('nombre', 'like', "%{$cleanTerm}%"))
+                        ->orWhereHas('modelo', fn($sub) => $sub->where('nombre_comercial', 'like', "%{$cleanTerm}%"));
+                    if (count($tokens) > 1) {
+                        $q->orWhere(function ($allTokensQ) use ($tokens) {
+                            foreach ($tokens as $token) {
+                                $allTokensQ->where(function ($sub) use ($token) {
+                                    $sub->where('nombre_variante', 'like', "%{$token}%")
+                                        ->orWhere('sku', 'like', "%{$token}%")
+                                        ->orWhere('codigo_barras', 'like', "%{$token}%")
+                                        ->orWhereHas('categoria', fn($c) => $c->where('nombre', 'like', "%{$token}%"))
+                                        ->orWhereHas('marca', fn($m) => $m->where('nombre', 'like', "%{$token}%"))
+                                        ->orWhereHas('modelo', fn($mod) => $mod->where('nombre_comercial', 'like', "%{$token}%"));
+                                });
+                            }
+                        });
+                    }
+                })
+                ->limit(6)
+                ->get();
+            if ($productsFallback->isNotEmpty()) {
+                $products = $productsFallback;
+            }
+        }
+
+        // 2. Buscar en Servicios Técnicos (mano de obra)
+        $servQuery = Servicio::withoutGlobalScope('multitenancy')
+            ->with(['categoria'])
+            ->where('empresa_id', $empresaId)
+            ->where('estado', true);
+
+        $servQuery->where(function ($q) use ($cleanTerm, $tokens) {
+            $q->where('nombre', 'like', "%{$cleanTerm}%")
+                ->orWhere('codigo', 'like', "%{$cleanTerm}%")
+                ->orWhere('descripcion', 'like', "%{$cleanTerm}%")
+                ->orWhereHas('categoria', fn($sub) => $sub->where('nombre', 'like', "%{$cleanTerm}%"));
+
+            if (count($tokens) > 1) {
+                $q->orWhere(function ($allTokensQ) use ($tokens) {
+                    foreach ($tokens as $token) {
+                        $allTokensQ->where(function ($sub) use ($token) {
+                            $sub->where('nombre', 'like', "%{$token}%")
+                                ->orWhere('codigo', 'like', "%{$token}%")
+                                ->orWhere('descripcion', 'like', "%{$token}%")
+                                ->orWhereHas('categoria', fn($c) => $c->where('nombre', 'like', "%{$token}%"));
+                        });
+                    }
+                });
+            }
+        });
+
+        $servicios = $servQuery->limit(4)->get();
+
+        // 3. Caso sin resultados
+        if ($products->isEmpty() && $servicios->isEmpty()) {
+            return [
+                'type' => 'not_found',
+                'message' => "❌ No encontré ningún producto, repuesto ni servicio relacionado con **\"{$cleanTerm}\"** en el catálogo.\n\n"
+                    . "💡 *Puedes consultar por código SKU, modelo de equipo o marca, o registrar el producto nuevo si no existe.*",
+                'quick_actions' => [
+                    ['label' => "➕ Crear {$cleanTerm}", 'text' => "crear producto {$cleanTerm} precio 10 stock 5"],
+                    ['label' => '📦 Ir a Inventario ↗', 'url' => '/admin/productos', 'type' => 'link'],
+                    ['label' => '⚙️ Ver Servicios ↗', 'url' => '/admin/servicios', 'type' => 'link'],
+                ],
+            ];
+        }
+
+        // Construir datos de tarjetas interactivas
+        $itemsData = [];
+        foreach ($products as $p) {
+            $nombre = $p->nombre_variante ?: trim(($p->marca?->nombre ?? '') . ' ' . ($p->modelo?->nombre_comercial ?? '') . ' ' . $p->sku);
+            $cat = $p->categoria?->nombre ?? 'General';
+            $stockStatus = ($p->usa_inventario && $p->stock <= 0) ? 'out_of_stock' : (($p->stock_minimo > 0 && $p->stock <= $p->stock_minimo) ? 'low' : 'ok');
+            $itemsData[] = [
+                'id' => $p->id,
+                'nombre' => $nombre,
+                'sku' => $p->sku,
+                'stock' => (float)$p->stock,
+                'stock_minimo' => (float)$p->stock_minimo,
+                'stock_status' => $stockStatus,
+                'tipo' => $p->tipo_producto === 'repuesto' ? 'repuesto' : 'producto',
+                'categoria' => $cat,
+                'precio' => "{$currency} " . number_format($p->precio_venta, 2),
+                'precio_num' => (float)$p->precio_venta,
+                'usa_inventario' => $p->usa_inventario,
+            ];
+        }
+
+        foreach ($servicios as $s) {
+            $itemsData[] = [
+                'id' => $s->id,
+                'nombre' => $s->nombre,
+                'sku' => $s->codigo,
+                'stock' => 0,
+                'stock_minimo' => 0,
+                'stock_status' => 'service',
+                'tipo' => 'servicio',
+                'categoria' => $s->categoria?->nombre ?? 'Mano de obra',
+                'precio' => "{$currency} " . number_format($s->precio, 2),
+                'precio_num' => (float)$s->precio,
+                'usa_inventario' => false,
+            ];
+        }
+
+        // Caso A: Coincidencia única o exacta (1 producto encontrado)
+        if ($products->count() === 1 && $servicios->isEmpty()) {
+            $p = $products->first();
+            $nombre = $p->nombre_variante ?: trim(($p->marca?->nombre ?? '') . ' ' . ($p->modelo?->nombre_comercial ?? '') . ' ' . $p->sku);
+            $cat = $p->categoria?->nombre ?? 'General';
+            $isRepuesto = ($p->tipo_producto === 'repuesto');
+            $precioFormat = "{$currency} " . number_format($p->precio_venta, 2);
+            $stockVal = (float)$p->stock;
+
+            $stockBadge = "ℹ️ Sin control de existencias";
+            if ($p->usa_inventario) {
+                if ($stockVal <= 0) {
+                    $stockBadge = "🔴 **Agotado (0 unidades en stock)**";
+                } elseif ($p->stock_minimo > 0 && $stockVal <= $p->stock_minimo) {
+                    $stockBadge = "⚠️ **Stock bajo: {$stockVal} unidades disponibles** (Mín: {$p->stock_minimo})";
+                } else {
+                    $stockBadge = "🟢 **Disponible: {$stockVal} unidades en inventario**";
+                }
+            }
+
+            $message = "💰 **Verificación de Precio:**\n\n"
+                . "🏷️ **Artículo:** **{$nombre}**\n"
+                . "💵 **Precio de venta:** **{$precioFormat}**\n"
+                . "📦 **Disponibilidad:** {$stockBadge}\n"
+                . "📁 **Categoría:** *{$cat}*" . ($p->sku ? " | SKU: `{$p->sku}`" : "") . "\n"
+                . "🛠️ **Tipo:** " . ($isRepuesto ? "Repuesto técnico para taller" : "Producto comercial") . "\n";
+
+            if ($isRepuesto) {
+                $message .= "\n💡 *Si vas a realizar la reparación en taller, escribe `cotizar {$cleanTerm}` para calcular repuesto + mano de obra juntos.*";
+            }
+
+            $actions = [];
+            if ($isRepuesto) {
+                $actions[] = [
+                    'label' => "💡 Cotizar reparación ({$cleanTerm})",
+                    'text' => "cotizar {$cleanTerm}",
+                ];
+            }
+            $actions[] = [
+                'label' => '🛒 Ir a Punto de Venta (POS) ↗',
+                'url' => '/admin/pos',
+                'type' => 'link',
+            ];
+            $actions[] = [
+                'label' => '📦 Ver en Catálogo ↗',
+                'url' => "/admin/productos?search=" . urlencode($p->sku ?: $nombre),
+                'type' => 'link',
+            ];
+
+            return [
+                'type' => 'product_price',
+                'message' => trim($message),
+                'price_card' => [
+                    'id' => $p->id,
+                    'nombre' => $nombre,
+                    'sku' => $p->sku,
+                    'precio_formateado' => $precioFormat,
+                    'precio_num' => (float)$p->precio_venta,
+                    'categoria' => $cat,
+                    'tipo' => $isRepuesto ? 'repuesto' : 'producto',
+                    'stock' => $stockVal,
+                    'disponible' => !$p->usa_inventario || $stockVal > 0,
+                ],
+                'items' => $itemsData,
+                'quick_actions' => $actions,
+            ];
+        }
+
+        // Caso B: Múltiples coincidencias
+        $message = "💰 **Precios verificados para \"{$cleanTerm}\":**\n\n";
+
+        if ($products->isNotEmpty()) {
+            $message .= "📦 **Productos y Repuestos:**\n";
+            foreach ($products as $p) {
+                $nombre = $p->nombre_variante ?: trim(($p->marca?->nombre ?? '') . ' ' . ($p->modelo?->nombre_comercial ?? '') . ' ' . $p->sku);
+                $pFormat = "{$currency} " . number_format($p->precio_venta, 2);
+                $stk = $p->usa_inventario ? ($p->stock > 0 ? "🟢 {$p->stock} uds" : "🔴 Agotado") : "ℹ️ Sin stock físico";
+                $message .= "• **{$nombre}**: **{$pFormat}** ({$stk})\n";
+            }
+            $message .= "\n";
+        }
+
+        if ($servicios->isNotEmpty()) {
+            $message .= "⚙️ **Mano de Obra y Servicios Técnicos:**\n";
+            foreach ($servicios as $s) {
+                $sFormat = "{$currency} " . number_format($s->precio, 2);
+                $message .= "• **{$s->nombre}**: **{$sFormat}** (🛠️ Tarifa técnica)\n";
+            }
+        }
+
+        $actions = [
+            [
+                'label' => "💡 Cotizar reparación ({$cleanTerm})",
+                'text' => "cotizar {$cleanTerm}",
+            ],
+            [
+                'label' => '🛒 Ir a POS ↗',
+                'url' => '/admin/pos',
+                'type' => 'link',
+            ],
+            [
+                'label' => '📦 Ver Catálogo ↗',
+                'url' => '/admin/productos',
+                'type' => 'link',
+            ],
+        ];
+
+        return [
+            'type' => 'product_price',
+            'message' => trim($message),
+            'items' => $itemsData,
+            'quick_actions' => $actions,
+        ];
+    }
+
     protected function handleSearchRepairsByText(User $user, int $empresaId, string $term): array
     {
         $orders = OrdenReparacion::withoutGlobalScope('multitenancy')
@@ -3995,6 +4305,36 @@ class InternalAssistantService
 
         if (preg_match('/^(?:ver|consultar|buscar|revisar)?\s*(?:la\s*)?(?:orden|reparacion|ticket|folio)\s*#?((?:rep[-_ ]*)?\d+|rep[-_]\w+)$/i', trim($raw), $m)) {
             return $m[1];
+        }
+
+        return null;
+    }
+
+    /**
+     * Parsea consultas específicas de precios de productos, repuestos o servicios.
+     */
+    protected function parsePriceQuery(string $raw, string $normalized): ?string
+    {
+        $norm = trim($normalized);
+
+        // Si escribe sólo "precio", "precios", "consultar precio", "ver precio" sin término:
+        if (preg_match('/^(?:ver\s+|consultar\s+|mostrar\s+)?(?:precios?|tarifas?|costos?)$/i', $norm)) {
+            return '';
+        }
+
+        // 1. "¿cuánto cuesta / cuánto vale / cuánto sale / a cómo está / a cómo sale...?"
+        if (preg_match('/^(?:cuanto\s+(?:cuesta|vale|sale)|a\s+como\s+(?:esta|sale)|en\s+cuanto\s+(?:sale|esta))\s+(?:el\s+|la\s+|los\s+|las\s+|un\s+|una\s+)?(?:producto\s+|repuesto\s+|servicio\s+)?(?:de\s+|del\s+)?(.+)$/i', $norm, $m)) {
+            return trim($m[1]);
+        }
+
+        // 2. "¿cuál es el precio / costo / tarifa / valor de...?"
+        if (preg_match('/^(?:cual\s+es\s+el\s+(?:precio|costo|tarifa|valor))\s+(?:de\s+|del\s+)?(?:el\s+|la\s+|los\s+|las\s+|un\s+|una\s+)?(?:producto\s+|repuesto\s+|servicio\s+)?(.+)$/i', $norm, $m)) {
+            return trim($m[1]);
+        }
+
+        // 3. "precio / precios / costo / valor de..." o "ver precio / consultar precio..."
+        if (preg_match('/^(?:ver\s+|consultar\s+|mostrar\s+|dame\s+el\s+)?(?:precio|precios|costo|costos|tarifa|tarifas|valor)\s+(?:de\s+|del\s+)?(?:el\s+|la\s+|los\s+|las\s+|un\s+|una\s+)?(?:producto\s+|repuesto\s+|servicio\s+)?(.+)$/i', $norm, $m)) {
+            return trim($m[1]);
         }
 
         return null;
