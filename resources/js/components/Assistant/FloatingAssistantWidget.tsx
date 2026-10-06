@@ -86,7 +86,7 @@ const buildWelcome = (text: string, id = 'welcome'): ChatMessage => ({
 });
 
 const WELCOME_TEXT =
-    '¡Hola! Soy tu copiloto interno de FixSale. Puedo ayudarte con servicio técnico y creación de órdenes, caja chica, cobranzas y clientes, inventario y Kardex, catálogo y finanzas.\n\nEscribe un comando o elige una categoría abajo.';
+    '¡Hola! Soy Fixy, tu copilot de FixSale. Puedo ayudarte con servicio técnico y creación de órdenes, caja chica, cobranzas y clientes, inventario y Kardex, catálogo y finanzas.\n\nEscribe un comando o elige una categoría abajo.';
 
 const toneFor = (type?: string): MessageTone => {
     if (!type) return 'default';
@@ -508,7 +508,10 @@ export default function FloatingAssistantWidget() {
                             </div>
                             <div>
                                 <h3 className="flex items-center gap-1.5 text-sm leading-tight font-semibold">
-                                    Copiloto FixSale
+                                    Fixy
+                                    <span className="text-[10.5px] font-medium bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-xs">
+                                        Copilot FixSale
+                                    </span>
                                     <Sparkles className="h-3.5 w-3.5 text-amber-300" />
                                 </h3>
                                 <p className="mt-0.5 flex items-center gap-1 text-[11px] leading-tight text-white/80">
@@ -934,15 +937,18 @@ export default function FloatingAssistantWidget() {
                         setIsMinimized(false);
                     }}
                     className="group animate-in fade-in zoom-in-90 relative flex items-center gap-2.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-4 py-3 text-white shadow-xl shadow-indigo-500/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/50 active:scale-95"
-                    title="Abrir Copiloto FixSale"
-                    aria-label="Abrir Copiloto FixSale"
+                    title="Abrir Fixy · Copilot FixSale"
+                    aria-label="Abrir Fixy · Copilot FixSale"
                 >
                     <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-indigo-500/30 [animation-duration:2.5s]" />
                     <div className="relative">
                         <Bot className="h-5 w-5 text-white transition-transform group-hover:rotate-12" />
                         <Sparkles className="absolute -top-1.5 -right-1.5 h-3 w-3 animate-pulse text-amber-300" />
                     </div>
-                    <span className="text-xs font-bold tracking-wide">Copiloto</span>
+                    <div className="flex flex-col text-left leading-tight">
+                        <span className="text-xs font-bold tracking-wide">Fixy</span>
+                        <span className="text-[9.5px] text-white/80 font-medium">Copilot FixSale</span>
+                    </div>
                     <span className="h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-white/40" />
                 </button>
             )}

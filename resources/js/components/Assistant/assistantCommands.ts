@@ -40,6 +40,9 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
     { category: 'clientes', label: 'Buscar cliente', text: 'buscar cliente ', prefill: true, hint: 'por nombre, teléfono o email' },
 
     // Inventario
+    { category: 'inventario', label: 'Consultar existencias', text: 'stock ', prefill: true, hint: 'stock Pantalla · existencias, categoría y tipo' },
+    { category: 'inventario', label: 'Ver repuestos', text: 'repuestos ', prefill: true, hint: 'repuestos Bateria · piezas físicas para taller' },
+    { category: 'inventario', label: 'Por categoría', text: 'categoria ', prefill: true, hint: 'categoria Display · artículos de una categoría' },
     { category: 'inventario', label: 'Ver Kardex', text: 'ver kardex', hint: 'Últimos movimientos de inventario' },
     { category: 'inventario', label: 'Kardex de producto', text: 'kardex ', prefill: true, hint: 'kardex Pantalla · movimientos de un producto' },
     { category: 'inventario', label: 'Ajustar stock', text: 'ajustar stock ', prefill: true, hint: 'ajustar stock Bateria a 15 por inventario' },
@@ -56,6 +59,8 @@ export const ASSISTANT_COMMANDS: AssistantCommand[] = [
     { category: 'finanzas', label: 'Compras', text: 'ver compras', hint: 'Compras recientes de insumos' },
 
     // Catálogo
+    { category: 'catalogo', label: 'Ver servicios', text: 'servicios', hint: 'Catálogo de mano de obra y diagnósticos' },
+    { category: 'catalogo', label: 'Consultar servicio', text: 'servicio ', prefill: true, hint: 'servicio cambio de pantalla · tarifas de mano de obra' },
     { category: 'catalogo', label: 'Ver marcas', text: 'ver marcas', hint: 'Marcas registradas' },
     { category: 'catalogo', label: 'Ver categorías', text: 'ver categorias', hint: 'Categorías registradas' },
     { category: 'catalogo', label: 'Crear marca', text: 'crear marca ', prefill: true, hint: 'crear marca Xiaomi' },

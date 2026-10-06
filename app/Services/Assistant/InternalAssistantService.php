@@ -20,6 +20,7 @@ use App\Models\Producto;
 use App\Models\Proveedor;
 use App\Models\Sale;
 use App\Models\SalesGoal;
+use App\Models\Servicio;
 use App\Models\Sucursal;
 use App\Models\User;
 use App\Services\CashRegisterService;
@@ -47,7 +48,7 @@ class InternalAssistantService
 
         // 1. Saludos o Ayuda
         if ($this->isGreetingOrHelp($normalized)) {
-            return $this->buildHelpResponse("¡Hola {$user->name}! Soy tu copiloto interno de FixSale. ¿En qué te ayudo hoy?");
+            return $this->buildHelpResponse("¡Hola {$user->name}! Soy Fixy, tu copilot de FixSale. ¿En qué te ayudo hoy?");
         }
 
         // ==========================================
@@ -245,6 +246,11 @@ class InternalAssistantService
             return $this->handleListCategorias($user, $empresaId);
         }
 
+        // 6b. Listar Servicios Técnicos
+        if (preg_match('/^(?:ver|listar|mostrar|catalogo de)\s+servicios(?:\s+tecnicos|\s+disponibles)?$/i', $normalized) || $normalized === 'servicios') {
+            return $this->handleListServicios($user, $empresaId);
+        }
+
         // 7. Listar Modelos de una Marca (ej: "modelos de samsung", "ver modelos xiaomi")
         if (preg_match('/^(?:ver|listar|mostrar)?\s*modelos\s+(?:de|para|en)\s+(.+)$/i', $normalized, $m)) {
             return $this->handleListModelosForMarca($user, $empresaId, trim($m[1]));
@@ -357,6 +363,9 @@ class InternalAssistantService
 
             case 'list_categorias':
                 return $this->handleListCategorias($user, $empresaId);
+
+            case 'list_servicios':
+                return $this->handleListServicios($user, $empresaId);
 
             // Fase 1: Acciones de Órdenes y Stock
             case 'send_whatsapp':
@@ -793,6 +802,50 @@ class InternalAssistantService
                     'url' => '/admin/categorias',
                     'type' => 'link',
                 ],
+            ],
+        ];
+    }
+
+    public function handleListServicios(User $user, int $empresaId): array
+    {
+        $servicios = Servicio::withoutGlobalScope('multitenancy')
+            ->with(['categoria', 'marca'])
+            ->where('empresa_id', $empresaId)
+            ->where('estado', true)
+            ->orderBy('nombre')
+            ->limit(10)
+            ->get();
+
+        if ($servicios->isEmpty()) {
+            return [
+                'type' => 'not_found',
+                'message' => "No tienes servicios técnicos registrados en tu catálogo aún.",
+                'quick_actions' => [
+                    ['label' => 'Catálogo de Servicios ↗', 'url' => '/admin/servicios', 'type' => 'link'],
+                ],
+            ];
+        }
+
+        $currency = $this->getCurrencySymbol($empresaId);
+        $total = Servicio::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId)->where('estado', true)->count();
+        $message = "⚙️ **Catálogo de Servicios Técnicos ({$total} registrados):**\n";
+        $message .= "*Nota: Los servicios representan mano de obra y diagnósticos técnicos (no manejan stock físico).*\n\n";
+
+        foreach ($servicios as $s) {
+            $cat = $s->categoria?->nombre ?? 'General';
+            $code = $s->codigo ? " (`{$s->codigo}`)" : "";
+            $message .= "• **{$s->nombre}**{$code}\n";
+            $message .= "  📁 Categoría: *{$cat}* | 🛠️ *Mano de obra* | 💰 Tarifa: {$currency} " . number_format($s->precio, 2) . "\n";
+        }
+
+        return [
+            'type' => 'services_list',
+            'message' => $message,
+            'quick_actions' => [
+                ['label' => 'Ver Servicios ↗', 'url' => '/admin/servicios', 'type' => 'link'],
+                ['label' => '🛠️ Ver Repuestos', 'text' => 'repuestos'],
+                ['label' => '📁 Ver Categorías', 'text' => 'ver categorias'],
+                ['label' => '⚠️ Alertas Stock', 'action' => 'get_stock_alerts'],
             ],
         ];
     }
@@ -2349,7 +2402,7 @@ class InternalAssistantService
             'user_id' => $user->id,
             'estado_anterior' => null,
             'estado_nuevo' => 'recibido',
-            'comentario' => 'Orden de recepción creada desde el Copiloto FixSale.',
+            'comentario' => 'Orden de recepción creada desde Fixy (Copilot FixSale).',
         ]);
 
         $trackingUrl = url("/reparacion/{$empresaId}/consultar?orden={$orden->numero_orden}");
@@ -2904,68 +2957,280 @@ class InternalAssistantService
         ];
     }
 
-    protected function handleStockSearch(User $user, int $empresaId, ?int $sucursalId, string $term): array
+    /**
+     * Consulta el stock y existencias de productos, repuestos, categorías y servicios.
+     *
+     * @param User $user
+     * @param int $empresaId
+     * @param int|null $sucursalId
+     * @param array|string $queryData
+     * @return array
+     */
+    protected function handleStockSearch(User $user, int $empresaId, ?int $sucursalId, $queryData): array
     {
-        $term = trim($term);
-        $query = Producto::withoutGlobalScope('multitenancy')
-            ->with(['marca', 'modelo', 'categoria'])
-            ->where('empresa_id', $empresaId)
-            ->where('estado', true)
-            ->where(function ($q) use ($term) {
-                $q->where('nombre_variante', 'like', "%{$term}%")
-                    ->orWhere('sku', 'like', "%{$term}%")
-                    ->orWhere('codigo_barras', 'like', "%{$term}%")
-                    ->orWhereHas('marca', fn($sub) => $sub->where('nombre', 'like', "%{$term}%"))
-                    ->orWhereHas('modelo', fn($sub) => $sub->where('nombre_comercial', 'like', "%{$term}%"));
-            });
-
-        if ($sucursalId) {
-            $query->where('sucursal_id', $sucursalId);
+        if (is_string($queryData)) {
+            $term = trim($queryData);
+            $filter = 'all';
+        } else {
+            $term = trim($queryData['term'] ?? '');
+            $filter = $queryData['filter'] ?? 'all';
         }
 
-        $items = $query->limit(6)->get();
+        // 1. Caso de explicación conceptual entre repuesto y servicio
+        if ($filter === 'concept') {
+            return [
+                'type' => 'concept_info',
+                'message' => "💡 **Diferencias entre Repuestos y Servicios en FixSale:**\n\n" .
+                    "🛠️ **Repuestos (Inventario Físico):**\n" .
+                    "• Son piezas físicas y componentes de recambio (ej: pantallas OLED, baterías, pines de carga, flex, tapas traseras).\n" .
+                    "• **Sí manejan existencia física (`stock`)**: se descuentan de bodega automáticamente al usarse en órdenes de reparación o ventas de mostrador.\n" .
+                    "• Tienen categoría asociada (ej: *DISPLAY, BATERIAS RECARGABLES*), código SKU, costo y precio de venta.\n\n" .
+                    "⚙️ **Servicios Técnicos (Mano de Obra):**\n" .
+                    "• Son trabajos técnicos, diagnósticos y mano de obra realizados por el personal (ej: *Cambio de Pantalla, Mantenimiento preventivo, Formateo*).\n" .
+                    "• **NO manejan stock físico**: no ocupan espacio en bodega porque representan el valor de la labor técnica realizada.\n" .
+                    "• Tienen código (`SERV-...`), tarifa sugerida de mano de obra y categoría de equipo (*Smartphone, Laptop*).\n\n" .
+                    "📦 **Productos de Venta y Accesorios:**\n" .
+                    "• Artículos comerciales para cliente final (cargadores, cables, audífonos, fundas) que también controlan stock físico en inventario.",
+                'quick_actions' => [
+                    ['label' => '🛠️ Ver Repuestos', 'text' => 'repuestos'],
+                    ['label' => '⚙️ Ver Servicios', 'text' => 'servicios'],
+                    ['label' => '📁 Ver Categorías', 'text' => 'ver categorias'],
+                    ['label' => '⚠️ Stock Bajo', 'action' => 'get_stock_alerts'],
+                ],
+            ];
+        }
 
-        if ($items->isEmpty()) {
+        // 2. Si es solicitud directa de listado de servicios
+        if ($filter === 'servicios_list') {
+            return $this->handleListServicios($user, $empresaId);
+        }
+
+        $currency = $this->getCurrencySymbol($empresaId);
+        $isRepuestoOnly = ($filter === 'repuesto');
+        $isServicioOnly = ($filter === 'servicio');
+        $isCategoriaOnly = ($filter === 'categoria');
+
+        // 3. Consultar Productos / Repuestos
+        $products = collect();
+        if (!$isServicioOnly) {
+            $prodQuery = Producto::withoutGlobalScope('multitenancy')
+                ->with(['marca', 'modelo', 'categoria'])
+                ->where('empresa_id', $empresaId)
+                ->where('estado', true);
+
+            if ($sucursalId) {
+                $prodQuery->where('sucursal_id', $sucursalId);
+            }
+
+            if ($isRepuestoOnly) {
+                $prodQuery->where('tipo_producto', 'repuesto');
+            } elseif ($filter === 'producto') {
+                $prodQuery->where('tipo_producto', '!=', 'repuesto');
+            }
+
+            if (!empty($term)) {
+                if ($isCategoriaOnly) {
+                    $prodQuery->whereHas('categoria', fn($c) => $c->where('nombre', 'like', "%{$term}%"));
+                } else {
+                    $prodQuery->where(function ($q) use ($term) {
+                        $q->where('nombre_variante', 'like', "%{$term}%")
+                            ->orWhere('sku', 'like', "%{$term}%")
+                            ->orWhere('codigo_barras', 'like', "%{$term}%")
+                            ->orWhereHas('categoria', fn($sub) => $sub->where('nombre', 'like', "%{$term}%"))
+                            ->orWhereHas('marca', fn($sub) => $sub->where('nombre', 'like', "%{$term}%"))
+                            ->orWhereHas('modelo', fn($sub) => $sub->where('nombre_comercial', 'like', "%{$term}%"));
+                    });
+                }
+            }
+
+            $products = $prodQuery->limit(8)->get();
+        }
+
+        // 4. Consultar Servicios Técnicos (Mano de Obra)
+        $servicios = collect();
+        if (!$isRepuestoOnly && $filter !== 'producto') {
+            $servQuery = Servicio::withoutGlobalScope('multitenancy')
+                ->with(['marca', 'modelo', 'categoria'])
+                ->where('empresa_id', $empresaId)
+                ->where('estado', true);
+
+            if (!empty($term)) {
+                if ($isCategoriaOnly) {
+                    $servQuery->whereHas('categoria', fn($c) => $c->where('nombre', 'like', "%{$term}%"));
+                } else {
+                    $servQuery->where(function ($q) use ($term) {
+                        $q->where('nombre', 'like', "%{$term}%")
+                            ->orWhere('codigo', 'like', "%{$term}%")
+                            ->orWhere('descripcion', 'like', "%{$term}%")
+                            ->orWhereHas('categoria', fn($sub) => $sub->where('nombre', 'like', "%{$term}%"))
+                            ->orWhereHas('marca', fn($sub) => $sub->where('nombre', 'like', "%{$term}%"))
+                            ->orWhereHas('modelo', fn($sub) => $sub->where('nombre_comercial', 'like', "%{$term}%"));
+                    });
+                }
+            }
+
+            $servicios = $servQuery->limit(6)->get();
+        }
+
+        // 5. Si no se encontró nada
+        if ($products->isEmpty() && $servicios->isEmpty()) {
+            $labelTerm = !empty($term) ? "\"{$term}\"" : "tu consulta";
             return [
                 'type' => 'not_found',
-                'message' => "No encontré productos o repuestos que coincidan con **\"{$term}\"**.",
+                'message' => "No encontré productos, repuestos ni servicios que coincidan con **{$labelTerm}**.\n\n" .
+                    "💡 *Tip: Puedes buscar por pieza (ej: `stock pantalla`), por categoría (`categoria display`), por repuestos (`repuestos bateria`) o consultar servicios (`servicio cambio de pantalla`).*",
                 'quick_actions' => [
                     ['label' => '⚠️ Ver Stock Bajo', 'action' => 'get_stock_alerts'],
+                    ['label' => '📁 Ver Categorías', 'text' => 'ver categorias'],
+                    ['label' => '⚙️ Ver Servicios', 'text' => 'servicios'],
                     ['label' => 'Ir a Inventario ↗', 'url' => '/admin/productos', 'type' => 'link'],
                 ],
             ];
         }
 
-        $currency = $this->getCurrencySymbol($empresaId);
-        $message = "📦 **Resultados para \"{$term}\":**\n\n";
+        // Separar productos en Repuestos y Venta Comercial
+        $repuestos = $products->filter(fn($p) => $p->tipo_producto === 'repuesto');
+        $articulosVenta = $products->filter(fn($p) => $p->tipo_producto !== 'repuesto');
+
+        $displayTitle = !empty($term) ? "para \"{$term}\"" : "";
+        $message = "🔍 **Resultados de inventario y catálogo {$displayTitle}:**\n\n";
 
         $productsData = [];
-        foreach ($items as $p) {
-            $nombre = $p->nombre_variante ?: trim(($p->marca?->nombre ?? '') . ' ' . ($p->modelo?->nombre_comercial ?? '') . ' ' . $p->sku);
-            $stockText = $p->usa_inventario ? "Stock: **{$p->stock}**" : "Servicio/Sin stock";
-            $message .= "• **{$nombre}**: {$stockText} | {$currency} " . number_format($p->precio_venta, 2) . "\n";
 
-            $productsData[] = [
-                'id' => $p->id,
-                'nombre' => $nombre,
-                'sku' => $p->sku,
-                'stock' => $p->stock,
-                'precio' => "{$currency} " . number_format($p->precio_venta, 2),
-                'usa_inventario' => $p->usa_inventario,
+        // 1. Repuestos
+        if ($repuestos->isNotEmpty()) {
+            $message .= "🛠️ **Repuestos de Taller (Inventario Físico):**\n";
+            foreach ($repuestos as $p) {
+                $nombre = $p->nombre_variante ?: trim(($p->marca?->nombre ?? '') . ' ' . ($p->modelo?->nombre_comercial ?? '') . ' ' . $p->sku);
+                $cat = $p->categoria?->nombre ?? 'Sin categoría';
+
+                if ($p->usa_inventario) {
+                    if ($p->stock <= 0) {
+                        $stockBadge = "🔴 **Agotado (0 uds)**";
+                    } elseif ($p->stock_minimo > 0 && $p->stock <= $p->stock_minimo) {
+                        $stockBadge = "⚠️ **Stock bajo: {$p->stock} uds** (Mín: {$p->stock_minimo})";
+                    } else {
+                        $stockBadge = "🟢 **Existencia: {$p->stock} uds**";
+                    }
+                } else {
+                    $stockBadge = "ℹ️ Sin control de existencias";
+                }
+
+                $message .= "• **{$nombre}**\n";
+                $message .= "  📁 Categoría: *{$cat}* | {$stockBadge} | 💰 {$currency} " . number_format($p->precio_venta, 2) . "\n";
+
+                $productsData[] = [
+                    'id' => $p->id,
+                    'nombre' => $nombre,
+                    'sku' => $p->sku,
+                    'stock' => $p->stock,
+                    'tipo' => 'repuesto',
+                    'categoria' => $cat,
+                    'precio' => "{$currency} " . number_format($p->precio_venta, 2),
+                    'usa_inventario' => $p->usa_inventario,
+                ];
+            }
+            $message .= "\n";
+        }
+
+        // 2. Artículos de Venta y Accesorios
+        if ($articulosVenta->isNotEmpty()) {
+            $message .= "📦 **Productos de Venta y Accesorios:**\n";
+            foreach ($articulosVenta as $p) {
+                $nombre = $p->nombre_variante ?: trim(($p->marca?->nombre ?? '') . ' ' . ($p->modelo?->nombre_comercial ?? '') . ' ' . $p->sku);
+                $cat = $p->categoria?->nombre ?? 'Sin categoría';
+
+                if ($p->usa_inventario) {
+                    if ($p->stock <= 0) {
+                        $stockBadge = "🔴 **Agotado (0 uds)**";
+                    } elseif ($p->stock_minimo > 0 && $p->stock <= $p->stock_minimo) {
+                        $stockBadge = "⚠️ **Stock bajo: {$p->stock} uds** (Mín: {$p->stock_minimo})";
+                    } else {
+                        $stockBadge = "🟢 **Existencia: {$p->stock} uds**";
+                    }
+                } else {
+                    $stockBadge = "ℹ️ Sin control de existencias";
+                }
+
+                $message .= "• **{$nombre}**\n";
+                $message .= "  📁 Categoría: *{$cat}* | {$stockBadge} | 💰 {$currency} " . number_format($p->precio_venta, 2) . "\n";
+
+                $productsData[] = [
+                    'id' => $p->id,
+                    'nombre' => $nombre,
+                    'sku' => $p->sku,
+                    'stock' => $p->stock,
+                    'tipo' => 'producto',
+                    'categoria' => $cat,
+                    'precio' => "{$currency} " . number_format($p->precio_venta, 2),
+                    'usa_inventario' => $p->usa_inventario,
+                ];
+            }
+            $message .= "\n";
+        }
+
+        // 3. Servicios Técnicos (Mano de Obra)
+        if ($servicios->isNotEmpty()) {
+            $message .= "⚙️ **Servicios Técnicos (Mano de Obra - Sin inventario físico):**\n";
+            foreach ($servicios as $s) {
+                $cat = $s->categoria?->nombre ?? 'General';
+                $code = $s->codigo ? " (`{$s->codigo}`)" : "";
+                $message .= "• **{$s->nombre}**{$code}\n";
+                $message .= "  📁 Categoría: *{$cat}* | 🛠️ *Mano de obra* | 💰 Tarifa: {$currency} " . number_format($s->precio, 2) . "\n";
+
+                $productsData[] = [
+                    'id' => $s->id,
+                    'nombre' => $s->nombre,
+                    'codigo' => $s->codigo,
+                    'tipo' => 'servicio',
+                    'categoria' => $cat,
+                    'precio' => "{$currency} " . number_format($s->precio, 2),
+                    'usa_inventario' => false,
+                ];
+            }
+        }
+
+        $quickActions = [];
+        if (!empty($term)) {
+            $quickActions[] = [
+                'label' => 'Ver en Inventario ↗',
+                'url' => "/admin/productos?search=" . urlencode($term),
+                'type' => 'link',
+            ];
+        } else {
+            $quickActions[] = [
+                'label' => 'Ir a Inventario ↗',
+                'url' => '/admin/productos',
+                'type' => 'link',
             ];
         }
 
+        if ($servicios->isNotEmpty()) {
+            $quickActions[] = [
+                'label' => 'Ver Servicios ↗',
+                'url' => '/admin/servicios',
+                'type' => 'link',
+            ];
+        }
+
+        if ($products->isNotEmpty()) {
+            $firstProd = $products->first();
+            $quickActions[] = [
+                'label' => "📊 Kardex {$firstProd->sku}",
+                'text' => "kardex {$firstProd->sku}",
+            ];
+        }
+
+        $quickActions[] = [
+            'label' => '⚠️ Ver Stock Bajo',
+            'action' => 'get_stock_alerts',
+        ];
+
         return [
             'type' => 'stock_search',
-            'message' => $message,
+            'message' => trim($message),
             'items' => $productsData,
-            'quick_actions' => [
-                [
-                    'label' => 'Ver en Inventario ↗',
-                    'url' => "/admin/productos?search=" . urlencode($term),
-                    'type' => 'link',
-                ],
-            ],
+            'quick_actions' => $quickActions,
         ];
     }
 
@@ -3127,11 +3392,113 @@ class InternalAssistantService
         return null;
     }
 
-    protected function parseStockSearch(string $normalized, string $raw): ?string
+    /**
+     * Parsea consultas de inventario, stock, repuestos, categorías y servicios.
+     */
+    protected function parseStockSearch(string $normalized, string $raw): ?array
     {
-        if (preg_match('/^(?:stock|cuanto stock|precio|buscar repuesto|buscar producto|repuesto|hay)\s+(?:de\s+)?(.+)$/i', $raw, $m)) {
-            return trim($m[1]);
+        $raw = trim($raw);
+        $norm = trim($normalized);
+
+        // 1. Preguntas conceptuales sobre repuestos vs servicios
+        if (preg_match('/\b(?:diferencia entre repuesto y servicio|que es un repuesto|que es un servicio|repuesto o servicio|repuestos o servicios|como funciona el stock|repuestos vs servicios)\b/i', $norm)) {
+            return [
+                'term' => '',
+                'filter' => 'concept',
+            ];
         }
+
+        // 2. Listar servicios técnicos
+        if (preg_match('/^(?:ver\s+)?servicios(?:\s+disponibles|\s+tecnicos)?$/i', $norm) || $norm === 'servicios') {
+            return [
+                'term' => '',
+                'filter' => 'servicios_list',
+            ];
+        }
+
+        // 3. Listar repuestos
+        if (preg_match('/^(?:ver\s+)?repuestos(?:\s+disponibles)?$/i', $norm) || $norm === 'repuestos' || $norm === 'repuesto') {
+            return [
+                'term' => '',
+                'filter' => 'repuesto',
+            ];
+        }
+
+        // 4. Búsqueda específica de servicio técnico (ej: "servicio cambio de pantalla", "precio servicio formateo")
+        if (preg_match('/^(?:servicio|servicios|buscar servicio|precio servicio|tarifa servicio|mano de obra)\s+(?:de\s+|para\s+)?(.+)$/i', $norm, $m)) {
+            return [
+                'term' => trim($m[1]),
+                'filter' => 'servicio',
+            ];
+        }
+
+        // 5. Búsqueda por categoría (ej: "categoria pantallas", "stock categoria cargadores", "repuestos de categoria display")
+        if (preg_match('/^(?:stock\s+categoria|repuestos?\s+de\s+categoria|productos?\s+de\s+categoria|categoria|categorias)\s+(?:de\s+)?(.+)$/i', $norm, $m)) {
+            return [
+                'term' => trim($m[1]),
+                'filter' => 'categoria',
+            ];
+        }
+
+        // 6. Búsqueda explícita de repuesto (ej: "buscar repuesto bateria", "repuestos de iphone", "repuesto pantalla")
+        if (preg_match('/^(?:buscar\s+repuestos?|repuestos?|piezas?|refacciones?)\s+(?:de\s+|para\s+)?(.+)$/i', $norm, $m)) {
+            return [
+                'term' => trim($m[1]),
+                'filter' => 'repuesto',
+            ];
+        }
+
+        // 7. Búsqueda explícita de producto / accesorio
+        if (preg_match('/^(?:buscar\s+productos?|productos?)\s+(?:de\s+|para\s+)?(.+)$/i', $norm, $m)) {
+            return [
+                'term' => trim($m[1]),
+                'filter' => 'producto',
+            ];
+        }
+
+        // 8. Consultas de stock y existencias (ej: "stock pantalla", "existencia de cargador", "existencias baterias")
+        if (preg_match('/^(?:stock|cuanto\s+stock|existencia|existencias|hay\s+stock|hay\s+en\s+existencia)\s+(?:de\s+|del\s+producto\s+|de\s+la\s+categoria\s+|de\s+categoria\s+)?(.+)$/i', $norm, $m)) {
+            return [
+                'term' => trim($m[1]),
+                'filter' => 'all',
+            ];
+        }
+
+        // 9. "¿cuánto hay de / en existencia de...?" o "cuántos hay..."
+        if (preg_match('/^cuanto[s]?\s+hay\s+(?:en\s+existencia\s+)?(?:de\s+)?(.+)$/i', $norm, $m)) {
+            return [
+                'term' => trim($m[1]),
+                'filter' => 'all',
+            ];
+        }
+
+        // 10. "¿hay existencia(s) de...?"
+        if (preg_match('/^hay\s+existencia[s]?\s+(?:de\s+)?(.+)$/i', $norm, $m)) {
+            return [
+                'term' => trim($m[1]),
+                'filter' => 'all',
+            ];
+        }
+
+        // 11. "precio de ..." / "costo de ..."
+        if (preg_match('/^(?:precio|precios|costo|costos|tarifa|valor)\s+(?:de\s+|del\s+)?(.+)$/i', $norm, $m)) {
+            return [
+                'term' => trim($m[1]),
+                'filter' => 'all',
+            ];
+        }
+
+        // 12. "hay [algo]" (ej: "hay pantallas", "hay cargadores")
+        if (preg_match('/^hay\s+(.+)$/i', $norm, $m)) {
+            $candidate = trim($m[1]);
+            if (!preg_match('/^(?:alguien|novedades|algo nuevo|problemas)\b/i', $candidate)) {
+                return [
+                    'term' => $candidate,
+                    'filter' => 'all',
+                ];
+            }
+        }
+
         return null;
     }
 
