@@ -120,12 +120,15 @@ class IntegrationController extends Controller
         }
 
         $validated = $request->validate([
-            'mapbox_api_key' => 'nullable|string|max:255',
+            // El mapa corre en el navegador: Mapbox GL solo acepta tokens PÚBLICOS (pk.).
+            'mapbox_api_key' => ['nullable', 'string', 'max:255', 'regex:/^pk\./'],
             'mapbox_active' => 'required|boolean',
+        ], [
+            'mapbox_api_key.regex' => __('The Mapbox token must be a public token (starts with pk.), not a secret one (sk.).'),
         ]);
 
         $empresa->update([
-            'mapbox_api_key' => $validated['mapbox_api_key'],
+            'mapbox_api_key' => $validated['mapbox_api_key'] !== null ? trim($validated['mapbox_api_key']) : null,
             'mapbox_active' => $validated['mapbox_active'],
         ]);
 

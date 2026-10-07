@@ -159,7 +159,7 @@ export default function ProductorVehiculosModal({
         if (!productor) return;
         setLoading(true);
         try {
-            const response = await fetch(`/admin/productores/${productor.id}/vehiculos`);
+            const response = await fetch(`/admin/socios-comerciales/${productor.id}/vehiculos`);
             const data = await response.json();
             if (data.success) {
                 setVehicles(data.vehicles);
@@ -251,7 +251,7 @@ export default function ProductorVehiculosModal({
             const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
             const url = editingVehicle 
                 ? `/admin/productor-vehiculos/${editingVehicle.id}` 
-                : `/admin/productores/${productor.id}/vehiculos`;
+                : `/admin/socios-comerciales/${productor.id}/vehiculos`;
 
             const response = await fetch(url, {
                 method: 'POST',

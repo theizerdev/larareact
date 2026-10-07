@@ -119,14 +119,14 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
 
     const handleSendWhatsApp = () => {
         setSendingWhatsapp(true);
-        router.post(`/admin/productores/${productor.id}/send-carnet-whatsapp`, {}, {
+        router.post(`/admin/socios-comerciales/${productor.id}/send-carnet-whatsapp`, {}, {
             onFinish: () => setSendingWhatsapp(false)
         });
     };
 
     return (
         <>
-            <Head title={`${__('Gafete Productor')} - ${displayName}`} />
+            <Head title={`${__('Gafete Socio Comercial')} - ${displayName}`} />
 
             <style dangerouslySetInnerHTML={{
                 __html: `
@@ -166,7 +166,7 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
                 <div className="w-full max-w-[340px] flex items-center justify-between gap-2 mb-6 no-print">
                     {auth?.user ? (
                         <Link
-                            href="/admin/productores"
+                            href="/admin/socios-comerciales"
                             className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
                         >
                             <ArrowLeft className="w-4 h-4" />
@@ -174,7 +174,7 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
                         </Link>
                     ) : (
                         <span className="text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
-                            🪪 Gafete de Productor
+                            🪪 Gafete de Socio Comercial
                         </span>
                     )}
 
@@ -294,7 +294,7 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
                             letterSpacing: '0.01em',
                             textShadow: '0 1px 2px rgba(0,0,0,0.2)'
                         }}>
-                            PRODUCTOR AUTORIZADO
+                            SOCIO COMERCIAL AUTORIZADO
                         </p>
                         {productor.responsable && (
                             <p style={{

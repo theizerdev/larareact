@@ -61,8 +61,9 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
     const [settings, setSettings] = useState<TemplateSettings>(() => {
         const base = { ...DEFAULT_SETTINGS, direction: defaultDir };
 
+        // La dirección siempre sigue al idioma activo (ar = RTL), no a lo guardado.
         if (dbSettings) {
-            return { ...base, ...dbSettings };
+            return { ...base, ...dbSettings, direction: defaultDir };
         }
 
         if (typeof window === 'undefined') {
@@ -73,7 +74,7 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
             const stored = localStorage.getItem('template-settings');
 
             if (stored) {
-                return { ...base, ...JSON.parse(stored) };
+                return { ...base, ...JSON.parse(stored), direction: defaultDir };
             }
         } catch (e) {
             console.error('Error loading template settings', e);

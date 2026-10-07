@@ -77,7 +77,7 @@ class HandleInertiaRequests extends Middleware
                         'status' => (bool) $e->status,
                     ]),
             ] : null,
-            'menuVisibility' => fn () => \App\Models\MenuVisibilitySetting::map(),
+            'menuVisibility' => fn () => \App\Services\MenuVisibilityService::hiddenFor($request->user()),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => $currentLocale,
             'regional_config' => fn () => \App\Services\RegionalConfigurationService::getCurrentConfiguration(),

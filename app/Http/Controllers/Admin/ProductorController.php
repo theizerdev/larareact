@@ -123,7 +123,7 @@ class ProductorController extends Controller
 
         return back()->with('notification', [
             'type' => 'error',
-            'message' => 'El productor no cuenta con un número de teléfono válido para enviarle el WhatsApp.',
+            'message' => 'El socio comercial no cuenta con un número de teléfono válido para enviarle el WhatsApp.',
         ]);
     }
 
@@ -145,9 +145,9 @@ class ProductorController extends Controller
 
                 $carnetUrl = url("/carnet-productor/{$productor->id}");
 
-                $msg  = "🪪 *¡SU GAFETE / CARNET AZUL DE PRODUCTOR ESTÁ LISTO!*\n\n";
-                $msg .= "Estimado Productor *{$productor->nombre_comercial}*,\n";
-                $msg .= "Se ha generado su Gafete Oficial de Acceso de Productor Autorizado.\n\n";
+                $msg  = "🪪 *¡SU GAFETE / CARNET AZUL DE SOCIO COMERCIAL ESTÁ LISTO!*\n\n";
+                $msg .= "Estimado Socio Comercial *{$productor->nombre_comercial}*,\n";
+                $msg .= "Se ha generado su Gafete Oficial de Acceso de Socio Comercial Autorizado.\n\n";
                 $msg .= "📌 *Doc / RUC:* {$productor->documento_identidad}\n";
                 $msg .= "👤 *Responsable:* {$productor->responsable}\n\n";
                 $msg .= "📲 *Acceda a su gafete digital aquí:*\n";
@@ -249,9 +249,9 @@ class ProductorController extends Controller
 
             $sucursalNombre = $user->sucursal?->nombre ?? ($empresa->razon_social ?? 'Instalaciones Principales');
 
-            $message = "Estimado Productor del Rancho *{$request->nombre_comercial_rancho}*, le invitamos a completar su pre-registro de datos para su acceso a nuestras instalaciones con la siguiente información:\n\n"
+            $message = "Estimado Socio Comercial *{$request->nombre_comercial_rancho}*, le invitamos a completar su pre-registro de datos para su acceso a nuestras instalaciones con la siguiente información:\n\n"
                 . "Ubicación: {$sucursalNombre}\n"
-                . "Rancho: {$request->nombre_comercial_rancho}\n"
+                . "Socio Comercial: {$request->nombre_comercial_rancho}\n"
                 . "Colaboradores: Indicar todos los que acudirán\n"
                 . "Vehículos: En los que acudirán.\n\n"
                 . "Será Indispensable contar con: *INE vigente* y *Chaleco de seguridad*\n\n"

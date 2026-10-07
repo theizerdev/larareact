@@ -1,49 +1,52 @@
 import { Head, router } from '@inertiajs/react';
-import { EyeOff, Save, Info } from 'lucide-react';
-import React, { useMemo, useState } from 'react';
+import { Building2, EyeOff, Info, Save, UserCog } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ADMIN_MENU_GROUPS, adminMenuChildren } from '@/config/admin-menu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ADMIN_MENU_GROUPS, ADMIN_MENU_NODES, adminMenuChildren } from '@/config/admin-menu';
 import { useTranslate } from '@/hooks/use-translate';
 
+type HiddenMap = Record<string, boolean>;
+
 interface PageProps {
-    /** Mapa con SOLO las claves ocultas (visible === false). Ausencia = visible. */
-    visibility: Record<string, boolean>;
+    empresas: { id: number; nombre: string }[];
+    roles: { id: number; name: string }[];
+    /** empresa id => mapa con SOLO las claves ocultas. Ausencia = visible. */
+    empresaHidden: Record<string, HiddenMap> | HiddenMap[];
+    roleHidden: Record<string, HiddenMap> | HiddenMap[];
 }
 
-export default function MenuVisibilidad({ visibility }: PageProps) {
+interface EditorProps {
+    hidden: HiddenMap;
+    saving: boolean;
+    onSave: (hiddenKeys: string[]) => void;
+}
+
+/** Interruptores de grupos y subítems. Estado local: true = visible. */
+function VisibilityEditor({ hidden, saving, onSave }: EditorProps) {
     const { __ } = useTranslate();
 
-    // Estado local: true = visible. Arranca desde el mapa (ausencia = visible).
     const initial = useMemo(() => {
         const state: Record<string, boolean> = {};
 
-        for (const group of ADMIN_MENU_GROUPS) {
-            state[group.key] = visibility[group.key] !== false;
-
-            for (const child of adminMenuChildren(group.key)) {
-                state[child.key] = visibility[child.key] !== false;
-            }
+        for (const node of ADMIN_MENU_NODES) {
+            state[node.key] = hidden[node.key] !== false;
         }
 
         return state;
-    }, [visibility]);
+    }, [hidden]);
 
-    const [state, setState] = useState<Record<string, boolean>>(initial);
-    const [saving, setSaving] = useState(false);
+    const [state, setState] = useState(initial);
 
-    const dirty = useMemo(
-        () => Object.keys(state).some((k) => state[k] !== initial[k]),
-        [state, initial],
-    );
+    useEffect(() => setState(initial), [initial]);
 
-    const setValue = (key: string, value: boolean) => {
-        setState((prev) => ({ ...prev, [key]: value }));
-    };
+    const dirty = Object.keys(state).some((k) => state[k] !== initial[k]);
 
     const toggleGroup = (groupKey: string, value: boolean) => {
         setState((prev) => {
@@ -58,11 +61,82 @@ export default function MenuVisibilidad({ visibility }: PageProps) {
         });
     };
 
-    const handleSave = () => {
+    const handleSave = () =>
+        onSave(Object.keys(state).filter((k) => state[k] === false));
+
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-end">
+                <Button onClick={handleSave} disabled={!dirty || saving} className="gap-2">
+                    <Save className="h-4 w-4" />
+                    {__('Save Changes')}
+                </Button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+                {ADMIN_MENU_GROUPS.map((group) => {
+                    const children = adminMenuChildren(group.key);
+                    const groupOn = state[group.key];
+
+                    return (
+                        <Card key={group.key} className="shadow-sm">
+                            <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-base">{__(group.labelKey)}</CardTitle>
+                                    <Switch
+                                        checked={groupOn}
+                                        onCheckedChange={(v) => toggleGroup(group.key, v)}
+                                    />
+                                </div>
+                            </CardHeader>
+                            {children.length > 0 && (
+                                <CardContent className="space-y-2 pt-0">
+                                    {children.map((child) => (
+                                        <div
+                                            key={child.key}
+                                            className="flex items-center justify-between rounded-md border px-3 py-2 bg-slate-50 dark:bg-slate-900/40"
+                                        >
+                                            <Label className={`text-sm font-normal ${!groupOn ? 'opacity-40' : ''}`}>
+                                                {__(child.labelKey)}
+                                            </Label>
+                                            <Switch
+                                                checked={state[child.key] && groupOn}
+                                                disabled={!groupOn}
+                                                onCheckedChange={(v) =>
+                                                    setState((prev) => ({ ...prev, [child.key]: v }))
+                                                }
+                                            />
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            )}
+                        </Card>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+export default function MenuVisibilidad({ empresas, roles, empresaHidden, roleHidden }: PageProps) {
+    const { __ } = useTranslate();
+
+    const [empresaId, setEmpresaId] = useState<string>(empresas[0] ? String(empresas[0].id) : '');
+    const [roleId, setRoleId] = useState<string>(roles[0] ? String(roles[0].id) : '');
+    const [saving, setSaving] = useState(false);
+
+    // PHP serializa un mapa vacío como [] — se normaliza a objeto.
+    const hiddenOf = (all: PageProps['empresaHidden'], id: string): HiddenMap => {
+        const v = (all as Record<string, HiddenMap>)[id];
+
+        return v && !Array.isArray(v) ? v : {};
+    };
+
+    const save = (url: string, hiddenKeys: string[]) => {
         setSaving(true);
         router.put(
-            '/admin/configuracion/menu-visibilidad',
-            { visibility: state },
+            url,
+            { hidden: hiddenKeys },
             {
                 preserveScroll: true,
                 onSuccess: () => {
@@ -81,8 +155,8 @@ export default function MenuVisibilidad({ visibility }: PageProps) {
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
-        { title: __('Settings'), href: '#' },
-        { title: __('Menu Visibility'), href: '/admin/configuracion/menu-visibilidad' },
+        { title: __('Security'), href: '#' },
+        { title: __('Menu Visibility'), href: '/admin/seguridad/menu-visibilidad' },
     ];
 
     return (
@@ -91,68 +165,91 @@ export default function MenuVisibilidad({ visibility }: PageProps) {
             <div className="space-y-6">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                            <EyeOff className="h-8 w-8 text-indigo-600" />
-                            {__('Menu Visibility')}
-                        </h1>
-                        <p className="text-muted-foreground mt-1 max-w-2xl">
-                            {__('Show or hide sidebar modules and submodules for everyone. This is visual only: it does not change permissions or direct URL access.')}
-                        </p>
-                    </div>
-                    <Button onClick={handleSave} disabled={!dirty || saving} className="gap-2 shrink-0">
-                        <Save className="h-4 w-4" />
-                        {__('Save Changes')}
-                    </Button>
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                        <EyeOff className="h-8 w-8 text-indigo-600" />
+                        {__('Menu Visibility')}
+                    </h1>
+                    <p className="text-muted-foreground mt-1 max-w-3xl">
+                        {__('Two levels decide what each user sees in the menu: first what the company has contracted, then what each role can see within that. This is visual only: it does not change permissions or direct URL access.')}
+                    </p>
                 </div>
 
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20 p-3 text-sm text-amber-800 dark:text-amber-300">
                     <Info className="h-4 w-4 mt-0.5 shrink-0" />
-                    <span>{__('Hiding a module only removes it from the menu. The route stays protected by permissions as before.')}</span>
+                    <span>{__('A module is shown only if the company has it AND the user\'s role allows it. Super Administrators always see everything.')}</span>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                    {ADMIN_MENU_GROUPS.map((group) => {
-                        const children = adminMenuChildren(group.key);
-                        const groupOn = state[group.key];
+                <Tabs defaultValue="empresa" className="space-y-4">
+                    <TabsList className="grid w-full max-w-md grid-cols-2">
+                        <TabsTrigger value="empresa" className="gap-2">
+                            <Building2 className="h-4 w-4" />
+                            {__('By company')}
+                        </TabsTrigger>
+                        <TabsTrigger value="rol" className="gap-2">
+                            <UserCog className="h-4 w-4" />
+                            {__('By role')}
+                        </TabsTrigger>
+                    </TabsList>
 
-                        return (
-                            <Card key={group.key} className="shadow-sm">
-                                <CardHeader className="pb-3">
-                                    <div className="flex items-center justify-between">
-                                        <CardTitle className="text-base">{__(group.labelKey)}</CardTitle>
-                                        <Switch
-                                            checked={groupOn}
-                                            onCheckedChange={(v) => toggleGroup(group.key, v)}
-                                        />
-                                    </div>
-                                </CardHeader>
-                                {children.length > 0 && (
-                                    <CardContent className="space-y-2 pt-0">
-                                        {children.map((child) => (
-                                            <div
-                                                key={child.key}
-                                                className="flex items-center justify-between rounded-md border px-3 py-2 bg-slate-50 dark:bg-slate-900/40"
-                                            >
-                                                <Label
-                                                    className={`text-sm font-normal ${!groupOn ? 'opacity-40' : ''}`}
-                                                >
-                                                    {__(child.labelKey)}
-                                                </Label>
-                                                <Switch
-                                                    checked={state[child.key] && groupOn}
-                                                    disabled={!groupOn}
-                                                    onCheckedChange={(v) => setValue(child.key, v)}
-                                                />
-                                            </div>
-                                        ))}
-                                    </CardContent>
-                                )}
-                            </Card>
-                        );
-                    })}
-                </div>
+                    <TabsContent value="empresa" className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            {__('What this company contracted. What you turn off here disappears for all its users, whatever their role.')}
+                        </p>
+                        <div className="max-w-sm space-y-1.5">
+                            <Label>{__('Company')}</Label>
+                            <Select value={empresaId} onValueChange={setEmpresaId}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder={__('Select a company')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {empresas.map((e) => (
+                                        <SelectItem key={e.id} value={String(e.id)}>
+                                            {e.nombre}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {empresaId && (
+                            <VisibilityEditor
+                                key={`e-${empresaId}-${Object.keys(hiddenOf(empresaHidden, empresaId)).sort().join(',')}`}
+                                hidden={hiddenOf(empresaHidden, empresaId)}
+                                saving={saving}
+                                onSave={(keys) => save(`/admin/seguridad/menu-visibilidad/empresa/${empresaId}`, keys)}
+                            />
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="rol" className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            {__('What each role can see within what its company has. The role applies in every company.')}
+                        </p>
+                        <div className="max-w-sm space-y-1.5">
+                            <Label>{__('Role')}</Label>
+                            <Select value={roleId} onValueChange={setRoleId}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder={__('Select a role')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {roles.map((r) => (
+                                        <SelectItem key={r.id} value={String(r.id)}>
+                                            {r.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {roleId && (
+                            <VisibilityEditor
+                                key={`r-${roleId}-${Object.keys(hiddenOf(roleHidden, roleId)).sort().join(',')}`}
+                                hidden={hiddenOf(roleHidden, roleId)}
+                                saving={saving}
+                                onSave={(keys) => save(`/admin/seguridad/menu-visibilidad/rol/${roleId}`, keys)}
+                            />
+                        )}
+                    </TabsContent>
+                </Tabs>
             </div>
         </>
     );

@@ -1527,7 +1527,7 @@ export default function Index({
                                         1. {selectedAccesoDetail.tipo_acceso === 'empleado' || selectedAccesoDetail.empleado_id
                                             ? __('Información del Empleado / Conductor')
                                             : selectedAccesoDetail.tipo_acceso === 'productor' || selectedAccesoDetail.productor_id || selectedAccesoDetail.productor
-                                                ? __('Información del Rancho / Productor y Personal')
+                                                ? __('Información del Socio Comercial y Personal')
                                                 : selectedAccesoDetail.tipo_acceso === 'proveedor' || selectedAccesoDetail.proveedor_id || selectedAccesoDetail.proveedor
                                                     ? __('Información de la Empresa Proveedora y Personal')
                                                     : __('Información del Visitante Particular')}
@@ -1584,7 +1584,7 @@ export default function Index({
                                                         </div>
                                                         <div>
                                                             <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
-                                                                {selectedAccesoDetail.productor?.nombre_comercial_rancho || selectedAccesoDetail.productor?.razon_social_rancho || selectedAccesoDetail.productor?.nombre_comercial || selectedAccesoDetail.productor?.razon_social || __('Rancho Productor')}
+                                                                {selectedAccesoDetail.productor?.nombre_comercial_rancho || selectedAccesoDetail.productor?.razon_social_rancho || selectedAccesoDetail.productor?.nombre_comercial || selectedAccesoDetail.productor?.razon_social || __('Socio Comercial')}
                                                             </h3>
                                                             {(selectedAccesoDetail.productor?.razon_social_rancho || selectedAccesoDetail.productor?.razon_social) && (
                                                                 <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
@@ -1612,7 +1612,7 @@ export default function Index({
                                                         </span>
                                                     </div>
                                                     <div>
-                                                        <span className="text-slate-500 block font-medium">{__('Ubicación Rancho')}</span>
+                                                        <span className="text-slate-500 block font-medium">{__('Ubicación del Socio Comercial')}</span>
                                                         <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
                                                             {selectedAccesoDetail.productor?.direccion || 'N/A'}
                                                         </span>
@@ -2443,7 +2443,7 @@ export default function Index({
                                     2. {tipoAcceso === 'empleado'
                                         ? __('Buscar Empleado Conductor (Nombre, Apellidos, Documento)')
                                         : tipoAcceso === 'productor'
-                                            ? __('Buscar Productor / Rancho (Razón Social, Nombre Comercial, RFC)')
+                                            ? __('Buscar Socio Comercial (Razón Social, Nombre Comercial, RFC)')
                                             : __('Buscar Proveedor (Razón Social, Nombre Comercial, RUC/DNI)')}
                                 </Label>
                                 <div className="relative">
@@ -2452,7 +2452,7 @@ export default function Index({
                                         placeholder={tipoAcceso === 'empleado'
                                             ? __('Escriba nombre, apellido o documento...')
                                             : tipoAcceso === 'productor'
-                                                ? __('Escriba nombre del rancho, razón social o RFC...')
+                                                ? __('Escriba nombre comercial, razón social o RFC...')
                                                 : __('Escriba razón social, nombre comercial o RUC...')}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -2560,7 +2560,7 @@ export default function Index({
                                                 <div>
                                                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                                                         <Users className="w-4 h-4 text-indigo-600" />
-                                                        {tipoAcceso === 'productor' ? __('Personal del Productor que accederá:') : __('Personal del Proveedor que accederá:')}
+                                                        {tipoAcceso === 'productor' ? __('Personal del Socio Comercial que accederá:') : __('Personal del Proveedor que accederá:')}
                                                     </Label>
                                                     <p className="text-[11px] text-muted-foreground mt-0.5">
                                                         {__('Seleccione uno o varios empleados. El primero actuará como Conductor / Principal.')}
@@ -2651,7 +2651,7 @@ export default function Index({
                                             ) : (
                                                 <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 text-purple-800 dark:text-purple-300 text-xs">
                                                     {tipoAcceso === 'productor'
-                                                        ? __('Este productor no tiene colaboradores pre-registrados en el sistema. Puede registrar el acceso del vehículo y agregar observaciones.')
+                                                        ? __('Este socio comercial no tiene colaboradores pre-registrados en el sistema. Puede registrar el acceso del vehículo y agregar observaciones.')
                                                         : __('Este proveedor no tiene empleados pre-registrados en el sistema. Puede registrar el acceso del vehículo y agregar observaciones.')}
                                                 </div>
                                             )}

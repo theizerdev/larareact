@@ -318,7 +318,7 @@ export default function Index({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingProductor) {
-            put(`/admin/productores/${editingProductor.id}`, {
+            put(`/admin/socios-comerciales/${editingProductor.id}`, {
                 onSuccess: () => {
                     setIsCreateModalOpen(false);
                     toast.success(__('Producer updated successfully'));
@@ -326,7 +326,7 @@ export default function Index({
                 onError: () => toast.error(__('Please check the form for errors')),
             });
         } else {
-            post('/admin/productores', {
+            post('/admin/socios-comerciales', {
                 onSuccess: () => {
                     setIsCreateModalOpen(false);
                     toast.success(__('Producer created successfully'));
@@ -339,7 +339,7 @@ export default function Index({
     // Pre-registro submission
     const handlePreRegistroSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        preRegistroForm.post('/admin/productores/pre-registro', {
+        preRegistroForm.post('/admin/socios-comerciales/pre-registro', {
             onSuccess: () => {
                 setIsPreRegistroModalOpen(false);
                 preRegistroForm.reset();
@@ -352,7 +352,7 @@ export default function Index({
     // Delete submission
     const handleDelete = () => {
         if (!deletingProductor) return;
-        router.delete(`/admin/productores/${deletingProductor.id}`, {
+        router.delete(`/admin/socios-comerciales/${deletingProductor.id}`, {
             onSuccess: () => {
                 setIsDeleteModalOpen(false);
                 setDeletingProductor(null);
@@ -365,7 +365,7 @@ export default function Index({
     const handleToggleStatus = (productor: Productor, newStatus?: string) => {
         const nextStatus = newStatus || (productor.status === 'activo' ? 'suspendido' : 'activo');
         router.patch(
-            `/admin/productores/${productor.id}/toggle-status`,
+            `/admin/socios-comerciales/${productor.id}/toggle-status`,
             { status: nextStatus },
             {
                 onSuccess: () => toast.success(__('Estado actualizado correctamente')),
@@ -374,7 +374,7 @@ export default function Index({
     };
 
     const handleSendCarnetWhatsApp = (productor: Productor) => {
-        router.post(`/admin/productores/${productor.id}/send-carnet-whatsapp`, {}, {
+        router.post(`/admin/socios-comerciales/${productor.id}/send-carnet-whatsapp`, {}, {
             preserveScroll: true,
             onSuccess: () => toast.success(__('Gafete Azul enviado por WhatsApp.')),
             onError: () => toast.error(__('No se pudo enviar el WhatsApp.')),
@@ -385,7 +385,7 @@ export default function Index({
     const columns: ColumnDef<Productor>[] = [
         {
             accessorKey: 'razon_social',
-            header: __('Rancho'),
+            header: __('Socio Comercial'),
             cell: (productor: Productor) => (
                 <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-lg bg-[#104a29]/10 text-[#104a29] dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center font-bold">
@@ -509,9 +509,9 @@ export default function Index({
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleOpenEditModal(productor)}>
                                 <Pencil className="h-4 w-4 mr-2 text-slate-600" />
-                                {__('Editar Productor')}
+                                {__('Editar Socio Comercial')}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.get(`/admin/productores/${productor.id}/carnet`)}>
+                            <DropdownMenuItem onClick={() => router.get(`/admin/socios-comerciales/${productor.id}/carnet`)}>
                                 <QrCode className="h-4 w-4 mr-2 text-blue-600" />
                                 {__('Gafete Azul / Carnet')}
                             </DropdownMenuItem>
@@ -546,7 +546,7 @@ export default function Index({
                 <Breadcrumbs
                     breadcrumbs={[
                         { title: __('Organization'), href: '#' },
-                        { title: __('Producers'), href: '/admin/productores' },
+                        { title: __('Producers'), href: '/admin/socios-comerciales' },
                     ]}
                 />
 
@@ -610,7 +610,7 @@ export default function Index({
                     <div className="flex flex-wrap items-end gap-4">
                         <FilterField label={__('Buscar')}>
                             <Input
-                                placeholder={__('Search by rancho, RFC, responsible, phone...')}
+                                placeholder={__('Buscar por razón social, nombre comercial, RFC, responsable o teléfono...')}
                                 className="w-full md:w-80"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -674,28 +674,28 @@ export default function Index({
             <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
                 <DialogContent className="w-[95vw] sm:max-w-[900px] lg:max-w-[1100px] xl:max-w-[1200px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader className="border-b pb-4">
-                        <DialogTitle>{editingProductor ? __('Editar Productor') : __('Nuevo Productor')}</DialogTitle>
+                        <DialogTitle>{editingProductor ? __('Editar Socio Comercial') : __('Nuevo Socio Comercial')}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-6 py-2">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                             <TabsList className="grid grid-cols-2 mb-6">
-                                <TabsTrigger value="general">{__('Datos del Rancho')}</TabsTrigger>
+                                <TabsTrigger value="general">{__('Datos del Socio Comercial')}</TabsTrigger>
                                 <TabsTrigger value="location">{__('Ubicación y Dirección')}</TabsTrigger>
                             </TabsList>
                             <TabsContent value="general" className="space-y-6">
                                 <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
                                     <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
                                         <Building2 className="h-4 w-4 text-[#104a29]" />
-                                        {__('Datos del Rancho')}
+                                        {__('Datos del Socio Comercial')}
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
-                                            <Label htmlFor="razon_social">{__('Razón Social del Rancho')} *</Label>
+                                            <Label htmlFor="razon_social">{__('Razón Social')} *</Label>
                                             <Input
                                                 id="razon_social"
                                                 required
                                                 className="mt-1.5 w-full"
-                                                placeholder="ej. Agrícola Los Pinos S.A. de C.V."
+                                                placeholder="ej. Comercializadora Ejemplo S.A. de C.V."
                                                 value={data.razon_social}
                                                 onChange={(e) => {
                                                     setData('razon_social', e.target.value);
@@ -706,12 +706,12 @@ export default function Index({
                                         </div>
 
                                         <div>
-                                            <Label htmlFor="nombre_comercial">{__('Nombre Comercial del Rancho')} *</Label>
+                                            <Label htmlFor="nombre_comercial">{__('Nombre Comercial')} *</Label>
                                             <Input
                                                 id="nombre_comercial"
                                                 required
                                                 className="mt-1.5 w-full"
-                                                placeholder="ej. Rancho Los Pinos"
+                                                placeholder="ej. Nombre comercial"
                                                 value={data.nombre_comercial}
                                                 onChange={(e) => {
                                                     setData('nombre_comercial', e.target.value);
@@ -773,7 +773,7 @@ export default function Index({
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <Label htmlFor="status">{__('Estado del Productor')}</Label>
+                                            <Label htmlFor="status">{__('Estado del Socio Comercial')}</Label>
                                             <Select value={data.status} onValueChange={(val: any) => setData('status', val)}>
                                                 <SelectTrigger id="status" className="mt-1.5 w-full">
                                                     <SelectValue placeholder={__('Seleccionar estado')} />
@@ -795,7 +795,7 @@ export default function Index({
                                     <div className="flex items-center justify-between">
                                         <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
                                             <MapPin className="h-4 w-4 text-[#104a29]" />
-                                            {__('Ubicación y Dirección del Rancho')}
+                                            {__('Ubicación y Dirección')}
                                         </h4>
                                         {sucursal?.nombre && (
                                             <span className="text-xs font-semibold text-[#104a29] bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-900/50">
@@ -852,7 +852,7 @@ export default function Index({
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <Label htmlFor="direccion">{__('Dirección Completa del Rancho')}</Label>
+                                            <Label htmlFor="direccion">{__('Dirección Completa del Socio Comercial')}</Label>
                                             <Textarea
                                                 id="direccion"
                                                 rows={2}
@@ -869,7 +869,7 @@ export default function Index({
                                         <div className="flex items-center justify-between text-xs text-slate-500">
                                             <span className="flex items-center gap-1.5 font-medium">
                                                 <Navigation className="h-4 w-4 text-[#104a29]" />
-                                                {__('Click or drag marker on map to set rancho location (centered at your branch sucursal)')}
+                                                {__('Haga clic o arrastre el marcador en el mapa para fijar la ubicación (centrado en su sucursal)')}
                                             </span>
                                             <span className="font-mono text-[11px] bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded">
                                                 Lat: {data.latitud?.toFixed(5) || '0'}, Lng: {data.longitud?.toFixed(5) || '0'}
@@ -906,7 +906,7 @@ export default function Index({
                                 disabled={processing}
                                 className="bg-[#104a29] hover:bg-[#0c371e] text-white font-semibold shadow-sm px-6"
                             >
-                                {processing ? __('Guardando...') : (editingProductor ? __('Guardar Cambios') : __('Guardar Productor'))}
+                                {processing ? __('Guardando...') : (editingProductor ? __('Guardar Cambios') : __('Guardar Socio Comercial'))}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -921,10 +921,10 @@ export default function Index({
                             <ShieldAlert className="h-5 w-5" />
                         </div>
                         <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                            {__('Eliminar Productor')}
+                            {__('Eliminar Socio Comercial')}
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-500">
-                            {__('¿Está seguro de que desea eliminar a este productor? Esta acción no se puede deshacer y eliminará colaboradores, vehículos e historial de accesos/visitas asociados.')}
+                            {__('¿Está seguro de que desea eliminar a este socio comercial? Esta acción no se puede deshacer y eliminará colaboradores, vehículos e historial de accesos/visitas asociados.')}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -953,16 +953,16 @@ export default function Index({
                             <Send className="h-5 w-5" />
                         </div>
                         <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                            {__('Pre-registro de Productor / Rancho')}
+                            {__('Pre-registro de Socio Comercial')}
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-500">
-                            {__('Envía una invitación por WhatsApp al productor para que complete el formulario con los datos de su rancho, colaboradores y vehículos.')}
+                            {__('Envía una invitación por WhatsApp al socio comercial para que complete el formulario con sus datos, colaboradores y vehículos.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handlePreRegistroSubmit} className="space-y-4 pt-2">
                         <div>
-                            <Label htmlFor="pre_razon_social_rancho">{__('Razón Social del Rancho')}</Label>
+                            <Label htmlFor="pre_razon_social_rancho">{__('Razón Social')}</Label>
                             <Input
                                 id="pre_razon_social_rancho"
                                 required
@@ -977,12 +977,12 @@ export default function Index({
                         </div>
 
                         <div>
-                            <Label htmlFor="pre_nombre_comercial_rancho">{__('Nombre Comercial del Rancho / Predio')}</Label>
+                            <Label htmlFor="pre_nombre_comercial_rancho">{__('Nombre Comercial')}</Label>
                             <Input
                                 id="pre_nombre_comercial_rancho"
                                 required
                                 className="mt-1"
-                                placeholder="ej. Rancho Los Berries - Módulo 2"
+                                placeholder="ej. Nombre comercial"
                                 value={preRegistroForm.data.nombre_comercial_rancho}
                                 onChange={(e) => preRegistroForm.setData('nombre_comercial_rancho', e.target.value)}
                             />
@@ -992,7 +992,7 @@ export default function Index({
                         </div>
 
                         <div>
-                            <Label>{__('WhatsApp del Productor')}</Label>
+                            <Label>{__('WhatsApp del Socio Comercial')}</Label>
                             <div className="mt-1.5 w-full">
                                 <PhoneInputGroup
                                     paises={paises}

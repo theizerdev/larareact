@@ -1393,8 +1393,8 @@ export default function GaritaControl({
                                             {isEmpleado ? `${__('Colaborador / Empleado')} ${empresaNombre}` :
                                                 resultado?.tipo === 'proveedor' ? __('🪪 Gafete Rojo • Proveedor Autorizado') :
                                                     resultado?.tipo === 'proveedor_empleado' ? __('🪪 Gafete Rojo • Empleado de Proveedor') :
-                                                        resultado?.tipo === 'productor' ? __('🪪 Gafete Azul • Productor Autorizado') :
-                                                            resultado?.tipo === 'productor_empleado' ? __('🪪 Gafete Azul • Empleado de Productor') :
+                                                        resultado?.tipo === 'productor' ? __('🪪 Gafete Azul • Socio Comercial Autorizado') :
+                                                            resultado?.tipo === 'productor_empleado' ? __('🪪 Gafete Azul • Colaborador de Socio Comercial') :
                                                                 isInvitacion ? __('Pre-Registro  Registrado') : __('Registro de Acceso Caseta')}
                                         </span>
                                         <div className="flex flex-wrap items-center gap-2">

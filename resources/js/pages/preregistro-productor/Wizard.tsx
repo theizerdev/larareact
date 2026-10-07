@@ -298,14 +298,14 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
         const nComercial = (productorData.nombre_comercial_rancho || productorData.nombre_comercial || '').trim();
         const rfc = (productorData.documento_identidad || '').trim();
 
-        if (!rSocial) newErrors.razon_social_rancho = __('La razón social del rancho es requerida');
-        if (!nComercial) newErrors.nombre_comercial_rancho = __('El nombre comercial del rancho es requerido');
+        if (!rSocial) newErrors.razon_social_rancho = __('La razón social es requerida');
+        if (!nComercial) newErrors.nombre_comercial_rancho = __('El nombre comercial es requerido');
         if (!rfc) newErrors.documento_identidad = __('El RFC es requerido');
 
         setErrors(newErrors);
 
         if (Object.keys(newErrors).length > 0) {
-            setErrorMsg(__('Por favor complete los campos obligatorios del rancho (*) para continuar.'));
+            setErrorMsg(__('Por favor complete los campos obligatorios (*) para continuar.'));
             if (newErrors.razon_social_rancho || newErrors.nombre_comercial_rancho || newErrors.documento_identidad) {
                 setStep1SubTab('general');
             }
@@ -399,7 +399,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                 {__('Producer Pre-Registration')}
                             </h1>
                             <p className="text-xs text-slate-500">
-                                {preRegistro.nombre_comercial_rancho || __('Rancho Portal')}
+                                {preRegistro.nombre_comercial_rancho || __('Portal de Socio Comercial')}
                             </p>
                         </div>
                     </div>
@@ -433,7 +433,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                             <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold max-w-xl mx-auto">
                                 <div className={cn("py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2", step === 1 ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400")}>
                                     <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">1</span>
-                                    <span className="hidden sm:inline">{__('Rancho y Ubicación')}</span>
+                                    <span className="hidden sm:inline">{__('Datos y Ubicación')}</span>
                                 </div>
                                 <div className={cn("py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2", step === 2 ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400")}>
                                     <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">2</span>
@@ -453,14 +453,14 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                             </div>
                         )}
 
-                        {/* Step 1: Producer & Rancho Details with Tabs */}
+                        {/* Step 1: Producer & Commercial Partner Details with Tabs */}
                         {step === 1 && (
                             <div className="p-6 md:p-8 space-y-6">
                                 <Tabs value={step1SubTab} onValueChange={setStep1SubTab} className="w-full">
                                     <TabsList className="grid grid-cols-2 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
                                         <TabsTrigger value="general" className="py-2.5 font-medium text-sm gap-2">
                                             <Building2 className="h-4 w-4" />
-                                            {__('Datos del Rancho')}
+                                            {__('Datos del Socio Comercial')}
                                         </TabsTrigger>
                                         <TabsTrigger value="location" className="py-2.5 font-medium text-sm gap-2">
                                             <MapPin className="h-4 w-4" />
@@ -468,21 +468,21 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                         </TabsTrigger>
                                     </TabsList>
 
-                                    {/* Sub-tab 1: Datos del Rancho */}
+                                    {/* Sub-tab 1: Datos del Socio Comercial */}
                                     <TabsContent value="general" className="space-y-6">
                                         <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
                                             <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
                                                 <Building2 className="h-4 w-4 text-emerald-600" />
-                                                {__('Información del Rancho')}
+                                                {__('Información del Socio Comercial')}
                                             </h4>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                                 <div>
-                                                    <Label htmlFor="razon_social_rancho">{__('Razón Social del Rancho')} *</Label>
+                                                    <Label htmlFor="razon_social_rancho">{__('Razón Social')} *</Label>
                                                     <Input 
                                                         id="razon_social_rancho"
                                                         className="mt-1.5 w-full"
-                                                        placeholder="ej. Agrícola Los Pinos S.A. de C.V."
+                                                        placeholder="ej. Comercializadora Ejemplo S.A. de C.V."
                                                         value={productorData.razon_social_rancho}
                                                         onChange={(e) => setProductorData({ 
                                                             ...productorData, 
@@ -494,11 +494,11 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 </div>
 
                                                 <div>
-                                                    <Label htmlFor="nombre_comercial_rancho">{__('Nombre Comercial del Rancho')} *</Label>
+                                                    <Label htmlFor="nombre_comercial_rancho">{__('Nombre Comercial')} *</Label>
                                                     <Input 
                                                         id="nombre_comercial_rancho"
                                                         className="mt-1.5 w-full"
-                                                        placeholder="ej. Rancho Los Pinos"
+                                                        placeholder="ej. Nombre comercial"
                                                         value={productorData.nombre_comercial_rancho}
                                                         onChange={(e) => setProductorData({ 
                                                             ...productorData, 
@@ -569,7 +569,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                         <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
                                             <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
                                                 <MapPin className="h-4 w-4 text-emerald-600" />
-                                                {__('Ubicación y Dirección del Rancho')}
+                                                {__('Ubicación y Dirección')}
                                             </h4>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -610,7 +610,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 </div>
 
                                                 <div className="md:col-span-2">
-                                                    <Label htmlFor="direccion">{__('Dirección Completa del Rancho')}</Label>
+                                                    <Label htmlFor="direccion">{__('Dirección Completa del Socio Comercial')}</Label>
                                                     <Textarea 
                                                         id="direccion"
                                                         rows={2}

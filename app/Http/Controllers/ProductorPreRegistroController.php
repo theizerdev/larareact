@@ -244,7 +244,7 @@ class ProductorPreRegistroController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pre-registro de productor completado con éxito. Su información está bajo revisión.'
+                'message' => 'Pre-registro de socio comercial completado con éxito. Su información está bajo revisión.'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

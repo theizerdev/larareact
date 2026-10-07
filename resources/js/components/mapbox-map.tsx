@@ -97,6 +97,23 @@ export default function MapboxMap({
 
             mapRef.current = map;
 
+            // Si el contenedor cambia de tamaño (modal animándose, pestaña que se muestra,
+            // panel que se abre) el lienzo se queda en gris hasta recalcular su tamaño.
+            const resizeObserver = new ResizeObserver(() => map.resize());
+            resizeObserver.observe(mapContainerRef.current);
+            map.once('remove', () => resizeObserver.disconnect());
+
+            // Antes un token inválido dejaba el mapa gris sin avisar.
+            map.on('error', (e: any) => {
+                const status = e?.error?.status;
+
+                if (status === 401) {
+                    setMapError(__('Mapbox rejected the Access Token (401). Check that it is a valid public token (starts with pk.).'));
+                } else if (status === 403) {
+                    setMapError(__('Mapbox denied access (403). The token may be secret (sk.), lack the Styles scope, or be restricted to other URLs.'));
+                }
+            });
+
             if (interactive) {
                 map.addControl(new mapboxgl.NavigationControl(), 'top-right');
             }

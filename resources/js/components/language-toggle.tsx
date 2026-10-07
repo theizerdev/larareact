@@ -7,33 +7,23 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useTemplateSettings } from '@/hooks/use-template-settings';
 
 export default function LanguageToggle() {
     const { locale } = usePage().props as any;
 
-    // Optional safe hook usage in case rendered outside Provider
-    let updateSetting: any = null;
-    try {
-        const templateSettings = useTemplateSettings();
-        updateSetting = templateSettings.updateSetting;
-    } catch {
-        // Rendered outside of TemplateSettingsProvider
-    }
-
     const changeLanguage = (lang: string) => {
-        if (updateSetting) {
-            updateSetting('direction', lang === 'ar' ? 'rtl' : 'ltr');
+        if (lang === locale) {
+            return;
         }
 
+        // Recarga completa tras guardar el idioma: traducciones y dirección (RTL/LTR)
+        // cambian juntas en un solo clic, sin estados intermedios.
         router.post(
             '/locale',
             { locale: lang },
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    router.reload();
-                },
+                onFinish: () => window.location.reload(),
             },
         );
     };

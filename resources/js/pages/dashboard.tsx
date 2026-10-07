@@ -252,7 +252,7 @@ export default function Dashboard({ moduleStats }: Props) {
             name: __('Business Partner'),
             desc: __('Agricultural business partners and staff'),
             icon: UserCheck,
-            href: '/admin/productores',
+            href: '/admin/socios-comerciales',
             count: `${overview.productores?.total || 0} ${__('active')}`,
             badgeColor: 'bg-amber-500/10 text-amber-500',
         },

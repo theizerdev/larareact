@@ -571,7 +571,7 @@ export default function AdminSaasLayout({
                                 },
                                 {
                                     title: 'Commercial Partners',
-                                    href: '/admin/productores',
+                                    href: '/admin/socios-comerciales',
                                     permission: 'productores.view',
                                     key: 'organization.partners',
                                 },
@@ -766,13 +766,7 @@ export default function AdminSaasLayout({
                                 },
                             ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
 
-                            // Solo superadmin: panel para ocultar/mostrar módulos del menú.
-                            // No es ocultable, se añade después del filtro de visibilidad.
-                            const settingsWithSuper = isSuperAdmin
-                                ? [...settingsItems, { title: 'Menu Visibility', href: '/admin/configuracion/menu-visibilidad' }]
-                                : settingsItems;
-
-                            if (settingsWithSuper.length === 0) return null;
+                            if (settingsItems.length === 0) return null;
 
                             return (
                                 <div className="pt-2">
@@ -780,7 +774,7 @@ export default function AdminSaasLayout({
                                         title="Settings"
                                         icon={Settings}
                                         collapsed={collapsed}
-                                        items={settingsWithSuper}
+                                        items={settingsItems}
                                     />
                                 </div>
                             );
@@ -877,7 +871,13 @@ export default function AdminSaasLayout({
                                 },
                             ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
 
-                            if (securityItems.length === 0) return null;
+                            // Solo superadmin: panel de visibilidad del menú (por empresa y por rol).
+                            // No es ocultable, se añade después del filtro de visibilidad.
+                            const securityWithSuper = isSuperAdmin
+                                ? [...securityItems, { title: 'Menu Visibility', href: '/admin/seguridad/menu-visibilidad' }]
+                                : securityItems;
+
+                            if (securityWithSuper.length === 0) return null;
 
                             return (
                                 <div className="pt-2">
@@ -885,7 +885,7 @@ export default function AdminSaasLayout({
                                         title="Security"
                                         icon={Shield}
                                         collapsed={collapsed}
-                                        items={securityItems}
+                                        items={securityWithSuper}
                                     />
                                 </div>
                             );
