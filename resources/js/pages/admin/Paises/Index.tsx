@@ -398,8 +398,8 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                     <DataTable
                         data={paises}
                         columns={columns}
-                        selectedIds={selectedIds}
-                        onSelectionChange={setSelectedIds}
+                        selectedIds={esSuperAdmin ? selectedIds : undefined}
+                        onSelectionChange={esSuperAdmin ? setSelectedIds : undefined}
                         filters={{
                             search: searchTerm,
                             status: statusFilter,
