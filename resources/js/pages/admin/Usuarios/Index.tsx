@@ -11,6 +11,7 @@ import {
     Building2,
     GitBranch,
     ShieldAlert,
+    ShieldCheck,
     Phone,
     Copy,
 } from 'lucide-react';
@@ -435,10 +436,20 @@ return;
                     description={__('Manage system users, passwords, access status and roles.')}
                     colorClassName="bg-slate-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New User')}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => router.get('/admin/seguridad/sox')}
+                            className="gap-1.5 text-xs border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                        >
+                            <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
+                            Cumplimiento SOX
+                        </Button>
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New User')}
+                        </Button>
+                    </div>
                 </ModuleHeader>
 
                 {/* Stat Cards */}

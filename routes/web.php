@@ -61,6 +61,19 @@ Route::post('locale', function (Request $request) {
     return back();
 })->name('locale.update');
 
+// Microsoft Entra ID (Azure AD SSO)
+Route::middleware(['guest'])->group(function () {
+    Route::get('/auth/sso/azure/redirect', [\App\Http\Controllers\Auth\AzureSsoController::class, 'redirect'])->name('auth.azure.redirect');
+    Route::get('/auth/sso/azure/callback', [\App\Http\Controllers\Auth\AzureSsoController::class, 'callback'])->name('auth.azure.callback');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/password/expired', [\App\Http\Controllers\Auth\PasswordExpiredController::class, 'show'])->name('password.expired');
+    Route::post('/password/expired', [\App\Http\Controllers\Auth\PasswordExpiredController::class, 'update'])
+        ->middleware('throttle:6,1')
+        ->name('password.expired.update');
+});
+
 Route::middleware(['auth','verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->can('dashboard.view');
     Route::get('/api/dashboard/stats', [DashboardController::class, 'stats'])->name('api.dashboard.stats');

@@ -853,7 +853,13 @@ export default function AdminSaasLayout({
                                     permission: 'roles.view',
                                     key: 'security.roles',
                                 },
-                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
+                                {
+                                    title: 'Cumplimiento SOX',
+                                    href: '/admin/seguridad/sox',
+                                    permission: 'users.view',
+                                    key: 'security.sox',
+                                },
+                            ].filter(item => (isSuperAdmin || hasPermission(item.permission)) && isMenuVisible(item.key));
 
                             if (securityItems.length === 0) return null;
 

@@ -41,6 +41,77 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        Fortify::authenticateUsing(function (Request $request) {
+            $login = $request->input(Fortify::username());
+            $password = $request->input('password');
+
+            $user = \App\Models\User::where('email', $login)
+                ->orWhere('username', $login)
+                ->first();
+
+            if (!$user) {
+                return null;
+            }
+
+            $soxConfig = \App\Models\ConfiguracionSox::current($user->empresa_id);
+
+            // Check if user is locked
+            if ($user->isLocked()) {
+                $minutes = $user->lockoutRemainingMinutes();
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    Fortify::username() => [
+                        "Esta cuenta está temporalmente bloqueada por superar el límite de {$soxConfig->max_failed_attempts} intentos fallidos. Contacte al administrador para solicitar el desbloqueo.",
+                    ],
+                ]);
+            }
+
+            if (\Illuminate\Support\Facades\Hash::check($password, $user->password)) {
+                $user->update([
+                    'failed_login_attempts' => 0,
+                    'locked_until' => null,
+                ]);
+
+                return $user;
+            }
+
+            // Failed password attempt
+            $attempts = $user->failed_login_attempts + 1;
+            $maxAttempts = $soxConfig->max_failed_attempts;
+            $lockoutMinutes = $soxConfig->lockout_minutes;
+
+            if ($attempts >= $maxAttempts) {
+                $user->update([
+                    'failed_login_attempts' => $attempts,
+                    'locked_until' => now()->addMinutes($lockoutMinutes),
+                ]);
+
+                activity('auth')
+                    ->causedBy($user)
+                    ->performedOn($user)
+                    ->withProperties([
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                        'evento' => 'sox_lockout',
+                        'intentos' => $attempts,
+                        'minutos_bloqueo' => $lockoutMinutes,
+                    ])
+                    ->event('sox_lockout')
+                    ->log("Cuenta de {$user->name} bloqueada por {$lockoutMinutes} min tras {$attempts} intentos fallidos");
+
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    Fortify::username() => [
+                        "Ha alcanzado el límite de {$maxAttempts} intentos fallidos. Su cuenta ha sido bloqueada por seguridad.",
+                    ],
+                ]);
+            } else {
+                $user->update([
+                    'failed_login_attempts' => $attempts,
+                ]);
+            }
+
+            return null;
+        });
     }
 
     /**

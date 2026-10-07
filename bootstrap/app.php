@@ -63,6 +63,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            \App\Http\Middleware\EnsurePasswordNotExpired::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
@@ -74,6 +75,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'password.not_expired' => \App\Http\Middleware\EnsurePasswordNotExpired::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

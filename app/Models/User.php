@@ -41,7 +41,7 @@ use App\Traits\HasSpanishActivityLog;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
-#[Fillable(['name', 'username', 'status', 'email', 'password', 'telefono', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'layout_settings'])]
+#[Fillable(['name', 'username', 'status', 'email', 'password', 'password_changed_at', 'failed_login_attempts', 'locked_until', 'telefono', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'layout_settings'])]
 #[Hidden(['password', 'remember_token', 'whatsapp_otp', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -51,7 +51,7 @@ class User extends Authenticatable implements PasskeyUser
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'username', 'status', 'email', 'telefono', 'empresa_id', 'sucursal_id'])
+            ->logOnly(['name', 'username', 'status', 'email', 'telefono', 'empresa_id', 'sucursal_id', 'failed_login_attempts', 'locked_until'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
@@ -76,8 +76,93 @@ class User extends Authenticatable implements PasskeyUser
             'phone_verified_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
+            'password_changed_at' => 'datetime',
+            'locked_until' => 'datetime',
+            'failed_login_attempts' => 'integer',
             'layout_settings' => 'array',
         ];
+    }
+
+    public function passwordHistories()
+    {
+        return $this->hasMany(PasswordHistory::class);
+    }
+
+    /**
+     * Check if account is currently locked out by SOX policy.
+     */
+    public function isLocked(): bool
+    {
+        return $this->locked_until !== null && $this->locked_until->isFuture();
+    }
+
+    /**
+     * Minutes remaining until account is unlocked.
+     */
+    public function lockoutRemainingMinutes(): int
+    {
+        if (!$this->isLocked()) {
+            return 0;
+        }
+
+        return max(1, (int) ceil(now()->diffInSeconds($this->locked_until) / 60));
+    }
+
+    /**
+     * Unlock user account and reset failed attempts.
+     */
+    public function unlock(): void
+    {
+        $this->update([
+            'failed_login_attempts' => 0,
+            'locked_until' => null,
+        ]);
+    }
+
+    /**
+     * Check if password has exceeded SOX expiration policy (default 90 days).
+     */
+    public function isPasswordExpired(?int $customDays = null): bool
+    {
+        $daysLimit = $customDays ?? ConfiguracionSox::current($this->empresa_id)->password_expires_days;
+
+        if (!$this->password_changed_at) {
+            return true;
+        }
+
+        return $this->password_changed_at->diffInDays(now()) >= $daysLimit;
+    }
+
+    /**
+     * Days remaining until password expires.
+     */
+    public function daysUntilPasswordExpires(?int $customDays = null): int
+    {
+        $daysLimit = $customDays ?? ConfiguracionSox::current($this->empresa_id)->password_expires_days;
+
+        if (!$this->password_changed_at) {
+            return 0;
+        }
+
+        $elapsed = $this->password_changed_at->diffInDays(now());
+        return max(0, $daysLimit - (int) $elapsed);
+    }
+
+    /**
+     * Record new password in history and update password_changed_at.
+     */
+    public function recordPasswordHistory(string $newPasswordHash): void
+    {
+        $this->passwordHistories()->create([
+            'password_hash' => $newPasswordHash,
+            'created_at' => now(),
+        ]);
+
+        $this->update([
+            'password_changed_at' => now(),
+            'failed_login_attempts' => 0,
+            'locked_until' => null,
+        ]);
     }
 
     public function empresa()
