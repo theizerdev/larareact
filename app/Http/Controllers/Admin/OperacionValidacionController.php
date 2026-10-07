@@ -8,6 +8,7 @@ use App\Models\KycValidacion;
 use App\Models\OperacionValidacion;
 use Illuminate\Database\Eloquent\Model;
 use App\Services\Validaciones\FirmaService;
+use App\Services\Validaciones\TruoraSincronizador;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -92,6 +93,12 @@ class OperacionValidacionController extends Controller
 
     public function show(Request $request, OperacionValidacion $operacion)
     {
+        // Antecedentes (TRUORA) abiertos de este folio: se consultan al abrir la pantalla.
+        TruoraSincronizador::sincronizarPendientes(
+            $operacion->kycValidaciones()->where('proveedor', KycValidacion::PROVEEDOR_TRUORA)->get()
+        );
+        $operacion->refresh();
+
         $operacion->load(['entidad', 'sucursal', 'iniciador']);
 
         $kycs = $operacion->kycValidaciones()

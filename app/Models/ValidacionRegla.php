@@ -35,6 +35,7 @@ class ValidacionRegla extends Model
         'entidad',
         'kyc_activo',
         'didit_antifraude',
+        'antecedentes_activo',
         'firma_activa',
         'plantilla_zapsign',
         'nombre_documento',
@@ -47,6 +48,7 @@ class ValidacionRegla extends Model
         return [
             'kyc_activo' => 'boolean',
             'didit_antifraude' => 'boolean',
+            'antecedentes_activo' => 'boolean',
             'firma_activa' => 'boolean',
             'firma_obligatoria' => 'boolean',
             'firma_valida_identidad' => 'boolean',

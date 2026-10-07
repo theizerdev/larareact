@@ -7,6 +7,7 @@ use App\Models\KycValidacion;
 use App\Services\DiditService;
 use App\Services\Validaciones\DiditSincronizador;
 use App\Services\Validaciones\FirmaService;
+use App\Services\Validaciones\TruoraSincronizador;
 use App\Services\ZapSignService;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
@@ -61,6 +62,34 @@ class WebhookValidacionController extends Controller
         }
 
         DiditSincronizador::sincronizar($val);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Webhook de TRUORA ("Check finished"). Sólo sirve para avisar: el check_id debe
+     * existir en Hoshō y el resultado se vuelve a pedir a la API con la llave de la empresa.
+     */
+    public function truora(Request $request)
+    {
+        $checkId = $request->input('check_id')
+            ?? $request->input('check.check_id')
+            ?? $request->input('data.check_id');
+        $checkId = is_string($checkId) ? $checkId : '';
+
+        if ($checkId === '') {
+            return response()->json(['ok' => true]);
+        }
+
+        $val = KycValidacion::withoutGlobalScopes()
+            ->where('proveedor', KycValidacion::PROVEEDOR_TRUORA)
+            ->where('truora_check_id', $checkId)
+            ->latest('id')
+            ->first();
+
+        if ($val) {
+            TruoraSincronizador::sincronizar($val);
+        }
 
         return response()->json(['ok' => true]);
     }

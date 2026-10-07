@@ -16,11 +16,12 @@ interface Validacion {
     persona_nombre: string;
     persona_tipo: string;
     curp_capturada: string | null;
-    proveedor: 'jaak' | 'didit';
+    proveedor: 'jaak' | 'didit' | 'truora';
     tipo_documento: string | null;
     pais_documento: string | null;
     didit_estatus: string | null;
     didit_session_id: string | null;
+    truora_check_id?: string | null;
     estatus: string;
     curp_valida: boolean | null;
     ine_valida: boolean | null;
@@ -159,6 +160,7 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                                 <option value="">{__('All providers')}</option>
                                 <option value="jaak">JAAK</option>
                                 <option value="didit">DIDIT</option>
+                                <option value="truora">TRUORA</option>
                             </select>
                         </div>
                     </CardHeader>
@@ -208,7 +210,7 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                                                     <td className="py-2 pr-3 text-muted-foreground">
                                                         {v.persona_tipo}
                                                         <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
-                                                            {v.proveedor === 'didit' ? 'DIDIT' : 'JAAK'}
+                                                            {v.proveedor === 'didit' ? 'DIDIT' : v.proveedor === 'truora' ? 'TRUORA' : 'JAAK'}
                                                             {v.tipo_documento === 'pasaporte' ? ` · ${__('Passport')}` : ''}
                                                             {v.pais_documento && v.pais_documento !== 'MEX' ? ` · ${v.pais_documento}` : ''}
                                                         </span>
@@ -250,11 +252,13 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                                                             <div className="mt-3 text-[11px] text-muted-foreground">
                                                                 {v.proveedor === 'didit'
                                                                     ? <>DIDIT · {v.didit_estatus || '—'} · session: {v.didit_session_id || '—'}</>
+                                                                    : v.proveedor === 'truora'
+                                                                    ? <>TRUORA · {__('Background check')}: {v.truora_check_id || '—'}</>
                                                                     : <>{__('Environment')}: {v.jaak_environment} · session: {v.jaak_session_id || '—'}</>}
                                                             </div>
                                                             <details className="mt-3">
                                                                 <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
-                                                                    {v.proveedor === 'didit' ? __('DIDIT raw response') : __('JAAK raw response')}
+                                                                    {v.proveedor === 'didit' ? __('DIDIT raw response') : v.proveedor === 'truora' ? __('TRUORA raw response') : __('JAAK raw response')}
                                                                 </summary>
                                                                 <pre className="mt-2 max-h-96 overflow-auto rounded bg-background p-3 text-[11px]">
                                                                     {JSON.stringify(

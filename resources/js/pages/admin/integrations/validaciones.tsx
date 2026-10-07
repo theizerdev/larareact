@@ -23,6 +23,10 @@ interface PageProps {
     didit_active?: boolean;
     didit_webhook_secret_set?: boolean;
     didit_webhook_url?: string;
+    truora_api_key?: string | null;
+    truora_active?: boolean;
+    truora_score_minimo?: number;
+    truora_webhook_url?: string;
     reglas?: Regla[];
     zapsign_plantillas?: { token: string; nombre: string; tipo: string | null }[];
     zapsign_variables?: string[];
@@ -32,6 +36,7 @@ interface Regla {
     entidad: 'colaboradores' | 'visitas' | 'proveedores' | 'socios';
     kyc_activo: boolean;
     didit_antifraude: boolean;
+    antecedentes_activo: boolean;
     firma_activa: boolean;
     plantilla_zapsign: string | null;
     nombre_documento: string | null;
@@ -59,6 +64,10 @@ export default function Validaciones({
     didit_active,
     didit_webhook_secret_set,
     didit_webhook_url,
+    truora_api_key,
+    truora_active,
+    truora_score_minimo,
+    truora_webhook_url,
     reglas = [],
     zapsign_plantillas = [],
     zapsign_variables = [],
@@ -67,6 +76,7 @@ export default function Validaciones({
     const [testingConnection, setTestingConnection] = useState(false);
     const [testingZapsign, setTestingZapsign] = useState(false);
     const [testingDidit, setTestingDidit] = useState(false);
+    const [testingTruora, setTestingTruora] = useState(false);
 
     const jaakForm = useForm({
         jaak_api_key: jaak_api_key || '',
@@ -86,6 +96,36 @@ export default function Validaciones({
         didit_active: !!didit_active,
         didit_webhook_secret: '',
     });
+
+    const truoraForm = useForm({
+        truora_api_key: truora_api_key || '',
+        truora_active: !!truora_active,
+        truora_score_minimo: String(truora_score_minimo ?? 0.8),
+    });
+
+    const handleSaveTruora = (e: React.FormEvent) => {
+        e.preventDefault();
+        truoraForm.put('/admin/integrations/truora', {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: __('Settings Saved'),
+                    text: __('TRUORA integration settings updated successfully.'),
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            },
+        });
+    };
+
+    const handleTestTruora = () => {
+        setTestingTruora(true);
+        router.post('/admin/integrations/truora/test', {}, {
+            preserveScroll: true,
+            onFinish: () => setTestingTruora(false),
+        });
+    };
 
     const handleSaveJaak = (e: React.FormEvent) => {
         e.preventDefault();
@@ -503,6 +543,111 @@ export default function Validaciones({
                             </CardFooter>
                         </form>
                     </Card>
+
+                    {/* TRUORA Background Check (antecedentes) */}
+                    <Card className="shadow-sm border-t-4 border-t-orange-600 flex flex-col justify-between">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 rounded bg-white border border-orange-100 dark:border-orange-900/40">
+                                        <img
+                                            src="/image/logo/integrations/truora-logo.png"
+                                            alt="TRUORA"
+                                            className="h-6 w-6 rounded object-contain"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <CardTitle>{__('TRUORA Background Check')}</CardTitle>
+                                        <CardDescription>{__('Check criminal, legal and watchlist records of a person from their CURP.')}</CardDescription>
+                                    </div>
+                                </div>
+                                <BadgeStatus active={truoraForm.data.truora_active} tone="orange" />
+                            </div>
+                        </CardHeader>
+                        <form onSubmit={handleSaveTruora}>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-sm font-medium">{__('Enable TRUORA')}</Label>
+                                        <p className="text-xs text-muted-foreground">{__('Toggle the connection to the TRUORA background check API.')}</p>
+                                    </div>
+                                    <Switch
+                                        checked={truoraForm.data.truora_active}
+                                        onCheckedChange={(checked) => truoraForm.setData('truora_active', checked)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="truora_api_key">{__('API Key')}</Label>
+                                    <Input
+                                        id="truora_api_key"
+                                        type="password"
+                                        autoComplete="off"
+                                        value={truoraForm.data.truora_api_key}
+                                        onChange={(e) => truoraForm.setData('truora_api_key', e.target.value)}
+                                        disabled={!truoraForm.data.truora_active}
+                                    />
+                                    {truoraForm.errors.truora_api_key && (
+                                        <p className="text-xs text-red-600">{truoraForm.errors.truora_api_key}</p>
+                                    )}
+                                    <p className="text-xs text-muted-foreground">
+                                        {__('Create it in your TRUORA account:')}{' '}
+                                        <a href="https://account.truora.com" target="_blank" rel="noreferrer" className="text-orange-600 hover:underline inline-flex items-center gap-0.5">
+                                            account.truora.com <ExternalLink className="h-3 w-3 inline" />
+                                        </a>
+                                    </p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="truora_score_minimo">{__('Minimum score to approve (0 to 1)')}</Label>
+                                    <Input
+                                        id="truora_score_minimo"
+                                        type="number"
+                                        step="0.05"
+                                        min="0"
+                                        max="1"
+                                        value={truoraForm.data.truora_score_minimo}
+                                        onChange={(e) => truoraForm.setData('truora_score_minimo', e.target.value)}
+                                        disabled={!truoraForm.data.truora_active}
+                                    />
+                                    {truoraForm.errors.truora_score_minimo && (
+                                        <p className="text-xs text-red-600">{truoraForm.errors.truora_score_minimo}</p>
+                                    )}
+                                    <p className="text-xs text-muted-foreground">
+                                        {__('1 means maximum confidence. Below the minimum the result goes to manual review; it is never rejected automatically.')}
+                                    </p>
+                                </div>
+                                {truora_webhook_url && (
+                                    <p className="text-xs text-muted-foreground break-all">
+                                        {__('Optional: register this webhook in TRUORA for the "Check finished" event, so results arrive without waiting:')} <code className="font-mono">{truora_webhook_url}</code>
+                                    </p>
+                                )}
+                            </CardContent>
+                            <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex flex-col gap-2">
+                                <div className="flex w-full justify-between">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2 border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+                                        disabled={!truoraForm.data.truora_active || testingTruora}
+                                        onClick={handleTestTruora}
+                                    >
+                                        {testingTruora ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
+                                        {__('Test Connection')}
+                                    </Button>
+                                    <Button type="submit" disabled={truoraForm.processing || !truoraForm.data.truora_active} className="gap-2">
+                                        <Save className="h-4 w-4" />
+                                        {__('Save Changes')}
+                                    </Button>
+                                </div>
+                                {truoraForm.isDirty && (
+                                    <p className="w-full text-xs text-amber-600 dark:text-amber-500">
+                                        {__('The connection test uses the saved credentials. Save your changes first.')}
+                                    </p>
+                                )}
+                            </CardFooter>
+                        </form>
+                    </Card>
                 </div>
 
                 <ReglasValidacion reglas={reglas} plantillas={zapsign_plantillas} variables={zapsign_variables} />
@@ -550,7 +695,7 @@ function ReglasValidacion({ reglas, plantillas, variables }: {
                                     <span className="text-xs text-muted-foreground">{__('Identity only for now; anti-fraud and signature arrive in a later phase.')}</span>
                                 )}
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-3">
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                 <label className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm">
                                     {__('Identity validation')}
                                     <Switch checked={r.kyc_activo} onCheckedChange={(v) => set(i, { kyc_activo: v })} />
@@ -558,6 +703,10 @@ function ReglasValidacion({ reglas, plantillas, variables }: {
                                 <label className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm">
                                     {__('DIDIT anti-fraud on top of JAAK')}
                                     <Switch checked={r.didit_antifraude} disabled={!r.con_seguimiento || !r.kyc_activo} onCheckedChange={(v) => set(i, { didit_antifraude: v })} />
+                                </label>
+                                <label className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                                    {__('TRUORA background check')}
+                                    <Switch checked={r.antecedentes_activo} onCheckedChange={(v) => set(i, { antecedentes_activo: v })} />
                                 </label>
                                 <label className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm">
                                     {__('ZapSign signature')}
@@ -618,11 +767,13 @@ function ReglasValidacion({ reglas, plantillas, variables }: {
     );
 }
 
-function BadgeStatus({ active, tone = 'teal' }: { active: boolean; tone?: 'teal' | 'blue' | 'purple' }) {
+function BadgeStatus({ active, tone = 'teal' }: { active: boolean; tone?: 'teal' | 'blue' | 'purple' | 'orange' }) {
     const { __ } = useTranslate();
 
     const activeTone = tone === 'blue'
         ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+        : tone === 'orange'
+        ? 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300'
         : tone === 'purple'
         ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
         : 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300';

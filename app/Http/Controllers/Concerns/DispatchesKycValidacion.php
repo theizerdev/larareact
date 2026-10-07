@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Concerns;
 
+use App\Jobs\IniciarTruoraCheck;
 use App\Jobs\ProcesarKycValidacion;
 use App\Models\KycValidacion;
 use App\Models\OperacionValidacion;
 use App\Models\ValidacionRegla;
 use App\Services\DiditService;
+use App\Services\TruoraService;
 use App\Services\Validaciones\DiditSincronizador;
 use App\Services\Validaciones\FirmaService;
 use Illuminate\Database\Eloquent\Model;
@@ -73,7 +75,17 @@ trait DispatchesKycValidacion
             );
             $usarFirma = $empresa->zapsign_active && $regla->enviaFirma() && $regla->seguimientoPara($persona) && ($titular === null || $titular === $persona);
 
-            if (! $usarJaak && ! $usarDidit && ! $usarFirma) {
+            // Antecedentes (TRUORA): corre si la regla lo pide o con el botón "Verificar antecedentes"
+            // ('solo_antecedentes' = únicamente esto, sin identidad ni firma). Sólo necesita la CURP.
+            $truoraDisponible = $empresa->truora_active && TruoraService::tokenDe($empresa) && config('truora.enabled', true);
+            $soloAntecedentes = ! empty($opciones['solo_antecedentes']);
+            $usarTruora = $truoraDisponible && ($soloAntecedentes || $regla->antecedentes_activo);
+
+            if ($soloAntecedentes) {
+                $usarJaak = $usarDidit = $usarFirma = false;
+            }
+
+            if (! $usarJaak && ! $usarDidit && ! $usarFirma && ! $usarTruora) {
                 return; // empresa sin validaciones configuradas: flujo idéntico al de siempre
             }
 
@@ -91,7 +103,7 @@ trait DispatchesKycValidacion
                 'estatus' => KycValidacion::ESTATUS_PENDIENTE,
             ];
 
-            if ($usarJaak || $usarDidit) {
+            if ($usarJaak || $usarDidit || $usarTruora) {
                 $persona->forceFill(['kyc_estatus' => KycValidacion::ESTATUS_PENDIENTE])->saveQuietly();
             }
 
@@ -111,6 +123,15 @@ trait DispatchesKycValidacion
                 ]);
 
                 DiditSincronizador::iniciar($validacion, $operacion?->urlSeguimiento());
+            }
+
+            if ($usarTruora) {
+                $validacion = KycValidacion::create($comunes + [
+                    'proveedor' => KycValidacion::PROVEEDOR_TRUORA,
+                    'jaak_environment' => 'n/a',
+                ]);
+
+                IniciarTruoraCheck::dispatch($validacion)->afterResponse();
             }
 
             if ($usarFirma && $operacion) {

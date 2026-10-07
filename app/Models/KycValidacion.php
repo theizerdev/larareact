@@ -29,6 +29,7 @@ class KycValidacion extends Model
 
     public const PROVEEDOR_JAAK = 'jaak';
     public const PROVEEDOR_DIDIT = 'didit';
+    public const PROVEEDOR_TRUORA = 'truora';
 
     public const DOCUMENTO_INE = 'ine';
     public const DOCUMENTO_PASAPORTE = 'pasaporte';
@@ -45,6 +46,7 @@ class KycValidacion extends Model
         'didit_session_id',
         'didit_url',
         'didit_estatus',
+        'truora_check_id',
         'curp_capturada',
         'jaak_environment',
         'jaak_session_id',
@@ -129,6 +131,11 @@ class KycValidacion extends Model
             ->pluck('estatus')
             ->sortByDesc(fn ($estatus) => self::SEVERIDAD[$estatus] ?? 0)
             ->first();
+    }
+
+    public function esTruora(): bool
+    {
+        return $this->proveedor === self::PROVEEDOR_TRUORA;
     }
 
     public function esDidit(): bool

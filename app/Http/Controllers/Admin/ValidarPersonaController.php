@@ -42,6 +42,7 @@ class ValidarPersonaController extends Controller
         $clase = self::TIPOS[$tipo] ?? abort(404);
         $persona = $clase::query()->findOrFail($id); // el scope de empresa devuelve 404 si es de otra
 
+        $soloAntecedentes = $request->boolean('antecedentes');
         $evidencia = ProcesarKycValidacion::evidencias($persona, class_basename($clase));
         $faltantes = [];
 
@@ -51,6 +52,15 @@ class ValidarPersonaController extends Controller
 
         if (empty($evidencia['front'])) {
             $faltantes[] = __('el documento de identidad (frente)');
+        }
+
+        // Los antecedentes sólo necesitan la CURP; identidad y prueba de vida, la foto y el documento.
+        if ($soloAntecedentes) {
+            $faltantes = [];
+
+            if (empty($persona->curp)) {
+                return $this->aviso('error', __('To check background we need the CURP. Edit the record and add it.'));
+            }
         }
 
         if ($faltantes) {
@@ -73,6 +83,7 @@ class ValidarPersonaController extends Controller
             'tipo_documento' => $persona->tipo_documento ?? $previa?->tipo_documento,
             'pais_documento' => $previa?->pais_documento,
             'forzar_didit' => $request->boolean('prueba_vida'),
+            'solo_antecedentes' => $soloAntecedentes,
         ]);
 
         $despues = $persona->kycValidaciones()->withoutGlobalScopes()->count();

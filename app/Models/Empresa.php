@@ -57,6 +57,7 @@ class Empresa extends Model
         'didit_api_key',
         'didit_webhook_secret',
         'zapsign_webhook_secret',
+        'truora_api_key',
         'biotime_password',
     ];
 
@@ -106,6 +107,9 @@ class Empresa extends Model
         'didit_active',
         'didit_webhook_secret',
         'zapsign_webhook_secret',
+        'truora_api_key',
+        'truora_active',
+        'truora_score_minimo',
         'biotime_base_url',
         'biotime_username',
         'biotime_password',
@@ -134,6 +138,9 @@ class Empresa extends Model
             'didit_webhook_secret' => 'encrypted',
             'zapsign_webhook_secret' => 'encrypted',
             'didit_active' => 'boolean',
+            'truora_api_key' => 'encrypted',
+            'truora_active' => 'boolean',
+            'truora_score_minimo' => 'decimal:2',
             'biotime_password' => 'encrypted',
             'biotime_active' => 'boolean',
             'biotime_last_sync_at' => 'datetime',

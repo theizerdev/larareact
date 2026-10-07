@@ -46,5 +46,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // DIDIT (Validaciones) Integration Routes
     Route::put('/integrations/didit', [IntegrationController::class, 'updateDidit'])->name('integrations.didit.update')->can('integrations.edit');
     Route::put('/integrations/validaciones/reglas', [IntegrationController::class, 'updateReglasValidacion'])->name('integrations.validaciones.reglas')->can('integrations.edit');
+    // TRUORA (antecedentes / background check)
+    Route::put('/integrations/truora', [IntegrationController::class, 'updateTruora'])->name('integrations.truora.update')->can('integrations.edit');
+    Route::post('/integrations/truora/test', [IntegrationController::class, 'truoraTest'])->name('integrations.truora.test')->can('integrations.edit');
     Route::post('/integrations/didit/test', [IntegrationController::class, 'diditTest'])->name('integrations.didit.test')->can('integrations.edit');
 });

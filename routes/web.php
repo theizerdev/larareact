@@ -94,6 +94,8 @@ Route::get('/validacion/{token}/estado', [\App\Http\Controllers\ValidacionSeguim
     ->name('validacion.seguimiento.estado')->middleware('throttle:60,1');
 Route::post('/webhooks/didit', [\App\Http\Controllers\WebhookValidacionController::class, 'didit'])
     ->name('webhooks.didit')->middleware('throttle:120,1');
+Route::post('/webhooks/truora', [\App\Http\Controllers\WebhookValidacionController::class, 'truora'])
+    ->name('webhooks.truora')->middleware('throttle:120,1');
 Route::post('/webhooks/zapsign', [\App\Http\Controllers\WebhookValidacionController::class, 'zapsign'])
     ->name('webhooks.zapsign')->middleware('throttle:120,1');
 

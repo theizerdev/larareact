@@ -23,7 +23,7 @@ interface Kyc {
     id: number;
     persona_nombre: string;
     persona_tipo: string;
-    proveedor: 'jaak' | 'didit';
+    proveedor: 'jaak' | 'didit' | 'truora';
     tipo_documento: string | null;
     pais_documento: string | null;
     estatus: string;
@@ -95,7 +95,7 @@ function Badge({ meta }: { meta: { label: string; cls: string } }) {
     return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${meta.cls}`}>{__(meta.label)}</span>;
 }
 
-const PROVEEDOR_LABEL: Record<string, string> = { jaak: 'JAAK', didit: 'DIDIT' };
+const PROVEEDOR_LABEL: Record<string, string> = { jaak: 'JAAK', didit: 'DIDIT', truora: 'TRUORA' };
 
 export default function OperacionValidacion({ operacion, kycs, documentos, seguimiento_url, seguimiento_qr, puede_gestionar }: PageProps) {
     const { __ } = useTranslate();

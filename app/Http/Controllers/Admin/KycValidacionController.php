@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcesarKycValidacion;
+use App\Jobs\IniciarTruoraCheck;
 use App\Services\Validaciones\DiditSincronizador;
+use App\Services\Validaciones\TruoraSincronizador;
 use App\Models\KycValidacion;
 use App\Models\OperacionValidacion;
 use Illuminate\Http\Request;
@@ -19,9 +21,16 @@ class KycValidacionController extends Controller
     {
         $filtros = $request->validate([
             'estatus' => 'nullable|string|in:pendiente,procesando,aprobado,revision,rechazado,error',
-            'proveedor' => 'nullable|string|in:jaak,didit',
+            'proveedor' => 'nullable|string|in:jaak,didit,truora',
             'q' => 'nullable|string|max:100',
         ]);
+
+        // Sin worker ni scheduler: los antecedentes abiertos se consultan al abrir la pantalla.
+        TruoraSincronizador::sincronizarPendientes(
+            KycValidacion::query()->where('proveedor', KycValidacion::PROVEEDOR_TRUORA)
+                ->whereIn('estatus', [KycValidacion::ESTATUS_PENDIENTE, KycValidacion::ESTATUS_PROCESANDO])
+                ->latest('id')->limit(20)->get()
+        );
 
         $validaciones = KycValidacion::query()
             ->with(['validable', 'operacion'])
@@ -32,6 +41,7 @@ class KycValidacionController extends Controller
                     $sub->where('curp_capturada', 'like', "%{$term}%")
                         ->orWhere('jaak_session_id', 'like', "%{$term}%")
                         ->orWhere('didit_session_id', 'like', "%{$term}%")
+                        ->orWhere('truora_check_id', 'like', "%{$term}%")
                         ->orWhereHas('operacion', fn ($o) => $o->where('folio', 'like', "%{$term}%"));
                 });
             })
@@ -73,6 +83,16 @@ class KycValidacionController extends Controller
             ]);
         }
 
+        // TRUORA: si el check sigue abierto sólo se consulta; si ya terminó se abre otro.
+        if ($kycValidacion->esTruora() && ! $kycValidacion->estaFinalizada()) {
+            $cambio = TruoraSincronizador::sincronizar($kycValidacion);
+
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => $cambio ? __('Background check updated.') : __('TRUORA has no new result yet.'),
+            ]);
+        }
+
         // La revalidación se queda en el mismo folio; las validaciones anteriores
         // al folio abren uno nuevo de tipo revalidación.
         $operacion = $kycValidacion->operacion
@@ -99,6 +119,15 @@ class KycValidacionController extends Controller
 
         $persona->forceFill(['kyc_estatus' => KycValidacion::ESTATUS_PENDIENTE])->saveQuietly();
         $operacion->recalcularEstatus();
+
+        if ($nueva->esTruora()) {
+            IniciarTruoraCheck::dispatch($nueva)->afterResponse();
+
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('New background check queued.'),
+            ]);
+        }
 
         if ($nueva->esDidit()) {
             DiditSincronizador::iniciar($nueva, $operacion->urlSeguimiento());
@@ -136,6 +165,7 @@ class KycValidacionController extends Controller
             'pais_documento' => $v->pais_documento,
             'didit_estatus' => $v->didit_estatus,
             'didit_session_id' => $v->didit_session_id,
+            'truora_check_id' => $v->truora_check_id,
             'estatus' => $v->estatus,
             'curp_valida' => $v->curp_valida,
             'ine_valida' => $v->ine_valida,

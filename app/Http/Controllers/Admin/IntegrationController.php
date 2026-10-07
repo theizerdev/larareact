@@ -9,6 +9,7 @@ use App\Services\BioTimeService;
 use App\Services\ControlAccesoService;
 use App\Models\ValidacionRegla;
 use App\Services\DiditService;
+use App\Services\TruoraService;
 use App\Services\Validaciones\FirmaService;
 use App\Services\JaakService;
 use App\Services\WhatsAppService;
@@ -644,6 +645,10 @@ class IntegrationController extends Controller
             // El secreto nunca viaja al frontend: sólo si hay uno guardado.
             'didit_webhook_secret_set' => $this->diditSecretoGuardado($empresa),
             'didit_webhook_url' => route('webhooks.didit'),
+            'truora_api_key' => TruoraService::tokenDe($empresa),
+            'truora_active' => (bool) $empresa->truora_active,
+            'truora_score_minimo' => TruoraService::scoreMinimoDe($empresa),
+            'truora_webhook_url' => route('webhooks.truora'),
             'reglas' => $this->reglasValidacion($empresa),
             'zapsign_plantillas' => $this->plantillasZapsign($empresa),
             'zapsign_variables' => FirmaService::VARIABLES,
@@ -670,6 +675,7 @@ class IntegrationController extends Controller
             'reglas.*.entidad' => 'required|string|in:'.implode(',', array_keys(ValidacionRegla::ENTIDADES)),
             'reglas.*.kyc_activo' => 'required|boolean',
             'reglas.*.didit_antifraude' => 'required|boolean',
+            'reglas.*.antecedentes_activo' => 'sometimes|boolean',
             'reglas.*.firma_activa' => 'required|boolean',
             'reglas.*.plantilla_zapsign' => 'nullable|string|max:64|regex:/^[A-Za-z0-9-]+$/',
             'reglas.*.nombre_documento' => 'nullable|string|max:120',
@@ -680,7 +686,7 @@ class IntegrationController extends Controller
         foreach ($validated['reglas'] as $i => $r) {
             $conSeguimiento = in_array($r['entidad'], ValidacionRegla::ENTIDADES_CON_SEGUIMIENTO, true);
 
-            if ($r['firma_activa'] && $conSeguimiento && empty($r['plantilla_zapsign'])) {
+            if ($r['firma_activa'] && $conSeguimiento && empty($r['plantilla_zapsign'] ?? null)) {
                 return back()->withErrors([
                     "reglas.$i.plantilla_zapsign" => __('Choose a ZapSign template to enable signing.'),
                 ])->with('notification', [
@@ -695,9 +701,10 @@ class IntegrationController extends Controller
                     'kyc_activo' => $r['kyc_activo'],
                     // Antifraude y firma sólo donde el alta ya entrega la liga de seguimiento.
                     'didit_antifraude' => $conSeguimiento && $r['didit_antifraude'],
+                    'antecedentes_activo' => (bool) ($r['antecedentes_activo'] ?? false),
                     'firma_activa' => $conSeguimiento && $r['firma_activa'],
-                    'plantilla_zapsign' => $r['plantilla_zapsign'] ?: null,
-                    'nombre_documento' => $r['nombre_documento'] ?: null,
+                    'plantilla_zapsign' => ($r['plantilla_zapsign'] ?? null) ?: null,
+                    'nombre_documento' => ($r['nombre_documento'] ?? null) ?: null,
                     'firma_obligatoria' => $conSeguimiento && $r['firma_obligatoria'],
                     'firma_valida_identidad' => $conSeguimiento && $r['firma_valida_identidad'],
                 ],
@@ -720,6 +727,7 @@ class IntegrationController extends Controller
                     'entidad' => $entidad,
                     'kyc_activo' => (bool) $r->kyc_activo,
                     'didit_antifraude' => (bool) $r->didit_antifraude,
+                    'antecedentes_activo' => (bool) $r->antecedentes_activo,
                     'firma_activa' => (bool) $r->firma_activa,
                     'plantilla_zapsign' => $r->plantilla_zapsign,
                     'nombre_documento' => $r->nombre_documento,
@@ -992,6 +1000,71 @@ class IntegrationController extends Controller
         return back()->with('notification', [
             'type' => 'success',
             'message' => __('DIDIT integration settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Actualiza la configuración de TRUORA (verificación de antecedentes) de la empresa.
+     */
+    public function updateTruora(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'truora_api_key' => 'nullable|string|max:4000',
+            'truora_active' => 'required|boolean',
+            'truora_score_minimo' => 'nullable|numeric|between:0,1',
+        ]);
+
+        $apiKey = trim((string) ($validated['truora_api_key'] ?? ''));
+
+        if ($validated['truora_active'] && $apiKey === '') {
+            return back()->withErrors([
+                'truora_api_key' => __('An API Key is required to enable the TRUORA integration.'),
+            ])->with('notification', [
+                'type' => 'error',
+                'message' => __('An API Key is required to enable the TRUORA integration.'),
+            ]);
+        }
+
+        $empresa->update([
+            'truora_api_key' => $apiKey !== '' ? $apiKey : null,
+            'truora_active' => $validated['truora_active'],
+            'truora_score_minimo' => $validated['truora_score_minimo'] ?? null,
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('TRUORA integration settings updated successfully.'),
+        ]);
+    }
+
+    /**
+     * Prueba la conexión con TRUORA usando las credenciales guardadas.
+     */
+    public function truoraTest(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa || empty(TruoraService::tokenDe($empresa))) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Please configure and save the API Key before testing the connection.'),
+            ]);
+        }
+
+        $result = (new TruoraService($empresa))->testConnection();
+
+        return back()->with('notification', [
+            'type' => $result['success'] ? 'success' : 'error',
+            'message' => $result['message'],
         ]);
     }
 
