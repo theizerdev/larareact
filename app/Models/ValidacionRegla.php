@@ -28,7 +28,7 @@ class ValidacionRegla extends Model
      * eso pueden usar DIDIT como antifraude y firma ZapSign. El resto llega
      * en la fase 4; mientras, ahí sólo aplica el KYC de siempre.
      */
-    public const ENTIDADES_CON_SEGUIMIENTO = ['colaboradores'];
+    public const ENTIDADES_CON_SEGUIMIENTO = ['colaboradores', 'socios'];
 
     protected $fillable = [
         'empresa_id',
@@ -95,6 +95,17 @@ class ValidacionRegla extends Model
         return $this->firma_activa
             && ! empty($this->plantilla_zapsign)
             && $this->conSeguimiento();
+    }
+
+    /**
+     * Quién recibe DIDIT/firma dentro de una entidad con seguimiento: en
+     * 'socios' es el socio comercial (su responsable), no cada uno de sus
+     * colaboradores, que todavía no tienen esa liga.
+     */
+    public function seguimientoPara(Model $persona): bool
+    {
+        return $this->conSeguimiento()
+            && ($this->entidad !== 'socios' || $persona instanceof Productor);
     }
 
     public function conSeguimiento(): bool

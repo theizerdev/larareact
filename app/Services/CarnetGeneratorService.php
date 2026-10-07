@@ -350,16 +350,33 @@ class CarnetGeneratorService
             $photoW = 230;
             $photoH = 270;
 
+            // Foto del socio comercial (recortada para llenar el marco, sin deformarla)
+            if ($productor->foto) {
+                $fotoRuta = storage_path('app/public/'.ltrim(preg_replace('#^/?storage/#', '', $productor->foto), '/'));
+                $fotoData = is_file($fotoRuta) ? @file_get_contents($fotoRuta) : false;
+                $fotoImg = $fotoData ? @imagecreatefromstring($fotoData) : false;
+
+                if ($fotoImg) {
+                    $sw = imagesx($fotoImg);
+                    $sh = imagesy($fotoImg);
+                    $escala = max($photoW / $sw, $photoH / $sh);
+                    $cw = (int) round($photoW / $escala);
+                    $ch = (int) round($photoH / $escala);
+                    imagecopyresampled($im, $fotoImg, $photoX, $photoY, (int) (($sw - $cw) / 2), (int) (($sh - $ch) / 2), $photoW, $photoH, $cw, $ch);
+                    imagedestroy($fotoImg);
+                }
+            }
+
             for ($t = 0; $t < 6; $t++) {
                 imagerectangle($im, $photoX - $t, $photoY - $t, $photoX + $photoW + $t, $photoY + $photoH + $t, $blueTheme);
             }
 
-            // --- 3. Franja Central AZUL (PRODUCTOR AUTORIZADO) ---
+            // --- 3. Franja Central AZUL (SOCIO COMERCIAL) ---
             $bannerY1 = 430;
             $bannerY2 = 610;
             imagefilledrectangle($im, 16, $bannerY1, $width - 16, $bannerY2, $blueTheme);
 
-            $tituloText = "PRODUCTOR";
+            $tituloText = "SOCIO COMERCIAL";
             $docValue = $productor->rfc ?: ($productor->documento_identidad ?: 'N/A');
             $subText = "RFC: " . $docValue;
 

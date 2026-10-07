@@ -589,6 +589,11 @@ class ProcesarKycValidacion implements ShouldQueue
                 'back' => $persona->documento_reverso,
                 'selfie' => $persona->foto_carnet,
             ],
+            'Productor' => [
+                'front' => $persona->documento_frontal,
+                'back' => $persona->documento_reverso,
+                'selfie' => $persona->foto,
+            ],
             'VisitaTemporal' => [
                 'front' => $persona->foto_documento,
                 'back' => null,

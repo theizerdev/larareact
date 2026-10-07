@@ -35,7 +35,7 @@ trait DispatchesKycValidacion
     private array $operacionesKyc = [];
 
     /**
-     * @param  Model  $persona  Empleado | ProveedorEmpleado | ProductorEmpleado | VisitaTemporal
+     * @param  Model  $persona  Empleado | ProveedorEmpleado | ProductorEmpleado | Productor | VisitaTemporal
      *                          (debe tener empresa_id, sucursal_id y la relación empresa())
      * @param  Model|null  $titular  Entidad dueña del folio de operación (p. ej. el Proveedor
      *                               de un pre-registro con varios empleados). Por defecto, la persona.
@@ -66,9 +66,9 @@ trait DispatchesKycValidacion
             $diditDisponible = $empresa->didit_active && DiditService::tokenDe($empresa) && config('didit.enabled', true);
 
             $usarJaak = $regla->kyc_activo && $jaakDisponible;
-            $usarDidit = $regla->kyc_activo && $diditDisponible && $regla->conSeguimiento()
+            $usarDidit = $regla->kyc_activo && $diditDisponible && $regla->seguimientoPara($persona)
                 && ($extranjero || $regla->didit_antifraude);
-            $usarFirma = $empresa->zapsign_active && $regla->enviaFirma() && ($titular === null || $titular === $persona);
+            $usarFirma = $empresa->zapsign_active && $regla->enviaFirma() && $regla->seguimientoPara($persona) && ($titular === null || $titular === $persona);
 
             if (! $usarJaak && ! $usarDidit && ! $usarFirma) {
                 return; // empresa sin validaciones configuradas: flujo idéntico al de siempre

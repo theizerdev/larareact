@@ -42,6 +42,13 @@ class ProductorRequest extends FormRequest
             'estado' => ['nullable', 'string', 'max:255'],
             'responsable' => ['nullable', 'string', 'max:255'],
             'curp' => ['nullable', 'string', 'max:18'],
+            'correo' => ['nullable', 'email', 'max:255'],
+            // Fotos (solo imagen: SVG y demás quedan fuera) y tipo de documento para las validaciones
+            'foto' => ['nullable', 'image', 'max:4096'],
+            'documento_frontal' => ['nullable', 'image', 'max:4096'],
+            'documento_reverso' => ['nullable', 'image', 'max:4096'],
+            'quitar_foto' => ['nullable', 'boolean'],
+            'tipo_documento' => ['nullable', Rule::in(['ine', 'pasaporte'])],
             'pais_id' => ['required', 'exists:pais,id'],
             'latitud' => ['nullable', 'numeric', 'between:-90,90'],
             'longitud' => ['nullable', 'numeric', 'between:-180,180'],

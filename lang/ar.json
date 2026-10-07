@@ -2317,5 +2317,19 @@
     "The Super Administrator role always sees everything.": "دور المشرف العام يرى كل شيء دائماً.",
     "Mapbox rejected the Access Token (401). Check that it is a valid public token (starts with pk.).": "رفضت Mapbox رمز الوصول (401). تأكد من أنه رمز عام صالح (يبدأ بـ pk.).",
     "Mapbox denied access (403). The token may be secret (sk.), lack the Styles scope, or be restricted to other URLs.": "رفضت Mapbox الوصول (403). قد يكون الرمز سرياً (sk.) أو بلا صلاحية Styles أو مقيداً بعناوين أخرى.",
-    "The Mapbox token must be a public token (starts with pk.), not a secret one (sk.).": "يجب أن يكون رمز Mapbox عاماً (يبدأ بـ pk.) وليس سرياً (sk.)."
+    "The Mapbox token must be a public token (starts with pk.), not a secret one (sk.).": "يجب أن يكون رمز Mapbox عاماً (يبدأ بـ pk.) وليس سرياً (sk.).",
+    "Quitar foto": "إزالة الصورة",
+    "Sin imagen": "لا توجد صورة",
+    "Cambiar": "تغيير",
+    "Identidad y Validación": "الهوية والتحقق",
+    "Identidad del Responsable": "هوية المسؤول",
+    "La foto y el documento del responsable se usan para validar su identidad y, si la empresa lo tiene configurado, enviarle el documento a firma. El CURP se captura en la primera pestaña.": "تُستخدم صورة المسؤول ومستنده للتحقق من هويته، وإرسال المستند للتوقيع إذا كانت الشركة قد فعّلت ذلك. يُدخل CURP في التبويب الأول.",
+    "Correo del Responsable": "البريد الإلكتروني للمسؤول",
+    "Tipo de documento": "نوع المستند",
+    "INE / Credencial para votar": "INE / بطاقة الناخب",
+    "Pasaporte / documento extranjero": "جواز سفر / مستند أجنبي",
+    "Foto del Socio Comercial": "صورة الشريك التجاري",
+    "Rostro de frente, bien iluminado. Se usa también para validar identidad.": "الوجه من الأمام وبإضاءة جيدة. تُستخدم أيضاً للتحقق من الهوية.",
+    "Documento Frente": "واجهة المستند",
+    "Documento Reverso": "ظهر المستند"
 }

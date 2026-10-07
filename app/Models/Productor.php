@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasKycValidaciones;
 use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Productor extends Model
 {
-    use HasFactory, HasSpanishActivityLog, LogsActivity, Multitenantable;
+    use HasFactory, HasKycValidaciones, HasSpanishActivityLog, LogsActivity, Multitenantable;
 
     protected static function booted()
     {
@@ -70,6 +71,7 @@ class Productor extends Model
                 'estado',
                 'responsable',
                 'curp',
+                'correo',
                 'pais_id',
                 'latitud',
                 'longitud',
@@ -101,6 +103,12 @@ class Productor extends Model
         'sucursal_id',
         'user_id',
         'status',
+        'foto',
+        'documento_frontal',
+        'documento_reverso',
+        'correo',
+        'kyc_estatus',
+        'kyc_validado_en',
     ];
 
     protected function casts(): array
@@ -108,7 +116,22 @@ class Productor extends Model
         return [
             'latitud' => 'float',
             'longitud' => 'float',
+            'kyc_validado_en' => 'datetime',
         ];
+    }
+
+    /**
+     * El socio comercial se valida y firma a través de su responsable: estos
+     * alias le dan la misma forma que a las demás personas (KYC, ZapSign).
+     */
+    public function getNombresAttribute(): string
+    {
+        return (string) ($this->responsable ?: $this->nombre_comercial);
+    }
+
+    public function getApellidosAttribute(): string
+    {
+        return '';
     }
 
     public function pais(): BelongsTo

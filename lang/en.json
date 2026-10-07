@@ -1248,5 +1248,16 @@
   "Search by CURP...": "Search by CURP...",
   "Supplier staff": "Supplier staff",
   "Producer staff": "Producer staff",
-  "Time Clock": "Time Clock"
+  "Time Clock": "Time Clock",
+  "Quitar foto": "Remove photo",
+  "Sin imagen": "No image",
+  "Identidad y Validación": "Identity & Validation",
+  "Identidad del Responsable": "Responsible Person Identity",
+  "La foto y el documento del responsable se usan para validar su identidad y, si la empresa lo tiene configurado, enviarle el documento a firma. El CURP se captura en la primera pestaña.": "The responsible person's photo and document are used to validate their identity and, if the company has it set up, to send them the document for signature. The CURP is entered in the first tab.",
+  "Correo del Responsable": "Responsible Person Email",
+  "Tipo de documento": "Document type",
+  "INE / Credencial para votar": "INE / Voter ID",
+  "Pasaporte / documento extranjero": "Passport / foreign document",
+  "Foto del Socio Comercial": "Commercial Partner Photo",
+  "Rostro de frente, bien iluminado. Se usa también para validar identidad.": "Face the camera, well lit. It is also used to validate identity."
 }

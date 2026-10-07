@@ -30,6 +30,7 @@ interface Productor {
     rfc?: string | null;
     responsable?: string | null;
     curp?: string | null;
+    foto?: string | null;
     telefono?: string | null;
     paisTelefono?: Pais | null;
     empresa?: Empresa | null;
@@ -259,13 +260,25 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     gap: '6px',
-                                    padding: '8px'
+                                    padding: '8px',
+                                    position: 'relative'
                                 }}
                             >
-                                <Sprout style={{ width: '48px', height: '48px', color: '#1d4ed8' }} />
-                                <span style={{ fontSize: '10px', fontWeight: '800', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    PRODUCTOR
-                                </span>
+                                {productor.foto ? (
+                                    <img
+                                        src={`/storage/${productor.foto}`}
+                                        alt=""
+                                        crossOrigin="anonymous"
+                                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                ) : (
+                                    <>
+                                        <Sprout style={{ width: '48px', height: '48px', color: '#1d4ed8' }} />
+                                        <span style={{ fontSize: '10px', fontWeight: '800', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            SOCIO COMERCIAL
+                                        </span>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

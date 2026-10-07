@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\DispatchesKycValidacion;
 use App\Http\Requests\ProductorRequest;
 use App\Models\Productor;
 use App\Services\AccessCodeService;
@@ -11,10 +12,13 @@ use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ProductorController extends Controller
 {
+    use DispatchesKycValidacion;
+
     public function index(Request $request)
     {
         $query = Productor::with(['pais', 'paisTelefono', 'empresa', 'sucursal', 'user'])
@@ -86,10 +90,15 @@ class ProductorController extends Controller
         $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? ('PROD_' . uniqid());
 
+        $tipoDocumento = $data['tipo_documento'] ?? null;
+        $data = $this->guardarImagenes($request, $data);
+
         $productor = AccessCodeService::createWithRetry(fn () => Productor::create($data));
         $this->enviarCarnetWhatsAppInternal($productor);
 
-        return redirect()->back();
+        $this->validarIdentidad($productor, $tipoDocumento, true);
+
+        return $this->respuestaConSeguimiento($request, $productor, __('Producer created successfully'));
     }
 
     public function carnet(Productor $productor)
@@ -187,13 +196,28 @@ class ProductorController extends Controller
         $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? $productor->documento_identidad;
 
+        $tipoDocumento = $data['tipo_documento'] ?? null;
+        $curpAntes = $productor->curp;
+        $data = $this->guardarImagenes($request, $data, $productor);
+
         $productor->update($data);
+
+        // Se re-valida solo si cambió algo que la validación usa (foto, documento o CURP).
+        $cambio = $request->hasFile('foto') || $request->hasFile('documento_frontal')
+            || $request->hasFile('documento_reverso') || $productor->curp !== $curpAntes;
+        $this->validarIdentidad($productor->fresh(), $tipoDocumento, $cambio);
 
         return redirect()->back();
     }
 
     public function destroy(Productor $productor)
     {
+        foreach ([$productor->foto, $productor->documento_frontal, $productor->documento_reverso] as $ruta) {
+            if ($ruta) {
+                Storage::disk('public')->delete($ruta);
+            }
+        }
+
         $productor->delete();
 
         return redirect()->back();
@@ -264,5 +288,83 @@ class ProductorController extends Controller
         }
 
         return redirect()->back();
+    }
+
+    /**
+     * Sube, reemplaza o quita las imágenes del socio comercial (foto y documento).
+     * Los campos de solo-formulario salen de $data para que no lleguen al modelo.
+     */
+    private function guardarImagenes(ProductorRequest $request, array $data, ?Productor $actual = null): array
+    {
+        unset($data['quitar_foto'], $data['tipo_documento']);
+
+        foreach (['foto', 'documento_frontal', 'documento_reverso'] as $campo) {
+            unset($data[$campo]);
+
+            if ($request->hasFile($campo)) {
+                if ($actual?->{$campo}) {
+                    Storage::disk('public')->delete($actual->{$campo});
+                }
+
+                $data[$campo] = $request->file($campo)->store('productores', 'public');
+            }
+        }
+
+        if ($actual && $request->boolean('quitar_foto') && ! $request->hasFile('foto')) {
+            if ($actual->foto) {
+                Storage::disk('public')->delete($actual->foto);
+            }
+
+            $data['foto'] = null;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Lanza las validaciones de identidad (JaaK / Didit / firma ZapSign, según la
+     * regla de la empresa) con la foto y el documento del responsable. Solo si ya
+     * hay foto y documento frontal; nunca bloquea el guardado.
+     */
+    private function validarIdentidad(Productor $productor, ?string $tipoDocumento, bool $correr): void
+    {
+        if (! $correr || ! $productor->foto || ! $productor->documento_frontal) {
+            return;
+        }
+
+        $this->dispatchKycValidacion($productor, $productor->curp, null, ['tipo_documento' => $tipoDocumento]);
+    }
+
+    /**
+     * Si al guardar quedan pasos para la persona (Didit o firma), se abre el
+     * folio, donde está el QR para terminarlos en su teléfono.
+     */
+    private function respuestaConSeguimiento(ProductorRequest $request, Productor $productor, string $mensaje)
+    {
+        $seguimiento = $this->seguimientoValidacion($productor);
+
+        if (! empty($seguimiento['url']) && $request->user()?->can('validaciones.view')) {
+            $operacionId = \App\Models\OperacionValidacion::withoutGlobalScopes()
+                ->where('folio', $seguimiento['folio'])
+                ->where('empresa_id', $productor->empresa_id)
+                ->value('id');
+
+            if ($operacionId) {
+                return redirect()->route('admin.validaciones.operaciones.show', $operacionId)->with('notification', [
+                    'type' => 'success',
+                    'message' => $mensaje.' '.__('Folio :folio: identity and signature are pending.', ['folio' => $seguimiento['folio']]),
+                ]);
+            }
+        }
+
+        // Sin folio no se manda aviso: la pantalla ya muestra su propio mensaje de éxito.
+        if (empty($seguimiento['folio'])) {
+            return redirect()->back();
+        }
+
+        return redirect()->back()->with('notification', [
+            'type' => 'success',
+            'message' => $mensaje.' '.__('Folio: :folio', ['folio' => $seguimiento['folio']]),
+        ]);
     }
 }

@@ -21,6 +21,10 @@ import {
     Users,
     Send,
     QrCode,
+    Camera,
+    UploadCloud,
+    IdCard,
+    X as XIcon,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
@@ -71,6 +75,79 @@ interface Usuario {
     email: string;
 }
 
+interface ImageFieldProps {
+    label: string;
+    hint?: string;
+    preview: string | null;
+    icon: React.ReactNode;
+    error?: string;
+    capture?: 'user' | 'environment';
+    onFile: (file: File) => void;
+    onRemove?: () => void;
+    id: string;
+}
+
+/** Cuadro de imagen con vista previa: subir/cambiar desde archivo o tomar con la cámara del dispositivo. */
+function ImageField({ label, hint, preview, icon, error, capture, onFile, onRemove, id }: ImageFieldProps) {
+    const { __ } = useTranslate();
+
+    const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+
+        if (file) {
+            onFile(file);
+        }
+
+        e.target.value = '';
+    };
+
+    return (
+        <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">{label}</Label>
+            <div className="relative h-40 w-full overflow-hidden rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center">
+                {preview ? (
+                    <>
+                        <img src={preview} alt={label} className="w-full h-full object-cover" />
+                        {onRemove && (
+                            <button
+                                type="button"
+                                onClick={onRemove}
+                                className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                                aria-label={__('Quitar foto')}
+                            >
+                                <XIcon className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                    </>
+                ) : (
+                    <div className="text-center p-3 text-slate-400">
+                        <div className="mx-auto mb-1 flex justify-center">{icon}</div>
+                        <span className="text-xs font-medium block">{__('Sin imagen')}</span>
+                    </div>
+                )}
+            </div>
+            {hint && <p className="text-[11px] text-slate-500">{hint}</p>}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+                <input type="file" accept="image/*" id={id} className="hidden" onChange={pick} />
+                <label htmlFor={id} className="cursor-pointer">
+                    <span className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent">
+                        <UploadCloud className="h-3.5 w-3.5" />
+                        {preview ? __('Cambiar') : __('Subir')}
+                    </span>
+                </label>
+                <input type="file" accept="image/*" capture={capture || 'environment'} id={`${id}_cam`} className="hidden" onChange={pick} />
+                <label htmlFor={`${id}_cam`} className="cursor-pointer">
+                    <span className="inline-flex w-full items-center justify-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">
+                        <Camera className="h-3.5 w-3.5" />
+                        {__('Cámara')}
+                    </span>
+                </label>
+            </div>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+        </div>
+    );
+}
+
 interface Productor {
     id: number;
     razon_social: string;
@@ -87,6 +164,11 @@ interface Productor {
     estado?: string | null;
     responsable?: string | null;
     curp?: string | null;
+    correo?: string | null;
+    foto?: string | null;
+    documento_frontal?: string | null;
+    documento_reverso?: string | null;
+    kyc_estatus?: string | null;
     pais_id?: number | null;
     latitud?: number | null;
     longitud?: number | null;
@@ -225,7 +307,7 @@ export default function Index({
     const defaultLng = sucursal?.longitud ? Number(sucursal.longitud) : (paises[0]?.longitud ? Number(paises[0].longitud) : -102.2839);
 
     // Main Productor Form
-    const { data, setData, post, put, reset, errors, processing, clearErrors } = useForm({
+    const { data, setData, post, transform, reset, errors, processing, clearErrors } = useForm({
         razon_social: '',
         nombre_comercial: '',
         rfc: '',
@@ -239,6 +321,12 @@ export default function Index({
         estado: '',
         responsable: '',
         curp: '',
+        correo: '',
+        tipo_documento: 'ine' as 'ine' | 'pasaporte',
+        foto: null as File | null,
+        documento_frontal: null as File | null,
+        documento_reverso: null as File | null,
+        quitar_foto: false,
         pais_id: paises.length > 0 ? String(paises[0].id) : '',
         latitud: defaultLat as any,
         longitud: defaultLng as any,
@@ -247,6 +335,22 @@ export default function Index({
         sucursal_id: sucursal ? String(sucursal.id) : '',
         user_id: '',
     });
+
+    // Vistas previas: la imagen guardada (/storage/...) o la recién elegida (blob:)
+    const [previews, setPreviews] = useState<{ foto: string | null; documento_frontal: string | null; documento_reverso: string | null }>({
+        foto: null, documento_frontal: null, documento_reverso: null,
+    });
+    const storagePath = (ruta?: string | null) => (ruta ? `/storage/${ruta}` : null);
+
+    const pickImage = (campo: 'foto' | 'documento_frontal' | 'documento_reverso', file: File) => {
+        setData((prev) => ({ ...prev, [campo]: file, ...(campo === 'foto' ? { quitar_foto: false } : {}) }));
+        setPreviews((prev) => ({ ...prev, [campo]: URL.createObjectURL(file) }));
+    };
+
+    const removeFoto = () => {
+        setData((prev) => ({ ...prev, foto: null, quitar_foto: true }));
+        setPreviews((prev) => ({ ...prev, foto: null }));
+    };
 
     // Pre-registro Form
     const preRegistroForm = useForm({
@@ -279,6 +383,7 @@ export default function Index({
             longitud: defaultLng,
             direccion: sucursal?.direccion || prev.direccion,
         }));
+        setPreviews({ foto: null, documento_frontal: null, documento_reverso: null });
         setEditingProductor(null);
         setActiveTab('general');
         setIsCreateModalOpen(true);
@@ -288,6 +393,11 @@ export default function Index({
     const handleOpenEditModal = (productor: Productor) => {
         clearErrors();
         setEditingProductor(productor);
+        setPreviews({
+            foto: storagePath(productor.foto),
+            documento_frontal: storagePath(productor.documento_frontal),
+            documento_reverso: storagePath(productor.documento_reverso),
+        });
         setData({
             razon_social: productor.razon_social || '',
             nombre_comercial: productor.nombre_comercial || '',
@@ -302,6 +412,12 @@ export default function Index({
             estado: productor.estado || '',
             responsable: productor.responsable || '',
             curp: productor.curp || productor.documento_identidad || '',
+            correo: productor.correo || '',
+            tipo_documento: 'ine',
+            foto: null,
+            documento_frontal: null,
+            documento_reverso: null,
+            quitar_foto: false,
             pais_id: productor.pais_id ? String(productor.pais_id) : (paises.length > 0 ? String(paises[0].id) : ''),
             latitud: productor.latitud ?? null,
             longitud: productor.longitud ?? null,
@@ -318,7 +434,10 @@ export default function Index({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingProductor) {
-            put(`/admin/socios-comerciales/${editingProductor.id}`, {
+            // Con archivos, PUT no llega como multipart: se envía por POST con _method=put.
+            transform((d) => ({ ...d, _method: 'put' }));
+            post(`/admin/socios-comerciales/${editingProductor.id}`, {
+                forceFormData: true,
                 onSuccess: () => {
                     setIsCreateModalOpen(false);
                     toast.success(__('Producer updated successfully'));
@@ -326,7 +445,9 @@ export default function Index({
                 onError: () => toast.error(__('Please check the form for errors')),
             });
         } else {
+            transform((d) => d);
             post('/admin/socios-comerciales', {
+                forceFormData: true,
                 onSuccess: () => {
                     setIsCreateModalOpen(false);
                     toast.success(__('Producer created successfully'));
@@ -388,8 +509,12 @@ export default function Index({
             header: __('Socio Comercial'),
             cell: (productor: Productor) => (
                 <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-[#104a29]/10 text-[#104a29] dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center font-bold">
-                        <Sprout className="h-5 w-5" />
+                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-[#104a29]/10 text-[#104a29] dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center font-bold">
+                        {productor.foto ? (
+                            <img src={`/storage/${productor.foto}`} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                            <Sprout className="h-5 w-5" />
+                        )}
                     </div>
                     <div>
                         <div className="font-semibold text-slate-900 dark:text-white">
@@ -678,9 +803,10 @@ export default function Index({
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-6 py-2">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                            <TabsList className="grid grid-cols-2 mb-6">
+                            <TabsList className="grid grid-cols-3 mb-6">
                                 <TabsTrigger value="general">{__('Datos del Socio Comercial')}</TabsTrigger>
                                 <TabsTrigger value="location">{__('Ubicación y Dirección')}</TabsTrigger>
+                                <TabsTrigger value="identity">{__('Identidad y Validación')}</TabsTrigger>
                             </TabsList>
                             <TabsContent value="general" className="space-y-6">
                                 <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
@@ -891,6 +1017,75 @@ export default function Index({
                                                 }));
                                             }}
                                             className="h-96 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner"
+                                        />
+                                    </div>
+                                </div>
+                            </TabsContent>
+                            {/* Tab 3: Foto e identidad del responsable (alimenta JaaK / Didit / ZapSign) */}
+                            <TabsContent value="identity" className="space-y-6">
+                                <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
+                                    <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                                        <IdCard className="h-4 w-4 text-[#104a29]" />
+                                        {__('Identidad del Responsable')}
+                                    </h4>
+                                    <p className="text-xs text-slate-500">
+                                        {__('La foto y el documento del responsable se usan para validar su identidad y, si la empresa lo tiene configurado, enviarle el documento a firma. El CURP se captura en la primera pestaña.')}
+                                    </p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div>
+                                            <Label htmlFor="correo">{__('Correo del Responsable')}</Label>
+                                            <Input
+                                                id="correo"
+                                                type="email"
+                                                className="mt-1.5 w-full"
+                                                placeholder="ej. responsable@empresa.com"
+                                                value={data.correo}
+                                                onChange={(e) => setData('correo', e.target.value)}
+                                            />
+                                            {errors.correo && <p className="text-xs text-red-500 mt-1">{errors.correo}</p>}
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="tipo_documento">{__('Tipo de documento')}</Label>
+                                            <Select value={data.tipo_documento} onValueChange={(v: any) => setData('tipo_documento', v)}>
+                                                <SelectTrigger id="tipo_documento" className="mt-1.5 w-full">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="ine">{__('INE / Credencial para votar')}</SelectItem>
+                                                    <SelectItem value="pasaporte">{__('Pasaporte / documento extranjero')}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+                                        <ImageField
+                                            id="foto_socio"
+                                            label={__('Foto del Socio Comercial')}
+                                            hint={__('Rostro de frente, bien iluminado. Se usa también para validar identidad.')}
+                                            preview={previews.foto}
+                                            icon={<Camera className="h-8 w-8 text-slate-400" />}
+                                            capture="user"
+                                            error={errors.foto}
+                                            onFile={(f) => pickImage('foto', f)}
+                                            onRemove={previews.foto ? removeFoto : undefined}
+                                        />
+                                        <ImageField
+                                            id="documento_frontal_socio"
+                                            label={__('Documento Frente')}
+                                            preview={previews.documento_frontal}
+                                            icon={<IdCard className="h-8 w-8 text-slate-400" />}
+                                            error={errors.documento_frontal}
+                                            onFile={(f) => pickImage('documento_frontal', f)}
+                                        />
+                                        <ImageField
+                                            id="documento_reverso_socio"
+                                            label={__('Documento Reverso')}
+                                            preview={previews.documento_reverso}
+                                            icon={<IdCard className="h-8 w-8 text-slate-400" />}
+                                            error={errors.documento_reverso}
+                                            onFile={(f) => pickImage('documento_reverso', f)}
                                         />
                                     </div>
                                 </div>
