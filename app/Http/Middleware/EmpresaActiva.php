@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
  *   (sesión "empresa_activa_id"), se le presta en memoria y todo lo que hace
  *   queda limitado a ella. Sin elección ve todas, como siempre.
  * - Usuario normal sin empresa asignada: no puede usar el panel.
+ * - Usuario inactivo/suspendido, o de una empresa desactivada: tampoco.
  */
 class EmpresaActiva
 {
@@ -26,6 +27,10 @@ class EmpresaActiva
 
         if (! $user) {
             return $next($request);
+        }
+
+        if (in_array($user->status, ['inactivo', 'suspendido'], true)) {
+            return $this->expulsar($request, __('Your user is inactive. Contact your administrator.'));
         }
 
         if ($user->isSuperAdmin()) {
@@ -41,14 +46,23 @@ class EmpresaActiva
             return $next($request);
         }
 
-        if (! $user->empresa_id) {
-            Auth::guard('web')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+        if (! $user->empresa_id || ! $user->empresa) {
+            return $this->expulsar($request, __('Your user has no company assigned. Contact your administrator.'));
+        }
 
-            return redirect()->route('login')->with('status', __('Your user has no company assigned. Contact your administrator.'));
+        if (! $user->empresa->status) {
+            return $this->expulsar($request, __('Your company is inactive. Contact your administrator.'));
         }
 
         return $next($request);
+    }
+
+    private function expulsar(Request $request, string $mensaje): Response
+    {
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login')->with('status', $mensaje);
     }
 }

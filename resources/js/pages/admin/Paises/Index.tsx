@@ -88,6 +88,8 @@ interface PaisesPageProps {
  */
 export default function PaisesIndexPage({ auth, paises, stats, filters }: PaisesPageProps) {
     const { __ } = useTranslate();
+    // Los países son un catálogo de toda la plataforma: sólo el Super Administrador los modifica.
+    const esSuperAdmin = Boolean((auth as { user?: { is_super_admin?: boolean } })?.user?.is_super_admin);
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -225,7 +227,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
         });
     };
 
-    const bulkActions = [
+    const bulkActions = !esSuperAdmin ? [] : [
         {
             label: 'Delete selected',
             icon: <Trash2 className="h-4 w-4" />,
@@ -262,6 +264,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                 <div className="flex items-center space-x-2">
                     <Switch
                         checked={pais.activo}
+                        disabled={!esSuperAdmin}
                         onCheckedChange={() => handleToggleActive(pais)}
                     />
                     <span className={cn(
@@ -280,7 +283,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
-            cell: (pais) => (
+            cell: (pais) => !esSuperAdmin ? null : (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -315,10 +318,12 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                     description={__('Manage countries, codes, and geolocation.')}
                     colorClassName="bg-blue-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Country')}
-                    </Button>
+                    {esSuperAdmin && (
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Country')}
+                        </Button>
+                    )}
                 </ModuleHeader>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -403,15 +408,14 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                             sortDir: filters.sortDir,
                         }}
                         isLoading={isTableLoading}
-                        onRowClick={(pais) => handleEditClick(pais)}
+                        onRowClick={esSuperAdmin ? (pais) => handleEditClick(pais) : undefined}
                         bulkActions={bulkActions}
                         emptyState={{
                             title: 'No countries found',
                             description: searchTerm || statusFilter
                                 ? 'Try clearing your search filters or changing your query.'
                                 : 'You have not registered any countries in the database yet.',
-                            ctaLabel: 'New Country',
-                            onCtaClick: handleCreateClick,
+                            ...(esSuperAdmin ? { ctaLabel: 'New Country', onCtaClick: handleCreateClick } : {}),
                         }}
                     />
                 </div>

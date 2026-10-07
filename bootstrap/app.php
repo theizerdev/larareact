@@ -4,6 +4,7 @@ use App\Http\Middleware\EmpresaActiva;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocale;
+use App\Models\User;
 use App\Models\WhatsAppMessage;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
@@ -11,6 +12,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -66,6 +68,23 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        // Un usuario normal sin empresa no se puede cargar: el scope Multitenantable lo oculta
+        // hasta de la búsqueda de su propia sesión, así que `auth` lo ve como no autenticado
+        // (y corre antes que EmpresaActiva). Aquí se le deja el aviso en vez de rebotarlo mudo.
+        $middleware->redirectGuestsTo(function (Request $request) {
+            $id = $request->hasSession() ? $request->session()->get(Auth::guard('web')->getName()) : null;
+            $usuario = $id ? User::withoutGlobalScopes()->find($id) : null;
+
+            if ($usuario && ! $usuario->empresa_id && ! $usuario->isSuperAdmin()) {
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                $request->session()->flash('status', __('Your user has no company assigned. Contact your administrator.'));
+            }
+
+            return route('login');
+        });
 
         $middleware->validateCsrfTokens(except: [
             'preregistro/*',

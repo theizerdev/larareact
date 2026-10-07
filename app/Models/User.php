@@ -7,6 +7,7 @@ use App\Traits\Multitenantable;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -75,6 +76,16 @@ class User extends Authenticatable implements PasskeyUser
                 $user->entrarAEmpresa($user->empresaActiva);
             }
         });
+    }
+
+    /**
+     * El correo se guarda siempre en minúsculas: Fortify lo convierte a minúsculas al
+     * iniciar sesión (lowercase_usernames) y la base distingue mayúsculas, así que
+     * un usuario dado de alta como "Nombre.Apellido@empresa.com" nunca podía entrar.
+     */
+    protected function email(): Attribute
+    {
+        return Attribute::make(set: fn ($valor) => is_string($valor) ? mb_strtolower(trim($valor)) : $valor);
     }
 
     public function entrarAEmpresa(Empresa $empresa): void

@@ -3,6 +3,8 @@
 namespace Tests\Unit;
 
 use App\Models\Cargo;
+use App\Models\Empresa;
+use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -33,9 +35,11 @@ class MultitenantableTest extends TestCase
     public function test_auth_user_resolution_does_not_cause_infinite_recursion()
     {
         $role = Role::firstOrCreate(['name' => 'operador', 'guard_name' => 'web']);
+        $empresa = Empresa::create(['razon_social' => 'Empresa 10', 'documento' => 'EMP-10', 'status' => true]);
+        $sucursal = Sucursal::create(['empresa_id' => $empresa->id, 'nombre' => 'Sucursal 20', 'status' => true]);
         $user = User::factory()->create([
-            'empresa_id' => 10,
-            'sucursal_id' => 20,
+            'empresa_id' => $empresa->id,
+            'sucursal_id' => $sucursal->id,
         ]);
         $user->assignRole($role);
 
@@ -50,9 +54,11 @@ class MultitenantableTest extends TestCase
     public function test_empresa_query_does_not_attempt_sucursal_id_filter()
     {
         $role = Role::firstOrCreate(['name' => 'operador', 'guard_name' => 'web']);
+        $empresa = Empresa::create(['razon_social' => 'Empresa 1', 'documento' => 'EMP-1', 'status' => true]);
+        $sucursal = Sucursal::create(['empresa_id' => $empresa->id, 'nombre' => 'Sucursal 1', 'status' => true]);
         $user = User::factory()->create([
-            'empresa_id' => 1,
-            'sucursal_id' => 1,
+            'empresa_id' => $empresa->id,
+            'sucursal_id' => $sucursal->id,
         ]);
         $user->assignRole($role);
 

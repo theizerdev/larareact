@@ -22,7 +22,9 @@ class WebhookValidacionController extends Controller
 {
     public function didit(Request $request)
     {
-        $sessionId = (string) $request->input('session_id', '');
+        // Webhook público: un valor que no sea texto (p. ej. un arreglo) se trata como vacío, no como error.
+        $sessionId = $request->input('session_id');
+        $sessionId = is_string($sessionId) ? $sessionId : '';
 
         if ($sessionId === '') {
             return response()->json(['ok' => true]);
@@ -65,7 +67,8 @@ class WebhookValidacionController extends Controller
 
     public function zapsign(Request $request)
     {
-        $docToken = (string) $request->input('token', '');
+        $docToken = $request->input('token');
+        $docToken = is_string($docToken) ? $docToken : '';
 
         if ($docToken === '') {
             return response()->json(['ok' => true]);

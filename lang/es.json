@@ -2027,8 +2027,8 @@
   "Finish the steps below without leaving this page.": "Termina los pasos de abajo sin salir de esta página.",
   "View as company": "Ver como empresa",
   "Your user has no company assigned. Contact your administrator.": "Tu usuario no tiene una empresa asignada. Contacta a tu administrador.",
-  "Access link": "Liga de acceso",
-  "Access link identifier": "Identificador de la liga de acceso",
-  "Share this link with the company's users: the login screen will show its logo.": "Comparte esta liga con los usuarios de la empresa: la pantalla de inicio de sesión mostrará su logo.",
-  "Link copied": "Liga copiada"
+  "Your user is inactive. Contact your administrator.": "Tu usuario está inactivo. Contacta a tu administrador.",
+  "Your company is inactive. Contact your administrator.": "Tu empresa está inactiva. Contacta a tu administrador.",
+  "You are not allowed to assign a role higher than your own.": "No tienes permiso para asignar un rol superior al tuyo.",
+  "You cannot deactivate or delete your own user.": "No puedes desactivar ni eliminar tu propio usuario."
 }

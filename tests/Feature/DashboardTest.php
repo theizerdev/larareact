@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -19,6 +20,7 @@ class DashboardTest extends TestCase
     public function test_authenticated_users_can_visit_the_dashboard()
     {
         $user = User::factory()->create();
+        $user->givePermissionTo(Permission::findOrCreate('dashboard.view', 'web'));
         $this->actingAs($user);
 
         $response = $this->get(route('dashboard'));
