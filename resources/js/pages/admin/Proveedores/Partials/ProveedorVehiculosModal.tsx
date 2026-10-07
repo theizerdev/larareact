@@ -1,3 +1,4 @@
+import { attachStream } from '@/lib/camera';
 import React, { useState, useEffect, useRef } from 'react';
 import {
     X,
@@ -320,11 +321,7 @@ export default function ProveedorVehiculosModal({
                 video: { facingMode: { ideal: 'environment' } }
             });
             setCameraStream(stream);
-            setTimeout(() => {
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                }
-            }, 100);
+            attachStream(videoRef, stream);
         } catch (err) {
             console.error("Error accessing camera:", err);
             toast.error(__('Failed to access camera. Please grant permission.'));

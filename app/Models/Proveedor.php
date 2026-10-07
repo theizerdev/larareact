@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasKycValidaciones;
 use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Proveedor extends Model
 {
-    use HasFactory, HasSpanishActivityLog, LogsActivity, Multitenantable;
+    use HasFactory, HasKycValidaciones, HasSpanishActivityLog, LogsActivity, Multitenantable;
 
     protected static function booted()
     {
@@ -75,6 +76,13 @@ class Proveedor extends Model
     }
 
     protected $fillable = [
+        'correo',
+        'foto',
+        'documento_frontal',
+        'documento_reverso',
+        'tipo_documento',
+        'kyc_estatus',
+        'kyc_validado_en',
         'razon_social',
         'nombre_comercial',
         'documento_identidad',
@@ -99,7 +107,22 @@ class Proveedor extends Model
         return [
             'latitud' => 'float',
             'longitud' => 'float',
+            'kyc_validado_en' => 'datetime',
         ];
+    }
+
+    /**
+     * Quien se valida de un proveedor es su responsable (representante o persona
+     * física); estos alias le dan la misma forma que a las demás personas.
+     */
+    public function getNombresAttribute(): string
+    {
+        return (string) ($this->responsable ?: $this->nombre_comercial);
+    }
+
+    public function getApellidosAttribute(): string
+    {
+        return '';
     }
 
     public function pais(): BelongsTo

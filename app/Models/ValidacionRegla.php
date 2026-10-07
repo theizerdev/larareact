@@ -17,7 +17,7 @@ class ValidacionRegla extends Model
 
     /** Entidades configurables y la clase de persona que cae en cada una. */
     public const ENTIDADES = [
-        'colaboradores' => [Empleado::class],
+        'colaboradores' => [Empleado::class, Responsable::class],
         'visitas' => [VisitaTemporal::class],
         'proveedores' => [Proveedor::class, ProveedorEmpleado::class],
         'socios' => [Productor::class, ProductorEmpleado::class],

@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Cargo;
 use App\Models\Departamento;
 use App\Models\Sucursal;
+use App\Support\EvidenciaIdentidad;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -36,7 +37,8 @@ class ResponsableRequest extends FormRequest
             'sucursal_id' => 'required|exists:sucursales,id',
             'user_id' => 'required|exists:users,id',
             'status' => 'nullable|integer|in:0,1',
-        ];
+            'curp' => 'nullable|string|max:18',
+        ] + EvidenciaIdentidad::reglas();
     }
 
     /**

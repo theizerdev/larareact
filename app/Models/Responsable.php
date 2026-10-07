@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasKycValidaciones;
 use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Responsable extends Model
 {
-    use HasFactory, HasSpanishActivityLog, LogsActivity, Multitenantable;
+    use HasFactory, HasKycValidaciones, HasSpanishActivityLog, LogsActivity, Multitenantable;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -23,6 +24,13 @@ class Responsable extends Model
     }
 
     protected $fillable = [
+        'curp',
+        'foto',
+        'documento_frontal',
+        'documento_reverso',
+        'tipo_documento',
+        'kyc_estatus',
+        'kyc_validado_en',
         'nombres',
         'apellidos',
         'documento_identidad',
@@ -36,6 +44,11 @@ class Responsable extends Model
         'user_id',
         'status',
     ];
+
+    protected function casts(): array
+    {
+        return ['kyc_validado_en' => 'datetime'];
+    }
 
     public function paisTelefono(): BelongsTo
     {

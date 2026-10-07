@@ -1,3 +1,4 @@
+import { attachStream } from '@/lib/camera';
 import React, { useState, useEffect, useRef } from 'react';
 import {
     X,
@@ -104,10 +105,7 @@ export default function ProductorVehiculosModal({
                 },
             });
             streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                videoRef.current.play();
-            }
+            attachStream(videoRef, stream);
         } catch (err) {
             console.error('Error starting camera:', err);
             toast.error(__('No se pudo acceder a la cámara. Por favor otorgue permisos.'));

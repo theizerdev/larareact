@@ -1,3 +1,4 @@
+import { attachStream } from '@/lib/camera';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import {
@@ -160,9 +161,7 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
                 video: { width: 640, height: 480, facingMode: mode }
             });
             setStream(mediaStream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = mediaStream;
-            }
+            attachStream(videoRef, mediaStream);
         } catch (err) {
             console.error(err);
             setError('Sin acceso a la cámara. Por favor active los permisos del navegador.');
@@ -884,11 +883,7 @@ export default function GaritaControl({
                         return;
                     }
                     setCameraStream(stream);
-                    if (videoRef.current) {
-                        videoRef.current.srcObject = stream;
-                        videoRef.current.setAttribute('playsinline', 'true');
-                        videoRef.current.play().catch(() => { });
-                    }
+                    attachStream(videoRef, stream);
 
                     // Detección nativa con BarcodeDetector API (soporta Android, Chrome, Edge, Safari 17+)
                     const hasBarcodeDetector = 'BarcodeDetector' in window;

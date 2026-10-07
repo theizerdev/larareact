@@ -1,3 +1,5 @@
+import { ValidarButton } from '@/components/validar-persona';
+import { attachStream } from '@/lib/camera';
 import React, { useState, useEffect } from 'react';
 import {
     X,
@@ -207,11 +209,7 @@ export default function ProveedorEmpleadosModal({
                 video: { facingMode: facingMode }
             });
             setCameraStream(stream);
-            setTimeout(() => {
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                }
-            }, 100);
+            attachStream(videoRef, stream);
         } catch (err) {
             console.error("Error accessing camera:", err);
             toast.error(__('Failed to access camera. Please grant permission.'));
@@ -768,6 +766,7 @@ export default function ProveedorEmpleadosModal({
                                             )}
 
                                             {/* Editar */}
+                                            <ValidarButton tipo="proveedor-colaborador" id={emp.id} />
                                             <Button
                                                 type="button"
                                                 variant="ghost"

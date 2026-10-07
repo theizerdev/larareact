@@ -1,3 +1,5 @@
+import { ValidarMenuItems } from '@/components/validar-persona';
+import { attachStream } from '@/lib/camera';
 import { Head, useForm, router } from '@inertiajs/react';
 import {
     Users,
@@ -245,9 +247,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
                 video: { width: 640, height: 480, facingMode: 'user' }
             });
             setStream(mediaStream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = mediaStream;
-            }
+            attachStream(videoRef, mediaStream);
         } catch (err) {
             console.error(err);
             setError(__('No webcam access or camera not found'));
@@ -793,6 +793,7 @@ export default function EmpleadosIndexPage({
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
                         </DropdownMenuItem>
+                        <ValidarMenuItems tipo="colaborador" id={emp.id} />
                         <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/carnet`)}>
                             <Eye className="mr-2 h-4 w-4" />
                             {__('Ver Carnet')}

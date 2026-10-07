@@ -578,6 +578,12 @@ class ProcesarKycValidacion implements ShouldQueue
      */
     private function rutasImagenes($persona, string $tipo): array
     {
+        return self::evidencias($persona, $tipo);
+    }
+
+    /** Rutas de foto y documento que se mandan a validar, por tipo de persona. */
+    public static function evidencias($persona, string $tipo): array
+    {
         return match (class_basename($tipo)) {
             'Empleado' => [
                 'front' => $persona->foto_documento,
@@ -588,6 +594,11 @@ class ProcesarKycValidacion implements ShouldQueue
                 'front' => $persona->documento_frontal,
                 'back' => $persona->documento_reverso,
                 'selfie' => $persona->foto_carnet,
+            ],
+            'Responsable', 'Proveedor' => [
+                'front' => $persona->documento_frontal,
+                'back' => $persona->documento_reverso,
+                'selfie' => $persona->foto,
             ],
             'Productor' => [
                 'front' => $persona->documento_frontal,

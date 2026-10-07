@@ -1,3 +1,4 @@
+import { attachStream } from '@/lib/camera';
 import React, { useState, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import { 
@@ -120,10 +121,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                 },
             });
             streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                videoRef.current.play();
-            }
+            attachStream(videoRef, stream);
         } catch (err) {
             console.error('Error starting camera:', err);
             setErrorMsg(__('No se pudo acceder a la cámara. Por favor otorgue permisos.'));

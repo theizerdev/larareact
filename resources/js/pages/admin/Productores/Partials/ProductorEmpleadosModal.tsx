@@ -1,3 +1,5 @@
+import { ValidarButton } from '@/components/validar-persona';
+import { attachStream } from '@/lib/camera';
 import React, { useState, useEffect, useRef } from 'react';
 import {
     X,
@@ -149,10 +151,7 @@ export default function ProductorEmpleadosModal({
                 },
             });
             streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                videoRef.current.play();
-            }
+            attachStream(videoRef, stream);
         } catch (err) {
             console.error('Error starting camera:', err);
             toast.error(__('No se pudo acceder a la cámara. Por favor otorgue permisos.'));
@@ -792,6 +791,7 @@ export default function ProductorEmpleadosModal({
                                             <Button variant="ghost" size="sm" onClick={() => setViewingEmployee(emp)}>
                                                 <Eye className="h-4 w-4 text-slate-500" />
                                             </Button>
+                                            <ValidarButton tipo="socio-colaborador" id={emp.id} />
                                             <Button variant="ghost" size="sm" onClick={() => handleEdit(emp)}>
                                                 <Pencil className="h-4 w-4 text-indigo-600" />
                                             </Button>

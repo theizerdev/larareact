@@ -25,6 +25,8 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { IdentidadEvidenciaFields } from '@/components/identidad-evidencia-fields';
+import { ValidarMenuItems } from '@/components/validar-persona';
 import { ModuleHeader } from '@/components/module-header';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { DataTable } from '@/components/data-table';
@@ -85,6 +87,10 @@ interface Proveedor {
     direccion?: string | null;
     responsable?: string | null;
     curp?: string | null;
+    correo?: string | null;
+    foto?: string | null;
+    documento_frontal?: string | null;
+    documento_reverso?: string | null;
     pais_id?: number | null;
     latitud?: number | null;
     longitud?: number | null;
@@ -145,6 +151,12 @@ const initialForm = {
     direccion: '',
     responsable: '',
     curp: '',
+    correo: '',
+    tipo_documento: 'ine' as string,
+    foto: null as File | null,
+    documento_frontal: null as File | null,
+    documento_reverso: null as File | null,
+    quitar_foto: false,
     pais_id: '',
     latitud: '' as any,
     longitud: '' as any,
@@ -222,7 +234,7 @@ export default function ProveedoresIndexPage({
     const notifyError = (message: string) => toast.error(message);
 
     // ── Formulario Inertia ─────────────────────────────────────────────────────
-    const { data, setData, post, put, reset, errors, processing } = useForm({ ...initialForm });
+    const { data, setData, post, reset, errors, processing, transform } = useForm({ ...initialForm });
 
     // Actualizar coordenadas y centro del mapa cuando cambie el país seleccionado
     useEffect(() => {
@@ -313,6 +325,12 @@ export default function ProveedoresIndexPage({
             direccion: prov.direccion || '',
             responsable: prov.responsable || '',
             curp: prov.curp || prov.documento_identidad || '',
+            correo: prov.correo || '',
+            tipo_documento: 'ine',
+            foto: null,
+            documento_frontal: null,
+            documento_reverso: null,
+            quitar_foto: false,
             pais_id: prov.pais_id ? String(prov.pais_id) : '',
             latitud: prov.latitud || '',
             longitud: prov.longitud || '',
@@ -338,7 +356,10 @@ export default function ProveedoresIndexPage({
         e.preventDefault();
 
         if (editingProveedor) {
-            put(`/admin/proveedores/${editingProveedor.id}`, {
+            // Con archivos, Laravel solo lee multipart por POST: se simula PUT.
+            transform((d) => ({ ...d, _method: 'put' }));
+            post(`/admin/proveedores/${editingProveedor.id}`, {
+                forceFormData: true,
                 onSuccess: () => {
                     setIsModalOpen(false);
                     setEditingProveedor(null);
@@ -350,7 +371,9 @@ export default function ProveedoresIndexPage({
                 },
             });
         } else {
+            transform((d) => d);
             post('/admin/proveedores', {
+                forceFormData: true,
                 onSuccess: () => {
                     setIsModalOpen(false);
                     reset();
@@ -587,6 +610,7 @@ export default function ProveedoresIndexPage({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <ValidarMenuItems tipo="proveedor" id={prov.id} />
                         <DropdownMenuItem onClick={() => handleEditClick(prov)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
@@ -877,6 +901,28 @@ export default function ProveedoresIndexPage({
                                                 {errors.curp}
                                             </p>
                                         )}
+                                    </div>
+
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <Label htmlFor="correo">{__('Correo del responsable')}</Label>
+                                        <Input
+                                            id="correo"
+                                            type="email"
+                                            value={data.correo}
+                                            onChange={(e) => setData('correo', e.target.value)}
+                                            className={cn(errors.correo && 'border-rose-500')}
+                                        />
+                                        {errors.correo && <p className="text-xs text-rose-500 mt-1">{errors.correo}</p>}
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <IdentidadEvidenciaFields
+                                            existing={editingProveedor ?? undefined}
+                                            resetKey={`${isModalOpen}-${editingProveedor?.id ?? 'nuevo'}`}
+                                            setData={setData as any}
+                                            tipoDocumento={data.tipo_documento}
+                                            errors={errors as any}
+                                        />
                                     </div>
 
                                     {/* Teléfono */}

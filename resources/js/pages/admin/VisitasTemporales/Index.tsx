@@ -1,3 +1,5 @@
+import { ValidarMenuItems } from '@/components/validar-persona';
+import { attachStream } from '@/lib/camera';
 import React, { useState, useEffect, useRef } from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import {
@@ -186,9 +188,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
                 video: { width: 640, height: 480, facingMode: 'user' }
             });
             setStream(mediaStream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = mediaStream;
-            }
+            attachStream(videoRef, mediaStream);
         } catch (err) {
             console.error(err);
             setError(__('No webcam access or camera not found'));
@@ -777,6 +777,7 @@ export default function Index({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <ValidarMenuItems tipo="visita-temporal" id={visit.id} />
                         <DropdownMenuItem onClick={() => handleEditClick(visit)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}

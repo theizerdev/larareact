@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Support\EvidenciaIdentidad;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -45,7 +46,8 @@ class ProveedorRequest extends FormRequest
             'empresa_id' => ['nullable', 'exists:empresas,id'],
             'sucursal_id' => ['nullable', 'exists:sucursales,id'],
             'user_id' => ['nullable', 'exists:users,id'],
-        ];
+            'correo' => ['nullable', 'email', 'max:255'],
+        ] + EvidenciaIdentidad::reglas();
     }
 
     /**

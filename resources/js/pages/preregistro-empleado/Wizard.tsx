@@ -1,3 +1,4 @@
+import { attachStream } from '@/lib/camera';
 import React, { useState, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import { 
@@ -126,9 +127,7 @@ export default function Wizard({ preRegistro, paises }: PreRegistroProps) {
                 video: { facingMode: 'user' } 
             });
             setCameraStream(stream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
+            attachStream(videoRef, stream);
         } catch (err) {
             alert(__('Unable to access camera. Please check camera permissions.'));
             setIsCameraOpen(false);

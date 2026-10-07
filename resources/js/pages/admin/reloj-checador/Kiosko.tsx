@@ -1,3 +1,4 @@
+import { attachStream } from '@/lib/camera';
 import React, { useState, useEffect, useRef } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { 
@@ -136,10 +137,8 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
         if (configuracion?.requiere_foto_marcaje) {
             navigator.mediaDevices?.getUserMedia({ video: true })
                 .then((stream) => {
-                    if (videoRef.current) {
-                        videoRef.current.srcObject = stream;
-                        setCameraActive(true);
-                    }
+                    attachStream(videoRef, stream);
+                    setCameraActive(true);
                 })
                 .catch(() => setCameraActive(false));
         }
@@ -210,11 +209,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                         return;
                     }
                     qrStreamRef.current = stream;
-                    if (qrVideoRef.current) {
-                        qrVideoRef.current.srcObject = stream;
-                        qrVideoRef.current.setAttribute('playsinline', 'true');
-                        qrVideoRef.current.play().catch(() => {});
-                    }
+                    attachStream(qrVideoRef, stream);
 
                     const hasBarcodeDetector = 'BarcodeDetector' in window;
                     let detector: any = null;

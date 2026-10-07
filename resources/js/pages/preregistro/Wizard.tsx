@@ -1,3 +1,4 @@
+import { attachStream } from '@/lib/camera';
 import React, { useState, lazy, Suspense, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import { 
@@ -222,9 +223,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                 video: { facingMode: 'environment' } 
             });
             setCameraStream(stream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
+            attachStream(videoRef, stream);
         } catch (err) {
             alert(__('Unable to access camera. Please check camera permissions.'));
             setIsCameraOpen(false);

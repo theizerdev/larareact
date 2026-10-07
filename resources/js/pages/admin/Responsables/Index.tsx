@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { IdentidadEvidenciaFields } from '@/components/identidad-evidencia-fields';
+import { ValidarMenuItems } from '@/components/validar-persona';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { FilterBar, FilterField } from '@/components/filter-bar';
@@ -105,6 +107,10 @@ interface Responsable {
     nombres: string;
     apellidos: string;
     documento_identidad?: string | null;
+    curp?: string | null;
+    foto?: string | null;
+    documento_frontal?: string | null;
+    documento_reverso?: string | null;
     pais_telefono_id?: number | null;
     telefono?: string | null;
     correo?: string | null;
@@ -159,6 +165,12 @@ const initialForm = {
     cargo_id: '' as string | number,
     user_id: '' as string | number,
     status: 1 as number,
+    curp: '',
+    tipo_documento: 'ine' as string,
+    foto: null as File | null,
+    documento_frontal: null as File | null,
+    documento_reverso: null as File | null,
+    quitar_foto: false,
 };
 
 // ─── Página principal ──────────────────────────────────────────────────────────
@@ -223,7 +235,7 @@ export default function ResponsablesIndexPage({
     }, [searchTerm, statusFilter, departamentoFilter, perPageFilter]);
 
     // ── Formulario Inertia ─────────────────────────────────────────────────────
-    const { data, setData, post, put, processing, errors, reset } = useForm(initialForm);
+    const { data, setData, post, processing, errors, reset, transform } = useForm(initialForm);
 
     // ── Filtros en cascada para el formulario ──────────────────────────────────
     const filteredSucursales = sucursales.filter(s => s.empresa_id === Number(data.empresa_id));
@@ -265,6 +277,12 @@ export default function ResponsablesIndexPage({
             cargo_id:            resp.cargo_id || '',
             user_id:             resp.user_id,
             status:              resp.status,
+            curp:                resp.curp || '',
+            tipo_documento:      'ine',
+            foto:                null,
+            documento_frontal:   null,
+            documento_reverso:   null,
+            quitar_foto:         false,
         });
         setIsModalOpen(true);
     };
@@ -273,7 +291,10 @@ export default function ResponsablesIndexPage({
         e.preventDefault();
 
         if (editingResponsable) {
-            put(`/admin/responsables/${editingResponsable.id}`, {
+            // Con archivos, Laravel solo lee multipart por POST: se simula PUT.
+            transform((d) => ({ ...d, _method: 'put' }));
+            post(`/admin/responsables/${editingResponsable.id}`, {
+                forceFormData: true,
                 onSuccess: () => {
                     setIsModalOpen(false);
                     setEditingResponsable(null);
@@ -283,7 +304,9 @@ export default function ResponsablesIndexPage({
                 onError: () => notifyError(__('Please review the highlighted fields.')),
             });
         } else {
+            transform((d) => d);
             post('/admin/responsables', {
+                forceFormData: true,
                 onSuccess: () => {
                     setIsModalOpen(false);
                     reset();
@@ -433,6 +456,7 @@ return;
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <ValidarMenuItems tipo="responsable" id={resp.id} />
                         <DropdownMenuItem onClick={() => handleEditClick(resp)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
@@ -813,6 +837,26 @@ return;
                                 </div>
                             </div>
                         </div>
+
+                        <div>
+                            <Label htmlFor="curp">{__('CURP')}</Label>
+                            <Input
+                                id="curp"
+                                value={data.curp}
+                                onChange={(e) => setData('curp', e.target.value.toUpperCase())}
+                                maxLength={18}
+                                className="mt-1.5"
+                            />
+                            {errors.curp && <p className="text-red-500 text-xs mt-1">{errors.curp}</p>}
+                        </div>
+
+                        <IdentidadEvidenciaFields
+                            existing={editingResponsable ?? undefined}
+                            resetKey={`${isModalOpen}-${editingResponsable?.id ?? 'nuevo'}`}
+                            setData={setData as any}
+                            tipoDocumento={data.tipo_documento}
+                            errors={errors as any}
+                        />
 
                         <DialogFooter className="pt-4 border-t">
                             <Button

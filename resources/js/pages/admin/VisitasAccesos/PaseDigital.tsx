@@ -1,3 +1,4 @@
+import { attachStream } from '@/lib/camera';
 import React, { useState, useRef, useEffect } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import {
@@ -237,9 +238,7 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
                 video: { width: 640, height: 480, facingMode: mode }
             });
             setStream(mediaStream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = mediaStream;
-            }
+            attachStream(videoRef, mediaStream);
         } catch (err) {
             console.error(err);
             setError('Sin acceso a la cámara. Por favor active los permisos del navegador.');

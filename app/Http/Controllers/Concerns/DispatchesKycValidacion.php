@@ -66,8 +66,11 @@ trait DispatchesKycValidacion
             $diditDisponible = $empresa->didit_active && DiditService::tokenDe($empresa) && config('didit.enabled', true);
 
             $usarJaak = $regla->kyc_activo && $jaakDisponible;
-            $usarDidit = $regla->kyc_activo && $diditDisponible && $regla->seguimientoPara($persona)
-                && ($extranjero || $regla->didit_antifraude);
+            // 'forzar_didit' = botón "Validar con prueba de vida": Didit corre aunque la regla no lo pida.
+            $usarDidit = $diditDisponible && (
+                ! empty($opciones['forzar_didit'])
+                || ($regla->kyc_activo && $regla->seguimientoPara($persona) && ($extranjero || $regla->didit_antifraude))
+            );
             $usarFirma = $empresa->zapsign_active && $regla->enviaFirma() && $regla->seguimientoPara($persona) && ($titular === null || $titular === $persona);
 
             if (! $usarJaak && ! $usarDidit && ! $usarFirma) {

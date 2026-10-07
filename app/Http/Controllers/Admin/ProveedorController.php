@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\GuardaEvidenciaIdentidad;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProveedorRequest;
 use App\Models\Proveedor;
@@ -15,6 +16,8 @@ use Inertia\Inertia;
 
 class ProveedorController extends Controller
 {
+    use GuardaEvidenciaIdentidad;
+
     public function index(Request $request)
     {
         $query = Proveedor::with(['pais', 'paisTelefono', 'empresa', 'sucursal', 'user'])
@@ -70,7 +73,7 @@ class ProveedorController extends Controller
 
     public function store(ProveedorRequest $request)
     {
-        $data = $request->validated();
+        $data = $this->guardarEvidencia($request, $request->validated(), 'proveedores');
         $user = auth()->user();
 
         // Autocompletar con los datos del usuario logueado si no vienen especificados
@@ -87,7 +90,7 @@ class ProveedorController extends Controller
 
     public function update(ProveedorRequest $request, Proveedor $proveedor)
     {
-        $data = $request->validated();
+        $data = $this->guardarEvidencia($request, $request->validated(), 'proveedores', $proveedor);
         $user = auth()->user();
 
         $data['empresa_id'] = $data['empresa_id'] ?? $proveedor->empresa_id ?? $user->empresa_id;
@@ -102,6 +105,7 @@ class ProveedorController extends Controller
 
     public function destroy(Proveedor $proveedor)
     {
+        $this->borrarEvidencia($proveedor);
         $proveedor->delete();
 
         return redirect()->back();

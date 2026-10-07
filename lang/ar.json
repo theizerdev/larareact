@@ -2331,5 +2331,22 @@
     "Foto del Socio Comercial": "صورة الشريك التجاري",
     "Rostro de frente, bien iluminado. Se usa también para validar identidad.": "الوجه من الأمام وبإضاءة جيدة. تُستخدم أيضاً للتحقق من الهوية.",
     "Documento Frente": "واجهة المستند",
-    "Documento Reverso": "ظهر المستند"
+    "Documento Reverso": "ظهر المستند",
+    "Tomar foto": "التقاط صورة",
+    "Encuadra y presiona Capturar.": "اضبط الإطار ثم اضغط التقاط.",
+    "Capturar": "التقاط",
+    "Este navegador no permite abrir la cámara. Usa HTTPS o el botón Subir.": "لا يتيح هذا المتصفح فتح الكاميرا. استخدم HTTPS أو زر الرفع.",
+    "Validar": "تحقق",
+    "Validar con prueba de vida": "تحقق مع اختبار الحيوية",
+    "Validación iniciada.": "بدأ التحقق.",
+    "Validación iniciada. Folio :folio: faltan pasos de la persona (prueba de vida o firma).": "بدأ التحقق. المرجع :folio: ما زالت هناك خطوات على الشخص (اختبار الحيوية أو التوقيع).",
+    "la foto": "الصورة",
+    "el documento de identidad (frente)": "وثيقة الهوية (الوجه الأمامي)",
+    "y": "و",
+    "Para validar falta cargar :faltantes. Edita el registro y súbelos.": "للتحقق يجب رفع :faltantes. عدّل السجل وارفعها.",
+    "Ya hay una validación en curso para esta persona. Espera unos minutos.": "هناك عملية تحقق جارية لهذا الشخص. انتظر بضع دقائق.",
+    "Esta empresa no tiene validaciones activas para este tipo de registro. Actívalas en Integraciones → Validaciones.": "لا توجد عمليات تحقق مفعّلة لهذه الشركة لهذا النوع من السجلات. فعّلها من التكاملات ← التحقق.",
+    "La foto y el documento son los que se mandan a validar con el botón Validar.": "الصورة والوثيقة هما ما يُرسل للتحقق عند الضغط على زر تحقق.",
+    "Rostro de frente, bien iluminado.": "الوجه من الأمام وبإضاءة جيدة.",
+    "Correo del responsable": "البريد الإلكتروني للمسؤول"
 }

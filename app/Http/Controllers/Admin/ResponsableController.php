@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\GuardaEvidenciaIdentidad;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ResponsableRequest;
 use App\Models\Cargo;
@@ -16,6 +17,8 @@ use Inertia\Inertia;
 
 class ResponsableController extends Controller
 {
+    use GuardaEvidenciaIdentidad;
+
     public function index(Request $request)
     {
         $query = Responsable::query()
@@ -83,7 +86,7 @@ class ResponsableController extends Controller
 
     public function store(ResponsableRequest $request)
     {
-        Responsable::create($request->validated());
+        Responsable::create($this->guardarEvidencia($request, $request->validated(), 'responsables'));
 
         return back()->with('notification', [
             'type' => 'success',
@@ -93,7 +96,7 @@ class ResponsableController extends Controller
 
     public function update(ResponsableRequest $request, Responsable $responsable)
     {
-        $responsable->update($request->validated());
+        $responsable->update($this->guardarEvidencia($request, $request->validated(), 'responsables', $responsable));
 
         return back()->with('notification', [
             'type' => 'success',
@@ -113,6 +116,7 @@ class ResponsableController extends Controller
 
     public function destroy(Responsable $responsable)
     {
+        $this->borrarEvidencia($responsable);
         $responsable->delete();
 
         return back()->with('notification', [
