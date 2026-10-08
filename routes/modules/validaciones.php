@@ -35,6 +35,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->whereNumber('id')->name('validaciones.validar')->can('validaciones.manage')
         ->middleware('throttle:20,1');
 
+    // Camino que seguiría la validación automática (vista previa del submenú).
+    Route::get('/validaciones/ruta/{tipo}/{id}', [ValidarPersonaController::class, 'ruta'])
+        ->whereNumber('id')->name('validaciones.ruta')->can('validaciones.manage')
+        ->middleware('throttle:60,1');
+
     // Botón "Validar" dentro del formulario de alta (antes de guardar): RFC de la
     // empresa (TRUORA) y nombre + CURP de la persona (DIDIT → RENAPO).
     Route::post('/validaciones/previa/rfc', [PrevalidacionController::class, 'rfc'])

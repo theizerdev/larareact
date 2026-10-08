@@ -88,6 +88,11 @@ trait DispatchesKycValidacion
                 $usarJaak = $usarDidit = $usarFirma = false;
             }
 
+            // 'solo_didit' = ruta sin documentos: únicamente la liga de DIDIT para que la persona los capture.
+            if (! empty($opciones['solo_didit'])) {
+                $usarJaak = $usarFirma = $usarTruora = false;
+            }
+
             if (! $usarJaak && ! $usarDidit && ! $usarFirma && ! $usarTruora) {
                 return; // empresa sin validaciones configuradas: flujo idéntico al de siempre
             }

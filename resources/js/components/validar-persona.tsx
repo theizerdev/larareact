@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/react';
-import { Building2, FileSearch, IdCard, ScanFace, ShieldCheck, UserCheck } from 'lucide-react';
+import { Building2, FileSearch, IdCard, Loader2, ScanFace, ShieldCheck, UserCheck, Wand2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -25,8 +26,9 @@ export type TipoValidable = 'colaborador' | 'proveedor-colaborador' | 'socio-col
  * antecedentes = antecedentes de la persona con TRUORA (CURP)
  * rfc          = antecedentes de la empresa con TRUORA (RFC), sin foto
  * curp         = nombre + CURP contra RENAPO con DIDIT, sin foto
+ * auto         = el sistema elige el camino según los datos y documentos del registro
  */
-export type ModoValidacion = 'normal' | 'prueba_vida' | 'antecedentes' | 'rfc' | 'curp';
+export type ModoValidacion = 'normal' | 'prueba_vida' | 'antecedentes' | 'rfc' | 'curp' | 'auto';
 
 /** Proveedores y socios comerciales son empresas: se validan por RFC y a través de su responsable. */
 const esEmpresa = (tipo: TipoValidable) => tipo === 'proveedor' || tipo === 'socio-comercial';
@@ -36,7 +38,9 @@ export function validarPersona(tipo: TipoValidable, id: number, modo: ModoValida
     const payload =
         modo === 'prueba_vida'
             ? { prueba_vida: 1 }
-            : modo === 'antecedentes'
+            : modo === 'auto'
+              ? { ruta: 'auto' }
+              : modo === 'antecedentes'
               ? { antecedentes: 1 }
               : modo === 'rfc' || modo === 'curp'
                 ? { rapida: modo }
@@ -56,13 +60,54 @@ function Opcion({ icono, titulo, detalle, onClick }: { icono: ReactNode; titulo:
     );
 }
 
+type PlanRuta = { ruta: string; titulo: string; pasos: { clave: string; etiqueta: string; proveedor: string }[]; avisos: string[]; faltantes: string[] };
+
+/** Consulta (sólo lectura) el camino que seguiría la validación automática del registro. */
+function useRuta(tipo: TipoValidable, id: number) {
+    const [plan, setPlan] = useState<PlanRuta | null>(null);
+
+    useEffect(() => {
+        const control = new AbortController();
+
+        fetch(`/admin/validaciones/ruta/${tipo}/${id}`, { headers: { Accept: 'application/json' }, signal: control.signal })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((datos) => setPlan(datos))
+            .catch(() => setPlan(null));
+
+        return () => control.abort();
+    }, [tipo, id]);
+
+    return plan;
+}
+
 /** Las opciones de validación del registro, según sea empresa o persona. */
 function OpcionesValidar({ tipo, id }: { tipo: TipoValidable; id: number }) {
     const { __ } = useTranslate();
     const empresa = esEmpresa(tipo);
+    const plan = useRuta(tipo, id);
 
     return (
         <>
+            <DropdownMenuItem onClick={() => validarPersona(tipo, id, 'auto')} disabled={plan !== null && plan.pasos.length === 0} className="items-start gap-2 py-2">
+                {plan ? <Wand2 className="mt-0.5 h-4 w-4 text-violet-600" /> : <Loader2 className="mt-0.5 h-4 w-4 animate-spin text-muted-foreground" />}
+                <span className="flex flex-col">
+                    <span className="text-sm font-medium">{__('Validar automáticamente')}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                        {plan ? `${__('Ruta')} ${plan.ruta} · ${plan.titulo}` : __('Elige el mejor camino según los datos del registro')}
+                    </span>
+                    {plan?.pasos.map((paso) => (
+                        <span key={paso.clave} className="text-[11px] text-muted-foreground">
+                            • {paso.etiqueta} · {paso.proveedor}
+                        </span>
+                    ))}
+                    {plan?.faltantes.map((falta) => (
+                        <span key={falta} className="text-[11px] text-amber-600">
+                            ! {__('Falta')} {falta}
+                        </span>
+                    ))}
+                </span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-[11px] font-semibold uppercase text-muted-foreground">{__('Sin foto')}</DropdownMenuLabel>
             {empresa && (
                 <Opcion
