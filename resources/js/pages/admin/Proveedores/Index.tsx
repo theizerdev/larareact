@@ -41,6 +41,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { ValidacionRapida } from '@/components/validacion-rapida';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
@@ -851,13 +852,15 @@ export default function ProveedoresIndexPage({
                                     {/* RFC (Registro Federal de Contribuyente) */}
                                     <div className="space-y-1.5 md:col-span-2">
                                         <Label htmlFor="rfc">{__('RFC (Registro Federal de Contribuyentes)')}</Label>
-                                        <Input
-                                            id="rfc"
-                                            placeholder="ej. ABC123456789"
-                                            value={data.rfc}
-                                            onChange={(e) => setData('rfc', e.target.value)}
-                                            className={cn(errors.rfc && 'border-rose-500')}
-                                        />
+                                        <ValidacionRapida tipo="rfc" valor={data.rfc} nombre={data.razon_social} entidad="proveedor" empresaId={data.empresa_id}>
+                                            <Input
+                                                id="rfc"
+                                                placeholder="ej. ABC123456789"
+                                                value={data.rfc}
+                                                onChange={(e) => setData('rfc', e.target.value)}
+                                                className={cn('pr-36', errors.rfc && 'border-rose-500')}
+                                            />
+                                        </ValidacionRapida>
                                         {errors.rfc && (
                                             <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
                                                 <ShieldAlert className="w-3 h-3" />
@@ -887,14 +890,16 @@ export default function ProveedoresIndexPage({
                                     {/* CURP (del Responsable) */}
                                     <div className="space-y-1.5">
                                         <Label htmlFor="curp">{__('CURP (del Responsable)')}</Label>
-                                        <Input
-                                            id="curp"
-                                            placeholder="ej. ABCD900101HDFRRR01"
-                                            maxLength={18}
-                                            value={data.curp}
-                                            onChange={(e) => setData('curp', e.target.value.toUpperCase())}
-                                            className={cn(errors.curp && 'border-rose-500')}
-                                        />
+                                        <ValidacionRapida tipo="curp" valor={data.curp} nombre={data.responsable} entidad="proveedor" empresaId={data.empresa_id}>
+                                            <Input
+                                                id="curp"
+                                                placeholder="ej. ABCD900101HDFRRR01"
+                                                maxLength={18}
+                                                value={data.curp}
+                                                onChange={(e) => setData('curp', e.target.value.toUpperCase())}
+                                                className={cn('pr-36', errors.curp && 'border-rose-500')}
+                                            />
+                                        </ValidacionRapida>
                                         {errors.curp && (
                                             <p className="text-xs text-rose-500 flex items-center gap-1 mt-1">
                                                 <ShieldAlert className="w-3 h-3" />

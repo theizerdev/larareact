@@ -73,6 +73,7 @@ import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ValidacionRapida } from '@/components/validacion-rapida';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -1082,14 +1083,22 @@ export default function EmpleadosIndexPage({
                                             </div>
                                             {/* RENAPO button removed – external validation disabled */}
                                         </div>
-                                        <Input
-                                            id="curp"
-                                            value={data.curp || ''}
-                                            onChange={(e) => setData('curp', e.target.value.toUpperCase())}
-                                            placeholder="ej. ABCD800101HDFRXX01"
-                                            maxLength={18}
-                                            className="font-mono uppercase text-sm h-11 bg-white dark:bg-slate-900 tracking-wider"
-                                        />
+                                        <ValidacionRapida
+                                            tipo="curp"
+                                            valor={data.curp}
+                                            nombre={`${data.nombres ?? ''} ${data.apellidos ?? ''}`}
+                                            entidad="colaborador"
+                                            empresaId={data.empresa_id}
+                                        >
+                                            <Input
+                                                id="curp"
+                                                value={data.curp || ''}
+                                                onChange={(e) => setData('curp', e.target.value.toUpperCase())}
+                                                placeholder="ej. ABCD800101HDFRXX01"
+                                                maxLength={18}
+                                                className="font-mono uppercase text-sm h-11 bg-white dark:bg-slate-900 tracking-wider pr-36"
+                                            />
+                                        </ValidacionRapida>
                                         {data.curp && data.curp.length > 0 && (() => {
                                             const res = validarCurp(data.curp);
                                             if (res.isValid && res.datos) {

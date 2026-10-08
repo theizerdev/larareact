@@ -24,6 +24,7 @@ interface Kyc {
     persona_nombre: string;
     persona_tipo: string;
     proveedor: 'jaak' | 'didit' | 'truora';
+    alcance?: 'empresa_rfc' | 'curp_renapo' | null;
     tipo_documento: string | null;
     pais_documento: string | null;
     estatus: string;
@@ -208,6 +209,7 @@ export default function OperacionValidacion({ operacion, kycs, documentos, segui
                                         {__('Identity')} · {k.persona_nombre}
                                         <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold">
                                             {PROVEEDOR_LABEL[k.proveedor] ?? k.proveedor}
+                                            {k.alcance === 'empresa_rfc' ? ` · ${__('RFC de la empresa')}` : k.alcance === 'curp_renapo' ? ` · ${__('Nombre y CURP (RENAPO)')}` : ''}
                                             {k.tipo_documento ? ` · ${k.tipo_documento === 'pasaporte' ? __('Passport') : k.tipo_documento.toUpperCase()}` : ''}
                                             {k.pais_documento ? ` · ${k.pais_documento}` : ''}
                                         </span>

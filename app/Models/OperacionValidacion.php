@@ -202,7 +202,7 @@ class OperacionValidacion extends Model
             ->withoutGlobalScopes()
             ->orderBy('id')
             ->get()
-            ->keyBy(fn (KycValidacion $v) => $v->validable_type.'#'.$v->validable_id.'#'.($v->proveedor ?: KycValidacion::PROVEEDOR_JAAK))
+            ->keyBy(fn (KycValidacion $v) => $v->validable_type.'#'.$v->validable_id.'#'.($v->proveedor ?: KycValidacion::PROVEEDOR_JAAK).'#'.$v->alcance)
             ->pluck('estatus');
 
         $firmas = $this->firmaDocumentos()->withoutGlobalScopes()->pluck('estatus');

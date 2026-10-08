@@ -97,6 +97,7 @@ class ProductorController extends Controller
         $this->enviarCarnetWhatsAppInternal($productor);
 
         $this->validarIdentidad($productor, $tipoDocumento, true);
+        $this->vincularPrevalidaciones($productor); // validaciones hechas desde el formulario
 
         return $this->respuestaConSeguimiento($request, $productor, __('Producer created successfully'));
     }
@@ -206,6 +207,7 @@ class ProductorController extends Controller
         $cambio = $request->hasFile('foto') || $request->hasFile('documento_frontal')
             || $request->hasFile('documento_reverso') || $productor->curp !== $curpAntes;
         $this->validarIdentidad($productor->fresh(), $tipoDocumento, $cambio);
+        $this->vincularPrevalidaciones($productor->fresh()); // validaciones hechas desde el formulario
 
         return redirect()->back();
     }

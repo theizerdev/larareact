@@ -6,11 +6,14 @@ use App\Jobs\IniciarTruoraCheck;
 use App\Jobs\ProcesarKycValidacion;
 use App\Models\KycValidacion;
 use App\Models\OperacionValidacion;
+use App\Models\Prevalidacion;
 use App\Models\ValidacionRegla;
 use App\Services\DiditService;
 use App\Services\TruoraService;
 use App\Services\Validaciones\DiditSincronizador;
 use App\Services\Validaciones\FirmaService;
+use App\Services\Validaciones\TruoraSincronizador;
+use App\Services\Validaciones\ValidacionRapida;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
@@ -141,6 +144,190 @@ trait DispatchesKycValidacion
         } catch (\Throwable $e) {
             Log::error('No se pudieron iniciar las validaciones: '.$e->getMessage(), [
                 'persona' => $persona->getMorphClass().'#'.$persona->getKey(),
+            ]);
+        }
+    }
+
+    /**
+     * Validación sin foto de un registro ya guardado (submenú Validar):
+     *  - 'rfc':  antecedentes de la empresa con su RFC (TRUORA, tarda unos minutos).
+     *  - 'curp': nombre + CURP contra RENAPO (DIDIT, resultado inmediato).
+     *
+     * @param  OperacionValidacion|null  $operacion  folio donde se registra (por defecto uno nuevo)
+     * @return array{type: string, message: string}
+     */
+    protected function validacionRapida(Model $registro, string $alcance, ?OperacionValidacion $operacion = null): array
+    {
+        try {
+            $empresa = $registro->empresa ?? null;
+
+            if (! $empresa) {
+                return ['type' => 'error', 'message' => __('El registro no tiene empresa asignada.')];
+            }
+
+            $comunes = [
+                'validable_type' => $registro->getMorphClass(),
+                'validable_id' => $registro->getKey(),
+                'empresa_id' => $registro->empresa_id,
+                'sucursal_id' => $registro->sucursal_id,
+                'pais_documento' => 'MEX',
+                'jaak_environment' => 'n/a',
+                'estatus' => KycValidacion::ESTATUS_PENDIENTE,
+            ];
+
+            if ($alcance === 'rfc') {
+                if (! ValidacionRapida::esEmpresa($registro)) {
+                    return ['type' => 'error', 'message' => __('Sólo proveedores y socios comerciales se validan por RFC.')];
+                }
+
+                $rfc = ValidacionRapida::normalizarRfc($registro->rfc);
+
+                if (! ValidacionRapida::rfcValido($rfc)) {
+                    return ['type' => 'error', 'message' => __('Para validar la empresa falta un RFC válido. Edita el registro y captúralo.')];
+                }
+
+                if (! ValidacionRapida::truoraDisponible($empresa)) {
+                    return ['type' => 'error', 'message' => __('TRUORA no está activo para esta empresa. Actívalo en Integraciones → Validaciones.')];
+                }
+
+                $operacion ??= $this->operacionKyc($registro);
+                $validacion = KycValidacion::create($comunes + [
+                    'operacion_id' => $operacion?->id,
+                    'proveedor' => KycValidacion::PROVEEDOR_TRUORA,
+                    'alcance' => KycValidacion::ALCANCE_EMPRESA,
+                    'dato_consultado' => $rfc,
+                ]);
+
+                $registro->forceFill(['kyc_estatus' => KycValidacion::ESTATUS_PENDIENTE])->saveQuietly();
+                $operacion?->recalcularEstatus();
+                IniciarTruoraCheck::dispatch($validacion)->afterResponse();
+
+                return ['type' => 'success', 'message' => __('Antecedentes de la empresa (RFC :rfc) enviados a TRUORA. El resultado llega en unos minutos a Resultados de validaciones.', ['rfc' => $rfc])
+                    .($operacion ? ' '.__('Folio: :folio', ['folio' => $operacion->folio]) : '')];
+            }
+
+            $curp = strtoupper(trim((string) ($registro->curp ?? '')));
+            $nombre = ValidacionRapida::nombreDe($registro);
+
+            if (! ValidacionRapida::curpValida($curp) || $nombre === '') {
+                return ['type' => 'error', 'message' => ValidacionRapida::esEmpresa($registro)
+                    ? __('Para validar al responsable faltan su nombre y una CURP válida. Edita el registro y captúralos.')
+                    : __('Para validar a la persona faltan su nombre y una CURP válida. Edita el registro y captúralos.')];
+            }
+
+            if (! ValidacionRapida::diditDisponible($empresa)) {
+                return ['type' => 'error', 'message' => __('DIDIT no está activo para esta empresa. Actívalo en Integraciones → Validaciones.')];
+            }
+
+            $operacion ??= $this->operacionKyc($registro);
+            $validacion = KycValidacion::create($comunes + [
+                'operacion_id' => $operacion?->id,
+                'proveedor' => KycValidacion::PROVEEDOR_DIDIT,
+                'alcance' => KycValidacion::ALCANCE_CURP,
+                'dato_consultado' => $curp,
+                'curp_capturada' => $curp,
+                'estatus' => KycValidacion::ESTATUS_PROCESANDO,
+            ]);
+
+            $r = ValidacionRapida::consultarCurp($empresa, $curp, $nombre, 'hosho:kyc:'.$validacion->id);
+
+            $validacion->forceFill([
+                'estatus' => $r['estatus'],
+                'curp_valida' => $r['curp_valida'],
+                'resultado_documento' => $r['resultado'],
+                'observaciones' => $r['observaciones'],
+                'error_detalle' => $r['error_detalle'],
+                'procesado_en' => now(),
+            ])->save();
+            TruoraSincronizador::propagar($validacion);
+
+            $texto = $r['observaciones'] ?? $r['error_detalle'] ?? '';
+
+            return match ($r['estatus']) {
+                KycValidacion::ESTATUS_APROBADO => ['type' => 'success', 'message' => __('Nombre y CURP verificados en RENAPO.').' '.$texto],
+                KycValidacion::ESTATUS_ERROR => ['type' => 'error', 'message' => __('No se pudo validar en RENAPO.').' '.$texto],
+                default => ['type' => 'error', 'message' => $texto], // revisión o rechazo: que se note
+            };
+        } catch (\Throwable $e) {
+            Log::error('Validación rápida fallida: '.$e->getMessage(), [
+                'registro' => $registro->getMorphClass().'#'.$registro->getKey(),
+                'alcance' => $alcance,
+            ]);
+
+            return ['type' => 'error', 'message' => __('No se pudo iniciar la validación. Intenta de nuevo.')];
+        }
+    }
+
+    /**
+     * Al guardar un alta o edición, pasa al registro las validaciones rápidas
+     * hechas desde el formulario (RFC y nombre + CURP) para que queden en su
+     * folio y en Resultados de validaciones. Sólo las de la misma empresa, de
+     * las últimas 24 h, con el mismo RFC/CURP (y el mismo nombre) que se guardó.
+     * Nunca rompe el guardado.
+     */
+    protected function vincularPrevalidaciones(Model $registro): void
+    {
+        try {
+            $rfc = ValidacionRapida::esEmpresa($registro) ? ValidacionRapida::normalizarRfc($registro->rfc) : '';
+            $curp = strtoupper(trim((string) ($registro->curp ?? '')));
+
+            if ($rfc === '' && $curp === '') {
+                return;
+            }
+
+            $previas = Prevalidacion::withoutGlobalScopes()
+                ->where('empresa_id', $registro->empresa_id)
+                ->whereNull('kyc_validacion_id')
+                ->where('estatus', '!=', KycValidacion::ESTATUS_ERROR)
+                ->where('created_at', '>=', now()->subDay())
+                ->where(function ($q) use ($rfc, $curp) {
+                    $q->where(fn ($w) => $w->where('tipo', Prevalidacion::TIPO_RFC)->where('dato', $rfc ?: '-'))
+                        ->orWhere(fn ($w) => $w->where('tipo', Prevalidacion::TIPO_CURP)->where('dato', $curp ?: '-'));
+                })
+                ->latest('id')
+                ->get()
+                ->unique('tipo'); // la más reciente de cada tipo
+
+            foreach ($previas as $pre) {
+                if ($pre->tipo === Prevalidacion::TIPO_CURP
+                    && ValidacionRapida::compararNombres((string) $pre->nombre, ValidacionRapida::nombreDe($registro)) !== 'igual') {
+                    continue; // se validó con otro nombre: no aplica a lo que se guardó
+                }
+
+                ValidacionRapida::sincronizarPrevalidacion($pre, true);
+                $operacion = $this->operacionKyc($registro);
+                $esRfc = $pre->tipo === Prevalidacion::TIPO_RFC;
+
+                $validacion = KycValidacion::create([
+                    'validable_type' => $registro->getMorphClass(),
+                    'validable_id' => $registro->getKey(),
+                    'empresa_id' => $registro->empresa_id,
+                    'sucursal_id' => $registro->sucursal_id,
+                    'operacion_id' => $operacion?->id,
+                    'proveedor' => $pre->proveedor,
+                    'alcance' => $esRfc ? KycValidacion::ALCANCE_EMPRESA : KycValidacion::ALCANCE_CURP,
+                    'dato_consultado' => $pre->dato,
+                    'curp_capturada' => $esRfc ? null : $pre->dato,
+                    'truora_check_id' => $esRfc ? $pre->referencia : null,
+                    'pais_documento' => 'MEX',
+                    'jaak_environment' => 'n/a',
+                    'estatus' => $pre->estatus,
+                    'curp_valida' => $esRfc ? null : ($pre->resultado['curp_valida'] ?? null),
+                    'score_global' => $pre->score,
+                    'en_listas' => $esRfc && $pre->score !== null && $pre->estaFinalizada()
+                        ? $pre->estatus !== KycValidacion::ESTATUS_APROBADO : null,
+                    'resultado_documento' => $esRfc ? null : $pre->resultado,
+                    'resultado_listas' => $esRfc ? $pre->resultado : null,
+                    'observaciones' => trim(($pre->observaciones ?? '').' '.__('(Validado desde el formulario de alta.)')),
+                    'procesado_en' => $pre->procesado_en,
+                ]);
+
+                $pre->forceFill(['kyc_validacion_id' => $validacion->id])->save();
+                TruoraSincronizador::propagar($validacion);
+            }
+        } catch (\Throwable $e) {
+            Log::error('No se pudieron vincular las prevalidaciones: '.$e->getMessage(), [
+                'registro' => $registro->getMorphClass().'#'.$registro->getKey(),
             ]);
         }
     }

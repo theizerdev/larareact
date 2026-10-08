@@ -53,6 +53,7 @@ import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import ProductorEmpleadosModal from './Partials/ProductorEmpleadosModal';
 import ProductorVehiculosModal from './Partials/ProductorVehiculosModal';
 import MapboxMap, { MapAddressDetails } from '@/components/mapbox-map';
+import { ValidacionRapida } from '@/components/validacion-rapida';
 
 interface Pais {
     id: number;
@@ -779,13 +780,15 @@ export default function Index({
 
                                         <div className="md:col-span-2">
                                             <Label htmlFor="rfc">{__('RFC (Registro Federal de Contribuyentes)')}</Label>
-                                            <Input
-                                                id="rfc"
-                                                className="mt-1.5 w-full"
-                                                placeholder="ej. ABC123456789"
-                                                value={data.rfc}
-                                                onChange={(e) => setData('rfc', e.target.value)}
-                                            />
+                                            <ValidacionRapida tipo="rfc" valor={data.rfc} nombre={data.razon_social} entidad="socio-comercial" empresaId={data.empresa_id} className="mt-1.5">
+                                                <Input
+                                                    id="rfc"
+                                                    className="w-full pr-36"
+                                                    placeholder="ej. ABC123456789"
+                                                    value={data.rfc}
+                                                    onChange={(e) => setData('rfc', e.target.value)}
+                                                />
+                                            </ValidacionRapida>
                                             {errors.rfc && <p className="text-xs text-red-500 mt-1">{errors.rfc}</p>}
                                         </div>
 
@@ -803,14 +806,16 @@ export default function Index({
 
                                         <div>
                                             <Label htmlFor="curp">{__('CURP (del Responsable)')}</Label>
-                                            <Input
-                                                id="curp"
-                                                className="mt-1.5 w-full"
-                                                placeholder="ej. ABCD900101HDFRRR01"
-                                                maxLength={18}
-                                                value={data.curp}
-                                                onChange={(e) => setData('curp', e.target.value.toUpperCase())}
-                                            />
+                                            <ValidacionRapida tipo="curp" valor={data.curp} nombre={data.responsable} entidad="socio-comercial" empresaId={data.empresa_id} className="mt-1.5">
+                                                <Input
+                                                    id="curp"
+                                                    className="w-full pr-36"
+                                                    placeholder="ej. ABCD900101HDFRRR01"
+                                                    maxLength={18}
+                                                    value={data.curp}
+                                                    onChange={(e) => setData('curp', e.target.value.toUpperCase())}
+                                                />
+                                            </ValidacionRapida>
                                             {errors.curp && <p className="text-xs text-red-500 mt-1">{errors.curp}</p>}
                                         </div>
 

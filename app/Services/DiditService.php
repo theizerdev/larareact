@@ -200,6 +200,21 @@ class DiditService
     }
 
     /**
+     * Valida una CURP contra RENAPO (servicio `mex_curp` de Database Validation).
+     * Sin foto ni documento; respuesta inmediata. Devuelve el registro de RENAPO
+     * (nombre, fecha de nacimiento, estatus de la CURP) para compararlo con lo capturado.
+     */
+    public function validarCurpRenapo(string $curp, ?string $vendorData = null): array
+    {
+        return $this->request('post', '/v3/database-validation/', array_filter([
+            'issuing_state' => 'MEX',
+            'services' => ['mex_curp'],
+            'personal_number' => $curp,
+            'vendor_data' => $vendorData,
+        ], fn ($v) => $v !== null && $v !== ''));
+    }
+
+    /**
      * Lista las sesiones creadas (solo lectura, paginado).
      */
     public function listSessions(int $page = 1): array

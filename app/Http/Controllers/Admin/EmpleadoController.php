@@ -113,6 +113,7 @@ class EmpleadoController extends Controller
             'tipo_documento' => $request->input('tipo_documento'),
             'pais_documento' => $request->input('pais_documento'),
         ]);
+        $this->vincularPrevalidaciones($empleado); // validaciones hechas desde el formulario
 
         $primerVehiculo = null;
         // Guardar vehículos
@@ -333,6 +334,7 @@ class EmpleadoController extends Controller
         }
 
         $empleado->update($data);
+        $this->vincularPrevalidaciones($empleado); // validaciones hechas desde el formulario
 
         // Sincronizar vehículos
         if ($request->has('vehiculos')) {

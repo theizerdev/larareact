@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\DispatchesKycValidacion;
 use App\Http\Controllers\Concerns\GuardaEvidenciaIdentidad;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProveedorRequest;
@@ -16,7 +17,7 @@ use Inertia\Inertia;
 
 class ProveedorController extends Controller
 {
-    use GuardaEvidenciaIdentidad;
+    use DispatchesKycValidacion, GuardaEvidenciaIdentidad;
 
     public function index(Request $request)
     {
@@ -84,6 +85,7 @@ class ProveedorController extends Controller
 
         $proveedor = AccessCodeService::createWithRetry(fn () => Proveedor::create($data));
         $this->enviarCarnetWhatsAppInternal($proveedor);
+        $this->vincularPrevalidaciones($proveedor); // validaciones hechas desde el formulario
 
         return redirect()->back();
     }
@@ -99,6 +101,7 @@ class ProveedorController extends Controller
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? $proveedor->documento_identidad;
 
         $proveedor->update($data);
+        $this->vincularPrevalidaciones($proveedor); // validaciones hechas desde el formulario
 
         return redirect()->back();
     }

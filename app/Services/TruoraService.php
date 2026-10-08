@@ -118,6 +118,25 @@ class TruoraService
         ], fn ($v) => $v !== null), true);
     }
 
+    /**
+     * Crea un check de antecedentes de una empresa (type=company) con su RFC
+     * (tax_id) y razón social: situación del negocio, antecedentes legales,
+     * penales, fiscales y menciones en medios. force_creation=false: si hay un
+     * check reciente con los mismos datos, TRUORA devuelve ése en vez de cobrar otro.
+     */
+    public function crearCheckEmpresa(string $rfc, ?string $razonSocial = null, ?string $referencia = null): array
+    {
+        return $this->request('post', '/v1/checks', array_filter([
+            'type' => 'company',
+            'country' => 'MX',
+            'tax_id' => $rfc,
+            'company_name' => $razonSocial ? mb_substr($razonSocial, 0, 200) : null,
+            'user_authorized' => 'true',
+            'force_creation' => 'false',
+            'custom_input' => $referencia ? mb_substr($referencia, 0, 128) : null,
+        ], fn ($v) => $v !== null && $v !== ''), true);
+    }
+
     public function getCheck(string $checkId): array
     {
         return $this->request('get', '/v1/checks/'.rawurlencode($checkId));

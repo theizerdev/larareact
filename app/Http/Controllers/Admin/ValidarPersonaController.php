@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
  * persona ya dada de alta con los datos y evidencias que ya tiene guardados
  * (foto, documento, CURP). Respeta las reglas de la empresa; con
  * `prueba_vida` además abre la verificación hospedada de Didit (prueba de vida).
+ * Con `rapida=rfc|curp` hace sólo la validación sin foto (ver validacionRapida()).
  */
 class ValidarPersonaController extends Controller
 {
@@ -41,6 +42,13 @@ class ValidarPersonaController extends Controller
     {
         $clase = self::TIPOS[$tipo] ?? abort(404);
         $persona = $clase::query()->findOrFail($id); // el scope de empresa devuelve 404 si es de otra
+
+        // Validaciones sin foto: RFC de la empresa (TRUORA) o nombre + CURP en RENAPO (DIDIT).
+        if (in_array($request->input('rapida'), ['rfc', 'curp'], true)) {
+            $resultado = $this->validacionRapida($persona, $request->input('rapida'));
+
+            return $this->aviso($resultado['type'], $resultado['message']);
+        }
 
         $soloAntecedentes = $request->boolean('antecedentes');
         $evidencia = ProcesarKycValidacion::evidencias($persona, class_basename($clase));

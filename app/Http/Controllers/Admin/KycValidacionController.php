@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\DispatchesKycValidacion;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcesarKycValidacion;
 use App\Jobs\IniciarTruoraCheck;
@@ -13,6 +14,8 @@ use Illuminate\Http\Request;
 
 class KycValidacionController extends Controller
 {
+    use DispatchesKycValidacion;
+
     /**
      * Listado de validaciones de identidad (KYC) de las personas de la empresa.
      * El scope multitenant lo aplica el trait Multitenantable del modelo.
@@ -93,6 +96,18 @@ class KycValidacionController extends Controller
             ]);
         }
 
+        // Validaciones sin foto (RFC de la empresa / nombre + CURP en RENAPO): se
+        // repite la misma consulta en el mismo folio.
+        if ($kycValidacion->alcance) {
+            $resultado = $this->validacionRapida(
+                $persona,
+                $kycValidacion->alcance === KycValidacion::ALCANCE_EMPRESA ? 'rfc' : 'curp',
+                $kycValidacion->operacion,
+            );
+
+            return back()->with('notification', $resultado);
+        }
+
         // La revalidación se queda en el mismo folio; las validaciones anteriores
         // al folio abren uno nuevo de tipo revalidación.
         $operacion = $kycValidacion->operacion
@@ -156,8 +171,12 @@ class KycValidacionController extends Controller
             'folio' => $v->operacion?->folio,
             'operacion_id' => $v->operacion_id,
             'persona_nombre' => $persona
-                ? trim(($persona->nombres ?? '').' '.($persona->apellidos ?? '')) ?: ('#'.$v->validable_id)
+                ? ($v->alcance === KycValidacion::ALCANCE_EMPRESA && $persona->razon_social
+                    ? $persona->razon_social
+                    : (trim(($persona->nombres ?? '').' '.($persona->apellidos ?? '')) ?: ('#'.$v->validable_id)))
                 : __('(deleted)'),
+            'alcance' => $v->alcance,
+            'dato_consultado' => $v->dato_consultado,
             'persona_tipo' => class_basename($v->validable_type),
             'curp_capturada' => $v->curp_capturada,
             'proveedor' => $v->proveedor ?: KycValidacion::PROVEEDOR_JAAK,

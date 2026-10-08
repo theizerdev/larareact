@@ -54,6 +54,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { ValidacionRapida } from '@/components/validacion-rapida';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
@@ -840,13 +841,22 @@ return;
 
                         <div>
                             <Label htmlFor="curp">{__('CURP')}</Label>
-                            <Input
-                                id="curp"
-                                value={data.curp}
-                                onChange={(e) => setData('curp', e.target.value.toUpperCase())}
-                                maxLength={18}
+                            <ValidacionRapida
+                                tipo="curp"
+                                valor={data.curp}
+                                nombre={`${data.nombres ?? ''} ${data.apellidos ?? ''}`}
+                                entidad="responsable"
+                                empresaId={data.empresa_id}
                                 className="mt-1.5"
-                            />
+                            >
+                                <Input
+                                    id="curp"
+                                    value={data.curp}
+                                    onChange={(e) => setData('curp', e.target.value.toUpperCase())}
+                                    maxLength={18}
+                                    className="pr-36"
+                                />
+                            </ValidacionRapida>
                             {errors.curp && <p className="text-red-500 text-xs mt-1">{errors.curp}</p>}
                         </div>
 

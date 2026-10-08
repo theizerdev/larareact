@@ -17,6 +17,8 @@ interface Validacion {
     persona_tipo: string;
     curp_capturada: string | null;
     proveedor: 'jaak' | 'didit' | 'truora';
+    alcance?: 'empresa_rfc' | 'curp_renapo' | null;
+    dato_consultado?: string | null;
     tipo_documento: string | null;
     pais_documento: string | null;
     didit_estatus: string | null;
@@ -203,14 +205,15 @@ export default function KycValidaciones({ validaciones, filtros, puede_revalidar
                                                     </td>
                                                     <td className="py-2 pr-3 font-medium">
                                                         {v.persona_nombre}
-                                                        {v.curp_capturada && (
-                                                            <span className="ml-2 font-mono text-[11px] text-muted-foreground">{v.curp_capturada}</span>
+                                                        {(v.curp_capturada || v.dato_consultado) && (
+                                                            <span className="ml-2 font-mono text-[11px] text-muted-foreground">{v.curp_capturada || v.dato_consultado}</span>
                                                         )}
                                                     </td>
                                                     <td className="py-2 pr-3 text-muted-foreground">
                                                         {v.persona_tipo}
                                                         <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
                                                             {v.proveedor === 'didit' ? 'DIDIT' : v.proveedor === 'truora' ? 'TRUORA' : 'JAAK'}
+                                                            {v.alcance === 'empresa_rfc' ? ` · ${__('RFC de la empresa')}` : v.alcance === 'curp_renapo' ? ` · ${__('Nombre y CURP (RENAPO)')}` : ''}
                                                             {v.tipo_documento === 'pasaporte' ? ` · ${__('Passport')}` : ''}
                                                             {v.pais_documento && v.pais_documento !== 'MEX' ? ` · ${v.pais_documento}` : ''}
                                                         </span>

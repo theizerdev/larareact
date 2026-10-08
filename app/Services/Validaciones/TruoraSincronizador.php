@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Log;
 class TruoraSincronizador
 {
     /** Estados de Truora en los que el check sigue en curso. */
-    private const EN_CURSO = ['not_started', 'enqueued', 'queued', 'in_progress', 'processing', 'delayed', 'started', 'created', 'pending'];
+    public const EN_CURSO = ['not_started', 'enqueued', 'queued', 'in_progress', 'processing', 'delayed', 'started', 'created', 'pending'];
 
     /** Abre el check en Truora. Si falla, la validación queda en 'error' con el detalle; nunca lanza. */
     public static function iniciar(KycValidacion $val): bool
@@ -32,17 +32,32 @@ class TruoraSincronizador
             return false;
         }
 
-        $curp = strtoupper(trim((string) $val->curp_capturada));
+        if ($val->alcance === KycValidacion::ALCANCE_EMPRESA) {
+            // Antecedentes de la empresa con su RFC (check type=company).
+            $rfc = strtoupper(trim((string) $val->dato_consultado));
 
-        if ($curp === '') {
-            return self::fallar($val, 'Falta la CURP de la persona para consultar antecedentes.');
+            if ($rfc === '') {
+                return self::fallar($val, 'Falta el RFC de la empresa para consultar sus antecedentes.');
+            }
+
+            $res = (new TruoraService($empresa))->crearCheckEmpresa(
+                $rfc,
+                $val->validable?->razon_social,
+                'hosho:kyc:'.$val->id,
+            );
+        } else {
+            $curp = strtoupper(trim((string) $val->curp_capturada));
+
+            if ($curp === '') {
+                return self::fallar($val, 'Falta la CURP de la persona para consultar antecedentes.');
+            }
+
+            $res = (new TruoraService($empresa))->crearCheck(
+                $curp,
+                $val->pais_documento,
+                'hosho:kyc:'.$val->id,
+            );
         }
-
-        $res = (new TruoraService($empresa))->crearCheck(
-            $curp,
-            $val->pais_documento,
-            'hosho:kyc:'.$val->id,
-        );
 
         $checkId = $res['data']['check']['check_id'] ?? $res['data']['check_id'] ?? null;
 
@@ -95,29 +110,39 @@ class TruoraSincronizador
         return self::aplicar($val, $check, $detalle['ok'] ? $detalle['data'] : [], TruoraService::scoreMinimoDe($empresa));
     }
 
-    public static function aplicar(KycValidacion $val, array $check, array $detalle, float $minimo): bool
+    /**
+     * Veredicto de un check terminado: aprobado si el score alcanza el mínimo;
+     * si no (o si no hay score), en revisión. Nunca rechaza solo.
+     *
+     * @return array{estatus: string, score: ?float, observacion: string}
+     */
+    public static function evaluar(array $check, float $minimo): array
     {
         $score = isset($check['score']) && is_numeric($check['score']) ? (float) $check['score'] : null;
-        $estatusAnterior = $val->estatus;
-        $observaciones = [];
 
         if ($score === null || $score < 0) {
-            $nuevo = KycValidacion::ESTATUS_REVISION;
-            $observaciones[] = 'TRUORA terminó la consulta sin calcular un score; revisa el detalle.';
-        } elseif ($score >= $minimo) {
-            $nuevo = KycValidacion::ESTATUS_APROBADO;
-            $observaciones[] = sprintf('Antecedentes: score %.2f (mínimo %.2f). Sin hallazgos relevantes.', $score, $minimo);
-        } else {
-            $nuevo = KycValidacion::ESTATUS_REVISION;
-            $observaciones[] = sprintf('Antecedentes: score %.2f por debajo del mínimo %.2f. Revisa los hallazgos en TRUORA.', $score, $minimo);
+            return ['estatus' => KycValidacion::ESTATUS_REVISION, 'score' => null, 'observacion' => 'TRUORA terminó la consulta sin calcular un score; revisa el detalle.'];
         }
 
+        if ($score >= $minimo) {
+            return ['estatus' => KycValidacion::ESTATUS_APROBADO, 'score' => $score, 'observacion' => sprintf('Antecedentes: score %.2f (mínimo %.2f). Sin hallazgos relevantes.', $score, $minimo)];
+        }
+
+        return ['estatus' => KycValidacion::ESTATUS_REVISION, 'score' => $score, 'observacion' => sprintf('Antecedentes: score %.2f por debajo del mínimo %.2f. Revisa los hallazgos en TRUORA.', $score, $minimo)];
+    }
+
+    public static function aplicar(KycValidacion $val, array $check, array $detalle, float $minimo): bool
+    {
+        $veredicto = self::evaluar($check, $minimo);
+        $score = $veredicto['score'];
+        $estatusAnterior = $val->estatus;
+
         $val->forceFill([
-            'estatus' => $nuevo,
-            'score_global' => $score !== null && $score >= 0 ? round($score, 2) : null,
-            'en_listas' => $score !== null && $score >= 0 ? $score < $minimo : null,
+            'estatus' => $veredicto['estatus'],
+            'score_global' => $score !== null ? round($score, 2) : null,
+            'en_listas' => $score !== null ? $score < $minimo : null,
             'resultado_listas' => self::depurar(['check' => $check, 'details' => $detalle]),
-            'observaciones' => implode("\n", $observaciones),
+            'observaciones' => $veredicto['observacion'],
             'error_detalle' => null,
             'procesado_en' => now(),
         ])->save();
@@ -193,7 +218,7 @@ class TruoraSincronizador
     }
 
     /** Quita blobs largos antes de guardar el JSON. */
-    private static function depurar(array $datos): array
+    public static function depurar(array $datos): array
     {
         array_walk_recursive($datos, function (&$v) {
             if (is_string($v) && strlen($v) > 3000) {

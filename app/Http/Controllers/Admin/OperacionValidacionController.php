@@ -110,6 +110,7 @@ class OperacionValidacionController extends Controller
                 'persona_nombre' => $this->nombre($v->validable) ?? ('#'.$v->validable_id),
                 'persona_tipo' => class_basename($v->validable_type),
                 'proveedor' => $v->proveedor ?: KycValidacion::PROVEEDOR_JAAK,
+                'alcance' => $v->alcance,
                 'tipo_documento' => $v->tipo_documento,
                 'pais_documento' => $v->pais_documento,
                 'estatus' => $v->estatus,

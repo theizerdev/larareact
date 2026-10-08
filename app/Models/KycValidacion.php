@@ -31,6 +31,10 @@ class KycValidacion extends Model
     public const PROVEEDOR_DIDIT = 'didit';
     public const PROVEEDOR_TRUORA = 'truora';
 
+    /** Alcance de una validación sin foto: RFC de la empresa (TRUORA) o nombre + CURP en RENAPO (DIDIT). */
+    public const ALCANCE_EMPRESA = 'empresa_rfc';
+    public const ALCANCE_CURP = 'curp_renapo';
+
     public const DOCUMENTO_INE = 'ine';
     public const DOCUMENTO_PASAPORTE = 'pasaporte';
 
@@ -47,6 +51,8 @@ class KycValidacion extends Model
         'didit_url',
         'didit_estatus',
         'truora_check_id',
+        'alcance',
+        'dato_consultado',
         'curp_capturada',
         'jaak_environment',
         'jaak_session_id',
@@ -126,8 +132,8 @@ class KycValidacion extends Model
             ->where('validable_type', $persona->getMorphClass())
             ->where('validable_id', $persona->getKey())
             ->orderBy('id')
-            ->get(['id', 'proveedor', 'estatus'])
-            ->keyBy(fn (self $v) => $v->proveedor ?: self::PROVEEDOR_JAAK)
+            ->get(['id', 'proveedor', 'alcance', 'estatus'])
+            ->keyBy(fn (self $v) => ($v->proveedor ?: self::PROVEEDOR_JAAK).'#'.$v->alcance)
             ->pluck('estatus')
             ->sortByDesc(fn ($estatus) => self::SEVERIDAD[$estatus] ?? 0)
             ->first();

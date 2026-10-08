@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\DispatchesKycValidacion;
 use App\Http\Controllers\Concerns\GuardaEvidenciaIdentidad;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ResponsableRequest;
@@ -17,7 +18,7 @@ use Inertia\Inertia;
 
 class ResponsableController extends Controller
 {
-    use GuardaEvidenciaIdentidad;
+    use DispatchesKycValidacion, GuardaEvidenciaIdentidad;
 
     public function index(Request $request)
     {
@@ -86,7 +87,8 @@ class ResponsableController extends Controller
 
     public function store(ResponsableRequest $request)
     {
-        Responsable::create($this->guardarEvidencia($request, $request->validated(), 'responsables'));
+        $responsable = Responsable::create($this->guardarEvidencia($request, $request->validated(), 'responsables'));
+        $this->vincularPrevalidaciones($responsable); // validaciones hechas desde el formulario
 
         return back()->with('notification', [
             'type' => 'success',
@@ -97,6 +99,7 @@ class ResponsableController extends Controller
     public function update(ResponsableRequest $request, Responsable $responsable)
     {
         $responsable->update($this->guardarEvidencia($request, $request->validated(), 'responsables', $responsable));
+        $this->vincularPrevalidaciones($responsable); // validaciones hechas desde el formulario
 
         return back()->with('notification', [
             'type' => 'success',
