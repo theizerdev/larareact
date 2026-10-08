@@ -195,6 +195,42 @@ export default function SucursalesIndexPage({
 
     const mapZoom = data.latitud && data.longitud ? 14 : paisSeleccionado ? 6 : 4;
 
+    const [geocoding, setGeocoding] = useState(false);
+
+    const handleForceGeocode = async () => {
+        if (!data.direccion || data.direccion.trim() === '') {
+            notifyError(__('Please enter an address first.'));
+            return;
+        }
+
+        setGeocoding(true);
+        try {
+            const query = encodeURIComponent(data.direccion.trim());
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`, {
+                headers: {
+                    'Accept-Language': 'es',
+                },
+            });
+            const results = await response.json();
+            if (results && results.length > 0) {
+                const lat = parseFloat(results[0].lat);
+                const lon = parseFloat(results[0].lon);
+                setData((prev) => ({
+                    ...prev,
+                    latitud: lat,
+                    longitud: lon,
+                }));
+                notifySuccess(__('Address located on map.'));
+            } else {
+                notifyError(__('Address could not be located on the map. Try dragging the marker manually.'));
+            }
+        } catch {
+            notifyError(__('Error trying to geolocate address.'));
+        } finally {
+            setGeocoding(false);
+        }
+    };
+
     // ── Handlers ───────────────────────────────────────────────────────────────
 
     const handleCreateClick = () => {
