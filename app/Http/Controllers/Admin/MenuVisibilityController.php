@@ -25,7 +25,7 @@ class MenuVisibilityController extends Controller
 
         $empresas = Empresa::withoutTenant()->orderBy('razon_social')
             ->get(['id', 'razon_social', 'nombre_comercial']);
-        $roles = Role::whereNotIn('name', self::SUPER_ROLES)->orderBy('name')->get(['id', 'name']);
+        $roles = Role::with('permissions:id,name')->whereNotIn('name', self::SUPER_ROLES)->orderBy('name')->get(['id', 'name']);
 
         return inertia('admin/configuracion/menu-visibilidad', [
             'empresas' => $empresas->map(fn ($e) => [
@@ -33,6 +33,10 @@ class MenuVisibilityController extends Controller
                 'nombre' => $e->nombre_comercial ?: $e->razon_social,
             ])->values(),
             'roles' => $roles->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->values(),
+            // Para avisar en el panel cuando un interruptor "activo" no se verá por falta de permiso.
+            'rolePermissions' => $roles->mapWithKeys(fn ($r) => [
+                $r->id => $r->permissions->pluck('name')->values(),
+            ]),
             // id => { clave: false } solo con lo oculto (ausencia = visible)
             'empresaHidden' => $empresas->mapWithKeys(fn ($e) => [
                 $e->id => array_fill_keys(MenuVisibilityService::empresaKeys($e->id), false),

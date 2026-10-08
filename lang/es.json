@@ -727,6 +727,8 @@
   "Currently developing support for automated SaaS recurring credit cards billing.": "Actualmente desarrollando el soporte para la facturación recurrente automatizada de tarjetas en SaaS.",
   "Settings Saved": "Configuración guardada",
   "Menu Visibility": "Visibilidad del Menú",
+  "Super Administrator only: never shown to company users": "Solo Super Administrador: nunca se muestra a usuarios de empresas",
+  "This role lacks the permission, so it will not be shown": "El rol no tiene el permiso, por eso no se mostrará",
   "Menu visibility updated.": "Visibilidad del menú actualizada.",
   "Show or hide sidebar modules and submodules for everyone. This is visual only: it does not change permissions or direct URL access.": "Muestra u oculta módulos y submódulos del menú lateral para todos. Es solo visual: no cambia permisos ni el acceso directo por URL.",
   "Hiding a module only removes it from the menu. The route stays protected by permissions as before.": "Ocultar un módulo solo lo quita del menú. La ruta sigue protegida por permisos como antes.",

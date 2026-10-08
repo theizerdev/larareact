@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { Building2, EyeOff, Info, Save, UserCog } from 'lucide-react';
+import { Building2, EyeOff, Info, Lock, Save, UserCog } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ADMIN_MENU_GROUPS, ADMIN_MENU_NODES, adminMenuChildren } from '@/config/admin-menu';
+import { ADMIN_MENU_GROUPS, ADMIN_MENU_NODES, adminMenuChildren, type AdminMenuNode } from '@/config/admin-menu';
 import { useTranslate } from '@/hooks/use-translate';
 
 type HiddenMap = Record<string, boolean>;
@@ -20,17 +20,52 @@ interface PageProps {
     /** empresa id => mapa con SOLO las claves ocultas. Ausencia = visible. */
     empresaHidden: Record<string, HiddenMap> | HiddenMap[];
     roleHidden: Record<string, HiddenMap> | HiddenMap[];
+    /** role id => permisos que tiene el rol */
+    rolePermissions: Record<string, string[]>;
 }
 
 interface EditorProps {
     hidden: HiddenMap;
     saving: boolean;
     onSave: (hiddenKeys: string[]) => void;
+    /** Permisos del rol que se edita; ausente en la pestaña de empresa (depende del rol de cada usuario). */
+    permissions?: string[];
 }
 
+type Blocker = 'platform' | 'permission' | null;
+
 /** Interruptores de grupos y subítems. Estado local: true = visible. */
-function VisibilityEditor({ hidden, saving, onSave }: EditorProps) {
+function VisibilityEditor({ hidden, saving, onSave, permissions }: EditorProps) {
     const { __ } = useTranslate();
+
+    // Un interruptor encendido NO garantiza que el ítem se vea: el layout también exige
+    // permiso y los módulos de plataforma son solo del Super Administrador. Se avisa aquí.
+    const blockerOf = (node: AdminMenuNode): Blocker => {
+        if (node.platformOnly) {
+            return 'platform';
+        }
+
+        if (permissions && node.permissions && !node.permissions.some((p) => permissions.includes(p))) {
+            return 'permission';
+        }
+
+        return null;
+    };
+    const blockerLabel = (b: Blocker) =>
+        b === 'platform'
+            ? __('Super Administrator only: never shown to company users')
+            : b === 'permission'
+              ? __('This role lacks the permission, so it will not be shown')
+              : '';
+    const groupBlocker = (group: AdminMenuNode): Blocker => {
+        if (group.platformOnly) {
+            return 'platform';
+        }
+
+        const kids = adminMenuChildren(group.key);
+
+        return kids.length > 0 && kids.every((k) => blockerOf(k)) ? 'permission' : null;
+    };
 
     const initial = useMemo(() => {
         const state: Record<string, boolean> = {};
@@ -77,6 +112,7 @@ function VisibilityEditor({ hidden, saving, onSave }: EditorProps) {
                 {ADMIN_MENU_GROUPS.map((group) => {
                     const children = adminMenuChildren(group.key);
                     const groupOn = state[group.key];
+                    const gBlock = groupBlocker(group);
 
                     return (
                         <Card key={group.key} className="shadow-sm">
@@ -84,30 +120,43 @@ function VisibilityEditor({ hidden, saving, onSave }: EditorProps) {
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base">{__(group.labelKey)}</CardTitle>
                                     <Switch
-                                        checked={groupOn}
+                                        checked={groupOn && !gBlock}
+                                        disabled={!!gBlock}
                                         onCheckedChange={(v) => toggleGroup(group.key, v)}
                                     />
                                 </div>
+                                {gBlock && (
+                                    <p className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                                        <Lock className="h-3 w-3 shrink-0" />
+                                        {blockerLabel(gBlock)}
+                                    </p>
+                                )}
                             </CardHeader>
                             {children.length > 0 && (
                                 <CardContent className="space-y-2 pt-0">
-                                    {children.map((child) => (
+                                    {children.map((child) => {
+                                        const block = gBlock ? null : blockerOf(child);
+
+                                        return (
                                         <div
                                             key={child.key}
+                                            title={blockerLabel(block)}
                                             className="flex items-center justify-between rounded-md border px-3 py-2 bg-slate-50 dark:bg-slate-900/40"
                                         >
-                                            <Label className={`text-sm font-normal ${!groupOn ? 'opacity-40' : ''}`}>
+                                            <Label className={`text-sm font-normal ${!groupOn || gBlock ? 'opacity-40' : ''}`}>
                                                 {__(child.labelKey)}
+                                                {block && <Lock className="ml-2 inline h-3 w-3 text-amber-600" />}
                                             </Label>
                                             <Switch
-                                                checked={state[child.key] && groupOn}
-                                                disabled={!groupOn}
+                                                checked={state[child.key] && groupOn && !gBlock && !block}
+                                                disabled={!groupOn || !!gBlock || !!block}
                                                 onCheckedChange={(v) =>
                                                     setState((prev) => ({ ...prev, [child.key]: v }))
                                                 }
                                             />
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </CardContent>
                             )}
                         </Card>
@@ -118,7 +167,7 @@ function VisibilityEditor({ hidden, saving, onSave }: EditorProps) {
     );
 }
 
-export default function MenuVisibilidad({ empresas, roles, empresaHidden, roleHidden }: PageProps) {
+export default function MenuVisibilidad({ empresas, roles, empresaHidden, roleHidden, rolePermissions }: PageProps) {
     const { __ } = useTranslate();
 
     const [empresaId, setEmpresaId] = useState<string>(empresas[0] ? String(empresas[0].id) : '');
@@ -244,6 +293,7 @@ export default function MenuVisibilidad({ empresas, roles, empresaHidden, roleHi
                             <VisibilityEditor
                                 key={`r-${roleId}-${Object.keys(hiddenOf(roleHidden, roleId)).sort().join(',')}`}
                                 hidden={hiddenOf(roleHidden, roleId)}
+                                permissions={rolePermissions[roleId] ?? []}
                                 saving={saving}
                                 onSave={(keys) => save(`/admin/seguridad/menu-visibilidad/rol/${roleId}`, keys)}
                             />

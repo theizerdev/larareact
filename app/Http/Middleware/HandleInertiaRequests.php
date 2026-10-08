@@ -57,10 +57,11 @@ class HandleInertiaRequests extends Middleware
                         'google_maps_api_key' => $request->user()->empresa->google_maps_api_key,
                         'google_maps_active' => (bool) $request->user()->empresa->google_maps_active,
                     ] : null,
-                    // El monitoreo y la edición de países son de toda la plataforma
-                    // (ver SoloSuperAdmin): fuera del superadmin no se ofrecen.
+                    // La edición de países es de toda la plataforma (ver SoloSuperAdmin).
+                    // El monitoreo se abre a las empresas que lo tengan activo; sus acciones
+                    // que modifican (limpiar logs/colas, correr tareas) siguen siendo solo del superadmin.
                     'permissions' => $request->user()->getAllPermissions()->pluck('name')
-                        ->when(! $request->user()->isSuperAdmin(), fn ($p) => $p->reject(fn ($n) => str_starts_with($n, 'monitoreo.') || in_array($n, ['paises.create', 'paises.edit', 'paises.delete'], true)))
+                        ->when(! $request->user()->isSuperAdmin(), fn ($p) => $p->reject(fn ($n) => in_array($n, ['monitoreo.import', 'monitoreo.backup', 'paises.create', 'paises.edit', 'paises.delete'], true)))
                         ->values()->toArray(),
                     'is_super_admin' => $request->user()->isSuperAdmin(),
                 ]) : null,

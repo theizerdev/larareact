@@ -3,7 +3,7 @@
 use App\Http\Controllers\Admin\SessionMonitoringController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['verified', 'permission:monitoreo.view', 'superadmin'])->group(function () {
+Route::middleware(['verified', 'permission:monitoreo.view'])->group(function () {
     Route::get('/monitoring/sessions', [SessionMonitoringController::class, 'index'])->name('monitoring.sessions.index');
-    Route::delete('/monitoring/sessions/{id}', [SessionMonitoringController::class, 'destroy'])->name('monitoring.sessions.destroy');
+    Route::delete('/monitoring/sessions/{id}', [SessionMonitoringController::class, 'destroy'])->name('monitoring.sessions.destroy')->middleware('superadmin');
 });

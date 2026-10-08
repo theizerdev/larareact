@@ -394,10 +394,12 @@ class TenantIsolationTest extends TestCase
         $this->assertDatabaseHas('pais', ['id' => $pais, 'nombre' => 'Editado']);
     }
 
-    public function test_platform_monitoring_is_only_for_the_superadmin(): void
+    public function test_monitoring_is_readable_by_company_admins_but_destructive_actions_are_superadmin_only(): void
     {
-        $this->actingAs($this->adminI())->get('/admin/monitoring/activity')->assertForbidden();
+        $this->actingAs($this->adminI())->get('/admin/monitoring/activity')->assertOk();
         $this->actingAs($this->adminI())->delete('/admin/monitoring/activity/clear')->assertForbidden();
+        $this->actingAs($this->adminI())->delete('/admin/monitoring/logs/clear')->assertForbidden();
+        $this->actingAs($this->adminI())->post('/admin/monitoring/tasks/run')->assertForbidden();
         $this->actingAs($this->superadmin())->get('/admin/monitoring/activity')->assertOk();
     }
 
@@ -408,7 +410,10 @@ class TenantIsolationTest extends TestCase
         foreach (['paises.create', 'paises.edit', 'paises.delete'] as $p) {
             $this->assertNotContains($p, $perms);
         }
-        $this->assertEmpty(array_filter($perms, fn ($n) => str_starts_with($n, 'monitoreo.')));
+        foreach (['monitoreo.import', 'monitoreo.backup'] as $p) {
+            $this->assertNotContains($p, $perms);
+        }
+        $this->assertContains('monitoreo.view', $perms);
         $this->assertContains('paises.view', $perms);
     }
 
