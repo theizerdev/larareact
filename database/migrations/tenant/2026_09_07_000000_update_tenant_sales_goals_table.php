@@ -20,7 +20,7 @@ return new class extends Migration
                     $table->decimal('base_sales', 12, 2)->default(0.00)->after('month');
                 }
                 if (!Schema::hasColumn('sales_goals', 'increment_percentage')) {
-                    $table->decimal('increment_percentage', 5, 2)->default(0.00)->after('base_sales');
+                    $table->decimal('increment_percentage', 12, 2)->default(0.00)->after('base_sales');
                 }
                 if (!Schema::hasColumn('sales_goals', 'target_amount')) {
                     $table->decimal('target_amount', 12, 2)->default(0.00)->after('increment_percentage');
@@ -56,7 +56,7 @@ return new class extends Migration
                 $table->integer('year');
                 $table->integer('month');
                 $table->decimal('base_sales', 12, 2)->default(0.00);
-                $table->decimal('increment_percentage', 5, 2)->default(0.00);
+                $table->decimal('increment_percentage', 12, 2)->default(0.00);
                 $table->decimal('target_amount', 12, 2)->default(0.00);
                 $table->text('notes')->nullable();
                 $table->timestamps();

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->integer('year');
             $table->integer('month');
             $table->decimal('base_sales', 12, 2)->default(0);
-            $table->decimal('increment_percentage', 5, 2)->default(0);
+            $table->decimal('increment_percentage', 12, 2)->default(0);
             $table->decimal('target_amount', 12, 2)->default(0);
             $table->text('notes')->nullable();
             $table->timestamps();
