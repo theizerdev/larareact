@@ -86,7 +86,7 @@ class UserController extends Controller
             'roles' => 'array',
         ]);
 
-        $this->guardRoleAndTenantAssignment($request, $validated);
+        $validated = $this->guardRoleAndTenantAssignment($request, $validated);
 
         try {
             $validated['password'] = Hash::make($validated['password']);
@@ -134,7 +134,7 @@ class UserController extends Controller
             'roles' => 'array',
         ]);
 
-        $this->guardRoleAndTenantAssignment($request, $validated);
+        $validated = $this->guardRoleAndTenantAssignment($request, $validated);
 
         try {
             if (! empty($validated['password'])) {
@@ -209,13 +209,20 @@ class UserController extends Controller
      * via a normal PUT to this endpoint. Non-super-admins can no longer
      * grant/keep the super-admin role, and are pinned to their own
      * empresa/sucursal exactly like the other tenant-scoped modules.
+     *
+     * Dejar la empresa/sucursal vacía tampoco se permite: un usuario sin
+     * empresa_id ve todas las empresas (Multitenantable no lo filtra). Al
+     * crear, el trait ya la rellenaba; al editar, el null se guardaba y un
+     * admin de empresa podía volver global a cualquier usuario suyo. El
+     * formulario manda '' cuando el campo va oculto, así que se fija la del
+     * actor en vez de rechazar.
      */
-    private function guardRoleAndTenantAssignment(Request $request, array $validated): void
+    private function guardRoleAndTenantAssignment(Request $request, array $validated): array
     {
         $actor = $request->user();
 
         if (! $actor || $actor->isSuperAdmin()) {
-            return;
+            return $validated;
         }
 
         if (in_array('super-admin', $validated['roles'] ?? [], true)) {
@@ -224,18 +231,26 @@ class UserController extends Controller
             ]);
         }
 
-        if ($actor->empresa_id && array_key_exists('empresa_id', $validated)
-            && $validated['empresa_id'] && (int) $validated['empresa_id'] !== (int) $actor->empresa_id) {
-            throw ValidationException::withMessages([
-                'empresa_id' => __('You are not allowed to assign this company.'),
-            ]);
+        if ($actor->empresa_id && array_key_exists('empresa_id', $validated)) {
+            if ($validated['empresa_id'] && (int) $validated['empresa_id'] !== (int) $actor->empresa_id) {
+                throw ValidationException::withMessages([
+                    'empresa_id' => __('You are not allowed to assign this company.'),
+                ]);
+            }
+
+            $validated['empresa_id'] = $actor->empresa_id;
         }
 
-        if ($actor->sucursal_id && array_key_exists('sucursal_id', $validated)
-            && $validated['sucursal_id'] && (int) $validated['sucursal_id'] !== (int) $actor->sucursal_id) {
-            throw ValidationException::withMessages([
-                'sucursal_id' => __('You are not allowed to assign this branch.'),
-            ]);
+        if ($actor->sucursal_id && array_key_exists('sucursal_id', $validated)) {
+            if ($validated['sucursal_id'] && (int) $validated['sucursal_id'] !== (int) $actor->sucursal_id) {
+                throw ValidationException::withMessages([
+                    'sucursal_id' => __('You are not allowed to assign this branch.'),
+                ]);
+            }
+
+            $validated['sucursal_id'] = $actor->sucursal_id;
         }
+
+        return $validated;
     }
 }
