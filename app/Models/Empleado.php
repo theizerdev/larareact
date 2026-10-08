@@ -78,6 +78,7 @@ class Empleado extends Model
         'user_id',
         'salario_diario',
         'turno_laboral_id',
+        'fecha_ingreso',
         'status',
     ];
 
@@ -85,6 +86,7 @@ class Empleado extends Model
     {
         return [
             'status' => 'boolean',
+            'fecha_ingreso' => 'date:Y-m-d',
             'jornada_laboral' => 'array',
             'salario_diario' => 'decimal:2',
         ];

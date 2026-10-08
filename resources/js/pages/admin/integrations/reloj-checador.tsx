@@ -15,6 +15,7 @@ interface PageProps {
     biotime_username: string | null;
     biotime_password_set: boolean;
     biotime_active: boolean;
+    biotime_auto_alta: boolean;
     biotime_last_sync_at: string | null;
 }
 
@@ -23,6 +24,7 @@ export default function RelojChecadorIntegration({
     biotime_username,
     biotime_password_set,
     biotime_active,
+    biotime_auto_alta,
     biotime_last_sync_at,
 }: PageProps) {
     const { __ } = useTranslate();
@@ -33,6 +35,7 @@ export default function RelojChecadorIntegration({
         biotime_username: biotime_username || '',
         biotime_password: '',
         biotime_active: biotime_active,
+        biotime_auto_alta: biotime_auto_alta,
     });
 
     const handleSaveBioTime = (e: React.FormEvent) => {
@@ -112,6 +115,20 @@ export default function RelojChecadorIntegration({
                                     <Switch
                                         checked={biotimeForm.data.biotime_active}
                                         onCheckedChange={(checked) => biotimeForm.setData('biotime_active', checked)}
+                                    />
+                                </div>
+
+                                <div className="flex items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5 pr-4">
+                                        <Label className="text-sm font-medium">{__('Create and update employees automatically')}</Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            {__('Every sync registers new BioTime employees in this company and keeps their data up to date.')}
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={biotimeForm.data.biotime_auto_alta}
+                                        onCheckedChange={(checked) => biotimeForm.setData('biotime_auto_alta', checked)}
+                                        disabled={!biotimeForm.data.biotime_active}
                                     />
                                 </div>
 

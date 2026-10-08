@@ -2319,5 +2319,8 @@
     "The image is not valid. Use a JPG, PNG or WEBP photo of up to 8 MB.": "الصورة غير صالحة. استخدم صورة JPG أو PNG أو WEBP بحجم أقصى 8 ميغابايت.",
     "This browser cannot open the camera. Use HTTPS or the Upload button.": "هذا المتصفح لا يستطيع فتح الكاميرا. استخدم HTTPS أو زر الرفع.",
     "Could not access the camera. Please grant permission.": "تعذر الوصول إلى الكاميرا. يرجى منح الإذن.",
-    "Frame the shot and press Capture.": "اضبط الإطار واضغط التقاط."
+    "Frame the shot and press Capture.": "اضبط الإطار واضغط التقاط.",
+    "Hire Date": "تاريخ التعيين",
+    "Create and update employees automatically": "إنشاء الموظفين وتحديثهم تلقائيًا",
+    "Every sync registers new BioTime employees in this company and keeps their data up to date.": "تسجل كل مزامنة موظفي BioTime الجدد في هذه الشركة وتحافظ على تحديث بياناتهم."
 }

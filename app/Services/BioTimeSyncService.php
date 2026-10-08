@@ -198,8 +198,12 @@ class BioTimeSyncService
             throw new \RuntimeException($res['error'] ?? 'No se pudieron leer los empleados.');
         }
 
+        // Qué columnas cambió BioTime en cada persona: el alta automática sólo
+        // pisa en Shigoto lo que cambió en el reloj.
+        $cambios = [];
+
         foreach ($res['data'] as $e) {
-            BiotimeEmpleado::updateOrCreate(
+            $bio = BiotimeEmpleado::updateOrCreate(
                 ['empresa_id' => $empresa->id, 'emp_code' => (string) ($e['emp_code'] ?? $e['id'])],
                 [
                     'biotime_id' => $e['id'],
@@ -222,11 +226,24 @@ class BioTimeSyncService
                     'raw' => $e,
                 ],
             );
+
+            if (! $bio->wasRecentlyCreated && $bio->wasChanged()) {
+                $cambios[$bio->id] = array_keys($bio->getChanges());
+            }
         }
 
         $linked = $this->resolveLinks($empresa);
+        $resultado = ['fetched' => count($res['data']), 'auto_linked' => $linked];
 
-        return ['fetched' => count($res['data']), 'auto_linked' => $linked];
+        if ($empresa->biotime_auto_alta) {
+            $alta = app(BioTimeEmpleadoProvisioner::class)->sincronizar($empresa, $cambios);
+            $resultado += ['created' => $alta['creados'], 'updated' => $alta['actualizados'], 'skipped' => count($alta['omitidos'])];
+            foreach ($alta['omitidos'] as $motivo) {
+                Log::channel('biotime')->warning("BioTime alta automática omitida: {$motivo}", ['empresa_id' => $empresa->id]);
+            }
+        }
+
+        return $resultado;
     }
 
     /**

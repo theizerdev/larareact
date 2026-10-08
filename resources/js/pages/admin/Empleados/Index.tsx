@@ -137,6 +137,7 @@ interface Empleado {
     telefono?: string | null;
     correo?: string | null;
     genero?: string | null;
+    fecha_ingreso?: string | null;
     departamento_id: number;
     responsable_id?: number | null;
     cargo_id?: number | null;
@@ -208,6 +209,7 @@ const initialForm = {
     telefono: '',
     correo: '',
     genero: '',
+    fecha_ingreso: '',
     departamento_id: '' as string | number,
     responsable_id: '' as string | number,
     cargo_id: '' as string | number,
@@ -554,6 +556,7 @@ export default function EmpleadosIndexPage({
             telefono: emp.telefono || '',
             correo: emp.correo || '',
             genero: emp.genero || '',
+            fecha_ingreso: emp.fecha_ingreso || '',
             departamento_id: emp.departamento_id || '',
             responsable_id: emp.responsable_id || '',
             cargo_id: emp.cargo_id || '',
@@ -1147,6 +1150,20 @@ export default function EmpleadosIndexPage({
                                         </Select>
                                         {errors.genero && (
                                             <p className="text-red-500 text-xs mt-1">{errors.genero}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Fecha de ingreso */}
+                                    <div>
+                                        <Label htmlFor="fecha_ingreso">{__('Hire Date')}</Label>
+                                        <Input
+                                            id="fecha_ingreso"
+                                            type="date"
+                                            value={data.fecha_ingreso || ''}
+                                            onChange={(e) => setData('fecha_ingreso', e.target.value)}
+                                        />
+                                        {errors.fecha_ingreso && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.fecha_ingreso}</p>
                                         )}
                                     </div>
 

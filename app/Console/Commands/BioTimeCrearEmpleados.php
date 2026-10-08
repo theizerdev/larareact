@@ -2,17 +2,11 @@
 
 namespace App\Console\Commands;
 
-use App\Models\BiotimeEmpleado;
-use App\Models\BiotimeMarcaje;
-use App\Models\Cargo;
-use App\Models\ContpaqiEmpleadoMapeo;
-use App\Models\Departamento;
-use App\Models\Empleado;
 use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Models\User;
+use App\Services\BioTimeEmpleadoProvisioner;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Da de alta en Shigoto a los empleados del reloj que no tienen vínculo.
@@ -83,118 +77,32 @@ class BioTimeCrearEmpleados extends Command
     private function procesarEmpresa(Empresa $empresa, Sucursal $sucursal, User $usuario): bool
     {
         $dryRun = (bool) $this->option('dry-run');
-        $conContpaqi = (bool) $this->option('contpaqi');
 
-        $pendientes = BiotimeEmpleado::query()
-            ->where('empresa_id', $empresa->id)
-            ->whereNull('empleado_id')
-            ->orderByRaw('CAST(emp_code AS UNSIGNED)')
-            ->get();
+        $r = app(BioTimeEmpleadoProvisioner::class)->sincronizar(
+            $empresa,
+            dryRun: $dryRun,
+            conContpaqi: (bool) $this->option('contpaqi'),
+            sucursal: $sucursal,
+            usuario: $usuario,
+        );
 
-        $departamentos = DB::table('biotime_departamentos')->where('empresa_id', $empresa->id)->pluck('dept_name', 'dept_code');
-        $cargos = DB::table('biotime_cargos')->where('empresa_id', $empresa->id)->pluck('position_name', 'position_code');
-
-        $creados = 0;
-        $omitidos = [];
-
-        foreach ($pendientes as $bio) {
-            $codigo = trim((string) $bio->emp_code);
-
-            if (Empleado::withoutTenant()->where('documento_identidad', $codigo)->exists()) {
-                $omitidos[] = "{$codigo} {$bio->nombre_completo}: ya hay un empleado con documento {$codigo}; vincúlalo a mano.";
-
-                continue;
-            }
-
-            if ($conContpaqi && ContpaqiEmpleadoMapeo::query()->paraEmpresa($empresa->id)->where('codigo_empleado', $codigo)->exists()) {
-                $omitidos[] = "{$codigo} {$bio->nombre_completo}: el código {$codigo} ya está mapeado en CONTPAQi a otro empleado.";
-
-                continue;
-            }
-
-            $this->line(sprintf('  + %-5s %s', $codigo, $bio->nombre_completo));
-
-            if ($dryRun) {
-                $creados++;
-
-                continue;
-            }
-
-            DB::transaction(function () use ($bio, $codigo, $empresa, $sucursal, $usuario, $departamentos, $cargos, $conContpaqi) {
-                $departamento = $this->departamento($departamentos[$bio->dept_code] ?? null, $empresa, $sucursal, $usuario);
-
-                $empleado = Empleado::create([
-                    'nombres' => $bio->first_name ?: 'N/A',
-                    'apellidos' => $bio->last_name ?: 'N/A',
-                    'documento_identidad' => $codigo,
-                    'tarjeta_acceso_1' => $bio->card_no,
-                    'telefono' => $bio->mobile,
-                    'correo' => $bio->email,
-                    'departamento_id' => $departamento?->id,
-                    'cargo_id' => $this->cargo($cargos[$bio->position_code] ?? null, $departamento, $empresa, $sucursal, $usuario)?->id,
-                    'empresa_id' => $empresa->id,
-                    'sucursal_id' => $sucursal->id,
-                    'status' => true,
-                ]);
-
-                $bio->update(['empleado_id' => $empleado->id, 'link_status' => 'auto']);
-
-                BiotimeMarcaje::query()
-                    ->where('biotime_empleado_id', $bio->id)
-                    ->update(['empleado_id' => $empleado->id]);
-
-                if ($conContpaqi) {
-                    ContpaqiEmpleadoMapeo::create([
-                        'empresa_id' => $empresa->id,
-                        'empleado_id' => $empleado->id,
-                        'codigo_empleado' => $codigo,
-                        'nombre_contpaqi' => mb_strtoupper(trim("{$bio->last_name} {$bio->first_name}")),
-                        'activo' => true,
-                        'notas' => 'Creado desde BioTime (emp_code del reloj).',
-                    ]);
-                }
-            });
-
-            $creados++;
+        foreach ($r['nuevos'] as $linea) {
+            $this->line('  + '.$linea);
         }
 
         $this->info(sprintf(
             'Empresa #%d (%s): %d empleados %s, %d omitidos.',
             $empresa->id,
             $empresa->razon_social,
-            $creados,
+            $r['creados'],
             $dryRun ? 'por crear' : 'creados y vinculados',
-            count($omitidos),
+            count($r['omitidos']),
         ));
 
-        foreach ($omitidos as $motivo) {
+        foreach ($r['omitidos'] as $motivo) {
             $this->warn('   '.$motivo);
         }
 
-        return $omitidos === [];
-    }
-
-    private function departamento(?string $nombre, Empresa $empresa, Sucursal $sucursal, User $usuario): ?Departamento
-    {
-        if (blank($nombre)) {
-            return null;
-        }
-
-        return Departamento::withoutTenant()->firstOrCreate(
-            ['empresa_id' => $empresa->id, 'nombre' => trim($nombre)],
-            ['sucursal_id' => $sucursal->id, 'user_id' => $usuario->id, 'status' => true],
-        );
-    }
-
-    private function cargo(?string $nombre, ?Departamento $departamento, Empresa $empresa, Sucursal $sucursal, User $usuario): ?Cargo
-    {
-        if (blank($nombre)) {
-            return null;
-        }
-
-        return Cargo::withoutTenant()->firstOrCreate(
-            ['empresa_id' => $empresa->id, 'nombre' => trim($nombre)],
-            ['departamento_id' => $departamento?->id, 'sucursal_id' => $sucursal->id, 'user_id' => $usuario->id, 'status' => true],
-        );
+        return $r['omitidos'] === [];
     }
 }

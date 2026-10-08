@@ -3062,5 +3062,8 @@
     "The image is not valid. Use a JPG, PNG or WEBP photo of up to 8 MB.": "La imagen no es válida. Usa una foto JPG, PNG o WEBP de hasta 8 MB.",
     "This browser cannot open the camera. Use HTTPS or the Upload button.": "Este navegador no permite abrir la cámara. Usa HTTPS o el botón Subir.",
     "Could not access the camera. Please grant permission.": "No se pudo acceder a la cámara. Otorga el permiso.",
-    "Frame the shot and press Capture.": "Encuadra y presiona Capturar."
+    "Frame the shot and press Capture.": "Encuadra y presiona Capturar.",
+    "Hire Date": "Fecha de ingreso",
+    "Create and update employees automatically": "Dar de alta y actualizar empleados automáticamente",
+    "Every sync registers new BioTime employees in this company and keeps their data up to date.": "Cada sincronización registra a los empleados nuevos de BioTime en esta empresa y mantiene sus datos al día."
 }
