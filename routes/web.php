@@ -85,6 +85,9 @@ Route::get('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::
 Route::post('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::class, 'submitWizard'])->name('preregistro-visita.submit');
 Route::post('/preregistro-visita/{token}/tipo-servicio', [VisitaTemporalPreRegistroController::class, 'storeTipoServicio'])->name('preregistro-visita.tipo-servicio.store');
 
+Route::post('/empresa-activa', [\App\Http\Controllers\EmpresaActivaController::class, 'cambiar'])
+    ->name('empresa-activa.cambiar')->middleware('auth');
+
 use App\Http\Controllers\VisitaAccesoAutorizacionController;
 Route::get('/autorizar-acceso/{token}', [VisitaAccesoAutorizacionController::class, 'show'])->name('autorizar-acceso.show');
 Route::post('/autorizar-acceso/{token}', [VisitaAccesoAutorizacionController::class, 'autorizar'])->name('autorizar-acceso.post');

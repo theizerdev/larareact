@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Building2, GitBranch, Briefcase, Calendar, Fingerprint, Receipt } from 'lucide-react';
 import * as React from 'react';
+import EmpresaSelector from '@/components/empresa-selector';
 import LanguageToggle from '@/components/language-toggle';
 import TemplateCustomizer from '@/components/template-customizer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -1080,6 +1081,9 @@ export default function AdminSaasLayout({
                         </div>
 
                         <div className="flex items-center gap-2">
+                            {/* Empresa activa (sólo Super Administrador) */}
+                            <EmpresaSelector />
+
                             {/* Language toggle */}
                             <LanguageToggle />
 

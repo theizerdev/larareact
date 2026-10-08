@@ -6,6 +6,7 @@ use App\Models\Empresa;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -25,7 +26,9 @@ class EmpresaCrudTest extends TestCase
             Permission::findOrCreate($name, 'web');
         }
 
+        // Crear, activar y desactivar empresas es del Super Administrador (ruta 'superadmin').
         $user = User::factory()->create(['empresa_id' => null]);
+        $user->assignRole(Role::findOrCreate('super-admin', 'web'));
         $user->givePermissionTo($permissions);
         $user->refresh();
 
@@ -158,12 +161,14 @@ class EmpresaCrudTest extends TestCase
 
     public function test_create_requires_permission(): void
     {
-        $user = User::factory()->create(['empresa_id' => null]);
+        // Un usuario normal de una empresa, sin el permiso: 403. (Sin empresa ya
+        // ni siquiera entra al panel; ver EmpresaActiva.)
+        $user = User::factory()->create();
 
         $this->actingAs($user)
             ->post('/admin/empresas', $this->validPayload())
             ->assertForbidden();
 
-        $this->assertSame(0, Empresa::withoutTenant()->count());
+        $this->assertSame(0, Empresa::withoutTenant()->where('documento', 'ACME010101AAA')->count());
     }
 }

@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\Empresa;
+use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -33,6 +35,12 @@ class UserFactory extends Factory
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
+            // Un usuario sin empresa no puede usar el panel (ver EmpresaActiva), así que
+            // todo usuario de prueba pertenece a una empresa y sucursal de prueba.
+            'empresa_id' => fn () => Empresa::withoutTenant()
+                ->firstOrCreate(['documento' => 'TEST-EMPRESA'], ['razon_social' => 'Empresa de prueba', 'status' => true])->id,
+            'sucursal_id' => fn (array $attributes) => $attributes['empresa_id'] === null ? null : Sucursal::withoutTenant()
+                ->firstOrCreate(['empresa_id' => $attributes['empresa_id'], 'nombre' => 'Sucursal de prueba'], ['status' => true])->id,
         ];
     }
 

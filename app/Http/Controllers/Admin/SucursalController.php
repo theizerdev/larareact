@@ -10,6 +10,7 @@ use App\Models\Sucursal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class SucursalController extends Controller
 {
@@ -61,6 +62,8 @@ class SucursalController extends Controller
 
     public function store(SucursalRequest $request)
     {
+        $this->guardEmpresa($request, $request->validated());
+
         DB::transaction(function () use ($request) {
             Sucursal::create($request->validated());
         });
@@ -73,6 +76,8 @@ class SucursalController extends Controller
 
     public function update(SucursalRequest $request, Sucursal $sucursal)
     {
+        $this->guardEmpresa($request, $request->validated());
+
         DB::transaction(function () use ($sucursal, $request) {
             $sucursal->update($request->validated());
         });
@@ -98,6 +103,27 @@ class SucursalController extends Controller
             'type' => 'success',
             'message' => __('Branch deleted successfully.'),
         ]);
+    }
+
+    /**
+     * Una sucursal sólo se da de alta (o se mueve) dentro de la empresa del
+     * propio usuario. `empresa_id` sólo pasaba `exists:empresas`, así que un admin
+     * podía crear sucursales en otra empresa o llevarse la suya a ella; ligarla a
+     * otra empresa es cosa del Super Administrador.
+     */
+    private function guardEmpresa(Request $request, array $validated): void
+    {
+        $actor = $request->user();
+
+        if ($actor->isSuperAdmin()) {
+            return;
+        }
+
+        if ((int) ($validated['empresa_id'] ?? 0) !== (int) $actor->empresa_id) {
+            throw ValidationException::withMessages([
+                'empresa_id' => __('You are not allowed to assign this company.'),
+            ]);
+        }
     }
 
     public function toggleStatus(Sucursal $sucursal)

@@ -26,8 +26,9 @@ class UserController extends Controller
         $roleName = $request->input('role');
         $empresaId = $request->input('empresa_id');
         $perPage = $request->input('perPage', 10);
+        $actor = $request->user();
 
-        $query = User::with(['empresa', 'sucursal', 'roles', 'paisTelefono']);
+        $query = $this->visiblesPara($actor, User::with(['empresa', 'sucursal', 'roles', 'paisTelefono']));
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -53,15 +54,16 @@ class UserController extends Controller
         $users = $query->latest()->paginate($perPage)->withQueryString();
 
         $stats = [
-            'total' => User::count(),
-            'activos' => User::where('status', 'activo')->count(),
-            'inactivos' => User::where('status', 'inactivos')->count(),
+            'total' => $this->visiblesPara($actor, User::query())->count(),
+            'activos' => $this->visiblesPara($actor, User::query())->where('status', 'activo')->count(),
+            'inactivos' => $this->visiblesPara($actor, User::query())->where('status', 'inactivo')->count(),
         ];
 
         return inertia('admin/Usuarios/Index', [
             'users' => $users,
             'stats' => $stats,
-            'roles' => Role::all(['id', 'name']),
+            'roles' => Role::all(['id', 'name'])
+                ->filter(fn ($rol) => $this->nivelDeRol($rol->name) <= $this->nivelDe($actor))->values(),
             'empresas' => Empresa::where('status', true)->orderBy('razon_social')->get(['id', 'razon_social']),
             'sucursales' => Sucursal::where('status', true)->orderBy('nombre')->get(['id', 'nombre', 'empresa_id']),
             'paises' => Pais::where('activo', true)
@@ -73,6 +75,8 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        $this->normalizarCorreo($request);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'username' => 'nullable|string|max:255|unique:users,username',
@@ -121,6 +125,9 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $this->guardObjetivo($request, $user);
+        $this->normalizarCorreo($request);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'username' => ['nullable', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
@@ -135,6 +142,12 @@ class UserController extends Controller
         ]);
 
         $validated = $this->guardRoleAndTenantAssignment($request, $validated);
+
+        if ($request->user()->is($user) && $validated['status'] !== 'activo') {
+            throw ValidationException::withMessages([
+                'status' => __('You cannot deactivate or delete your own user.'),
+            ]);
+        }
 
         try {
             if (! empty($validated['password'])) {
@@ -163,8 +176,14 @@ class UserController extends Controller
         }
     }
 
-    public function destroy(User $user)
+    public function destroy(Request $request, User $user)
     {
+        $this->guardObjetivo($request, $user);
+
+        if ($request->user()->is($user)) {
+            return $this->errorSobreUnoMismo();
+        }
+
         try {
             $user->delete();
 
@@ -182,8 +201,14 @@ class UserController extends Controller
         }
     }
 
-    public function toggleStatus(User $user)
+    public function toggleStatus(Request $request, User $user)
     {
+        $this->guardObjetivo($request, $user);
+
+        if ($request->user()->is($user)) {
+            return $this->errorSobreUnoMismo();
+        }
+
         try {
             $user->status = $user->status === 'activo' ? 'inactivo' : 'activo';
             $user->save();
@@ -200,6 +225,68 @@ class UserController extends Controller
                 'message' => __('There was an error updating the status. Please try again.'),
             ]);
         }
+    }
+
+    /** Roles del Super Administrador (mismos alias que User::isSuperAdmin). */
+    private const ROLES_SUPERADMIN = ['Super Administrador', 'super-admin', 'Super Admin', 'super_admin'];
+
+    /**
+     * Jerarquía de roles: super-admin (3) > admin (2) > el resto (1). Quien
+     * administra usuarios sólo ve, edita, desactiva o borra a gente de su nivel o
+     * menor, y sólo asigna roles de su nivel o menor. Sin esto, cualquiera con
+     * "users.edit" (p. ej. un operador) podía quedarse con la cuenta del
+     * superadmin, hacerse admin o cambiarle la contraseña a un admin.
+     */
+    private function nivelDeRol(string $rol): int
+    {
+        return match (true) {
+            in_array($rol, self::ROLES_SUPERADMIN, true) => 3,
+            $rol === 'admin' => 2,
+            default => 1,
+        };
+    }
+
+    private function nivelDe(User $user): int
+    {
+        return $user->roles->map(fn ($rol) => $this->nivelDeRol($rol->name))->max() ?? 1;
+    }
+
+    /** Sólo las personas de nivel igual o menor al de quien consulta. */
+    private function visiblesPara(User $actor, $query)
+    {
+        $nivel = $this->nivelDe($actor);
+
+        if ($nivel >= 3) {
+            return $query;
+        }
+
+        $porEncima = $nivel >= 2 ? self::ROLES_SUPERADMIN : [...self::ROLES_SUPERADMIN, 'admin'];
+
+        return $query->whereDoesntHave('roles', fn ($roles) => $roles->whereIn('name', $porEncima));
+    }
+
+    /** Correos en minúsculas y sin espacios, para que `unique` y el inicio de sesión vean lo mismo. */
+    private function normalizarCorreo(Request $request): void
+    {
+        if (is_string($request->input('email'))) {
+            $request->merge(['email' => mb_strtolower(trim($request->input('email')))]);
+        }
+    }
+
+    /** Con el bloqueo por estado, desactivarse o borrarse a uno mismo lo dejaría fuera. */
+    private function errorSobreUnoMismo()
+    {
+        return back()->with('notification', [
+            'type' => 'error',
+            'message' => __('You cannot deactivate or delete your own user.'),
+        ]);
+    }
+
+    private function guardObjetivo(Request $request, User $objetivo): void
+    {
+        $actor = $request->user();
+
+        abort_if($this->nivelDe($objetivo) > $this->nivelDe($actor), 403);
     }
 
     /**
@@ -229,6 +316,15 @@ class UserController extends Controller
             throw ValidationException::withMessages([
                 'roles' => __('You are not allowed to assign the super-admin role.'),
             ]);
+        }
+
+        $nivel = $this->nivelDe($actor);
+        foreach ($validated['roles'] ?? [] as $rol) {
+            if ($this->nivelDeRol((string) $rol) > $nivel) {
+                throw ValidationException::withMessages([
+                    'roles' => __('You are not allowed to assign a role higher than your own.'),
+                ]);
+            }
         }
 
         if ($actor->empresa_id && array_key_exists('empresa_id', $validated)) {

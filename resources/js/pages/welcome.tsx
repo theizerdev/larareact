@@ -1,7 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { useTranslate } from '@/hooks/use-translate';
 import { dashboard, login } from '@/routes';
-import { register } from '@/routes';
 
 export default function Welcome() {
     const { auth } = usePage().props;
@@ -21,20 +20,12 @@ export default function Welcome() {
                                 {__('Dashboard')}
                             </Link>
                         ) : (
-                            <>
-                                <Link
-                                    href={login()}
-                                    className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
-                                >
-                                    {__('Log in')}
-                                </Link>
-                                <Link
-                                    href={register()}
-                                    className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
-                                >
-                                    {__('Register')}
-                                </Link>
-                            </>
+                            <Link
+                                href={login()}
+                                className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
+                            >
+                                {__('Log in')}
+                            </Link>
                         )}
                     </nav>
                 </header>

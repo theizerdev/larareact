@@ -189,11 +189,24 @@ class EmpleadoImportService
             ->pluck('id', 'documento_identidad')
             ->toArray();
 
+        // El número de empleado es único entre TODAS las empresas, pero la consulta de arriba sólo
+        // ve a los empleados de la empresa/sucursal del usuario. Si el Excel trae uno que ya está
+        // registrado fuera de su alcance, importar fallaba al final con un error de SQL; aquí se
+        // avisa fila por fila, sin revelar de quién es. (Un código de acceso repetido no es
+        // problema: al importar se le asigna uno nuevo.)
+        $docsOcupados = Empleado::withoutTenant()->whereIn('documento_identidad', $docsList)->pluck('id', 'documento_identidad')->toArray();
+
         $records = [];
         $nuevosCount = 0;
         $actualizarCount = 0;
 
         foreach ($groupedEmployees as $doc => $emp) {
+            if (isset($docsOcupados[$doc]) && ! isset($existingDocs[$doc])) {
+                $invalidRows[] = ['row' => $emp['rows'][0], 'reason' => "El número de empleado {$doc} ya está registrado en otro lugar."];
+
+                continue;
+            }
+
             $isDuplicate = isset($existingDocs[$doc]);
             if ($isDuplicate) {
                 $actualizarCount++;
@@ -358,7 +371,10 @@ class EmpleadoImportService
                 ];
 
                 if (!empty($codigoAccesoExcel)) {
-                    $occupied = Empleado::where('codigo_acceso', $codigoAccesoExcel)
+                    // withoutTenant: el índice único de codigo_acceso es de toda la plataforma; con el
+                    // scope sólo se veían los códigos de la propia empresa, y un código que ya usa otra
+                    // empresa se intentaba insertar tal cual y la importación fallaba completa.
+                    $occupied = Empleado::withoutTenant()->where('codigo_acceso', $codigoAccesoExcel)
                         ->when($existing, fn($q) => $q->where('id', '!=', $existing->id))
                         ->exists();
 
@@ -440,9 +456,13 @@ class EmpleadoImportService
                 'exception' => $e
             ]);
 
+            $choque = $e instanceof \Illuminate\Database\UniqueConstraintViolationException;
+
             return [
                 'success' => false,
-                'message' => 'Ocurrió un error al procesar la importación: ' . $e->getMessage()
+                'message' => $choque
+                    ? 'No se importó nada: un código de acceso o número de empleado ya lo usa otro empleado. Revisa la vista previa del archivo.'
+                    : 'Ocurrió un error al procesar la importación. Revisa el archivo e inténtalo de nuevo.',
             ];
         }
     }

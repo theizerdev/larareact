@@ -161,7 +161,9 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Las cuentas las da de alta un admin (Usuarios), ligadas a una empresa:
+        // sin registro público no se pueden crear cuentas ni disparar correos ajenos.
+        // Features::registration(),
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::twoFactorAuthentication([

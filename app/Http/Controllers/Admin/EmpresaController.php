@@ -79,6 +79,12 @@ class EmpresaController extends Controller
     {
         $data = $request->validated();
 
+        // Activar/desactivar una empresa es del Super Administrador (toggleStatus);
+        // por aquí un admin podía apagar su propia empresa.
+        if (! $request->user()->isSuperAdmin()) {
+            unset($data['status']);
+        }
+
         DB::transaction(function () use ($empresa, $data) {
             $empresa->update($data);
         });

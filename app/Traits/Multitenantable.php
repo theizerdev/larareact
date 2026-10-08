@@ -33,7 +33,10 @@ trait Multitenantable
                         }
                     }
 
-                    if ($table !== 'empresas' && $table !== 'sucursales' && isset($user->sucursal_id) && $user->sucursal_id) {
+                    // Sólo si la sucursal del usuario es de la misma empresa del
+                    // registro: si no, quedaría colgado de la sucursal de otra empresa.
+                    if ($table !== 'empresas' && $table !== 'sucursales' && isset($user->sucursal_id) && $user->sucursal_id
+                        && (int) $user->sucursal?->empresa_id === (int) $model->empresa_id) {
                         if (! isset($model->sucursal_id) || empty($model->sucursal_id)) {
                             $model->sucursal_id = $user->sucursal_id;
                         }
@@ -45,7 +48,8 @@ trait Multitenantable
         });
 
         // Global scope: filtra por empresa y sucursal del usuario autenticado
-        // El Super Administrador no tiene filtro (ve todos los tenants)
+        // El Super Administrador no tiene filtro (ve todos los tenants) salvo que
+        // haya elegido una empresa en el selector del panel.
         static::addGlobalScope('multitenancy', function (Builder $builder) {
             static $isResolvingUser = false;
 
@@ -71,11 +75,21 @@ trait Multitenantable
                     ? $user->isSuperAdmin()
                     : (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Administrador', 'super-admin', 'Super Admin', 'super_admin']));
 
-                if ($isSuperAdmin) {
+                // Sin empresa elegida en el selector, el Super Administrador
+                // ve todos los tenants. Con una elegida, filtra como un
+                // usuario de esa empresa (ver User::entrarAEmpresa).
+                if ($isSuperAdmin && ! ($user->empresaActiva ?? null)) {
                     return;
                 }
 
                 $table = $builder->getModel()->getTable();
+
+                // Un usuario normal sin empresa no ve datos de ninguna.
+                if (! $isSuperAdmin && ! $user->empresa_id) {
+                    $builder->whereRaw('1 = 0');
+
+                    return;
+                }
 
                 // 1. Filtrado por Empresa
                 if ($table === 'empresas') {
@@ -88,9 +102,14 @@ trait Multitenantable
                     }
                 }
 
-                // 2. Filtrado por Sucursal (no aplica a la tabla empresas)
-                if ($table === 'empresas') {
-                    // La tabla empresas representa el tenant principal y no posee columna sucursal_id
+                // 2. Filtrado por Sucursal (no aplica a la tabla empresas ni al
+                // superadmin dentro de una empresa: ve todas sus sucursales)
+                // Los catálogos de toda la empresa (TENANT_SOLO_EMPRESA) tampoco:
+                // todas sus sucursales comparten los mismos.
+                $soloEmpresa = defined(get_class($builder->getModel()).'::TENANT_SOLO_EMPRESA');
+
+                if ($table === 'empresas' || $isSuperAdmin || $soloEmpresa) {
+                    // empresas no tiene sucursal_id; el superadmin no se limita a una sucursal
                 } elseif ($table === 'sucursales') {
                     if ($user->sucursal_id) {
                         $builder->where("{$table}.id", $user->sucursal_id);

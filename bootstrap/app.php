@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Middleware\EmpresaActiva;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RegionalConfiguration;
 use App\Http\Middleware\SetLocale;
+use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Console\Scheduling\Schedule;
@@ -15,6 +17,7 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -76,9 +79,27 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             SetLocale::class,
             HandleAppearance::class,
+            EmpresaActiva::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        // Un usuario normal sin empresa no se puede cargar: el scope Multitenantable lo oculta
+        // hasta de la búsqueda de su propia sesión, así que `auth` lo ve como no autenticado
+        // (y corre antes que EmpresaActiva). Aquí se le deja el aviso en vez de rebotarlo mudo.
+        $middleware->redirectGuestsTo(function (Request $request) {
+            $id = $request->hasSession() ? $request->session()->get(Auth::guard('web')->getName()) : null;
+            $usuario = $id ? User::withoutGlobalScopes()->find($id) : null;
+
+            if ($usuario && ! $usuario->empresa_id && ! $usuario->isSuperAdmin()) {
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                $request->session()->flash('status', __('Your user has no company assigned. Contact your administrator.'));
+            }
+
+            return route('login');
+        });
 
         $middleware->validateCsrfTokens(except: [
             'preregistro/*',
@@ -89,6 +110,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'superadmin' => \App\Http\Middleware\SoloSuperAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
