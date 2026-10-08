@@ -23,7 +23,31 @@ class ProductorRequest extends FormRequest
     {
         $id = $this->route('productor')?->id ?? $this->route('productor');
 
+        $actual = $this->route('productor');
+        $actual = $actual instanceof \App\Models\Productor ? $actual : null;
+
+        // Obligatorias al crear; al editar sólo si el socio aún no tiene la imagen.
+        $imagen = function (string $campo) use ($actual) {
+            return [
+                $actual?->{$campo} ? 'nullable' : 'required',
+                function ($attribute, $value, $fail) use ($actual, $campo) {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    $valida = \App\Services\ImagenService::esDataUrlValida($value)
+                        || ($actual?->{$campo} && $value === $actual->{$campo});
+                    if (! $valida) {
+                        $fail(__('The image is not valid. Use a JPG, PNG or WEBP photo of up to 8 MB.'));
+                    }
+                },
+            ];
+        };
+
         return [
+            'foto_empresa' => $imagen('foto_empresa'),
+            'foto_responsable' => $imagen('foto_responsable'),
+            'ine_responsable_frente' => $imagen('ine_responsable_frente'),
+            'ine_responsable_reverso' => $imagen('ine_responsable_reverso'),
             'razon_social' => ['required', 'string', 'max:255'],
             'nombre_comercial' => ['required', 'string', 'max:255'],
             'rfc' => ['nullable', 'string', 'max:255'],
@@ -33,8 +57,6 @@ class ProductorRequest extends FormRequest
                 'max:255',
                 Rule::unique('productores', 'documento_identidad')->ignore($id),
             ],
-            'razon_social_rancho' => ['nullable', 'string', 'max:255'],
-            'nombre_comercial_rancho' => ['nullable', 'string', 'max:255'],
             'pais_telefono_id' => ['nullable', 'exists:pais,id'],
             'telefono' => ['nullable', 'string', 'max:255'],
             'direccion' => ['nullable', 'string'],
@@ -55,6 +77,16 @@ class ProductorRequest extends FormRequest
     /**
      * Same cross-tenant gap found and fixed in ProveedorRequest.
      */
+    public function attributes(): array
+    {
+        return [
+            'foto_empresa' => __('company photo'),
+            'foto_responsable' => __('responsible person photo'),
+            'ine_responsable_frente' => __('INE (front)'),
+            'ine_responsable_reverso' => __('INE (back)'),
+        ];
+    }
+
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {

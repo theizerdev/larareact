@@ -159,7 +159,7 @@ export default function ProductorVehiculosModal({
         if (!productor) return;
         setLoading(true);
         try {
-            const response = await fetch(`/admin/productores/${productor.id}/vehiculos`);
+            const response = await fetch(`/admin/socios-comerciales/${productor.id}/vehiculos`);
             const data = await response.json();
             if (data.success) {
                 setVehicles(data.vehicles);
@@ -251,7 +251,7 @@ export default function ProductorVehiculosModal({
             const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
             const url = editingVehicle 
                 ? `/admin/productor-vehiculos/${editingVehicle.id}` 
-                : `/admin/productores/${productor.id}/vehiculos`;
+                : `/admin/socios-comerciales/${productor.id}/vehiculos`;
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -292,7 +292,7 @@ export default function ProductorVehiculosModal({
                             </div>
                             <div>
                                 <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                                    {__('Producer Vehicles')}
+                                    {__('Commercial Partner Vehicles')}
                                 </DialogTitle>
                                 <DialogDescription className="text-xs text-slate-500">
                                     {productor.razon_social}
@@ -578,7 +578,7 @@ export default function ProductorVehiculosModal({
                             <div className="py-12 text-center text-slate-400 border border-dashed rounded-xl p-8">
                                 <Car className="h-10 w-10 mx-auto text-slate-300 mb-2" />
                                 <p className="text-sm font-semibold">{__('No vehicles registered')}</p>
-                                <p className="text-xs mt-1 text-slate-400">{__('Click "Add Vehicle" to register vehicles for this producer.')}</p>
+                                <p className="text-xs mt-1 text-slate-400">{__('Click "Add Vehicle" to register vehicles for this commercial partner.')}</p>
                             </div>
                         ) : (
                             <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl overflow-hidden">

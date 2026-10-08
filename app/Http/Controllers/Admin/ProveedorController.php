@@ -131,7 +131,7 @@ class ProveedorController extends Controller
         $user = auth()->user();
         $token = bin2hex(random_bytes(16));
 
-        \App\Models\ProveedorPreRegistro::create([
+        $preRegistro = \App\Models\ProveedorPreRegistro::create([
             'nombre_comercial' => $request->nombre_comercial,
             'pais_telefono_id' => $request->pais_telefono_id,
             'telefono' => $request->telefono,
@@ -141,6 +141,8 @@ class ProveedorController extends Controller
             'sucursal_id' => $user->sucursal_id,
             'status' => 'pendiente',
         ]);
+
+        $enviado = null;
 
         try {
             $pais = \App\Models\Pais::findOrFail($request->pais_telefono_id);
@@ -152,7 +154,7 @@ class ProveedorController extends Controller
             $whatsappService = new \App\Services\WhatsAppService($empresa);
 
             $link = url("/preregistro/{$token}");
-            $terminos    = url("https://www.driscolls.com/Privacy-and-Terms  ");
+            $terminos    = config('app.privacy_url');
 
             $sucursalNombre = $user->sucursal?->nombre ?? ($empresa->razon_social ?? $empresa->nombre_comercial ?? 'Nuestras Instalaciones');
 
@@ -160,14 +162,23 @@ class ProveedorController extends Controller
                 . "Ubicación: {$sucursalNombre}\n"
                 . "Colaboradores: Indicar todos los que acudirán\n"
                 . "Vehículos: En el que acudirán.\n\n"
-                . "Será Indispensable contar de cada colaborador con: INE vigente y Chaleco de seguridad*\n\n"
+                . "Será indispensable que cada colaborador cuente con una identificación oficial vigente y el equipo de seguridad que se indique en el acceso.\n\n"
                 . "Ingresar a:\n"
                 . $link. "\n\n"
-                . "Para cualquier duda adicional, podrá consultar el aviso de privacidad en: {$terminos}";
+                . ($terminos ? "Para cualquier duda adicional, podrá consultar el aviso de privacidad en: {$terminos}" : "Para cualquier duda adicional, contacte a la persona que le envió esta invitación.");
 
-            $whatsappService->sendMessage($to, $message, true);
+            $enviado = $whatsappService->sendMessage($to, $message, true);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp de invitación: ' . $e->getMessage());
+        }
+
+        // sendMessage() devuelve null si falla: se quita la invitación huérfana y se avisa con un error real.
+        if (! $enviado) {
+            $preRegistro->delete();
+
+            return back()->withErrors([
+                'telefono' => __('The WhatsApp invitation could not be sent. Check the phone number and the WhatsApp integration, then try again.'),
+            ]);
         }
 
         return redirect()->back();

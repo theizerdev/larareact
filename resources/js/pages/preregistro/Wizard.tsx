@@ -1427,7 +1427,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 <div key={i} className="flex justify-between items-center py-2 text-xs">
                                                     <div>
                                                         <p className="font-semibold text-slate-800 dark:text-slate-200">{emp.nombres} {emp.apellidos}</p>
-                                                        <span className="text-slate-400 font-mono">DNI: {emp.documento_identidad}</span>
+                                                        <span className="text-slate-400 font-mono">ID: {emp.documento_identidad}</span>
                                                     </div>
                                                     <span className="text-[#104a29] font-medium bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px]">
                                                         {emp.cargo || __('Colaborador')}

@@ -25,6 +25,7 @@ import {
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
 
+import { FotoCampo } from '@/components/admin/foto-campo';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
 import { FilterBar, FilterField } from '@/components/filter-bar';
@@ -78,14 +79,16 @@ interface Productor {
     documento_identidad: string;
     codigo_acceso?: string | null;
     rfc?: string | null;
-    razon_social_rancho?: string | null;
-    nombre_comercial_rancho?: string | null;
     pais_telefono_id?: number | null;
     telefono?: string | null;
     direccion?: string | null;
     codigo_postal?: string | null;
     estado?: string | null;
     responsable?: string | null;
+    foto_empresa?: string | null;
+    foto_responsable?: string | null;
+    ine_responsable_frente?: string | null;
+    ine_responsable_reverso?: string | null;
     curp?: string | null;
     pais_id?: number | null;
     latitud?: number | null;
@@ -230,14 +233,16 @@ export default function Index({
         nombre_comercial: '',
         rfc: '',
         documento_identidad: '',
-        razon_social_rancho: '',
-        nombre_comercial_rancho: '',
         pais_telefono_id: paises.length > 0 ? String(paises[0].id) : '',
         telefono: '',
         direccion: sucursal?.direccion || '',
         codigo_postal: '',
         estado: '',
         responsable: '',
+        foto_empresa: '',
+        foto_responsable: '',
+        ine_responsable_frente: '',
+        ine_responsable_reverso: '',
         curp: '',
         pais_id: paises.length > 0 ? String(paises[0].id) : '',
         latitud: defaultLat as any,
@@ -250,8 +255,8 @@ export default function Index({
 
     // Pre-registro Form
     const preRegistroForm = useForm({
-        razon_social_rancho: '',
-        nombre_comercial_rancho: '',
+        razon_social: '',
+        nombre_comercial: '',
         pais_telefono_id: paises.length > 0 ? String(paises[0].id) : '',
         telefono: '',
     });
@@ -293,14 +298,16 @@ export default function Index({
             nombre_comercial: productor.nombre_comercial || '',
             rfc: productor.rfc || '',
             documento_identidad: productor.documento_identidad || '',
-            razon_social_rancho: productor.razon_social_rancho || '',
-            nombre_comercial_rancho: productor.nombre_comercial_rancho || '',
             pais_telefono_id: productor.pais_telefono_id ? String(productor.pais_telefono_id) : (paises.length > 0 ? String(paises[0].id) : ''),
             telefono: productor.telefono || '',
             direccion: productor.direccion || '',
             codigo_postal: productor.codigo_postal || '',
             estado: productor.estado || '',
             responsable: productor.responsable || '',
+            foto_empresa: productor.foto_empresa || '',
+            foto_responsable: productor.foto_responsable || '',
+            ine_responsable_frente: productor.ine_responsable_frente || '',
+            ine_responsable_reverso: productor.ine_responsable_reverso || '',
             curp: productor.curp || productor.documento_identidad || '',
             pais_id: productor.pais_id ? String(productor.pais_id) : (paises.length > 0 ? String(paises[0].id) : ''),
             latitud: productor.latitud ?? null,
@@ -318,20 +325,26 @@ export default function Index({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingProductor) {
-            put(`/admin/productores/${editingProductor.id}`, {
+            put(`/admin/socios-comerciales/${editingProductor.id}`, {
                 onSuccess: () => {
                     setIsCreateModalOpen(false);
-                    toast.success(__('Producer updated successfully'));
+                    toast.success(__('Commercial partner updated successfully'));
                 },
-                onError: () => toast.error(__('Please check the form for errors')),
+                onError: (errs) => {
+                    if (errs.foto_empresa || errs.foto_responsable || errs.ine_responsable_frente || errs.ine_responsable_reverso) setActiveTab('fotos');
+                    toast.error(__('Please check the form for errors'));
+                },
             });
         } else {
-            post('/admin/productores', {
+            post('/admin/socios-comerciales', {
                 onSuccess: () => {
                     setIsCreateModalOpen(false);
-                    toast.success(__('Producer created successfully'));
+                    toast.success(__('Commercial partner created successfully'));
                 },
-                onError: () => toast.error(__('Please check the form for errors')),
+                onError: (errs) => {
+                    if (errs.foto_empresa || errs.foto_responsable || errs.ine_responsable_frente || errs.ine_responsable_reverso) setActiveTab('fotos');
+                    toast.error(__('Please check the form for errors'));
+                },
             });
         }
     };
@@ -339,11 +352,11 @@ export default function Index({
     // Pre-registro submission
     const handlePreRegistroSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        preRegistroForm.post('/admin/productores/pre-registro', {
+        preRegistroForm.post('/admin/socios-comerciales/pre-registro', {
             onSuccess: () => {
                 setIsPreRegistroModalOpen(false);
                 preRegistroForm.reset();
-                toast.success(__('Producer pre-registration link sent via WhatsApp'));
+                toast.success(__('Commercial partner pre-registration link sent via WhatsApp'));
             },
             onError: () => toast.error(__('Could not send pre-registration invitation')),
         });
@@ -352,11 +365,11 @@ export default function Index({
     // Delete submission
     const handleDelete = () => {
         if (!deletingProductor) return;
-        router.delete(`/admin/productores/${deletingProductor.id}`, {
+        router.delete(`/admin/socios-comerciales/${deletingProductor.id}`, {
             onSuccess: () => {
                 setIsDeleteModalOpen(false);
                 setDeletingProductor(null);
-                toast.success(__('Producer deleted successfully'));
+                toast.success(__('Commercial partner deleted successfully'));
             },
         });
     };
@@ -365,7 +378,7 @@ export default function Index({
     const handleToggleStatus = (productor: Productor, newStatus?: string) => {
         const nextStatus = newStatus || (productor.status === 'activo' ? 'suspendido' : 'activo');
         router.patch(
-            `/admin/productores/${productor.id}/toggle-status`,
+            `/admin/socios-comerciales/${productor.id}/toggle-status`,
             { status: nextStatus },
             {
                 onSuccess: () => toast.success(__('Status updated successfully')),
@@ -374,7 +387,7 @@ export default function Index({
     };
 
     const handleSendCarnetWhatsApp = (productor: Productor) => {
-        router.post(`/admin/productores/${productor.id}/send-carnet-whatsapp`, {}, {
+        router.post(`/admin/socios-comerciales/${productor.id}/send-carnet-whatsapp`, {}, {
             preserveScroll: true,
             onSuccess: () => toast.success(__('Blue ID Badge sent via WhatsApp.')),
             onError: () => toast.error(__('Could not send WhatsApp.')),
@@ -385,7 +398,7 @@ export default function Index({
     const columns: ColumnDef<Productor>[] = [
         {
             accessorKey: 'razon_social',
-            header: __('Ranch'),
+            header: __('Commercial Partner'),
             cell: (productor: Productor) => (
                 <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-lg bg-[#104a29]/10 text-[#104a29] dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
@@ -510,9 +523,9 @@ export default function Index({
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleOpenEditModal(productor)}>
                                 <Pencil className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2 text-slate-600" />
-                                {__('Edit Producer')}
+                                {__('Edit Commercial Partner')}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.get(`/admin/productores/${productor.id}/carnet`)}>
+                            <DropdownMenuItem onClick={() => router.get(`/admin/socios-comerciales/${productor.id}/carnet`)}>
                                 <QrCode className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2 text-blue-600" />
                                 {__('Blue ID Badge / Carnet')}
                             </DropdownMenuItem>
@@ -541,20 +554,20 @@ export default function Index({
 
     return (
         <>
-            <Head title={__('Producers')} />
+            <Head title={__('Commercial Partners')} />
 
             <div className="space-y-6">
                 <Breadcrumbs
                     breadcrumbs={[
                         { title: __('Organization'), href: '#' },
-                        { title: __('Producers'), href: '/admin/productores' },
+                        { title: __('Commercial Partners'), href: '/admin/socios-comerciales' },
                     ]}
                 />
 
                 <ModuleHeader
                     icon={<Sprout className="h-6 w-6 text-white" />}
-                    title={__('Producers')}
-                    description={__('Manage agriculture producers, ranches, collaborators, vehicles and pre-registrations.')}
+                    title={__('Commercial Partners')}
+                    description={__('Manage commercial partners, collaborators, vehicles and pre-registrations.')}
                     colorClassName="bg-[#071EA3]"
                 >
                     <div className="flex items-center gap-2">
@@ -575,20 +588,20 @@ export default function Index({
                             className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
                         >
                             <Plus className="h-4 w-4" />
-                            {__('New Producer')}
+                            {__('New Commercial Partner')}
                         </Button>
                     </div>
                 </ModuleHeader>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard
-                        title={__('Total Producers')}
+                        title={__('Total Commercial Partners')}
                         value={stats.total}
                         icon={<Sprout className="h-6 w-6" />}
                         colorClassName="bg-blue-100 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400"
                     />
                     <StatCard
-                        title={__('Active Producers')}
+                        title={__('Active Commercial Partners')}
                         value={stats.activos}
                         icon={<CheckCircle className="h-6 w-6" />}
                         colorClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400"
@@ -611,7 +624,7 @@ export default function Index({
                     <div className="flex flex-wrap items-end gap-4">
                         <FilterField label={__('Search')}>
                             <Input
-                                placeholder={__('Search by rancho, RFC, responsible, phone...')}
+                                placeholder={__('Search by business name, tax ID, contact, phone...')}
                                 className="w-full md:w-80"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -675,49 +688,44 @@ export default function Index({
             <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
                 <DialogContent className="w-[95vw] sm:max-w-[900px] lg:max-w-[1100px] xl:max-w-[1200px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader className="border-b pb-4">
-                        <DialogTitle>{editingProductor ? __('Edit Producer') : __('New Producer')}</DialogTitle>
+                        <DialogTitle>{editingProductor ? __('Edit Commercial Partner') : __('New Commercial Partner')}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-6 py-2">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                            <TabsList className="grid grid-cols-2 mb-6">
-                                <TabsTrigger value="general">{__('Ranch Data')}</TabsTrigger>
+                            <TabsList className="grid grid-cols-3 mb-6">
+                                <TabsTrigger value="general">{__('Commercial Partner Data')}</TabsTrigger>
+                                <TabsTrigger value="fotos">{__('Photos & ID')}</TabsTrigger>
                                 <TabsTrigger value="location">{__('Location & Address')}</TabsTrigger>
                             </TabsList>
                             <TabsContent value="general" className="space-y-6">
                                 <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
                                     <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
                                         <Building2 className="h-4 w-4 text-[#104a29]" />
-                                        {__('Ranch Data')}
+                                        {__('Commercial Partner Data')}
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
-                                            <Label htmlFor="razon_social">{__('Ranch Business Name')} *</Label>
+                                            <Label htmlFor="razon_social">{__('Business Name')} *</Label>
                                             <Input
                                                 id="razon_social"
                                                 required
                                                 className="mt-1.5 w-full"
-                                                placeholder="ej. Agrícola Los Pinos S.A. de C.V."
+                                                placeholder="ej. Comercializadora Ejemplo S.A. de C.V."
                                                 value={data.razon_social}
-                                                onChange={(e) => {
-                                                    setData('razon_social', e.target.value);
-                                                    setData('razon_social_rancho', e.target.value);
-                                                }}
+                                                onChange={(e) => setData('razon_social', e.target.value)}
                                             />
                                             {errors.razon_social && <p className="text-xs text-red-500 mt-1">{errors.razon_social}</p>}
                                         </div>
 
                                         <div>
-                                            <Label htmlFor="nombre_comercial">{__('Ranch Trade Name')} *</Label>
+                                            <Label htmlFor="nombre_comercial">{__('Trade Name')} *</Label>
                                             <Input
                                                 id="nombre_comercial"
                                                 required
                                                 className="mt-1.5 w-full"
-                                                placeholder="ej. Rancho Los Pinos"
+                                                placeholder="ej. Comercializadora Ejemplo"
                                                 value={data.nombre_comercial}
-                                                onChange={(e) => {
-                                                    setData('nombre_comercial', e.target.value);
-                                                    setData('nombre_comercial_rancho', e.target.value);
-                                                }}
+                                                onChange={(e) => setData('nombre_comercial', e.target.value)}
                                             />
                                             {errors.nombre_comercial && <p className="text-xs text-red-500 mt-1">{errors.nombre_comercial}</p>}
                                         </div>
@@ -774,7 +782,7 @@ export default function Index({
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <Label htmlFor="status">{__('Producer Status')}</Label>
+                                            <Label htmlFor="status">{__('Commercial Partner Status')}</Label>
                                             <Select value={data.status} onValueChange={(val: any) => setData('status', val)}>
                                                 <SelectTrigger id="status" className="mt-1.5 w-full">
                                                     <SelectValue placeholder={__('Select Status')} />
@@ -786,6 +794,56 @@ export default function Index({
                                                 </SelectContent>
                                             </Select>
                                         </div>
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            {/* Tab: fotos de la empresa e identificación del responsable */}
+                            <TabsContent value="fotos" className="space-y-6">
+                                <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
+                                    <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                                        <Building2 className="h-4 w-4 text-[#104a29]" />
+                                        {__('Company photo')}
+                                    </h4>
+                                    <FotoCampo
+                                        label={__('Company photo')}
+                                        required
+                                        value={data.foto_empresa}
+                                        onChange={(v) => setData('foto_empresa', v)}
+                                        error={errors.foto_empresa}
+                                        ayuda={__('Photo of the facade or logo of the commercial partner')}
+                                    />
+                                </div>
+                                <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
+                                    <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                                        <UserIcon className="h-4 w-4 text-[#104a29]" />
+                                        {__('Responsible person identification')}
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                        <FotoCampo
+                                            label={__('Responsible person photo')}
+                                            required
+                                            redonda
+                                            camara="user"
+                                            value={data.foto_responsable}
+                                            onChange={(v) => setData('foto_responsable', v)}
+                                            error={errors.foto_responsable}
+                                            ayuda={__('Clear photo of the face of the responsible person')}
+                                        />
+                                        <FotoCampo
+                                            label={__('INE (front)')}
+                                            required
+                                            value={data.ine_responsable_frente}
+                                            onChange={(v) => setData('ine_responsable_frente', v)}
+                                            error={errors.ine_responsable_frente}
+                                        />
+                                        <FotoCampo
+                                            label={__('INE (back)')}
+                                            required
+                                            value={data.ine_responsable_reverso}
+                                            onChange={(v) => setData('ine_responsable_reverso', v)}
+                                            error={errors.ine_responsable_reverso}
+                                        />
                                     </div>
                                 </div>
                             </TabsContent>
@@ -827,7 +885,7 @@ export default function Index({
                                             <Input
                                                 id="estado"
                                                 className="mt-1.5 w-full"
-                                                placeholder="ej. Michoacán, Jalisco"
+                                                placeholder="ej. Estado o provincia"
                                                 value={data.estado}
                                                 onChange={(e) => setData('estado', e.target.value)}
                                             />
@@ -853,12 +911,12 @@ export default function Index({
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <Label htmlFor="direccion">{__('Full Ranch Address')}</Label>
+                                            <Label htmlFor="direccion">{__('Full Address')}</Label>
                                             <Textarea
                                                 id="direccion"
                                                 rows={2}
                                                 className="mt-1.5 w-full"
-                                                placeholder="ej. Carretera Zamora-Jacona Km 3, cerca de la sucursal"
+                                                placeholder="ej. Calle, número y colonia"
                                                 value={data.direccion}
                                                 onChange={(e) => setData('direccion', e.target.value)}
                                             />
@@ -870,7 +928,7 @@ export default function Index({
                                         <div className="flex items-center justify-between text-xs text-slate-500">
                                             <span className="flex items-center gap-1.5 font-medium">
                                                 <Navigation className="h-4 w-4 text-[#104a29]" />
-                                                {__('Click or drag marker on map to set rancho location (centered at your branch sucursal)')}
+                                                {__('Click or drag the marker on the map to set the location (centered at your branch)')}
                                             </span>
                                             <span className="font-mono text-[11px] bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded" dir="ltr">
                                                 Lat: {data.latitud?.toFixed(5) || '0'}, Lng: {data.longitud?.toFixed(5) || '0'}
@@ -907,7 +965,7 @@ export default function Index({
                                 disabled={processing}
                                 className="bg-[#104a29] hover:bg-[#0c371e] text-white font-semibold shadow-sm px-6"
                             >
-                                {processing ? __('Saving...') : (editingProductor ? __('Save Changes') : __('Save Producer'))}
+                                {processing ? __('Saving...') : (editingProductor ? __('Save Changes') : __('Save Commercial Partner'))}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -922,10 +980,10 @@ export default function Index({
                             <ShieldAlert className="h-5 w-5" />
                         </div>
                         <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                            {__('Delete Producer')}
+                            {__('Delete Commercial Partner')}
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-500">
-                            {__('Are you sure you want to delete this producer? This action cannot be undone and will delete associated collaborators, vehicles, and access history.')}
+                            {__('Are you sure you want to delete this commercial partner? This action cannot be undone and will delete associated collaborators, vehicles, and access history.')}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -954,46 +1012,46 @@ export default function Index({
                             <Send className="h-5 w-5" />
                         </div>
                         <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                            {__('Producer Pre-registration')}
+                            {__('Commercial Partner Pre-Registration')}
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-500">
-                            {__('Send a WhatsApp invitation to the producer to complete the form with ranch, collaborator, and vehicle details.')}
+                            {__('Send a WhatsApp invitation to the commercial partner to complete the form with their details, collaborators and vehicles.')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handlePreRegistroSubmit} className="space-y-4 pt-2">
                         <div>
-                            <Label htmlFor="pre_razon_social_rancho">{__('Ranch Business Name')}</Label>
+                            <Label htmlFor="pre_razon_social">{__('Business Name')}</Label>
                             <Input
-                                id="pre_razon_social_rancho"
+                                id="pre_razon_social"
                                 required
                                 className="mt-1"
-                                placeholder="ej. Agrícola Driscoll's S.P.R. de R.L."
-                                value={preRegistroForm.data.razon_social_rancho}
-                                onChange={(e) => preRegistroForm.setData('razon_social_rancho', e.target.value)}
+                                placeholder="ej. Comercializadora Ejemplo S.A. de C.V."
+                                value={preRegistroForm.data.razon_social}
+                                onChange={(e) => preRegistroForm.setData('razon_social', e.target.value)}
                             />
-                            {preRegistroForm.errors.razon_social_rancho && (
-                                <p className="text-xs text-red-500 mt-1">{preRegistroForm.errors.razon_social_rancho}</p>
+                            {preRegistroForm.errors.razon_social && (
+                                <p className="text-xs text-red-500 mt-1">{preRegistroForm.errors.razon_social}</p>
                             )}
                         </div>
 
                         <div>
-                            <Label htmlFor="pre_nombre_comercial_rancho">{__('Ranch Trade Name')}</Label>
+                            <Label htmlFor="pre_nombre_comercial">{__('Trade Name')}</Label>
                             <Input
-                                id="pre_nombre_comercial_rancho"
+                                id="pre_nombre_comercial"
                                 required
                                 className="mt-1"
-                                placeholder="ej. Rancho Los Berries - Módulo 2"
-                                value={preRegistroForm.data.nombre_comercial_rancho}
-                                onChange={(e) => preRegistroForm.setData('nombre_comercial_rancho', e.target.value)}
+                                placeholder="ej. Comercializadora Ejemplo - Sede Norte"
+                                value={preRegistroForm.data.nombre_comercial}
+                                onChange={(e) => preRegistroForm.setData('nombre_comercial', e.target.value)}
                             />
-                            {preRegistroForm.errors.nombre_comercial_rancho && (
-                                <p className="text-xs text-red-500 mt-1">{preRegistroForm.errors.nombre_comercial_rancho}</p>
+                            {preRegistroForm.errors.nombre_comercial && (
+                                <p className="text-xs text-red-500 mt-1">{preRegistroForm.errors.nombre_comercial}</p>
                             )}
                         </div>
 
                         <div>
-                            <Label>{__('Producer WhatsApp')}</Label>
+                            <Label>{__('Commercial Partner WhatsApp')}</Label>
                             <div className="mt-1.5 w-full">
                                 <PhoneInputGroup
                                     paises={paises}

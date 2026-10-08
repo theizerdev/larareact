@@ -119,14 +119,14 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
 
     const handleSendWhatsApp = () => {
         setSendingWhatsapp(true);
-        router.post(`/admin/productores/${productor.id}/send-carnet-whatsapp`, {}, {
+        router.post(`/admin/socios-comerciales/${productor.id}/send-carnet-whatsapp`, {}, {
             onFinish: () => setSendingWhatsapp(false)
         });
     };
 
     return (
         <>
-            <Head title={`${__('Producer ID Badge')} - ${displayName}`} />
+            <Head title={`${__('Commercial Partner ID Badge')} - ${displayName}`} />
 
             <style dangerouslySetInnerHTML={{
                 __html: `
@@ -166,15 +166,15 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
                 <div className="w-full max-w-[340px] flex items-center justify-between gap-2 mb-6 no-print">
                     {auth?.user ? (
                         <Link
-                            href="/admin/productores"
+                            href="/admin/socios-comerciales"
                             className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
                         >
                             <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
-                            {__('Producers')}
+                            {__('Commercial Partners')}
                         </Link>
                     ) : (
                         <span className="text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
-                            🪪 {__('Producer ID Badge')}
+                            🪪 {__('Commercial Partner ID Badge')}
                         </span>
                     )}
 

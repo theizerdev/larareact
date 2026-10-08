@@ -750,7 +750,7 @@ return;
 
                                     {/* Numeral Planta (Código de Acceso) */}
                                     <div>
-                                        <Label htmlFor="codigo_numeral">{__('Plant Numeral (e.g. 01 Purépero, 02 Tuxcueca)')} *</Label>
+                                        <Label htmlFor="codigo_numeral">{__('Branch Numeral (e.g. 01, 02)')} *</Label>
                                         <Input
                                             id="codigo_numeral"
                                             value={data.codigo_numeral}

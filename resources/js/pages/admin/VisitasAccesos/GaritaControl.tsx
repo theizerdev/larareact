@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     ShieldCheck,
     QrCode,
@@ -607,6 +607,7 @@ export default function GaritaControl({
     timezone = 'America/Mexico_City',
 }: GaritaProps) {
     const { __ } = useTranslate();
+    const empresaNombre: string = (usePage().props as any)?.auth?.user?.empresa?.razon_social || '';
     const searchInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -1287,7 +1288,7 @@ export default function GaritaControl({
                             <div>
                                 <div className="flex items-center gap-2">
                                     <h1 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                                        {__("DRISCOLL'S • CONTROL DE GARITA")}
+                                        {empresaNombre ? `${empresaNombre.toUpperCase()} • ` : ''}{__('CONTROL DE GARITA')}
                                     </h1>
                                     <Badge className="bg-emerald-400 text-emerald-950 font-extrabold text-[10px] uppercase tracking-wider px-2 py-0.5 border-0">
                                         {__('🟢 Lector Activo')}
@@ -1335,7 +1336,7 @@ export default function GaritaControl({
                                 <Input
                                     ref={searchInputRef}
                                     type="text"
-                                    placeholder={__('Escanee código QR o busque por Código, Nombres, DNI o Placa...')}
+                                    placeholder={__('Escanee código QR o busque por Código, Nombres, Documento o Placa...')}
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                     className="pl-13 rtl:pl-4 rtl:pr-13 h-14 w-full bg-slate-50 text-slate-900 text-base font-medium rounded-2xl border-slate-300 focus:border-[#104a29] focus:ring-2 focus:ring-[#104a29]/20"
@@ -1388,11 +1389,11 @@ export default function GaritaControl({
                                     </div>
                                     <div>
                                         <span className="text-xs font-bold uppercase tracking-wider text-emerald-200 block">
-                                            {isEmpleado ? __('Colaborador / Empleado Driscoll\'s') :
+                                            {isEmpleado ? __('Colaborador / Empleado') :
                                                 resultado?.tipo === 'proveedor' ? __('🪪 Gafete Rojo • Proveedor Autorizado') :
                                                     resultado?.tipo === 'proveedor_empleado' ? __('🪪 Gafete Rojo • Empleado de Proveedor') :
-                                                        resultado?.tipo === 'productor' ? __('🪪 Gafete Azul • Productor Autorizado') :
-                                                            resultado?.tipo === 'productor_empleado' ? __('🪪 Gafete Azul • Empleado de Productor') :
+                                                        resultado?.tipo === 'productor' ? __('🪪 Gafete Azul • Socio Comercial Autorizado') :
+                                                            resultado?.tipo === 'productor_empleado' ? __('🪪 Gafete Azul • Empleado de Socio Comercial') :
                                                                 isInvitacion ? __('Pre-Registro  Registrado') : __('Registro de Acceso Caseta')}
                                         </span>
                                         <div className="flex flex-wrap items-center gap-2">
@@ -2259,7 +2260,7 @@ export default function GaritaControl({
                                                         className="w-full h-16 bg-[#104a29] hover:bg-[#0c371e] text-white text-base font-extrabold rounded-2xl shadow-xl gap-2 flex items-center justify-center transition-transform active:scale-[0.98]"
                                                     >
                                                         <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                                                        {__('Registrar Ingreso de ') + (isProductor ? __('Productor') : __('Proveedor')) + __(' (1-Clic)')}
+                                                        {__('Registrar Ingreso de ') + (isProductor ? __('Socio Comercial') : __('Proveedor')) + __(' (1-Clic)')}
                                                     </Button>
                                                 )}
                                             </>
@@ -2320,7 +2321,7 @@ export default function GaritaControl({
                                     {__('Esperando Lectura de Pase Digital')}
                                 </h3>
                                 <p className="text-xs text-slate-500 leading-relaxed">
-                                    {__('Escanee el código QR del visitante con la cámara de la tablet, la pistola de código de barras USB o busque por DNI/Placa.')}
+                                    {__('Escanee el código QR del visitante con la cámara de la tablet, la pistola de código de barras USB o busque por Documento/Placa.')}
                                 </p>
                             </div>
                         </div>
@@ -2487,7 +2488,7 @@ export default function GaritaControl({
                         {empleadosDisponibles.length > 0 && (
                             <div className="space-y-1.5 bg-emerald-50/80 p-3.5 rounded-2xl border border-emerald-200">
                                 <label className="text-xs font-extrabold text-emerald-900 flex items-center justify-between">
-                                    <span>{__('Autorellenar desde Empleado del Proveedor / Productor:')}</span>
+                                    <span>{__('Autorellenar desde Empleado del Proveedor / Socio Comercial:')}</span>
                                     <Badge className="bg-emerald-200 text-emerald-950 font-bold text-[10px]">
                                         {empleadosDisponibles.length} {__('Registrado(s)')}
                                     </Badge>
@@ -2706,7 +2707,7 @@ export default function GaritaControl({
                         {/* Section 3: Fotografías del Documento de Identidad */}
                         <div className="space-y-3 pt-4 border-t border-slate-200">
                             <Label className="font-extrabold text-slate-700 uppercase tracking-wider block">
-                                3. {__('FOTOGRAFÍAS DEL DOCUMENTO DE IDENTIDAD (INE / CÉDULA / PASAPORTE)')}
+                                3. {__('FOTOGRAFÍAS DEL DOCUMENTO DE IDENTIDAD (IDENTIFICACIÓN OFICIAL / PASAPORTE)')}
                             </Label>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

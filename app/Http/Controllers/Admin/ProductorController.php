@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductorRequest;
 use App\Models\Productor;
 use App\Services\AccessCodeService;
+use App\Services\ImagenService;
 use App\Models\Pais;
 use App\Models\Empresa;
 use App\Models\Sucursal;
@@ -15,6 +16,8 @@ use Inertia\Inertia;
 
 class ProductorController extends Controller
 {
+    private const IMAGENES = ['foto_empresa', 'foto_responsable', 'ine_responsable_frente', 'ine_responsable_reverso'];
+
     public function index(Request $request)
     {
         $query = Productor::with(['pais', 'paisTelefono', 'empresa', 'sucursal', 'user'])
@@ -24,8 +27,6 @@ class ProductorController extends Controller
                         ->orWhere('nombre_comercial', 'like', "%{$search}%")
                         ->orWhere('documento_identidad', 'like', "%{$search}%")
                         ->orWhere('rfc', 'like', "%{$search}%")
-                        ->orWhere('razon_social_rancho', 'like', "%{$search}%")
-                        ->orWhere('nombre_comercial_rancho', 'like', "%{$search}%")
                         ->orWhere('responsable', 'like', "%{$search}%")
                         ->orWhere('curp', 'like', "%{$search}%")
                         ->orWhere('telefono', 'like', "%{$search}%");
@@ -82,11 +83,24 @@ class ProductorController extends Controller
         $data['sucursal_id'] = $data['sucursal_id'] ?? $user->sucursal_id;
         $data['user_id'] = $data['user_id'] ?? $user->id;
 
-        $data['razon_social_rancho'] = $data['razon_social_rancho'] ?? $data['razon_social'];
-        $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
+        // Las columnas *_rancho son heredadas: se mantienen iguales a la razón social y
+        // al nombre comercial para que garita y las búsquedas sigan encontrando al socio.
+        $data['razon_social_rancho'] = $data['razon_social'];
+        $data['nombre_comercial_rancho'] = $data['nombre_comercial'];
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? ('PROD_' . uniqid());
 
-        $productor = AccessCodeService::createWithRetry(fn () => Productor::create($data));
+        foreach (self::IMAGENES as $campo) {
+            $data[$campo] = ImagenService::guardar($data[$campo] ?? null, 'socios-comerciales');
+        }
+
+        try {
+            $productor = AccessCodeService::createWithRetry(fn () => Productor::create($data));
+        } catch (\Throwable $e) {
+            foreach (self::IMAGENES as $campo) {
+                ImagenService::borrar($data[$campo]);
+            }
+            throw $e;
+        }
         $this->enviarCarnetWhatsAppInternal($productor);
 
         return redirect()->back();
@@ -117,13 +131,13 @@ class ProductorController extends Controller
         if ($sent) {
             return back()->with('notification', [
                 'type' => 'success',
-                'message' => "Gafete Azul enviado por WhatsApp a {$productor->nombre_comercial}.",
+                'message' => __('Badge sent by WhatsApp to :name.', ['name' => $productor->nombre_comercial]),
             ]);
         }
 
         return back()->with('notification', [
             'type' => 'error',
-            'message' => 'El productor no cuenta con un número de teléfono válido para enviarle el WhatsApp.',
+            'message' => __('This business partner has no valid phone number to send the WhatsApp message.'),
         ]);
     }
 
@@ -145,10 +159,10 @@ class ProductorController extends Controller
 
                 $carnetUrl = url("/carnet-productor/{$productor->id}");
 
-                $msg  = "🪪 *¡SU GAFETE / CARNET AZUL DE PRODUCTOR ESTÁ LISTO!*\n\n";
-                $msg .= "Estimado Productor *{$productor->nombre_comercial}*,\n";
-                $msg .= "Se ha generado su Gafete Oficial de Acceso de Productor Autorizado.\n\n";
-                $msg .= "📌 *Doc / RUC:* {$productor->documento_identidad}\n";
+                $msg  = "🪪 *¡SU GAFETE / CARNET DE SOCIO COMERCIAL ESTÁ LISTO!*\n\n";
+                $msg .= "Estimado socio comercial *{$productor->nombre_comercial}*,\n";
+                $msg .= "Se ha generado su gafete oficial de acceso.\n\n";
+                $msg .= "📌 *Documento:* {$productor->documento_identidad}\n";
                 $msg .= "👤 *Responsable:* {$productor->responsable}\n\n";
                 $msg .= "📲 *Acceda a su gafete digital aquí:*\n";
                 $msg .= "🔗 {$carnetUrl}\n\n";
@@ -168,7 +182,7 @@ class ProductorController extends Controller
                 return true;
             }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp carnet productor: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp carnet de socio comercial: ' . $e->getMessage());
         }
 
         return false;
@@ -183,18 +197,47 @@ class ProductorController extends Controller
         $data['sucursal_id'] = $data['sucursal_id'] ?? $productor->sucursal_id ?? $user->sucursal_id;
         $data['user_id'] = $data['user_id'] ?? $productor->user_id ?? $user->id;
 
-        $data['razon_social_rancho'] = $data['razon_social_rancho'] ?? $data['razon_social'];
-        $data['nombre_comercial_rancho'] = $data['nombre_comercial_rancho'] ?? $data['nombre_comercial'];
+        $data['razon_social_rancho'] = $data['razon_social'];
+        $data['nombre_comercial_rancho'] = $data['nombre_comercial'];
         $data['documento_identidad'] = $data['documento_identidad'] ?? $data['rfc'] ?? $data['curp'] ?? $productor->documento_identidad;
 
-        $productor->update($data);
+        $reemplazadas = [];
+        foreach (self::IMAGENES as $campo) {
+            if (! array_key_exists($campo, $data) || $data[$campo] === null || $data[$campo] === '') {
+                unset($data[$campo]);
+
+                continue;
+            }
+            $nueva = ImagenService::guardar($data[$campo], 'socios-comerciales');
+            if ($nueva !== $productor->{$campo}) {
+                $reemplazadas[] = $productor->{$campo};
+            }
+            $data[$campo] = $nueva;
+        }
+
+        try {
+            $productor->update($data);
+        } catch (\Throwable $e) {
+            foreach (self::IMAGENES as $campo) {
+                if (isset($data[$campo]) && $data[$campo] !== $productor->getOriginal($campo)) {
+                    ImagenService::borrar($data[$campo]);
+                }
+            }
+            throw $e;
+        }
+
+        foreach ($reemplazadas as $vieja) {
+            ImagenService::borrar($vieja);
+        }
 
         return redirect()->back();
     }
 
     public function destroy(Productor $productor)
     {
+        $archivos = array_map(fn ($c) => $productor->{$c}, self::IMAGENES);
         $productor->delete();
+        array_map([ImagenService::class, 'borrar'], $archivos);
 
         return redirect()->back();
     }
@@ -215,8 +258,8 @@ class ProductorController extends Controller
     public function generatePreRegistro(Request $request)
     {
         $request->validate([
-            'razon_social_rancho' => 'required|string|max:255',
-            'nombre_comercial_rancho' => 'required|string|max:255',
+            'razon_social' => 'required|string|max:255',
+            'nombre_comercial' => 'required|string|max:255',
             'pais_telefono_id' => 'required|exists:pais,id',
             'telefono' => 'required|string|max:20',
         ]);
@@ -224,9 +267,10 @@ class ProductorController extends Controller
         $user = auth()->user();
         $token = bin2hex(random_bytes(16));
 
-        \App\Models\ProductorPreRegistro::create([
-            'razon_social_rancho' => $request->razon_social_rancho,
-            'nombre_comercial_rancho' => $request->nombre_comercial_rancho,
+        // Las columnas *_rancho son heredadas: guardan la razón social y el nombre comercial.
+        $preRegistro = \App\Models\ProductorPreRegistro::create([
+            'razon_social_rancho' => $request->razon_social,
+            'nombre_comercial_rancho' => $request->nombre_comercial,
             'pais_telefono_id' => $request->pais_telefono_id,
             'telefono' => $request->telefono,
             'token' => $token,
@@ -235,6 +279,8 @@ class ProductorController extends Controller
             'sucursal_id' => $user->sucursal_id,
             'status' => 'pendiente',
         ]);
+
+        $enviado = null;
 
         try {
             $pais = \App\Models\Pais::findOrFail($request->pais_telefono_id);
@@ -249,18 +295,28 @@ class ProductorController extends Controller
 
             $sucursalNombre = $user->sucursal?->nombre ?? ($empresa->razon_social ?? 'Instalaciones Principales');
 
-            $message = "Estimado Productor del Rancho *{$request->nombre_comercial_rancho}*, le invitamos a completar su pre-registro de datos para su acceso a nuestras instalaciones con la siguiente información:\n\n"
+            $message = "Estimado socio comercial *{$request->nombre_comercial}*, le invitamos a completar su pre-registro de datos para su acceso a nuestras instalaciones con la siguiente información:\n\n"
                 . "Ubicación: {$sucursalNombre}\n"
-                . "Rancho: {$request->nombre_comercial_rancho}\n"
                 . "Colaboradores: Indicar todos los que acudirán\n"
                 . "Vehículos: En los que acudirán.\n\n"
-                . "Será Indispensable contar con: *INE vigente* y *Chaleco de seguridad*\n\n"
+                . "Será indispensable contar con una identificación oficial vigente y el equipo de seguridad que se indique en el acceso.\n\n"
                 . "Ingresar a:\n"
                 . $link;
 
-            $whatsappService->sendMessage($to, $message, true);
+            $enviado = $whatsappService->sendMessage($to, $message, true);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp de invitación de productor: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp de invitación de socio comercial: ' . $e->getMessage());
+        }
+
+        // sendMessage() devuelve null cuando falla. Antes se ignoraba y el usuario veía
+        // "enviado" sin que hubiera salido nada; ahora se quita la invitación huérfana y se
+        // responde con un error de validación, que sí dispara onError en el formulario.
+        if (! $enviado) {
+            $preRegistro->delete();
+
+            return back()->withErrors([
+                'telefono' => __('The WhatsApp invitation could not be sent. Check the phone number and the WhatsApp integration, then try again.'),
+            ]);
         }
 
         return redirect()->back();

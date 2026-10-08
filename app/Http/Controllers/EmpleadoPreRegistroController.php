@@ -187,7 +187,7 @@ class EmpleadoPreRegistroController extends Controller
 
                     $carnetUrl = url("/carnet-empleado/{$empleado->id}");
                     $message = "Estimado Colaborador *{$preRegistro->nombres} {$preRegistro->apellidos}*, hemos recibido la información de tu registro satisfactoriamente.\n\n"
-                        . "🪪 *Tu Gafete / Carnet Digital Driscoll's:* \n🔗 {$carnetUrl}\n\n"
+                        . "🪪 *Tu Gafete / Carnet Digital:* \n🔗 {$carnetUrl}\n\n"
                         . "Presenta este carnet o código QR en garita para tu control de accesos.";
 
                     $carnetPath = \App\Services\CarnetGeneratorService::generarCarnetPNG($empleado);

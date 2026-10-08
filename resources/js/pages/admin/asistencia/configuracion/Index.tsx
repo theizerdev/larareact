@@ -1461,7 +1461,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                 required
                                 value={festivoForm.data.descripcion}
                                 onChange={(e) => festivoForm.setData('descripcion', e.target.value)}
-                                placeholder={__('Ej. Día del Trabajador Agrícola')}
+                                placeholder={__('Ej. Día del Trabajo')}
                             />
                         </div>
 

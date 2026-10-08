@@ -548,7 +548,7 @@ export default function AdminSaasLayout({
                                 },
                                 {
                                     title: 'Commercial Partners',
-                                    href: '/admin/productores',
+                                    href: '/admin/socios-comerciales',
                                     permission: 'productores.view',
                                     key: 'organization.partners',
                                 },

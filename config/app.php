@@ -15,6 +15,9 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    // Aviso de privacidad que se menciona en los mensajes de WhatsApp. Vacío = no se menciona.
+    'privacy_url' => env('APP_PRIVACY_URL'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

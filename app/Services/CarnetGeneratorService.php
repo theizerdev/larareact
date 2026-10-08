@@ -8,6 +8,24 @@ use Illuminate\Support\Facades\Log;
 class CarnetGeneratorService
 {
     /**
+     * Logo del carnet: el de la empresa a la que pertenece la persona; si no tiene
+     * (o el archivo no existe), el de la plataforma.
+     */
+    private static function logoCarnet(?\App\Models\Empresa $empresa): string
+    {
+        $ruta = $empresa?->logo;
+
+        if (is_string($ruta) && str_starts_with($ruta, '/storage/')) {
+            $archivo = storage_path('app/public/'.substr($ruta, strlen('/storage/')));
+            if (is_file($archivo)) {
+                return $archivo;
+            }
+        }
+
+        return public_path('image/logo/hosho/lockup.png');
+    }
+
+    /**
      * Genera la imagen PNG del carnet del empleado y retorna la ruta absoluta del archivo.
      */
     public static function generarCarnetPNG(Empleado $empleado): ?string
@@ -128,10 +146,7 @@ class CarnetGeneratorService
             }
 
             // --- 5. Logotipo institucional (Hoshō) ---
-            $logoPath = public_path('image/logo/hosho/lockup.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
-            }
+            $logoPath = self::logoCarnet($empleado->empresa);
             if (file_exists($logoPath)) {
                 $logoData = @file_get_contents($logoPath);
                 if ($logoData) {
@@ -257,10 +272,7 @@ class CarnetGeneratorService
             }
 
             // --- 5. Logotipo institucional (Hoshō) ---
-            $logoPath = public_path('image/logo/hosho/lockup.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
-            }
+            $logoPath = self::logoCarnet($proveedor->empresa);
             if (file_exists($logoPath)) {
                 $logoData = @file_get_contents($logoPath);
                 if ($logoData) {
@@ -385,10 +397,7 @@ class CarnetGeneratorService
             }
 
             // --- 5. Logotipo institucional (Hoshō) ---
-            $logoPath = public_path('image/logo/hosho/lockup.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
-            }
+            $logoPath = self::logoCarnet($productor->empresa);
             if (file_exists($logoPath)) {
                 $logoData = @file_get_contents($logoPath);
                 if ($logoData) {

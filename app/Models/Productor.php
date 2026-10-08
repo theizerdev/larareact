@@ -101,6 +101,10 @@ class Productor extends Model
         'sucursal_id',
         'user_id',
         'status',
+        'foto_empresa',
+        'foto_responsable',
+        'ine_responsable_frente',
+        'ine_responsable_reverso',
     ];
 
     protected function casts(): array

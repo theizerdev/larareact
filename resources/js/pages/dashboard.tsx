@@ -265,7 +265,7 @@ export default function Dashboard({ moduleStats }: Props) {
             name: __('Business Partner'),
             desc: __('Agricultural business partners and staff'),
             icon: UserCheck,
-            href: '/admin/productores',
+            href: '/admin/socios-comerciales',
             count: `${overview.productores?.total || 0} ${__('active')}`,
             badgeColor: 'bg-amber-500/10 text-amber-500',
         },
@@ -411,7 +411,7 @@ export default function Dashboard({ moduleStats }: Props) {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground">
-                                    {__('Suppliers & Producers')}
+                                    {__('Suppliers & Commercial Partners')}
                                 </p>
                                 <p className="mt-2 text-2xl font-bold tracking-tight">
                                     {(overview.proveedores?.total || 0) + (overview.productores?.total || 0)}
@@ -422,7 +422,7 @@ export default function Dashboard({ moduleStats }: Props) {
                             </div>
                         </div>
                         <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-500">
-                            <span>{overview.proveedores?.total || 0} {__('suppliers')} / {overview.productores?.total || 0} {__('producers')}</span>
+                            <span>{overview.proveedores?.total || 0} {__('suppliers')} / {overview.productores?.total || 0} {__('commercial partners')}</span>
                         </div>
                     </SectionCard>
                 </div>

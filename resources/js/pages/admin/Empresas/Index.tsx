@@ -892,7 +892,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="ciudad"
                                             value={data.ciudad || ''}
                                             onChange={(e) => setData('ciudad', e.target.value)}
-                                            placeholder={__('Ej: Zamora')}
+                                            placeholder={__('Ej: Ciudad')}
                                         />
                                         {errors.ciudad && <p className="text-red-500 text-xs mt-1">{errors.ciudad}</p>}
                                     </div>
@@ -902,7 +902,7 @@ formData.append('logo_mini', logoMiniFile);
                                             id="estado"
                                             value={data.estado || ''}
                                             onChange={(e) => setData('estado', e.target.value)}
-                                            placeholder={__('Ej: Michoacán')}
+                                            placeholder={__('Ej: Estado')}
                                         />
                                         {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado}</p>}
                                     </div>

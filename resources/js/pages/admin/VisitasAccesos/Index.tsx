@@ -630,7 +630,7 @@ export default function Index({
                 foto_empleado: emp.foto_carnet || emp.foto_empleado || null,
                 documento_frontal: emp.documento_frontal || null,
                 departamento: ent.nombre_comercial_rancho || ent.razon_social_rancho || ent.nombre_comercial || ent.razon_social,
-                cargo: emp.cargo || (tipoAcceso === 'productor' ? 'Colaborador Productor' : 'Personal Proveedor'),
+                cargo: emp.cargo || (tipoAcceso === 'productor' ? 'Colaborador Socio Comercial' : 'Personal Proveedor'),
                 is_proveedor_empleado: true,
             }));
 
@@ -1197,7 +1197,7 @@ export default function Index({
                 if (isProd) {
                     return (
                         <Badge className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900 gap-1">
-                            <Sprout className="w-3 h-3" /> {__('Productor')}
+                            <Sprout className="w-3 h-3" /> {__('Socio Comercial')}
                         </Badge>
                     );
                 }
@@ -1317,7 +1317,7 @@ export default function Index({
                 <ModuleHeader
                     icon={<ShieldCheck className="h-6 w-6 text-white" />}
                     title={__('Control de Accesos a Instalaciones')}
-                    description={__('Gestión unificada de entradas/salidas para Empleados, Proveedores y Productores con Código de Visitante (80000001+).')}
+                    description={__('Gestión unificada de entradas/salidas para Empleados, Proveedores y Socios Comerciales con Código de Visitante (80000001+).')}
                     colorClassName="bg-[#104a29]"
                 >
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -1381,7 +1381,7 @@ export default function Index({
                     <div className="flex flex-wrap items-end gap-4">
                         <FilterField label={__('Buscar Acceso')}>
                             <Input
-                                placeholder={__('Buscar por código (80000001+), DNI, Nombre...')}
+                                placeholder={__('Buscar por código (80000001+), Documento, Nombre...')}
                                 className="w-full md:w-80 bg-white dark:bg-slate-900"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -1397,7 +1397,7 @@ export default function Index({
                                     <SelectItem value="all">{__('Todos')}</SelectItem>
                                     <SelectItem value="empleado">{__('Empleado')}</SelectItem>
                                     <SelectItem value="proveedor">{__('Proveedor')}</SelectItem>
-                                    <SelectItem value="productor">{__('Productor')}</SelectItem>
+                                    <SelectItem value="productor">{__('Socio Comercial')}</SelectItem>
                                     <SelectItem value="visitante">{__('Visitante Particular')}</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -1487,7 +1487,7 @@ export default function Index({
                                             {selectedAccesoDetail.tipo_acceso === 'empleado' ? (
                                                 <Badge className="bg-blue-100 text-blue-800 border-blue-300">Empleado</Badge>
                                             ) : selectedAccesoDetail.tipo_acceso === 'productor' ? (
-                                                <Badge className="bg-purple-100 text-purple-800 border-purple-300">Productor</Badge>
+                                                <Badge className="bg-purple-100 text-purple-800 border-purple-300">Socio Comercial</Badge>
                                             ) : (
                                                 <Badge className="bg-amber-100 text-amber-800 border-amber-300">Proveedor</Badge>
                                             )}
@@ -1530,7 +1530,7 @@ export default function Index({
                                         1. {selectedAccesoDetail.tipo_acceso === 'empleado' || selectedAccesoDetail.empleado_id
                                             ? __('Información del Empleado / Conductor')
                                             : selectedAccesoDetail.tipo_acceso === 'productor' || selectedAccesoDetail.productor_id || selectedAccesoDetail.productor
-                                                ? __('Información del Rancho / Productor y Personal')
+                                                ? __('Información del Socio Comercial y Personal')
                                                 : selectedAccesoDetail.tipo_acceso === 'proveedor' || selectedAccesoDetail.proveedor_id || selectedAccesoDetail.proveedor
                                                     ? __('Información de la Empresa Proveedora y Personal')
                                                     : __('Información del Visitante Particular')}
@@ -1578,7 +1578,7 @@ export default function Index({
                                         </div>
                                     ) : selectedAccesoDetail.tipo_acceso === 'productor' || selectedAccesoDetail.productor_id || selectedAccesoDetail.productor ? (
                                         <div className="space-y-4">
-                                            {/* Ficha del Rancho / Productor */}
+                                            {/* Ficha del Socio Comercial */}
                                             <div className="p-4 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-900/60 space-y-3">
                                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-200/80 dark:border-purple-900/60 pb-2">
                                                     <div className="flex items-center gap-2.5">
@@ -1587,7 +1587,7 @@ export default function Index({
                                                         </div>
                                                         <div>
                                                             <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
-                                                                {selectedAccesoDetail.productor?.nombre_comercial_rancho || selectedAccesoDetail.productor?.razon_social_rancho || selectedAccesoDetail.productor?.nombre_comercial || selectedAccesoDetail.productor?.razon_social || __('Rancho Productor')}
+                                                                {selectedAccesoDetail.productor?.nombre_comercial_rancho || selectedAccesoDetail.productor?.razon_social_rancho || selectedAccesoDetail.productor?.nombre_comercial || selectedAccesoDetail.productor?.razon_social || __('Socio Comercial')}
                                                             </h3>
                                                             {(selectedAccesoDetail.productor?.razon_social_rancho || selectedAccesoDetail.productor?.razon_social) && (
                                                                 <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
@@ -1615,7 +1615,7 @@ export default function Index({
                                                         </span>
                                                     </div>
                                                     <div>
-                                                        <span className="text-slate-500 block font-medium">{__('Ubicación Rancho')}</span>
+                                                        <span className="text-slate-500 block font-medium">{__('Ubicación del Socio Comercial')}</span>
                                                         <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
                                                             {selectedAccesoDetail.productor?.direccion || 'N/A'}
                                                         </span>
@@ -2435,7 +2435,7 @@ export default function Index({
                                         className={`h-14 text-sm font-semibold ${tipoAcceso === 'productor' ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-md' : ''}`}
                                     >
                                         <Sprout className="mr-2 h-5 w-5" />
-                                        {__('Productor')}
+                                        {__('Socio Comercial')}
                                     </Button>
                                 </div>
                             </div>
@@ -2446,8 +2446,8 @@ export default function Index({
                                     2. {tipoAcceso === 'empleado'
                                         ? __('Buscar Empleado Conductor (Nombre, Apellidos, Documento)')
                                         : tipoAcceso === 'productor'
-                                            ? __('Buscar Productor / Rancho (Razón Social, Nombre Comercial, RFC)')
-                                            : __('Buscar Proveedor (Razón Social, Nombre Comercial, RUC/DNI)')}
+                                            ? __('Buscar Socio Comercial (Razón Social, Nombre Comercial, ID Fiscal)')
+                                            : __('Buscar Proveedor (Razón Social, Nombre Comercial, ID Fiscal)')}
                                 </Label>
                                 <div className="relative">
                                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -2455,8 +2455,8 @@ export default function Index({
                                         placeholder={tipoAcceso === 'empleado'
                                             ? __('Escriba nombre, apellido o documento...')
                                             : tipoAcceso === 'productor'
-                                                ? __('Escriba nombre del rancho, razón social o RFC...')
-                                                : __('Escriba razón social, nombre comercial o RUC...')}
+                                                ? __('Escriba razón social, nombre comercial o ID fiscal...')
+                                                : __('Escriba razón social, nombre comercial o ID fiscal...')}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-11 h-12 text-base bg-white dark:bg-slate-900 w-full"
@@ -2563,7 +2563,7 @@ export default function Index({
                                                 <div>
                                                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                                                         <Users className="w-4 h-4 text-indigo-600" />
-                                                        {tipoAcceso === 'productor' ? __('Personal del Productor que accederá:') : __('Personal del Proveedor que accederá:')}
+                                                        {tipoAcceso === 'productor' ? __('Personal del Socio Comercial que accederá:') : __('Personal del Proveedor que accederá:')}
                                                     </Label>
                                                     <p className="text-[11px] text-muted-foreground mt-0.5">
                                                         {__('Seleccione uno o varios empleados. El primero actuará como Conductor / Principal.')}
@@ -2654,7 +2654,7 @@ export default function Index({
                                             ) : (
                                                 <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 text-purple-800 dark:text-purple-300 text-xs">
                                                     {tipoAcceso === 'productor'
-                                                        ? __('Este productor no tiene colaboradores pre-registrados en el sistema. Puede registrar el acceso del vehículo y agregar observaciones.')
+                                                        ? __('Este socio comercial no tiene colaboradores pre-registrados en el sistema. Puede registrar el acceso del vehículo y agregar observaciones.')
                                                         : __('Este proveedor no tiene empleados pre-registrados en el sistema. Puede registrar el acceso del vehículo y agregar observaciones.')}
                                                 </div>
                                             )}
@@ -2948,7 +2948,7 @@ export default function Index({
                                                 <div className="relative">
                                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                                     <Input
-                                                        placeholder={__('Escriba nombre o DNI de empleado para agregar acompañante...')}
+                                                        placeholder={__('Escriba nombre o documento de empleado para agregar acompañante...')}
                                                         value={acompananteSearchTerm}
                                                         onChange={(e) => setAcompananteSearchTerm(e.target.value)}
                                                         className="pl-9 bg-white dark:bg-slate-900 text-sm h-10 w-full"
@@ -3122,7 +3122,7 @@ export default function Index({
                                     {([
                                         { val: 'visitante', icon: '👤', label: __('Visitante Particular') },
                                         { val: 'proveedor', icon: '🚚', label: __('Proveedor de Servicios') },
-                                        { val: 'productor', icon: '🌱', label: __('Productor / Socio Agrícola') },
+                                        { val: 'productor', icon: '🌱', label: __('Socio Comercial') },
                                     ] as const).map((opt) => (
                                         <button
                                             key={opt.val}
@@ -3157,7 +3157,7 @@ export default function Index({
                             {/* PASO 2 — Responsable / Anfitrión (siempre visible) */}
                             <div className="space-y-2" ref={invResponsableRef}>
                                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                    {invTipoAcceso === 'visitante' ? __('Anfitrión / Responsable Driscoll\'s') : __('Responsable Driscoll\'s')}
+                                    {invTipoAcceso === 'visitante' ? __('Anfitrión / Responsable') : __('Responsable')}
                                     <span className="text-rose-500"> *</span>
                                 </Label>
 
@@ -3392,7 +3392,7 @@ export default function Index({
                                     <>
                                         {/* Buscador de Productor */}
                                         <div className="space-y-1.5">
-                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Buscar Productor / Rancho')} <span className="text-rose-500">*</span></Label>
+                                            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Buscar Socio Comercial')} <span className="text-rose-500">*</span></Label>
                                             {selectedInvEntity ? (
                                                 <div className="flex items-center gap-3 p-3 rounded-xl bg-purple-50 dark:bg-purple-950/20 border border-purple-200">
                                                     <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-white flex-shrink-0"><Sprout className="w-4 h-4" /></div>
@@ -3406,7 +3406,7 @@ export default function Index({
                                                 <div className="space-y-1.5">
                                                     <div className="relative">
                                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                                                        <Input placeholder={__('Nombre del Rancho, Razón Social o RFC...')} value={invEntityQuery} onChange={(e) => setInvEntityQuery(e.target.value)} className="pl-9 h-10 w-full bg-white dark:bg-slate-900 text-xs" />
+                                                        <Input placeholder={__('Razón Social, Nombre Comercial o ID fiscal...')} value={invEntityQuery} onChange={(e) => setInvEntityQuery(e.target.value)} className="pl-9 h-10 w-full bg-white dark:bg-slate-900 text-xs" />
                                                     </div>
                                                     {isSearchingInvEntity && <p className="text-xs text-slate-500 px-1">{__('Buscando...')}</p>}
                                                     {invEntityResults.length > 0 && (
@@ -3431,7 +3431,7 @@ export default function Index({
                                             <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Tipo de Servicio / Entrega')} <span className="text-rose-500">*</span></Label>
                                             <Select value={invForm.data.tipo_servicio_id} onValueChange={(v) => invForm.setData('tipo_servicio_id', v)}>
                                                 <SelectTrigger className="h-10 w-full bg-white dark:bg-slate-900 text-xs">
-                                                    <SelectValue placeholder={__('Seleccionar tipo de servicio agrícola...')} />
+                                                    <SelectValue placeholder={__('Seleccionar tipo de servicio...')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {tipoServicios.map((ts: any) => (
@@ -3456,7 +3456,7 @@ export default function Index({
                                         {/* Motivo */}
                                         <div className="space-y-1.5">
                                             <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">{__('Motivo de Visita')} <span className="text-rose-500">*</span></Label>
-                                            <Textarea placeholder="Ej: Entrega de cosecha / Reunión agrícola..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
+                                            <Textarea placeholder="Ej: Entrega de mercancía / Reunión de trabajo..." value={invForm.data.motivo_visita} onChange={(e) => invForm.setData('motivo_visita', e.target.value)} className="min-h-[80px] w-full bg-white dark:bg-slate-900 text-xs" required />
                                         </div>
                                     </>
                                 )}
@@ -3489,7 +3489,7 @@ export default function Index({
                                 {__('Registrar Acompañante')}
                             </DialogTitle>
                             <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
-                                {__('Ingrese los datos del acompañante (proveedor, productor, visita o particular) que ingresará.')}
+                                {__('Ingrese los datos del acompañante (proveedor, socio comercial, visita o particular) que ingresará.')}
                             </DialogDescription>
                         </DialogHeader>
 
@@ -3514,7 +3514,7 @@ export default function Index({
                                     </Label>
                                     <Input
                                         type="text"
-                                        placeholder="Ej: DNI / Cédula"
+                                        placeholder="Ej: Documento de identidad"
                                         value={nuevoAcompanante.documento}
                                         onChange={(e) => setNuevoAcompanante({ ...nuevoAcompanante, documento: e.target.value })}
                                         className="h-10 text-xs font-mono font-bold bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 focus:border-emerald-600"

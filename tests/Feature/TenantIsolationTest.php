@@ -245,9 +245,11 @@ class TenantIsolationTest extends TestCase
             ->assertSessionHasErrors('empresa_id');
         $this->assertSame($this->innovacion->id, Sucursal::withoutTenant()->find($this->sucI->id)->empresa_id);
 
+        // Un admin atado a una sucursal no puede crear otra en su empresa: la perdería de vista
+        // (ver CatalogosCrudTest para la creación por un administrador de toda la empresa).
         $this->actingAs($admin)->post('/admin/sucursales', ['empresa_id' => $this->innovacion->id, 'nombre' => 'Legítima', 'status' => true])
-            ->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('sucursales', ['nombre' => 'Legítima', 'empresa_id' => $this->innovacion->id]);
+            ->assertSessionHasErrors('nombre');
+        $this->assertDatabaseMissing('sucursales', ['nombre' => 'Legítima']);
     }
 
     public function test_an_admin_cannot_create_users_in_another_company(): void

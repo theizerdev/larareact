@@ -45,8 +45,8 @@ interface Pais {
 interface PreRegistroProps {
     preRegistro: {
         id: number;
-        razon_social_rancho: string;
-        nombre_comercial_rancho: string;
+        razon_social: string;
+        nombre_comercial: string;
         pais_telefono_id: number;
         telefono: string;
         token: string;
@@ -190,14 +190,12 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
         stopCamera();
     };
 
-    // Step 1: Producer & Rancho Data
+    // Step 1: Business partner data
     const [productorData, setProductorData] = useState({
-        razon_social: '',
-        nombre_comercial: '',
+        razon_social: preRegistro.razon_social || '',
+        nombre_comercial: preRegistro.nombre_comercial || '',
         rfc: '',
         documento_identidad: '',
-        razon_social_rancho: preRegistro.razon_social_rancho || '',
-        nombre_comercial_rancho: preRegistro.nombre_comercial_rancho || '',
         pais_telefono_id: preRegistro.pais_telefono_id ? String(preRegistro.pais_telefono_id) : (paises[0]?.id ? String(paises[0].id) : ''),
         telefono: preRegistro.telefono || '',
         responsable: '',
@@ -291,19 +289,19 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
     const validateStep1 = () => {
         const newErrors: Record<string, string> = {};
 
-        const rSocial = (productorData.razon_social_rancho || productorData.razon_social || '').trim();
-        const nComercial = (productorData.nombre_comercial_rancho || productorData.nombre_comercial || '').trim();
-        const rfc = (productorData.documento_identidad || '').trim();
+        const rSocial = (productorData.razon_social || '').trim();
+        const nComercial = (productorData.nombre_comercial || '').trim();
 
-        if (!rSocial) newErrors.razon_social_rancho = __('La razón social del rancho es requerida');
-        if (!nComercial) newErrors.nombre_comercial_rancho = __('El nombre comercial del rancho es requerido');
-        if (!rfc) newErrors.documento_identidad = __('El RFC es requerido');
+        // El ID fiscal (RFC) es opcional: ningún campo del formulario llenaba
+        // `documento_identidad`, así que exigirlo bloqueaba siempre el paso 1.
+        if (!rSocial) newErrors.razon_social = __('La razón social es requerida');
+        if (!nComercial) newErrors.nombre_comercial = __('El nombre comercial es requerido');
 
         setErrors(newErrors);
 
         if (Object.keys(newErrors).length > 0) {
-            setErrorMsg(__('Por favor complete los campos obligatorios del rancho (*) para continuar.'));
-            if (newErrors.razon_social_rancho || newErrors.nombre_comercial_rancho || newErrors.documento_identidad) {
+            setErrorMsg(__('Por favor complete los campos obligatorios (*) para continuar.'));
+            if (newErrors.razon_social || newErrors.nombre_comercial) {
                 setStep1SubTab('general');
             }
             return false;
@@ -314,8 +312,6 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
             ...prev,
             razon_social: rSocial,
             nombre_comercial: nComercial,
-            razon_social_rancho: rSocial,
-            nombre_comercial_rancho: nComercial,
         }));
         return true;
     };
@@ -382,7 +378,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-between font-sans">
-            <Head title={__('Producer Pre-Registration')} />
+            <Head title={__('Commercial Partner Pre-Registration')} />
 
             {/* Top Bar Header */}
             <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-4 px-6 sticky top-0 z-50 shadow-sm">
@@ -393,10 +389,10 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                         </div>
                         <div>
                             <h1 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
-                                {__('Producer Pre-Registration')}
+                                {__('Commercial Partner Pre-Registration')}
                             </h1>
                             <p className="text-xs text-slate-500">
-                                {preRegistro.nombre_comercial_rancho || __('Rancho Portal')}
+                                {preRegistro.nombre_comercial || __('Partner Portal')}
                             </p>
                         </div>
                     </div>
@@ -415,7 +411,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                             {__('Registration Complete!')}
                         </h2>
                         <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                            {__('Your producer and rancho information has been submitted successfully. Status is currently Under Review. You will receive a WhatsApp message once activated.')}
+                            {__('Your business partner information has been submitted successfully. Status is currently Under Review. You will receive a WhatsApp message once activated.')}
                         </p>
                         <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                             <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -430,7 +426,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                             <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold max-w-xl mx-auto">
                                 <div className={cn("py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2", step === 1 ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400")}>
                                     <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">1</span>
-                                    <span className="hidden sm:inline">{__('Rancho y Ubicación')}</span>
+                                    <span className="hidden sm:inline">{__('Datos y Ubicación')}</span>
                                 </div>
                                 <div className={cn("py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2", step === 2 ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400")}>
                                     <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">2</span>
@@ -450,14 +446,14 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                             </div>
                         )}
 
-                        {/* Step 1: Producer & Rancho Details with Tabs */}
+                        {/* Step 1: Business partner details with tabs */}
                         {step === 1 && (
                             <div className="p-6 md:p-8 space-y-6">
                                 <Tabs value={step1SubTab} onValueChange={setStep1SubTab} className="w-full">
                                     <TabsList className="grid grid-cols-2 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
                                         <TabsTrigger value="general" className="py-2.5 font-medium text-sm gap-2">
                                             <Building2 className="h-4 w-4" />
-                                            {__('Datos del Rancho')}
+                                            {__('Datos del Socio Comercial')}
                                         </TabsTrigger>
                                         <TabsTrigger value="location" className="py-2.5 font-medium text-sm gap-2">
                                             <MapPin className="h-4 w-4" />
@@ -465,45 +461,37 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                         </TabsTrigger>
                                     </TabsList>
 
-                                    {/* Sub-tab 1: Datos del Rancho */}
+                                    {/* Sub-tab 1: Datos del Socio Comercial */}
                                     <TabsContent value="general" className="space-y-6">
                                         <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
                                             <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
                                                 <Building2 className="h-4 w-4 text-emerald-600" />
-                                                {__('Información del Rancho')}
+                                                {__('Información del Socio Comercial')}
                                             </h4>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                                 <div>
-                                                    <Label htmlFor="razon_social_rancho">{__('Razón Social del Rancho')} *</Label>
+                                                    <Label htmlFor="razon_social">{__('Razón Social')} *</Label>
                                                     <Input 
-                                                        id="razon_social_rancho"
+                                                        id="razon_social"
                                                         className="mt-1.5 w-full"
-                                                        placeholder="ej. Agrícola Los Pinos S.A. de C.V."
-                                                        value={productorData.razon_social_rancho}
-                                                        onChange={(e) => setProductorData({ 
-                                                            ...productorData, 
-                                                            razon_social_rancho: e.target.value,
-                                                            razon_social: e.target.value
-                                                        })}
+                                                        placeholder="ej. Comercializadora Ejemplo S.A. de C.V."
+                                                        value={productorData.razon_social}
+                                                        onChange={(e) => setProductorData({ ...productorData, razon_social: e.target.value })}
                                                     />
-                                                    {errors.razon_social_rancho && <p className="text-xs text-red-500 mt-1">{errors.razon_social_rancho}</p>}
+                                                    {errors.razon_social && <p className="text-xs text-red-500 mt-1">{errors.razon_social}</p>}
                                                 </div>
 
                                                 <div>
-                                                    <Label htmlFor="nombre_comercial_rancho">{__('Nombre Comercial del Rancho')} *</Label>
+                                                    <Label htmlFor="nombre_comercial">{__('Nombre Comercial')} *</Label>
                                                     <Input 
-                                                        id="nombre_comercial_rancho"
+                                                        id="nombre_comercial"
                                                         className="mt-1.5 w-full"
-                                                        placeholder="ej. Rancho Los Pinos"
-                                                        value={productorData.nombre_comercial_rancho}
-                                                        onChange={(e) => setProductorData({ 
-                                                            ...productorData, 
-                                                            nombre_comercial_rancho: e.target.value,
-                                                            nombre_comercial: e.target.value
-                                                        })}
+                                                        placeholder="ej. Comercializadora Ejemplo"
+                                                        value={productorData.nombre_comercial}
+                                                        onChange={(e) => setProductorData({ ...productorData, nombre_comercial: e.target.value })}
                                                     />
-                                                    {errors.nombre_comercial_rancho && <p className="text-xs text-red-500 mt-1">{errors.nombre_comercial_rancho}</p>}
+                                                    {errors.nombre_comercial && <p className="text-xs text-red-500 mt-1">{errors.nombre_comercial}</p>}
                                                 </div>
 
                                                 <div className="md:col-span-2">
@@ -566,7 +554,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                         <div className="bg-slate-50/70 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-4">
                                             <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
                                                 <MapPin className="h-4 w-4 text-emerald-600" />
-                                                {__('Ubicación y Dirección del Rancho')}
+                                                {__('Ubicación y Dirección')}
                                             </h4>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -589,7 +577,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                     <Input 
                                                         id="estado"
                                                         className="mt-1.5 w-full"
-                                                        placeholder="ej. Michoacán, Jalisco"
+                                                        placeholder="ej. Estado o provincia"
                                                         value={productorData.estado}
                                                         onChange={(e) => setProductorData({ ...productorData, estado: e.target.value })}
                                                     />
@@ -607,12 +595,12 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                                 </div>
 
                                                 <div className="md:col-span-2">
-                                                    <Label htmlFor="direccion">{__('Dirección Completa del Rancho')}</Label>
+                                                    <Label htmlFor="direccion">{__('Dirección Completa')}</Label>
                                                     <Textarea 
                                                         id="direccion"
                                                         rows={2}
                                                         className="mt-1.5 w-full"
-                                                        placeholder="ej. Carretera Zamora-Jacona Km 3"
+                                                        placeholder="ej. Calle, número y colonia"
                                                         value={productorData.direccion}
                                                         onChange={(e) => setProductorData({ ...productorData, direccion: e.target.value })}
                                                     />
@@ -964,7 +952,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
                                     <div>
                                         <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                             <Car className="h-5 w-5 text-emerald-600" />
-                                            {__('Producer Vehicles (Optional)')}
+                                            {__('Commercial Partner Vehicles (Optional)')}
                                         </h3>
                                         <p className="text-xs text-slate-500 mt-1">
                                             {__('Register vehicles used to access facilities.')}
@@ -1311,7 +1299,7 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
             </Dialog>
 
             <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-200 dark:border-slate-800">
-                &copy; {new Date().getFullYear()} Driscolls App. {__('All rights reserved.')}
+                &copy; {new Date().getFullYear()} {__('All rights reserved.')}
             </footer>
         </div>
     );

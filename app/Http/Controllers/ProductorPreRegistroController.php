@@ -38,8 +38,8 @@ class ProductorPreRegistroController extends Controller
         return Inertia::render('preregistro-productor/Wizard', [
             'preRegistro' => [
                 'id' => $preRegistro->id,
-                'razon_social_rancho' => $preRegistro->razon_social_rancho,
-                'nombre_comercial_rancho' => $preRegistro->nombre_comercial_rancho,
+                'razon_social' => $preRegistro->razon_social_rancho,
+                'nombre_comercial' => $preRegistro->nombre_comercial_rancho,
                 'pais_telefono_id' => $preRegistro->pais_telefono_id,
                 'telefono' => $preRegistro->telefono,
                 'token' => $preRegistro->token,
@@ -61,13 +61,11 @@ class ProductorPreRegistroController extends Controller
 
         // Validar datos
         $request->validate([
-            // Productor & Rancho
+            // Datos del socio comercial
             'razon_social' => 'required|string|max:255',
             'nombre_comercial' => 'required|string|max:255',
             'rfc' => 'nullable|string|max:255',
             'documento_identidad' => 'nullable|string|max:50',
-            'razon_social_rancho' => 'required|string|max:255',
-            'nombre_comercial_rancho' => 'required|string|max:255',
             'pais_telefono_id' => 'required|exists:pais,id',
             'telefono' => 'required|string|max:20',
             'responsable' => 'required|string|max:255',
@@ -113,8 +111,9 @@ class ProductorPreRegistroController extends Controller
                 'nombre_comercial' => $request->nombre_comercial,
                 'rfc' => $request->rfc,
                 'documento_identidad' => $docIdentidad,
-                'razon_social_rancho' => $request->razon_social_rancho,
-                'nombre_comercial_rancho' => $request->nombre_comercial_rancho,
+                // Columnas *_rancho heredadas: se mantienen iguales a los datos del socio.
+                'razon_social_rancho' => $request->razon_social,
+                'nombre_comercial_rancho' => $request->nombre_comercial,
                 'pais_telefono_id' => $request->pais_telefono_id,
                 'telefono' => $request->telefono,
                 'responsable' => $request->responsable,
@@ -217,24 +216,26 @@ class ProductorPreRegistroController extends Controller
                     $empresa = $preRegistro->empresa;
                     $whatsappService = new WhatsAppService($empresa);
 
-                    $message = "Estimado Productor *{$productor->nombre_comercial}* (Rancho: *{$productor->nombre_comercial_rancho}*), hemos recibido la información de su pre-registro satisfactoriamente.\n\n"
+                    $message = "Estimado socio comercial *{$productor->nombre_comercial}*, hemos recibido la información de su pre-registro satisfactoriamente.\n\n"
                         . "Su registro se encuentra en estado *En Revisión*. Le notificaremos una vez que el personal de administración valide y active su suscripción.";
 
                     $whatsappService->sendMessage($to, $message, true);
                 }
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp de pre-registro de productor completado: ' . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error('Error al enviar WhatsApp de pre-registro de socio comercial completado: ' . $e->getMessage());
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pre-registro de productor completado con éxito. Su información está bajo revisión.'
+                'message' => __('Pre-registration completed successfully. Your information is under review.')
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Error en pre-registro de socio comercial: ' . $e->getMessage(), ['exception' => $e]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Ocurrió un error al procesar el registro: ' . $e->getMessage()
+                'message' => __('An error occurred while processing your registration. Please try again or contact the person who sent you the link.'),
             ], 500);
         }
     }

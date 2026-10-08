@@ -64,6 +64,16 @@ class SucursalController extends Controller
     {
         $this->guardEmpresa($request, $request->validated());
 
+        // Un usuario atado a una sucursal sólo ve esa sucursal: la que creara
+        // desaparecería de su vista (sin poder editarla ni borrarla) y parecería
+        // que "no se guardó". Que la cree un administrador de toda la empresa.
+        $actor = $request->user();
+        if (! $actor->isSuperAdmin() && $actor->sucursal_id) {
+            throw ValidationException::withMessages([
+                'nombre' => __('Your user is assigned to a single branch, so it cannot create new branches. Ask a company administrator.'),
+            ]);
+        }
+
         DB::transaction(function () use ($request) {
             Sucursal::create($request->validated());
         });

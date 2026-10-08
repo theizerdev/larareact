@@ -409,6 +409,7 @@ export default function EmpleadosIndexPage({
                 setIsPreRegistroModalOpen(false);
                 preRegistroForm.reset();
             },
+            onError: (errs) => notifyError(Object.values(errs)[0] || __('Please review the highlighted fields.')),
         });
     };
 
