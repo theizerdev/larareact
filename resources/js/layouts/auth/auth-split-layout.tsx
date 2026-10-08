@@ -26,12 +26,7 @@ export default function AuthSplitLayout({
                     href={home()}
                     className="relative z-10 flex items-center font-semibold"
                 >
-                    <img
-                        src="/image/logo/hosho/lockup-dark.png"
-                        alt="Hoshō"
-                        className="h-9 w-auto object-contain"
-                    />
-                    <span className="mx-4 h-8 w-px bg-white/40" />
+
                     <ClientLogo
                         className="h-9 w-auto object-contain"
                         onDarkBackground
@@ -39,8 +34,7 @@ export default function AuthSplitLayout({
                 </Link>
 
                 <p className="relative z-10 text-sm text-white/70 font-medium drop-shadow-sm">
-                    © {new Date().getFullYear()} Hoshō. Todos los derechos
-                    reservados.
+                    © {new Date().getFullYear()} Smurfit Westrock. Todos los derechos reservados.
                 </p>
             </div>
 
@@ -51,12 +45,8 @@ export default function AuthSplitLayout({
                         href={home()}
                         className="mb-8 flex items-center justify-center"
                     >
-                        <img
-                            src="/image/logo/hosho/lockup.png"
-                            alt="Hoshō"
-                            className="h-12 w-auto object-contain"
-                        />
-                        <span className="mx-4 h-10 w-px bg-border" />
+
+
                         <ClientLogo className="h-12 w-auto object-contain" />
                     </Link>
 
@@ -78,10 +68,9 @@ export default function AuthSplitLayout({
                         <p className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis">
                             Con apego y alineación a políticas y normativas internacionales
                         </p>
-                        <div className="flex items-center justify-between gap-1.5 pt-1">
+                        <div className="flex items-center justify-center gap-6 sm:gap-8 pt-1">
                             <img src="/image/logo/certifications/iso20000.svg" alt="ISO 20000" className="h-11 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
-                            <img src="/image/logo/certifications/ctpat.svg" alt="CTPAT" className="h-8 sm:h-9 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
-                            <img src="/image/logo/certifications/oea_mexico.svg" alt="OEA México" className="h-8 sm:h-9 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
+                            <img src="/image/logo/certifications/sox.svg" alt="SOX Sección 404" className="h-11 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
                             <img src="/image/logo/certifications/iso27001.svg" alt="ISO 27001" className="h-11 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
                         </div>
                     </div>
