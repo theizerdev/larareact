@@ -12,10 +12,14 @@ import {
     GitBranch,
     ShieldAlert,
     ShieldCheck,
+    Lock,
+    Unlock,
     Phone,
     Copy,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
+import PasswordInput from '@/components/password-input';
+import { SoxPasswordRequirements } from '@/components/sox-password-requirements';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -99,6 +103,10 @@ interface User {
     sucursal?: Sucursal | null;
     roles: Role[];
     pais_telefono?: Pais | null;
+    is_locked?: boolean;
+    lockout_remaining_minutes?: number;
+    days_remaining?: number;
+    is_expired?: boolean;
 }
 
 interface UsersPageProps {
@@ -108,6 +116,11 @@ interface UsersPageProps {
         total: number;
         activos: number;
         inactivos: number;
+    };
+    soxPolicies?: {
+        minLength: number;
+        historyLimit: number;
+        expireDays: number;
     };
     roles: Role[];
     empresas: Empresa[];
@@ -136,7 +149,7 @@ const initialForm = {
 };
 
 export default function UsersIndexPage({
-    auth, users, stats, roles, empresas, sucursales, paises, filters,
+    auth, users, stats, soxPolicies, roles, empresas, sucursales, paises, filters,
 }: UsersPageProps) {
     const { __ } = useTranslate();
 
@@ -151,6 +164,14 @@ export default function UsersIndexPage({
     const [duplicatingUser, setDuplicatingUser] = useState<User | null>(null);
     const [deletingUser, setDeletingUser] = useState<User | null>(null);
     const [isTableLoading, setIsTableLoading] = useState(false);
+
+    const handleUnlockUser = (user: User) => {
+        router.post(`/admin/usuarios/${user.id}/unlock`, {}, {
+            preserveScroll: true,
+            onSuccess: () => notifySuccess(`Cuenta de ${user.name} desbloqueada exitosamente.`),
+            onError: () => notifyError('Error al desbloquear el usuario.'),
+        });
+    };
 
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
@@ -367,21 +388,33 @@ return;
             header: __('Status'),
             stopRowClick: true,
             cell: (user) => (
-                <div className="flex items-center space-x-2">
-                    <Switch
-                        checked={user.status === 'activo'}
-                        onCheckedChange={() => handleToggleStatus(user)}
-                    />
-                    <span className={cn(
-                        'text-xs font-medium px-2 py-0.5 rounded-full border capitalize',
-                        user.status === 'activo'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900'
-                            : user.status === 'suspendido'
-                            ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800'
-                    )}>
-                        {__(user.status)}
-                    </span>
+                <div className="flex flex-col gap-1 items-start">
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            checked={user.status === 'activo'}
+                            onCheckedChange={() => handleToggleStatus(user)}
+                        />
+                        <span className={cn(
+                            'text-xs font-medium px-2 py-0.5 rounded-full border capitalize',
+                            user.status === 'activo'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900'
+                                : user.status === 'suspendido'
+                                ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800'
+                        )}>
+                            {__(user.status)}
+                        </span>
+                    </div>
+                    {user.is_locked ? (
+                        <Badge className="bg-red-600 text-white gap-1 text-[10px] mt-0.5">
+                            <Lock className="size-2.5" />
+                            Bloqueado SOX ({user.lockout_remaining_minutes ?? 15}m)
+                        </Badge>
+                    ) : user.is_expired ? (
+                        <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 text-[10px] mt-0.5">
+                            Contraseña Caducada
+                        </Badge>
+                    ) : null}
                 </div>
             ),
         },
@@ -398,6 +431,12 @@ return;
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        {user.is_locked && (
+                            <DropdownMenuItem onClick={() => handleUnlockUser(user)} className="text-red-600 font-semibold focus:text-red-700">
+                                <Unlock className="mr-2 h-4 w-4" />
+                                Desbloquear (SOX)
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => handleEditClick(user)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
@@ -623,19 +662,26 @@ return;
                             </div>
 
                             {/* Contraseña */}
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-2 space-y-2">
                                 <Label htmlFor="password">
                                     {__('Password')} {editingUser ? `(${__('Leave blank to keep current password')})` : '*'}
                                 </Label>
-                                <Input
+                                <PasswordInput
                                     id="password"
-                                    type="password"
                                     value={data.password}
                                     onChange={(e) => setData('password', e.target.value)}
-                                    placeholder="••••••••"
+                                    placeholder={!editingUser ? `Mínimo ${soxPolicies?.minLength ?? 15} caracteres (Política SOX)` : '•••••••••••••••'}
                                     required={!editingUser}
                                 />
                                 {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+
+                                {(!editingUser || data.password.length > 0) && (
+                                    <SoxPasswordRequirements
+                                        password={data.password}
+                                        minLength={soxPolicies?.minLength ?? 15}
+                                        historyLimit={soxPolicies?.historyLimit ?? 8}
+                                    />
+                                )}
                             </div>
 
                             {/* Teléfono */}
@@ -758,7 +804,10 @@ return;
                             >
                                 {__('Cancel')}
                             </Button>
-                            <Button type="submit" disabled={processing}>
+                            <Button
+                                type="submit"
+                                disabled={processing || (!editingUser && data.password.length < (soxPolicies?.minLength ?? 15))}
+                            >
                                 {processing ? __('Saving...') : __('Save Changes')}
                             </Button>
                         </DialogFooter>
