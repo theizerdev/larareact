@@ -137,20 +137,38 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
     };
 
     useEffect(() => {
-        if (configuracion?.requiere_foto_marcaje) {
-            if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then((stream) => {
-                        if (videoRef.current) {
-                            videoRef.current.srcObject = stream;
-                            setCameraActive(true);
-                        }
-                    })
-                    .catch(() => setCameraActive(false));
-            } else {
-                setCameraActive(false);
-            }
+        if (!configuracion?.requiere_foto_marcaje) return;
+        let active = true;
+        let stream: MediaStream | null = null;
+
+        if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then((s) => {
+                    // Si el usuario ya salió de la pantalla, apagar de inmediato
+                    if (!active) {
+                        s.getTracks().forEach(t => t.stop());
+                        return;
+                    }
+                    stream = s;
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = s;
+                        setCameraActive(true);
+                    }
+                })
+                .catch(() => setCameraActive(false));
+        } else {
+            setCameraActive(false);
         }
+
+        // Al salir del kiosco (o cambiar configuración) se libera la cámara
+        return () => {
+            active = false;
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+            }
+            if (videoRef.current) videoRef.current.srcObject = null;
+        };
     }, [configuracion]);
 
     // Listener para Lectores Físicos (Pistolas USB/Bluetooth) con tecla Enter

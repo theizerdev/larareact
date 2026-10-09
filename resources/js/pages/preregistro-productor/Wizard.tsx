@@ -104,6 +104,14 @@ export default function Wizard({ preRegistro, paises, mapbox_api_key, mapbox_act
         setCameraState(null);
     };
 
+    // Liberar la cámara al desmontar (salir de la pantalla)
+    useEffect(() => {
+        return () => {
+            streamRef.current?.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+        };
+    }, []);
+
     const startCamera = async (empIndex: number, target: PhotoTarget, mode?: 'user' | 'environment') => {
         stopCamera();
         const selectedMode = mode || (target === 'foto' ? 'user' : 'environment');

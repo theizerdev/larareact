@@ -89,6 +89,14 @@ export default function ProductorVehiculosModal({
         setActiveCameraTarget(null);
     };
 
+    // Liberar la cámara al desmontar (salir de la pantalla)
+    useEffect(() => {
+        return () => {
+            streamRef.current?.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+        };
+    }, []);
+
     const startCamera = async (target: PhotoTarget, mode?: 'user' | 'environment') => {
         stopCamera();
         const selectedMode = mode || 'environment';
@@ -178,6 +186,8 @@ export default function ProductorVehiculosModal({
             setIsAdding(false);
             setEditingVehicle(null);
             setViewingVehicle(null);
+        } else if (!isOpen) {
+            stopCamera();
         }
     }, [isOpen, productor]);
 

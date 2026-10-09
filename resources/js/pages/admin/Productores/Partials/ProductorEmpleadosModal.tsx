@@ -134,6 +134,14 @@ export default function ProductorEmpleadosModal({
         setActiveCameraTarget(null);
     };
 
+    // Liberar la cámara al desmontar (salir de la pantalla)
+    useEffect(() => {
+        return () => {
+            streamRef.current?.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+        };
+    }, []);
+
     const startCamera = async (target: PhotoTarget, mode?: 'user' | 'environment') => {
         stopCamera();
         const selectedMode = mode || (target === 'foto' ? 'user' : 'environment');
