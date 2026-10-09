@@ -157,9 +157,17 @@ class ProductorFotoValidacionTest extends TestCase
         $this->actingAs($admin)->post('/admin/socios-comerciales', $this->datos(['foto' => $this->imagen()]));
         $this->assertSame(0, KycValidacion::withoutGlobalScopes()->count());
 
+        // Con foto y documento, pero sin pedirlo en el formulario: tampoco (validaciones manuales)
+        $this->actingAs($admin)->post('/admin/socios-comerciales', $this->datos([
+            'razon_social' => 'Agro 1', 'documento_identidad' => 'D1',
+            'foto' => $this->imagen(), 'documento_frontal' => $this->imagen('f.jpg'), 'tipo_documento' => 'ine',
+        ]))->assertSessionHasNoErrors();
+        $this->assertSame(0, KycValidacion::withoutGlobalScopes()->count());
+
         $this->actingAs($admin)->post('/admin/socios-comerciales', $this->datos([
             'razon_social' => 'Agro 2', 'documento_identidad' => 'D2',
             'foto' => $this->imagen(), 'documento_frontal' => $this->imagen('f.jpg'), 'tipo_documento' => 'ine',
+            'validar_identidad' => '1',
         ]));
 
         $p = Productor::where('razon_social', 'Agro 2')->firstOrFail();

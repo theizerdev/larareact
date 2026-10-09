@@ -96,10 +96,10 @@ class ProductorController extends Controller
         $productor = AccessCodeService::createWithRetry(fn () => Productor::create($data));
         $this->enviarCarnetWhatsAppInternal($productor);
 
-        $this->validarIdentidad($productor, $tipoDocumento, true);
+        $avisoIdentidad = $this->validarIdentidad($request, $productor, $tipoDocumento, true);
         $this->vincularPrevalidaciones($productor); // validaciones hechas desde el formulario
 
-        return $this->respuestaConSeguimiento($request, $productor, __('Producer created successfully'));
+        return $this->respuestaConSeguimiento($request, $productor, __('Producer created successfully'), $avisoIdentidad);
     }
 
     public function carnet(Productor $productor)
@@ -203,10 +203,11 @@ class ProductorController extends Controller
 
         $productor->update($data);
 
-        // Se re-valida solo si cambió algo que la validación usa (foto, documento o CURP).
+        // Con validaciones automáticas se re-valida solo si cambió algo que la
+        // validación usa (foto, documento o CURP); si no, sólo si el usuario lo pidió.
         $cambio = $request->hasFile('foto') || $request->hasFile('documento_frontal')
             || $request->hasFile('documento_reverso') || $productor->curp !== $curpAntes;
-        $this->validarIdentidad($productor->fresh(), $tipoDocumento, $cambio);
+        $this->validarIdentidad($request, $productor->fresh(), $tipoDocumento, $cambio);
         $this->vincularPrevalidaciones($productor->fresh()); // validaciones hechas desde el formulario
 
         return redirect()->back();
@@ -325,24 +326,24 @@ class ProductorController extends Controller
 
     /**
      * Lanza las validaciones de identidad (JaaK / Didit / firma ZapSign, según la
-     * regla de la empresa) con la foto y el documento del responsable. Solo si ya
-     * hay foto y documento frontal; nunca bloquea el guardado.
+     * regla de la empresa) con la foto y el documento del responsable, si el
+     * usuario lo pidió en el formulario (o con validaciones automáticas, cuando
+     * $correr y ya hay foto y documento frontal); nunca bloquea el guardado.
      */
-    private function validarIdentidad(Productor $productor, ?string $tipoDocumento, bool $correr): void
+    private function validarIdentidad(ProductorRequest $request, Productor $productor, ?string $tipoDocumento, bool $correr): ?string
     {
-        if (! $correr || ! $productor->foto || ! $productor->documento_frontal) {
-            return;
-        }
-
-        $this->dispatchKycValidacion($productor, $productor->curp, null, ['tipo_documento' => $tipoDocumento]);
+        return $this->validarIdentidadSiSePidio($request, $productor, $productor->curp, ['tipo_documento' => $tipoDocumento],
+            automatico: $correr && $productor->foto && $productor->documento_frontal);
     }
 
     /**
      * Si al guardar quedan pasos para la persona (Didit o firma), se abre el
      * folio, donde está el QR para terminarlos en su teléfono.
      */
-    private function respuestaConSeguimiento(ProductorRequest $request, Productor $productor, string $mensaje)
+    private function respuestaConSeguimiento(ProductorRequest $request, Productor $productor, string $mensaje, ?string $avisoIdentidad = null)
     {
+        $mensaje .= $avisoIdentidad ? ' '.$avisoIdentidad : '';
+
         $seguimiento = $this->seguimientoValidacion($productor);
 
         if (! empty($seguimiento['url']) && $request->user()?->can('validaciones.view')) {
@@ -360,13 +361,13 @@ class ProductorController extends Controller
         }
 
         // Sin folio no se manda aviso: la pantalla ya muestra su propio mensaje de éxito.
-        if (empty($seguimiento['folio'])) {
+        if (empty($seguimiento['folio']) && ! $avisoIdentidad) {
             return redirect()->back();
         }
 
         return redirect()->back()->with('notification', [
             'type' => 'success',
-            'message' => $mensaje.' '.__('Folio: :folio', ['folio' => $seguimiento['folio']]),
+            'message' => $mensaje.(! empty($seguimiento['folio']) ? ' '.__('Folio: :folio', ['folio' => $seguimiento['folio']]) : ''),
         ]);
     }
 }

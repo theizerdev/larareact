@@ -87,6 +87,11 @@ class ProveedorController extends Controller
         $this->enviarCarnetWhatsAppInternal($proveedor);
         $this->vincularPrevalidaciones($proveedor); // validaciones hechas desde el formulario
 
+        // Identidad del responsable (INE + foto): sólo si el usuario la pidió en el formulario.
+        if ($aviso = $this->validarIdentidadSiSePidio($request, $proveedor, $proveedor->curp, ['tipo_documento' => $proveedor->tipo_documento], automatico: false)) {
+            return redirect()->back()->with('notification', ['type' => 'success', 'message' => $aviso]);
+        }
+
         return redirect()->back();
     }
 

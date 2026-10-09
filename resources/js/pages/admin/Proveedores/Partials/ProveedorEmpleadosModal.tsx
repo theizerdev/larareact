@@ -1,3 +1,4 @@
+import { ValidarIdentidadAlGuardar } from '@/components/validacion-rapida';
 import { ValidarButton } from '@/components/validar-persona';
 import { attachStream } from '@/lib/camera';
 import React, { useState, useEffect } from 'react';
@@ -77,6 +78,7 @@ const initialForm = {
     foto_carnet: null as File | null,
     documento_frontal: null as File | null,
     documento_reverso: null as File | null,
+    validar_identidad: false,
 };
 
 export default function ProveedorEmpleadosModal({
@@ -269,6 +271,7 @@ export default function ProveedorEmpleadosModal({
             foto_carnet: null,
             documento_frontal: null,
             documento_reverso: null,
+            validar_identidad: false,
         });
 
         setPreviews({
@@ -300,6 +303,7 @@ export default function ProveedorEmpleadosModal({
             if (form.foto_carnet) formData.append('foto_carnet', form.foto_carnet);
             if (form.documento_frontal) formData.append('documento_frontal', form.documento_frontal);
             if (form.documento_reverso) formData.append('documento_reverso', form.documento_reverso);
+            if (!editingEmployee && form.validar_identidad) formData.append('validar_identidad', '1');
 
             let url = `/admin/proveedores/${proveedor.id}/empleados`;
             if (editingEmployee) {
@@ -321,6 +325,7 @@ export default function ProveedorEmpleadosModal({
 
             if (response.ok && resData.success) {
                 toast.success(editingEmployee ? __('Employee updated successfully.') : __('Employee added successfully.'));
+                if (resData.aviso_identidad) toast.info(resData.aviso_identidad);
                 handleResetForm();
                 loadEmployees();
             } else if (response.status === 422) {
@@ -649,6 +654,15 @@ export default function ProveedorEmpleadosModal({
                                     )}
                                 </div>
                             </div>
+
+                            {!editingEmployee && (
+                                <ValidarIdentidadAlGuardar
+                                    listo={!!form.foto_carnet && !!form.documento_frontal}
+                                    value={form.validar_identidad}
+                                    onChange={(v) => setForm((f) => ({ ...f, validar_identidad: v }))}
+                                    className="mt-4"
+                                />
+                            )}
 
                             <Button
                                 type="submit"

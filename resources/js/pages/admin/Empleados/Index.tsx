@@ -73,7 +73,7 @@ import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ValidacionRapida } from '@/components/validacion-rapida';
+import { ValidacionRapida, ValidarIdentidadAlGuardar } from '@/components/validacion-rapida';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -219,6 +219,7 @@ const initialForm = {
     foto_empleado_2: null as any,
     foto_documento: null as any,
     foto_documento_reverso: null as any,
+    validar_identidad: false,
     vehiculos: [] as any[],
     empresa_id: '' as string | number,
     sucursal_id: '' as string | number,
@@ -562,6 +563,7 @@ export default function EmpleadosIndexPage({
             foto_empleado_2: emp.foto_empleado_2 || null,
             foto_documento: emp.foto_documento || null,
             foto_documento_reverso: emp.foto_documento_reverso || null,
+            validar_identidad: false,
             vehiculos: emp.vehiculos || [],
             empresa_id: emp.empresa_id || '',
             sucursal_id: emp.sucursal_id || '',
@@ -1715,6 +1717,14 @@ export default function EmpleadosIndexPage({
                                     </div>
 
                                 </div>
+                                {!editingEmpleado && (
+                                    <ValidarIdentidadAlGuardar
+                                        listo={!!data.foto_empleado && !!data.foto_documento}
+                                        value={data.validar_identidad}
+                                        onChange={(v) => setData('validar_identidad', v)}
+                                        className="mt-4"
+                                    />
+                                )}
                             </TabsContent>
 
                             {/* ══ Tab 4: Vehículos ══════════════════════════════════════════════════ */}

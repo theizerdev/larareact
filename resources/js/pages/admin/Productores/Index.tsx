@@ -53,7 +53,7 @@ import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import ProductorEmpleadosModal from './Partials/ProductorEmpleadosModal';
 import ProductorVehiculosModal from './Partials/ProductorVehiculosModal';
 import MapboxMap, { MapAddressDetails } from '@/components/mapbox-map';
-import { ValidacionRapida } from '@/components/validacion-rapida';
+import { ValidacionRapida, ValidarIdentidadAlGuardar } from '@/components/validacion-rapida';
 
 interface Pais {
     id: number;
@@ -257,6 +257,7 @@ export default function Index({
         documento_frontal: null as File | null,
         documento_reverso: null as File | null,
         quitar_foto: false,
+        validar_identidad: false,
         pais_id: paises.length > 0 ? String(paises[0].id) : '',
         latitud: defaultLat as any,
         longitud: defaultLng as any,
@@ -348,6 +349,7 @@ export default function Index({
             documento_frontal: null,
             documento_reverso: null,
             quitar_foto: false,
+            validar_identidad: false,
             pais_id: productor.pais_id ? String(productor.pais_id) : (paises.length > 0 ? String(paises[0].id) : ''),
             latitud: productor.latitud ?? null,
             longitud: productor.longitud ?? null,
@@ -1023,6 +1025,15 @@ export default function Index({
                                             onFile={(f) => pickImage('documento_reverso', f)}
                                         />
                                     </div>
+                                    {!editingProductor && (
+                                        <ValidarIdentidadAlGuardar
+                                            listo={!!data.foto && !!data.documento_frontal}
+                                            value={data.validar_identidad}
+                                            onChange={(v) => setData('validar_identidad', v)}
+                                            pasaporte={data.tipo_documento === 'pasaporte'}
+                                            className="mt-4"
+                                        />
+                                    )}
                                 </div>
                             </TabsContent>
                         </Tabs>

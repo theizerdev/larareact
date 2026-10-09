@@ -1347,5 +1347,20 @@
   "Validar automáticamente": "Validate automatically",
   "Elige el mejor camino según los datos del registro": "Picks the best path based on the record's data",
   "Ruta": "Route",
-  "Falta": "Missing"
+  "Falta": "Missing",
+  "No se validó la identidad: falta el INE (o pasaporte) o la foto.": "Identity was not validated: the INE (or passport) or the photo is missing.",
+  "Validación de identidad iniciada: el resultado llega a Resultados de validaciones.": "Identity validation started: the result will appear in Validation results.",
+  "No se validó la identidad: la empresa no tiene validación de identidad activa.": "Identity was not validated: the company has no active identity validation.",
+  "Esta consulta tiene costo.": "This check has a cost.",
+  "Sí, validar": "Yes, validate",
+  "¿Validar el RFC de la empresa?": "Validate the company's RFC?",
+  "¿Validar la CURP de esta persona?": "Validate this person's CURP?",
+  "Se consultarán los antecedentes de la empresa con el RFC :rfc en TRUORA.": "The company's background will be checked with RFC :rfc in TRUORA.",
+  "Se consultará en RENAPO (DIDIT) que la CURP :curp corresponda a :nombre.": "RENAPO (DIDIT) will be checked to confirm that CURP :curp belongs to :nombre.",
+  "el pasaporte": "the passport",
+  "Validar identidad al guardar": "Validate identity on save",
+  "Se validan :documento y la foto (lectura del documento y comparación facial). Opcional: después también se puede validar desde el menú Validar.": "Validates :documento and the photo (document reading and face match). Optional: you can also validate later from the Validate menu.",
+  "Carga :documento (frente) y la foto para poder validar la identidad.": "Upload :documento (front) and the photo to validate identity.",
+  "¿Validar la identidad de esta persona?": "Validate this person's identity?",
+  "Al guardar, :documento y la foto se enviarán a validación de identidad (lectura del documento y comparación facial).": "On save, :documento and the photo will be sent for identity validation (document reading and face match)."
 }

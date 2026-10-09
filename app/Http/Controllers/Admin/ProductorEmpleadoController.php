@@ -77,13 +77,14 @@ class ProductorEmpleadoController extends Controller
 
         $employee = ProductorEmpleado::create($data);
 
-        // Validación de identidad (KYC) contra JAAK si la empresa la tiene activa.
-        $this->dispatchKycValidacion($employee, $data['curp'] ?? null);
+        // Validación de identidad (KYC): sólo si el usuario la pidió en el formulario.
+        $avisoIdentidad = $this->validarIdentidadSiSePidio($request, $employee, $data['curp'] ?? null);
 
         return response()->json([
             'success' => true,
             'message' => 'Employee added successfully',
-            'employee' => $employee
+            'employee' => $employee,
+            'aviso_identidad' => $avisoIdentidad,
         ], 201);
     }
 

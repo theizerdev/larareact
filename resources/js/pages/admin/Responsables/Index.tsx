@@ -54,7 +54,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ValidacionRapida } from '@/components/validacion-rapida';
+import { ValidacionRapida, ValidarIdentidadAlGuardar } from '@/components/validacion-rapida';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
@@ -172,6 +172,7 @@ const initialForm = {
     documento_frontal: null as File | null,
     documento_reverso: null as File | null,
     quitar_foto: false,
+    validar_identidad: false,
 };
 
 // ─── Página principal ──────────────────────────────────────────────────────────
@@ -284,6 +285,7 @@ export default function ResponsablesIndexPage({
             documento_frontal:   null,
             documento_reverso:   null,
             quitar_foto:         false,
+            validar_identidad:   false,
         });
         setIsModalOpen(true);
     };
@@ -867,6 +869,15 @@ return;
                             tipoDocumento={data.tipo_documento}
                             errors={errors as any}
                         />
+
+                        {!editingResponsable && (
+                            <ValidarIdentidadAlGuardar
+                                listo={!!data.foto && !!data.documento_frontal}
+                                value={data.validar_identidad}
+                                onChange={(v) => setData('validar_identidad', v)}
+                                pasaporte={data.tipo_documento === 'pasaporte'}
+                            />
+                        )}
 
                         <DialogFooter className="pt-4 border-t">
                             <Button

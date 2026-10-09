@@ -90,9 +90,12 @@ class ResponsableController extends Controller
         $responsable = Responsable::create($this->guardarEvidencia($request, $request->validated(), 'responsables'));
         $this->vincularPrevalidaciones($responsable); // validaciones hechas desde el formulario
 
+        // Identidad (INE + foto): sólo si el usuario la pidió en el formulario.
+        $avisoIdentidad = $this->validarIdentidadSiSePidio($request, $responsable, $responsable->curp, ['tipo_documento' => $responsable->tipo_documento], automatico: false);
+
         return back()->with('notification', [
             'type' => 'success',
-            'message' => __('Responsible created successfully.'),
+            'message' => __('Responsible created successfully.').($avisoIdentidad ? ' '.$avisoIdentidad : ''),
         ]);
     }
 

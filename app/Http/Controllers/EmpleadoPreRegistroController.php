@@ -181,12 +181,14 @@ class EmpleadoPreRegistroController extends Controller
 
             DB::commit();
 
-            // 3.5 Disparar la validación de identidad (KYC) contra JAAK si la
-            // empresa la tiene activa. Nunca bloquea: corre tras la respuesta.
-            $this->dispatchKycValidacion($empleado, $request->curp, null, [
-                'tipo_documento' => $request->input('tipo_documento'),
-                'pais_documento' => $request->input('pais_documento'),
-            ]);
+            // 3.5 Validación de identidad (KYC): ya no corre sola (costo de las
+            // APIs); el administrador la lanza desde Validar ▸ si la necesita.
+            if (self::validacionesAutomaticas()) {
+                $this->dispatchKycValidacion($empleado, $request->curp, null, [
+                    'tipo_documento' => $request->input('tipo_documento'),
+                    'pais_documento' => $request->input('pais_documento'),
+                ]);
+            }
             $seguimiento = $this->seguimientoValidacion($empleado);
 
             // 4. Enviar mensaje de WhatsApp

@@ -240,10 +240,12 @@ class ProveedorPreRegistroController extends Controller
 
             DB::commit();
 
-            // 4.5 Validación de identidad (KYC) contra JAAK por cada empleado del
-            // proveedor, si la empresa la tiene activa. Nunca bloquea.
-            foreach ($empleadosKyc as [$empleadoKyc, $curpKyc]) {
-                $this->dispatchKycValidacion($empleadoKyc, $curpKyc, $proveedor);
+            // 4.5 Validación de identidad (KYC) por cada empleado del proveedor:
+            // ya no corre sola (costo de las APIs); se lanza desde Validar ▸.
+            if (self::validacionesAutomaticas()) {
+                foreach ($empleadosKyc as [$empleadoKyc, $curpKyc]) {
+                    $this->dispatchKycValidacion($empleadoKyc, $curpKyc, $proveedor);
+                }
             }
 
             // 5. Enviar mensaje de WhatsApp

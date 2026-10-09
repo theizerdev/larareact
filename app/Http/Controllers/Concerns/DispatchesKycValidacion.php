@@ -15,6 +15,7 @@ use App\Services\Validaciones\FirmaService;
 use App\Services\Validaciones\TruoraSincronizador;
 use App\Services\Validaciones\ValidacionRapida;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -33,6 +34,10 @@ use Illuminate\Support\Facades\Log;
  * Todo cae en el folio de operación del titular. Lo que la persona tiene que
  * hacer en otra página (DIDIT, firma) se le ofrece en la liga de seguimiento
  * (seguimientoValidacion()). Diseño defensivo: nada aquí rompe el registro.
+ *
+ * Desde 2026-10 nada se valida solo al registrar (costo de las APIs): las
+ * altas llaman a validarIdentidadSiSePidio() y los pre-registros sólo validan
+ * con validacionesAutomaticas(); lo demás es el menú Validar ▸.
  */
 trait DispatchesKycValidacion
 {
@@ -45,14 +50,15 @@ trait DispatchesKycValidacion
      * @param  Model|null  $titular  Entidad dueña del folio de operación (p. ej. el Proveedor
      *                               de un pre-registro con varios empleados). Por defecto, la persona.
      * @param  array{tipo_documento?: ?string, pais_documento?: ?string}  $opciones
+     * @return bool true si se lanzó al menos una validación
      */
-    protected function dispatchKycValidacion(Model $persona, ?string $curp = null, ?Model $titular = null, array $opciones = []): void
+    protected function dispatchKycValidacion(Model $persona, ?string $curp = null, ?Model $titular = null, array $opciones = []): bool
     {
         try {
             $empresa = $persona->empresa ?? null;
 
             if (! $empresa) {
-                return;
+                return false;
             }
 
             $regla = ValidacionRegla::para(
@@ -94,7 +100,7 @@ trait DispatchesKycValidacion
             }
 
             if (! $usarJaak && ! $usarDidit && ! $usarFirma && ! $usarTruora) {
-                return; // empresa sin validaciones configuradas: flujo idéntico al de siempre
+                return false; // empresa sin validaciones configuradas: flujo idéntico al de siempre
             }
 
             $curp = $curp ?: ($persona->curp ?? null);
@@ -146,11 +152,59 @@ trait DispatchesKycValidacion
                 $operacion->urlSeguimiento(); // el redirect de ZapSign regresa a la liga de seguimiento
                 FirmaService::iniciar($operacion, $persona, $regla, $tipoDocumento, $pais);
             }
+
+            return true;
         } catch (\Throwable $e) {
             Log::error('No se pudieron iniciar las validaciones: '.$e->getMessage(), [
                 'persona' => $persona->getMorphClass().'#'.$persona->getKey(),
             ]);
+
+            return false;
         }
+    }
+
+    /**
+     * ¿Se valida solo al registrar? Apagado por defecto (config/validaciones.php):
+     * para controlar el costo, cada validación la elige el usuario.
+     */
+    protected static function validacionesAutomaticas(): bool
+    {
+        return (bool) config('validaciones.automaticas', false);
+    }
+
+    /**
+     * Identidad al dar de alta desde el panel. Sólo corre si el usuario marcó
+     * "Validar identidad al guardar" (y lo confirmó) y la persona tiene INE o
+     * pasaporte y foto. Con validaciones automáticas, las altas que antes
+     * validaban solas ($automatico) vuelven a hacerlo.
+     *
+     * @return string|null aviso para el mensaje de guardado; null si no se pidió
+     */
+    protected function validarIdentidadSiSePidio(Request $request, Model $persona, ?string $curp = null, array $opciones = [], bool $automatico = true): ?string
+    {
+        if ($automatico && self::validacionesAutomaticas()) {
+            $this->dispatchKycValidacion($persona, $curp, null, $opciones);
+
+            return null;
+        }
+
+        if (! $request->boolean('validar_identidad')) {
+            return null;
+        }
+
+        if (! $request->user()?->can('validaciones.manage')) {
+            return __('No tienes permiso para validar.');
+        }
+
+        $evidencia = ProcesarKycValidacion::evidencias($persona, class_basename($persona));
+
+        if (empty($evidencia['front']) || empty($evidencia['selfie'])) {
+            return __('No se validó la identidad: falta el INE (o pasaporte) o la foto.');
+        }
+
+        return $this->dispatchKycValidacion($persona, $curp, null, $opciones)
+            ? __('Validación de identidad iniciada: el resultado llega a Resultados de validaciones.')
+            : __('No se validó la identidad: la empresa no tiene validación de identidad activa.');
     }
 
     /**

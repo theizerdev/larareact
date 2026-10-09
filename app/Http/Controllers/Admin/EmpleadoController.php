@@ -108,8 +108,8 @@ class EmpleadoController extends Controller
 
         $empleado = AccessCodeService::createWithRetry(fn () => Empleado::create($data));
 
-        // Validación de identidad (KYC) contra JAAK si la empresa la tiene activa.
-        $this->dispatchKycValidacion($empleado, $data['curp'] ?? null, null, [
+        // Validación de identidad (KYC): sólo si el usuario la pidió en el formulario.
+        $avisoIdentidad = $this->validarIdentidadSiSePidio($request, $empleado, $data['curp'] ?? null, [
             'tipo_documento' => $request->input('tipo_documento'),
             'pais_documento' => $request->input('pais_documento'),
         ]);
@@ -156,7 +156,8 @@ class EmpleadoController extends Controller
             if ($operacionId) {
                 return redirect()->route('admin.validaciones.operaciones.show', $operacionId)->with('notification', [
                     'type' => 'success',
-                    'message' => __('Employee created successfully.').' '.__('Folio :folio: identity and signature are pending.', ['folio' => $seguimiento['folio']]),
+                    'message' => __('Employee created successfully.').' '.__('Folio :folio: identity and signature are pending.', ['folio' => $seguimiento['folio']])
+                        .($avisoIdentidad ? ' '.$avisoIdentidad : ''),
                 ]);
             }
         }
@@ -164,7 +165,8 @@ class EmpleadoController extends Controller
         return back()->with('notification', [
             'type' => 'success',
             'message' => __('Employee created successfully.')
-                .(! empty($seguimiento['folio']) ? ' '.__('Folio: :folio', ['folio' => $seguimiento['folio']]) : ''),
+                .(! empty($seguimiento['folio']) ? ' '.__('Folio: :folio', ['folio' => $seguimiento['folio']]) : '')
+                .($avisoIdentidad ? ' '.$avisoIdentidad : ''),
         ]);
     }
 

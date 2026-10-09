@@ -41,7 +41,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { ValidacionRapida } from '@/components/validacion-rapida';
+import { ValidacionRapida, ValidarIdentidadAlGuardar } from '@/components/validacion-rapida';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn } from '@/lib/utils';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
@@ -158,6 +158,7 @@ const initialForm = {
     documento_frontal: null as File | null,
     documento_reverso: null as File | null,
     quitar_foto: false,
+    validar_identidad: false,
     pais_id: '',
     latitud: '' as any,
     longitud: '' as any,
@@ -332,6 +333,7 @@ export default function ProveedoresIndexPage({
             documento_frontal: null,
             documento_reverso: null,
             quitar_foto: false,
+            validar_identidad: false,
             pais_id: prov.pais_id ? String(prov.pais_id) : '',
             latitud: prov.latitud || '',
             longitud: prov.longitud || '',
@@ -928,6 +930,15 @@ export default function ProveedoresIndexPage({
                                             tipoDocumento={data.tipo_documento}
                                             errors={errors as any}
                                         />
+                                        {!editingProveedor && (
+                                            <ValidarIdentidadAlGuardar
+                                                listo={!!data.foto && !!data.documento_frontal}
+                                                value={data.validar_identidad}
+                                                onChange={(v) => setData('validar_identidad', v)}
+                                                pasaporte={data.tipo_documento === 'pasaporte'}
+                                                className="mt-3"
+                                            />
+                                        )}
                                     </div>
 
                                     {/* Teléfono */}

@@ -1,3 +1,4 @@
+import { ValidarIdentidadAlGuardar } from '@/components/validacion-rapida';
 import { ValidarButton } from '@/components/validar-persona';
 import { attachStream } from '@/lib/camera';
 import React, { useState, useEffect, useRef } from 'react';
@@ -95,6 +96,7 @@ export default function ProductorEmpleadosModal({
     const [fotoCarnet, setFotoCarnet] = useState<File | null>(null);
     const [docFrontal, setDocFrontal] = useState<File | null>(null);
     const [docReverso, setDocReverso] = useState<File | null>(null);
+    const [validarIdentidad, setValidarIdentidad] = useState(false);
 
     const [previewFoto, setPreviewFoto] = useState<string | null>(null);
     const [previewFrontal, setPreviewFrontal] = useState<string | null>(null);
@@ -238,6 +240,7 @@ export default function ProductorEmpleadosModal({
         setPreviewFoto(null);
         setPreviewFrontal(null);
         setPreviewReverso(null);
+        setValidarIdentidad(false);
         stopCamera();
     };
 
@@ -298,6 +301,7 @@ export default function ProductorEmpleadosModal({
         if (fotoCarnet) data.append('foto_carnet', fotoCarnet);
         if (docFrontal) data.append('documento_frontal', docFrontal);
         if (docReverso) data.append('documento_reverso', docReverso);
+        if (!editingEmployee && validarIdentidad) data.append('validar_identidad', '1');
 
         try {
             const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content;
@@ -317,6 +321,7 @@ export default function ProductorEmpleadosModal({
             const resData = await response.json();
             if (resData.success) {
                 toast.success(editingEmployee ? __('Colaborador actualizado correctamente') : __('Colaborador registrado correctamente'));
+                if (resData.aviso_identidad) toast.info(resData.aviso_identidad);
                 fetchEmployees();
                 setIsAdding(false);
                 setEditingEmployee(null);
@@ -742,6 +747,14 @@ export default function ProductorEmpleadosModal({
                                 </div>
                             </div>
                         </div>
+
+                        {!editingEmployee && (
+                            <ValidarIdentidadAlGuardar
+                                listo={!!fotoCarnet && !!docFrontal}
+                                value={validarIdentidad}
+                                onChange={setValidarIdentidad}
+                            />
+                        )}
 
                         <div className="flex justify-end gap-3 pt-4 border-t dark:border-slate-800">
                             <Button variant="outline" type="button" onClick={() => { stopCamera(); setIsAdding(false); }}>

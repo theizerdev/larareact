@@ -216,10 +216,12 @@ class ProductorPreRegistroController extends Controller
 
             DB::commit();
 
-            // 4.5 Validación de identidad (KYC) contra JAAK por cada empleado del
-            // productor, si la empresa la tiene activa. Nunca bloquea.
-            foreach ($empleadosKyc as [$empleadoKyc, $curpKyc]) {
-                $this->dispatchKycValidacion($empleadoKyc, $curpKyc, $productor);
+            // 4.5 Validación de identidad (KYC) por cada empleado del socio:
+            // ya no corre sola (costo de las APIs); se lanza desde Validar ▸.
+            if (self::validacionesAutomaticas()) {
+                foreach ($empleadosKyc as [$empleadoKyc, $curpKyc]) {
+                    $this->dispatchKycValidacion($empleadoKyc, $curpKyc, $productor);
+                }
             }
 
             // 5. Enviar mensaje de WhatsApp

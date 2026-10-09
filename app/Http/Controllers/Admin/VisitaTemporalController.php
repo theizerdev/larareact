@@ -144,15 +144,15 @@ class VisitaTemporalController extends Controller
 
         $visita = VisitaTemporal::create($validated);
 
-        // Validación de identidad (KYC) contra JAAK si la empresa la tiene activa.
-        $this->dispatchKycValidacion($visita, $validated['curp'] ?? null);
+        // Validación de identidad (KYC): sólo si el usuario la pidió en el formulario.
+        $avisoIdentidad = $this->validarIdentidadSiSePidio($request, $visita, $validated['curp'] ?? null);
 
         // Notificar al empleado visitado Y al responsable por WhatsApp
         $this->notifyArrival($visita, $user);
 
         return back()->with('notification', [
             'type'    => 'success',
-            'message' => __('Temporary visit registered successfully.'),
+            'message' => __('Temporary visit registered successfully.').($avisoIdentidad ? ' '.$avisoIdentidad : ''),
         ]);
     }
 
