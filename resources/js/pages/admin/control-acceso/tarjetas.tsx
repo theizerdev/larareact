@@ -64,7 +64,7 @@ export default function ControlAccesoTarjetas({ items, filters, error }: PagePro
     useFilterSync(currentFilters);
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Access Control'), href: '/admin/control-acceso/tarjetas' },
         { title: __('Access Cards'), href: '/admin/control-acceso/tarjetas' },
     ];

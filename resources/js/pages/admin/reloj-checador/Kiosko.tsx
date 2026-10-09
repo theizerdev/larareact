@@ -499,7 +499,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
 
                     <LanguageToggle />
 
-                    <Link href="/admin/dashboard">
+                    <Link href="/dashboard">
                         <Button variant="outline" className="border-slate-800 bg-slate-900 text-slate-300 hover:text-white">
                             <ArrowLeft className="w-4 h-4 mr-2 rtl:mr-0 rtl:ml-2 rtl:rotate-180" />
                             {__('Panel Admin')}

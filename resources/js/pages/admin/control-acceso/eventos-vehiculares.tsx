@@ -77,7 +77,7 @@ export default function ControlAccesoEventosVehiculares({ items, filters, error 
     useFilterSync(currentFilters);
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Access Control'), href: '/admin/control-acceso/eventos-vehiculares' },
         { title: __('Vehicle Access Events'), href: '/admin/control-acceso/eventos-vehiculares' },
     ];

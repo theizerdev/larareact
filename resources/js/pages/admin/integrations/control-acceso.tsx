@@ -58,7 +58,7 @@ export default function ControlAccesoIntegration({
     };
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Settings'), href: '#' },
         { title: __('Integrations'), href: '/admin/integrations' },
         { title: __('Access Control'), href: '/admin/integrations/control-acceso' },

@@ -35,7 +35,7 @@ export default function BioTimeDispositivos({ dispositivos, last_sync_at, biotim
     const [syncing, setSyncing] = React.useState(false);
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: 'BioTime', href: '/admin/biotime/dispositivos' },
         { title: __('Devices'), href: '/admin/biotime/dispositivos' },
     ];

@@ -72,7 +72,7 @@ export default function Integrations({
     };
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Settings'), href: '#' },
         { title: __('Integrations'), href: '/admin/integrations' }
     ];

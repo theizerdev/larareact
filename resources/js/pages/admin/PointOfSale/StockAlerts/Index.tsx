@@ -96,7 +96,7 @@ export default function StockAlertsIndex({ products, resumen }: Props) {
     const { __ } = useTranslate();
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Punto de Venta'), href: '#' },
         { title: __('Alertas de Stock'), href: '/admin/stock-alerts' },
     ];

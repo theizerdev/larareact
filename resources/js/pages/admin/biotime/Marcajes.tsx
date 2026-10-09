@@ -69,7 +69,7 @@ export default function BioTimeMarcajes({ marcajes, stats, filters, dispositivos
     useFilterSync(currentFilters);
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: 'BioTime', href: '/admin/biotime/dispositivos' },
         { title: __('Punches'), href: '/admin/biotime/marcajes' },
     ];

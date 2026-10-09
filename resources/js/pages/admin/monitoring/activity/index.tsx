@@ -305,7 +305,7 @@ export default function ActivityMonitoring({
     };
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Monitoring'), href: '#' },
         { title: __('System Activity Logs'), href: '/admin/monitoring/activity' },
     ];

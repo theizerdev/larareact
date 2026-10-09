@@ -192,7 +192,7 @@ return '0';
         : [0, 0, 0, 0];
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Monitoring'), href: '#' },
         { title: __('Database'), href: '/admin/monitoring/database' }
     ];

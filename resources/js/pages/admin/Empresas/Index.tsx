@@ -140,7 +140,7 @@ export default function EmpresasIndexPage({ auth, empresas, stats, paises, filte
     const { __ } = useTranslate();
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Companies'), href: '/admin/empresas' },
     ];
 

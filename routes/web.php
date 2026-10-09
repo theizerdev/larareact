@@ -102,6 +102,8 @@ Route::post('/admin/proveedores/{proveedor}/send-carnet-whatsapp', [\App\Http\Co
 Route::get('/carnet-productor/{productor}', [\App\Http\Controllers\Admin\ProductorController::class, 'carnetPublico'])->name('productores.carnet.publico');
 // Dirección anterior del módulo (marcadores guardados)
 Route::redirect('/admin/productores', '/admin/socios-comerciales');
+// Dirección incorrecta del dashboard (enlaces/marcadores viejos)
+Route::redirect('/admin/dashboard', '/dashboard');
 Route::get('/admin/socios-comerciales/{productor}/carnet', [\App\Http\Controllers\Admin\ProductorController::class, 'carnet'])->name('productores.carnet');
 Route::post('/admin/socios-comerciales/{productor}/send-carnet-whatsapp', [\App\Http\Controllers\Admin\ProductorController::class, 'sendCarnetWhatsApp'])->name('productores.send-carnet-whatsapp')->middleware(['auth','verified'])->can('productores.send-carnet-whatsapp');
 

@@ -144,7 +144,7 @@ export default function CargosIndexPage({
     const { __ } = useTranslate();
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Positions'), href: '/admin/cargos' },
     ];
 

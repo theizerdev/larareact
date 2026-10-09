@@ -165,7 +165,7 @@ export default function DepartamentosIndexPage({
     const { __ } = useTranslate();
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Departments'), href: '/admin/departamentos' },
     ];
 

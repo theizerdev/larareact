@@ -52,7 +52,7 @@ export default function Validaciones({ jaak_api_key, jaak_environment, jaak_acti
     };
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Settings'), href: '#' },
         { title: __('Integrations'), href: '/admin/integrations' },
         { title: __('Validations'), href: '/admin/integrations/validaciones' },

@@ -87,7 +87,7 @@ export default function SessionMonitoring({ sessions }: PageProps) {
     };
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Monitoring'), href: '#' },
         { title: __('User Sessions'), href: '/admin/monitoring/sessions' }
     ];

@@ -87,7 +87,7 @@ export default function RolesIndexPage({ auth, roles, stats, groupedPermissions,
     const { __ } = useTranslate();
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Roles'), href: '/admin/roles' },
     ];
 

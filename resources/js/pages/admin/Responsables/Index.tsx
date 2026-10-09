@@ -178,7 +178,7 @@ export default function ResponsablesIndexPage({
     const { __ } = useTranslate();
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Responsibles'), href: '/admin/responsables' },
     ];
 

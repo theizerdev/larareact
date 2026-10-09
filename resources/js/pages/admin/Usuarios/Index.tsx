@@ -140,7 +140,7 @@ export default function UsersIndexPage({
     const { __ } = useTranslate();
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Users'), href: '/admin/usuarios' },
     ];
 

@@ -61,7 +61,7 @@ export default function BioTimeEmpleados({ empleados, stats, filters, empleados_
     useFilterSync(currentFilters);
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: 'BioTime', href: '/admin/biotime/dispositivos' },
         { title: __('Employees'), href: '/admin/biotime/empleados' },
     ];

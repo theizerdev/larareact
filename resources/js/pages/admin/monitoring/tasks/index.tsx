@@ -50,7 +50,7 @@ export default function TaskMonitoring({ tasks }: PageProps) {
     };
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Monitoring'), href: '#' },
         { title: __('Scheduled Tasks'), href: '/admin/monitoring/tasks' }
     ];

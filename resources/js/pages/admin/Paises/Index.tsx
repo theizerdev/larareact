@@ -90,7 +90,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
     const { __ } = useTranslate();
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Countries'), href: '/admin/paises' },
     ];
 

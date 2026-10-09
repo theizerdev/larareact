@@ -206,7 +206,7 @@ return [];
     };
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Monitoring'), href: '#' },
         { title: __('System Logs'), href: '/admin/monitoring/logs' }
     ];

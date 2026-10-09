@@ -118,7 +118,7 @@ export default function QueueMonitoring({ stats, pendingJobs, failedJobs }: Page
     };
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Monitoring'), href: '#' },
         { title: __('Queue Monitor'), href: '/admin/monitoring/queues' }
     ];

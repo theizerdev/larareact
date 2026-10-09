@@ -80,7 +80,7 @@ export default function MenuVisibilidad({ visibility }: PageProps) {
     };
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Settings'), href: '#' },
         { title: __('Menu Visibility'), href: '/admin/configuracion/menu-visibilidad' },
     ];

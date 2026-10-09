@@ -78,7 +78,7 @@ export default function ControlAccesoVehiculos({ items, filters, error }: PagePr
     useFilterSync(currentFilters);
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Access Control'), href: '/admin/control-acceso/vehiculos' },
         { title: __('Vehicles'), href: '/admin/control-acceso/vehiculos' },
     ];

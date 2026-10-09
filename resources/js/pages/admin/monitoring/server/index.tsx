@@ -137,7 +137,7 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
     ];
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
+        { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Monitoring'), href: '#' },
         { title: __('Server'), href: '/admin/monitoring/server' }
     ];
