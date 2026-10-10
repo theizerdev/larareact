@@ -67,9 +67,11 @@ class Empresa extends Model
         'didit_workflow_id',
         'didit_active',
         'biotime_base_url',
+        'biotime_company',
         'biotime_username',
         'biotime_password',
         'biotime_active',
+        'biotime_auto_alta',
         'biotime_last_sync_at',
         'biotime_last_transaction_id',
     ];
@@ -94,6 +96,7 @@ class Empresa extends Model
             'didit_active' => 'boolean',
             'biotime_password' => 'encrypted',
             'biotime_active' => 'boolean',
+            'biotime_auto_alta' => 'boolean',
             'biotime_last_sync_at' => 'datetime',
             'biotime_last_transaction_id' => 'integer',
         ];

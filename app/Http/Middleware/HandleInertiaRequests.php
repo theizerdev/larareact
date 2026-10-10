@@ -36,7 +36,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $currentLocale = app()->getLocale();
-     
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -56,6 +56,9 @@ class HandleInertiaRequests extends Middleware
                 ]) : null,
             ],
             'menuVisibility' => fn () => \App\Models\MenuVisibilitySetting::map(),
+            // Módulos encendidos en esta instancia (config/modulos.php). Lo
+            // apagado no se pinta en el menú y sus rutas responden 404.
+            'modulos' => config('modulos'),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => $currentLocale,
             'regional_config' => fn () => \App\Services\RegionalConfigurationService::getCurrentConfiguration(),

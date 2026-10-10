@@ -19,7 +19,7 @@ class SetLocale
         $locale = session('locale', config('app.locale'));
         // \Log::debug("SetLocale: session locale is '{$locale}'");
 
-        if (in_array($locale, ['en', 'es', 'ar'])) {
+        if (in_array($locale, ['en', 'es', 'hi'])) {
             App::setLocale($locale);
             // \Log::debug("SetLocale: App::setLocale set to '{$locale}'");
         }

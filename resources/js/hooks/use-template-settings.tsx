@@ -53,7 +53,7 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
     const { appearance, resolvedAppearance, updateAppearance } = useAppearance();
     const page = usePage();
     const locale = (page.props as any)?.locale;
-    const defaultDir: 'ltr' | 'rtl' = locale === 'ar' ? 'rtl' : 'ltr';
+    const defaultDir: 'ltr' | 'rtl' = 'ltr';
     const user = (page.props.auth as any)?.user;
     const dbSettings = user?.layout_settings;
     const userId = user?.id;
@@ -91,12 +91,13 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
         });
     };
 
-    // Automatically sync direction when locale changes (e.g. switching to/from Arabic)
+    // Ningún idioma habilitado (es, en, hi) es RTL: al cambiar de idioma se
+    // fuerza LTR para limpiar la dirección guardada de cuando existía el árabe.
     const prevLocale = useRef(locale);
     useEffect(() => {
         if (locale && locale !== prevLocale.current) {
             prevLocale.current = locale;
-            const targetDir: 'ltr' | 'rtl' = locale === 'ar' ? 'rtl' : 'ltr';
+            const targetDir: 'ltr' | 'rtl' = 'ltr';
             updateSetting('direction', targetDir);
         }
     }, [locale]);

@@ -283,18 +283,16 @@ class CarnetGeneratorService
                 }
             }
 
-            // --- 5. Logotipo institucional (Hoshō) ---
-            $logoPath = public_path('image/logo/hosho/lockup.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
-            }
+            // --- 5. Logotipo institucional (Smurfit Westrock) ---
+            $logoPath = public_path('image/logo/clientes/smurfit-westrock-logo.png');
             if (file_exists($logoPath)) {
                 $logoData = @file_get_contents($logoPath);
                 if ($logoData) {
                     $logoImg = @imagecreatefromstring($logoData);
                     if ($logoImg) {
+                        // Alto según la proporción del logo, sin pasar de 140 px.
                         $logoW = 340;
-                        $logoH = 140;
+                        $logoH = min(140, (int) round($logoW * imagesy($logoImg) / imagesx($logoImg)));
                         $logoX = (int) (($width - $logoW) / 2);
                         $logoY = 870;
                         imagecopyresampled($im, $logoImg, $logoX, $logoY, 0, 0, $logoW, $logoH, imagesx($logoImg), imagesy($logoImg));
@@ -411,18 +409,16 @@ class CarnetGeneratorService
                 }
             }
 
-            // --- 5. Logotipo institucional (Hoshō) ---
-            $logoPath = public_path('image/logo/hosho/lockup.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
-            }
+            // --- 5. Logotipo institucional (Smurfit Westrock) ---
+            $logoPath = public_path('image/logo/clientes/smurfit-westrock-logo.png');
             if (file_exists($logoPath)) {
                 $logoData = @file_get_contents($logoPath);
                 if ($logoData) {
                     $logoImg = @imagecreatefromstring($logoData);
                     if ($logoImg) {
+                        // Alto según la proporción del logo, sin pasar de 140 px.
                         $logoW = 340;
-                        $logoH = 140;
+                        $logoH = min(140, (int) round($logoW * imagesy($logoImg) / imagesx($logoImg)));
                         $logoX = (int) (($width - $logoW) / 2);
                         $logoY = 870;
                         imagecopyresampled($im, $logoImg, $logoX, $logoY, 0, 0, $logoW, $logoH, imagesx($logoImg), imagesy($logoImg));

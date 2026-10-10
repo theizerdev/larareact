@@ -23,7 +23,7 @@ export default function LanguageToggle() {
 
     const changeLanguage = (lang: string) => {
         if (updateSetting) {
-            updateSetting('direction', lang === 'ar' ? 'rtl' : 'ltr');
+            updateSetting('direction', 'ltr');
         }
 
         router.post(
@@ -70,11 +70,11 @@ export default function LanguageToggle() {
                     )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                    onClick={() => changeLanguage('ar')}
+                    onClick={() => changeLanguage('hi')}
                     className="flex cursor-pointer items-center justify-between font-medium"
                 >
-                    <span>العربية</span>
-                    {locale === 'ar' && (
+                    <span>हिन्दी</span>
+                    {locale === 'hi' && (
                         <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
                     )}
                 </DropdownMenuItem>

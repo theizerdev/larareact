@@ -79,6 +79,7 @@ class Empleado extends Model
         'user_id',
         'salario_diario',
         'turno_laboral_id',
+        'fecha_ingreso',
         'status',
         'kyc_estatus',
         'kyc_validado_en',
@@ -89,6 +90,7 @@ class Empleado extends Model
         return [
             'status' => 'boolean',
             'jornada_laboral' => 'array',
+            'fecha_ingreso' => 'date:Y-m-d',
             'salario_diario' => 'decimal:2',
             'kyc_validado_en' => 'datetime',
         ];

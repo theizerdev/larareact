@@ -50,10 +50,12 @@ class IntegrationController extends Controller
             'control_acceso_user_token' => $empresa->control_acceso_user_token,
             'control_acceso_active' => (bool) $empresa->control_acceso_active,
             'biotime_base_url' => $empresa->biotime_base_url,
+            'biotime_company' => $empresa->biotime_company,
             'biotime_username' => $empresa->biotime_username,
             // La contraseña nunca viaja al frontend: sólo si hay una guardada.
             'biotime_password_set' => ! empty($empresa->biotime_password),
             'biotime_active' => (bool) $empresa->biotime_active,
+            'biotime_auto_alta' => (bool) $empresa->biotime_auto_alta,
             'biotime_last_sync_at' => $empresa->biotime_last_sync_at?->toIso8601String(),
         ]);
     }
@@ -226,7 +228,7 @@ class IntegrationController extends Controller
     }
 
     /**
-     * Actualiza la configuración de BioTime PRO (ZKTeco) de la empresa del usuario.
+     * Actualiza la configuración de BioTime Cloud (ZKTeco) de la empresa del usuario.
      *
      * La contraseña sólo se reescribe si el formulario envía una nueva; enviar
      * el campo vacío conserva la que ya estaba guardada.
@@ -244,15 +246,19 @@ class IntegrationController extends Controller
 
         $validated = $request->validate([
             'biotime_base_url' => 'nullable|url|max:255',
+            'biotime_company' => 'nullable|string|max:150',
             'biotime_username' => 'nullable|string|max:150',
             'biotime_password' => 'nullable|string|max:255',
             'biotime_active' => 'required|boolean',
+            'biotime_auto_alta' => 'sometimes|boolean',
         ]);
 
         $payload = [
             'biotime_base_url' => $validated['biotime_base_url'] ? rtrim($validated['biotime_base_url'], '/') : null,
+            'biotime_company' => filled($validated['biotime_company'] ?? null) ? trim($validated['biotime_company']) : null,
             'biotime_username' => $validated['biotime_username'] ?? null,
             'biotime_active' => $validated['biotime_active'],
+            'biotime_auto_alta' => $validated['biotime_auto_alta'] ?? (bool) $empresa->biotime_auto_alta,
         ];
 
         if (! empty($validated['biotime_password'])) {
@@ -268,7 +274,7 @@ class IntegrationController extends Controller
     }
 
     /**
-     * Prueba la conexión con BioTime PRO usando las credenciales guardadas.
+     * Prueba la conexión con BioTime Cloud usando las credenciales guardadas.
      */
     public function bioTimeTest(Request $request)
     {
@@ -639,7 +645,7 @@ class IntegrationController extends Controller
     }
 
     /**
-     * Muestra la página de integración de Reloj Checador (BioTime PRO) de la empresa.
+     * Muestra la página de integración de Reloj Checador (BioTime Cloud) de la empresa.
      * Solo lectura: replica el subconjunto de props de index() para esta integración.
      */
     public function relojChecadorIndex(Request $request)
@@ -655,10 +661,12 @@ class IntegrationController extends Controller
 
         return inertia('admin/integrations/reloj-checador', [
             'biotime_base_url' => $empresa->biotime_base_url,
+            'biotime_company' => $empresa->biotime_company,
             'biotime_username' => $empresa->biotime_username,
             // La contraseña nunca viaja al frontend: sólo si hay una guardada.
             'biotime_password_set' => ! empty($empresa->biotime_password),
             'biotime_active' => (bool) $empresa->biotime_active,
+            'biotime_auto_alta' => (bool) $empresa->biotime_auto_alta,
             'biotime_last_sync_at' => $empresa->biotime_last_sync_at?->toIso8601String(),
         ]);
     }

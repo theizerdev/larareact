@@ -1,2 +1,0 @@
-<?php
-// Scratch clean up

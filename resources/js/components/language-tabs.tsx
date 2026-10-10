@@ -20,12 +20,12 @@ export default function LanguageTabs({
     const tabs = [
         { value: 'es', label: 'Español' },
         { value: 'en', label: 'English' },
-        { value: 'ar', label: 'العربية' },
+        { value: 'hi', label: 'हिन्दी' },
     ];
 
     const changeLanguage = (lang: string) => {
         if (updateSetting) {
-            updateSetting('direction', lang === 'ar' ? 'rtl' : 'ltr');
+            updateSetting('direction', 'ltr');
         }
 
         router.post(

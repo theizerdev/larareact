@@ -20,6 +20,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionCard } from '@/components/ui/section-card';
+import { useModulos } from '@/hooks/use-modulos';
 import { useTranslate } from '@/hooks/use-translate';
 import { dashboard } from '@/routes';
 
@@ -40,6 +41,7 @@ interface Props {
 
 export default function Dashboard({ moduleStats }: Props) {
     const { __ } = useTranslate();
+    const conProductores = useModulos()('productores');
     const [chartMounted, setChartMounted] = useState(false);
     const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), 'yyyy-MM-dd'));
     const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -248,14 +250,16 @@ export default function Dashboard({ moduleStats }: Props) {
             count: `${overview.proveedores?.total || 0} ${__('companies')}`,
             badgeColor: 'bg-purple-500/10 text-purple-500',
         },
-        {
-            name: __('Business Partner'),
-            desc: __('Agricultural business partners and staff'),
-            icon: UserCheck,
-            href: '/admin/productores',
-            count: `${overview.productores?.total || 0} ${__('active')}`,
-            badgeColor: 'bg-amber-500/10 text-amber-500',
-        },
+        ...(conProductores
+            ? [{
+                name: __('Business Partner'),
+                desc: __('Agricultural business partners and staff'),
+                icon: UserCheck,
+                href: '/admin/productores',
+                count: `${overview.productores?.total || 0} ${__('active')}`,
+                badgeColor: 'bg-amber-500/10 text-amber-500',
+            }]
+            : []),
         {
             name: __('Organizational Structure'),
             desc: __('Companies, branches and positions'),
@@ -398,10 +402,10 @@ export default function Dashboard({ moduleStats }: Props) {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground">
-                                    {__('Suppliers & Producers')}
+                                    {conProductores ? __('Suppliers & Producers') : __('Suppliers')}
                                 </p>
                                 <p className="mt-2 text-2xl font-bold tracking-tight">
-                                    {(overview.proveedores?.total || 0) + (overview.productores?.total || 0)}
+                                    {(overview.proveedores?.total || 0) + (conProductores ? (overview.productores?.total || 0) : 0)}
                                 </p>
                             </div>
                             <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-500">
@@ -409,7 +413,10 @@ export default function Dashboard({ moduleStats }: Props) {
                             </div>
                         </div>
                         <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-500">
-                            <span>{overview.proveedores?.total || 0} {__('suppliers')} / {overview.productores?.total || 0} {__('producers')}</span>
+                            <span>
+                                {overview.proveedores?.total || 0} {__('suppliers')}
+                                {conProductores && <> / {overview.productores?.total || 0} {__('producers')}</>}
+                            </span>
                         </div>
                     </SectionCard>
                 </div>

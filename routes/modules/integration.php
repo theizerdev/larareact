@@ -8,16 +8,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Páginas de integración segmentadas por especialidad (solo lectura + render, igual que validaciones)
     Route::get('/integrations/reloj-checador', [IntegrationController::class, 'relojChecadorIndex'])->name('integrations.reloj-checador.index')->can('integrations.view');
-    Route::get('/integrations/control-acceso', [IntegrationController::class, 'controlAccesoIndex'])->name('integrations.control-acceso.index')->can('integrations.view');
+    Route::get('/integrations/control-acceso', [IntegrationController::class, 'controlAccesoIndex'])->name('integrations.control-acceso.index')->can('integrations.view')->middleware('modulo:control_acceso');
 
     Route::get('/integrations/map', [IntegrationController::class, 'mapboxMap'])->name('integrations.mapbox.map')->can('integrations.view');
     Route::get('/integrations/map/navigation', [IntegrationController::class, 'mapboxNavigation'])->name('integrations.mapbox.navigation')->can('integrations.view');
     Route::put('/integrations/mapbox', [IntegrationController::class, 'updateMapbox'])->name('integrations.mapbox.update')->can('integrations.edit');
     Route::put('/integrations/google-maps', [IntegrationController::class, 'updateGoogleMaps'])->name('integrations.google-maps.update')->can('integrations.edit');
-    Route::put('/integrations/control-acceso', [IntegrationController::class, 'updateControlAcceso'])->name('integrations.control-acceso.update')->can('integrations.edit');
-    Route::post('/integrations/control-acceso/test', [IntegrationController::class, 'controlAccesoTest'])->name('integrations.control-acceso.test')->can('integrations.edit');
+    Route::put('/integrations/control-acceso', [IntegrationController::class, 'updateControlAcceso'])->name('integrations.control-acceso.update')->can('integrations.edit')->middleware('modulo:control_acceso');
+    Route::post('/integrations/control-acceso/test', [IntegrationController::class, 'controlAccesoTest'])->name('integrations.control-acceso.test')->can('integrations.edit')->middleware('modulo:control_acceso');
 
-    // BioTime PRO (ZKTeco) — configuración de conexión
+    // BioTime Cloud (ZKTeco) — configuración de conexión
     Route::put('/integrations/biotime', [IntegrationController::class, 'updateBioTime'])->name('integrations.biotime.update')->can('integrations.edit');
     Route::post('/integrations/biotime/test', [IntegrationController::class, 'bioTimeTest'])->name('integrations.biotime.test')->can('integrations.edit');
 
@@ -32,18 +32,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/integrations/whatsapp/reconnect', [IntegrationController::class, 'whatsappReconnect'])->name('integrations.whatsapp.reconnect')->can('integrations.edit');
     Route::post('/integrations/whatsapp/send-message', [IntegrationController::class, 'whatsappSendMessage'])->name('integrations.whatsapp.send-message')->can('integrations.edit');
 
-    // JAAK (Validaciones) Integration Routes
-    Route::get('/integrations/validaciones', [IntegrationController::class, 'validacionesIndex'])->name('integrations.validaciones.index')->can('jaak.view');
-    Route::put('/integrations/jaak', [IntegrationController::class, 'updateJaak'])->name('integrations.jaak.update')->can('jaak.manage');
-    Route::post('/integrations/jaak/test', [IntegrationController::class, 'jaakTest'])->name('integrations.jaak.test')->can('jaak.manage');
+    // Validaciones (JAAK, ZapSign, Didit): apagables por config/modulos.php.
+    Route::middleware('modulo:validaciones')->group(function () {
+        // JAAK (Validaciones) Integration Routes
+        Route::get('/integrations/validaciones', [IntegrationController::class, 'validacionesIndex'])->name('integrations.validaciones.index')->can('jaak.view');
+        Route::put('/integrations/jaak', [IntegrationController::class, 'updateJaak'])->name('integrations.jaak.update')->can('jaak.manage');
+        Route::post('/integrations/jaak/test', [IntegrationController::class, 'jaakTest'])->name('integrations.jaak.test')->can('jaak.manage');
 
-    // ZapSign (Validaciones) Integration Routes
-    // La pantalla que las contiene es /integrations/validaciones (can jaak.view);
-    // escribir y probar la conexión requiere su propio permiso.
-    Route::put('/integrations/zapsign', [IntegrationController::class, 'updateZapsign'])->name('integrations.zapsign.update')->can('zapsign.manage');
-    Route::post('/integrations/zapsign/test', [IntegrationController::class, 'zapsignTest'])->name('integrations.zapsign.test')->can('zapsign.manage');
+        // ZapSign (Validaciones) Integration Routes
+        // La pantalla que las contiene es /integrations/validaciones (can jaak.view);
+        // escribir y probar la conexión requiere su propio permiso.
+        Route::put('/integrations/zapsign', [IntegrationController::class, 'updateZapsign'])->name('integrations.zapsign.update')->can('zapsign.manage');
+        Route::post('/integrations/zapsign/test', [IntegrationController::class, 'zapsignTest'])->name('integrations.zapsign.test')->can('zapsign.manage');
 
-    // DIDIT (Validaciones) Integration Routes
-    Route::put('/integrations/didit', [IntegrationController::class, 'updateDidit'])->name('integrations.didit.update')->can('integrations.edit');
-    Route::post('/integrations/didit/test', [IntegrationController::class, 'diditTest'])->name('integrations.didit.test')->can('integrations.edit');
+        // DIDIT (Validaciones) Integration Routes
+        Route::put('/integrations/didit', [IntegrationController::class, 'updateDidit'])->name('integrations.didit.update')->can('integrations.edit');
+        Route::post('/integrations/didit/test', [IntegrationController::class, 'diditTest'])->name('integrations.didit.test')->can('integrations.edit');
+    });
 });

@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 /**
- * Pantallas de solo lectura del espejo de BioTime PRO.
+ * Pantallas de solo lectura del espejo de BioTime Cloud.
  *
  * El scope multiempresa se aplica a mano (los modelos biotime_* no usan el
  * trait Multitenantable a propósito): cada consulta filtra por empresa_id.

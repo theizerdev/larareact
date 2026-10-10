@@ -5,7 +5,7 @@ export default function AppLogo() {
     const { auth } = usePage().props as any;
     const logoMini = auth?.user?.empresa?.logo_mini;
     const logo = auth?.user?.empresa?.logo;
-    const companyLogo = logoMini || logo || "/image/logo/hosho/icon.png";
+    const companyLogo = logoMini || logo || "/image/logo/smurfit/icon.png";
     const companyName = auth?.user?.empresa?.razon_social;
 
     return (
@@ -13,7 +13,7 @@ export default function AppLogo() {
             <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-transparent">
                 <img
                     src={companyLogo}
-                    alt={companyName || "Hoshō"}
+                    alt={companyName || "Smurfit Westrock"}
                     className="size-8 object-contain"
                 />
             </div>

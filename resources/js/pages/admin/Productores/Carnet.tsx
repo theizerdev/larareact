@@ -360,10 +360,10 @@ export default function CarnetProductorPage({ productor }: CarnetProductorPagePr
                             <img
                                 src="/image/logo/clientes/smurfit-westrock-logo.png"
                                 onError={(e) => {
-                                    (e.target as HTMLImageElement).src = "/storage/empresas/logos_mini/ygqMbkSqgVmQvsMBkmZtaYor1iAyGZPGCWXyme71.png";
+                                    (e.target as HTMLImageElement).src = "/image/logo/clientes/smurfit-westrock-logo.png";
                                 }}
                                 alt="Smurfit Westrock"
-                                style={{ height: '60px', maxWidth: '240px', width: 'auto', display: 'block', objectFit: 'contain', backgroundColor: 'transparent' }}
+                                style={{ height: '72px', maxWidth: '250px', width: 'auto', display: 'block', objectFit: 'contain', backgroundColor: 'transparent' }}
                             />
                         </div>
                     </div>

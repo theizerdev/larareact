@@ -32,31 +32,28 @@
         </style>
 
         @php
-            $favicon = '/storage/empresas/logos_mini/ygqMbkSqgVmQvsMBkmZtaYor1iAyGZPGCWXyme71.png';
-            $appName = config('app.name', 'Smurfit Westrock');
-            $ogDescription = 'Plataforma empresarial de control de accesos, gestión de flota, activos y control de jornada laboral - ' . $appName;
+            $favicon = '/image/logo/smurfit/favicon.png';
+            $ogDescription = 'Smurfit Westrock — control de asistencia con reloj checador biométrico.';
         @endphp
         <link rel="icon" href="{{ $favicon }}" type="image/png">
-        <link rel="apple-touch-icon" href="{{ $favicon }}">
+        <link rel="apple-touch-icon" href="/image/logo/smurfit/apple-touch-icon.png">
 
         {{-- Server-rendered title/description/Open Graph so link previews on
              redes sociales y correo (que no ejecutan JS) siempre encuentren
              estas etiquetas — la app es 100% client-rendered (sin SSR), por
              lo que nada de esto puede depender de React/Inertia. --}}
-        <title>{{ $appName }}</title>
+        <title>Smurfit Westrock</title>
         <meta name="description" content="{{ $ogDescription }}">
-        <meta property="og:site_name" content="{{ $appName }}">
-        <meta property="og:title" content="{{ $appName }}">
+        <meta property="og:site_name" content="Smurfit Westrock">
+        <meta property="og:title" content="Smurfit Westrock">
         <meta property="og:description" content="{{ $ogDescription }}">
         <meta property="og:url" content="{{ url()->current() }}">
-        <meta property="og:image" content="{{ url($favicon) }}">
-        <meta property="og:image:width" content="1200">
-        <meta property="og:image:height" content="630">
-        <meta property="og:image:alt" content="{{ $appName }}">
+        <meta property="og:image" content="{{ url('/image/logo/clientes/smurfit-westrock-logo.png') }}">
+        <meta property="og:image:alt" content="Smurfit Westrock">
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="{{ $appName }}">
+        <meta name="twitter:title" content="Smurfit Westrock">
         <meta name="twitter:description" content="{{ $ogDescription }}">
-        <meta name="twitter:image" content="{{ url($favicon) }}">
+        <meta name="twitter:image" content="{{ url('/image/logo/clientes/smurfit-westrock-logo.png') }}">
 
         @if(request()->is('admin/reloj-checador/kiosko*'))
         {{-- PWA Kiosko --}}

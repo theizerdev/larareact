@@ -1274,5 +1274,7 @@
   "Loading access chart...": "Loading access chart...",
   "Digital visitor passes and invitations created per day": "Digital visitor passes and invitations created per day",
   "Loading visits chart...": "Loading visits chart...",
-  "Loading data...": "Loading data..."
+  "Loading data...": "Loading data...",
+  "Hoshō employee": "Collaborator",
+  "Employees mirrored from BioTime and their link to Hoshō employees.": "Employees mirrored from BioTime and their link to Organization / Collaborators."
 }
