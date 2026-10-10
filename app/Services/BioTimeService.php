@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\Log;
  * Cliente HTTP de SOLO LECTURA contra la API REST de BioTime Cloud
  * (ZKTeco; misma API REST que BioTime 8.x).
  *
- * - Autenticación: POST /jwt-api-token-auth/ {username,password} -> {token}
+ * - Autenticación: POST /jwt-api-token-auth/ -> {token}. BioTime local pide
+ *   {username,password}; BioTime Cloud pide {company,email,password}.
  *   y luego header `Authorization: JWT <token>` en cada petición.
  * - Todos los listados devuelven el sobre {count,next,previous,msg,code,data:[...]}
  *   y aceptan ?page=&limit=.
@@ -25,6 +26,8 @@ class BioTimeService
 {
     private ?string $baseUrl;
 
+    private ?string $company;
+
     private ?string $username;
 
     private ?string $password;
@@ -36,6 +39,7 @@ class BioTimeService
     public function __construct(Empresa $empresa)
     {
         $this->baseUrl = $empresa->biotime_base_url ? rtrim($empresa->biotime_base_url, '/') : null;
+        $this->company = filled($empresa->biotime_company) ? trim($empresa->biotime_company) : null;
         $this->username = $empresa->biotime_username;
         // Cast 'encrypted' en el modelo: aquí ya llega en claro.
         $this->password = $empresa->biotime_password;
@@ -69,10 +73,7 @@ class BioTimeService
         try {
             $response = $this->baseClient()
                 ->asJson()
-                ->post("{$this->baseUrl}/jwt-api-token-auth/", [
-                    'username' => $this->username,
-                    'password' => $this->password,
-                ]);
+                ->post("{$this->baseUrl}/jwt-api-token-auth/", $this->credenciales());
         } catch (ConnectionException $e) {
             Log::channel('biotime')->error('BioTime login inalcanzable: '.$e->getMessage(), [
                 'company_id' => $this->companyId,
@@ -82,7 +83,9 @@ class BioTimeService
         }
 
         if ($response->status() === 400 || $response->status() === 401) {
-            throw new \RuntimeException('BioTime rechazó las credenciales (usuario o contraseña incorrectos).');
+            throw new \RuntimeException($this->company
+                ? 'BioTime Cloud rechazó las credenciales (compañía, correo o contraseña incorrectos).'
+                : 'BioTime rechazó las credenciales (usuario o contraseña incorrectos).');
         }
 
         $token = $response->json('token');
@@ -96,6 +99,21 @@ class BioTimeService
         }
 
         return $this->token = $token;
+    }
+
+    /**
+     * Cuerpo del login: BioTime Cloud identifica la cuenta por compañía +
+     * correo; el BioTime local, por usuario.
+     *
+     * @return array<string, string|null>
+     */
+    private function credenciales(): array
+    {
+        if ($this->company) {
+            return ['company' => $this->company, 'email' => $this->username, 'password' => $this->password];
+        }
+
+        return ['username' => $this->username, 'password' => $this->password];
     }
 
     /* ------------------------------------------------------------------ */

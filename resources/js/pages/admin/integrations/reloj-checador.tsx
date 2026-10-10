@@ -12,6 +12,7 @@ import { useTranslate } from '@/hooks/use-translate';
 
 interface PageProps {
     biotime_base_url: string | null;
+    biotime_company: string | null;
     biotime_username: string | null;
     biotime_password_set: boolean;
     biotime_active: boolean;
@@ -21,6 +22,7 @@ interface PageProps {
 
 export default function RelojChecadorIntegration({
     biotime_base_url,
+    biotime_company,
     biotime_username,
     biotime_password_set,
     biotime_active,
@@ -32,6 +34,7 @@ export default function RelojChecadorIntegration({
 
     const biotimeForm = useForm({
         biotime_base_url: biotime_base_url || '',
+        biotime_company: biotime_company || '',
         biotime_username: biotime_username || '',
         biotime_password: '',
         biotime_active: biotime_active,
@@ -144,6 +147,20 @@ export default function RelojChecadorIntegration({
                                         disabled={!biotimeForm.data.biotime_active}
                                         className="font-mono text-sm"
                                     />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="biotime_company">{__('Company')}</Label>
+                                    <Input
+                                        id="biotime_company"
+                                        type="text"
+                                        placeholder={__('Company name')}
+                                        value={biotimeForm.data.biotime_company}
+                                        onChange={(e) => biotimeForm.setData('biotime_company', e.target.value)}
+                                        disabled={!biotimeForm.data.biotime_active}
+                                        className="font-mono text-sm"
+                                    />
+                                    <p className="text-xs text-muted-foreground">{__('Exactly as in the "Company Name" field of the BioTime Cloud web sign-in. Leave blank for an on-premise BioTime.')}</p>
                                 </div>
 
                                 <div className="space-y-2">

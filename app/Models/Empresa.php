@@ -67,6 +67,7 @@ class Empresa extends Model
         'didit_workflow_id',
         'didit_active',
         'biotime_base_url',
+        'biotime_company',
         'biotime_username',
         'biotime_password',
         'biotime_active',

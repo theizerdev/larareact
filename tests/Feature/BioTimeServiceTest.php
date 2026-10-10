@@ -41,6 +41,30 @@ class BioTimeServiceTest extends TestCase
             && $r['username'] === 'Sistemas' && $r['password'] === 'secret');
     }
 
+    public function test_biotime_cloud_autentica_con_compania_y_correo(): void
+    {
+        Http::fake(['*/jwt-api-token-auth/' => Http::response(['token' => 'jwt-cloud'], 200)]);
+
+        $empresa = $this->empresa([
+            'biotime_base_url' => 'https://acme.biotime.mx/',
+            'biotime_company' => ' ACME Planta ',
+            'biotime_username' => 'ti@acme.mx',
+        ]);
+
+        $this->assertSame('jwt-cloud', (new BioTimeService($empresa))->authenticate());
+        Http::assertSent(fn ($r) => $r->url() === 'https://acme.biotime.mx/jwt-api-token-auth/'
+            && $r['company'] === 'ACME Planta' && $r['email'] === 'ti@acme.mx'
+            && $r['password'] === 'secret' && ! isset($r['username']));
+    }
+
+    public function test_biotime_cloud_rechazo_menciona_la_compania(): void
+    {
+        Http::fake(['*/jwt-api-token-auth/' => Http::response(['non_field_errors' => ['Unable to log in with provided credentials.']], 400)]);
+
+        $this->expectExceptionMessage('compañía, correo o contraseña');
+        (new BioTimeService($this->empresa(['biotime_company' => 'ACME'])))->authenticate();
+    }
+
     public function test_authenticate_rejects_bad_credentials(): void
     {
         Http::fake(['*/jwt-api-token-auth/' => Http::response(['non_field_errors' => ['bad']], 400)]);

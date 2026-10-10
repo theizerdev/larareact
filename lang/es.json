@@ -1958,5 +1958,7 @@
   "No active service": "Sin servicio activo",
   "Hire Date": "Fecha de ingreso",
   "Create and update employees automatically": "Dar de alta y actualizar empleados automáticamente",
-  "Every sync registers new BioTime employees in this company and keeps their data up to date.": "Cada sincronización registra a los empleados nuevos de BioTime en esta empresa y mantiene sus datos al día."
+  "Every sync registers new BioTime employees in this company and keeps their data up to date.": "Cada sincronización registra a los empleados nuevos de BioTime en esta empresa y mantiene sus datos al día.",
+  "Company name": "Nombre de la compañía",
+  "Exactly as in the \"Company Name\" field of the BioTime Cloud web sign-in. Leave blank for an on-premise BioTime.": "Tal cual se escribe en el campo \"Company Name\" del inicio de sesión web de BioTime Cloud. Déjalo vacío para un BioTime local."
 }

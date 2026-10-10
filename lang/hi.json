@@ -1952,5 +1952,7 @@
     "Descanso excedido": "विराम समय पार हो गया",
     ":empleado excedió su :concepto por :minutos min.": ":empleado ने अपना :concepto :minutos मिनट से अधिक लिया।",
     "You must check the Enable WhatsApp Integration\" switch and save configurations to start.": "शुरू करने के लिए आपको \"WhatsApp एकीकरण सक्षम करें\" स्विच चालू करके कॉन्फ़िगरेशन सहेजना होगा।",
-    "Socio Comercial": "व्यावसायिक साझेदार"
+    "Socio Comercial": "व्यावसायिक साझेदार",
+    "Company name": "कंपनी का नाम",
+    "Exactly as in the \"Company Name\" field of the BioTime Cloud web sign-in. Leave blank for an on-premise BioTime.": "ठीक वैसा ही जैसा BioTime Cloud के वेब साइन-इन के \"Company Name\" फ़ील्ड में लिखा जाता है। स्थानीय BioTime के लिए खाली छोड़ें।"
 }
