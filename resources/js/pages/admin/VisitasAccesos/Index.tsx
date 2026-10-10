@@ -70,6 +70,7 @@ import { FilterBar, FilterField } from '@/components/filter-bar';
 import { DataTable } from '@/components/data-table';
 import type { ColumnDef } from '@/components/data-table';
 import { notifySuccess, notifyError } from '@/utils/notifications';
+import { useModulos } from '@/hooks/use-modulos';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams } from '@/lib/utils';
 
@@ -311,6 +312,8 @@ export default function Index({
     filters = {},
 }: VisitasAccesosProps) {
     const { __ } = useTranslate();
+    const moduloActivo = useModulos();
+    const conProductores = moduloActivo('productores');
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/dashboard' },
@@ -1313,7 +1316,9 @@ export default function Index({
                 <ModuleHeader
                     icon={<ShieldCheck className="h-6 w-6 text-white" />}
                     title={__('Control de Accesos a Instalaciones')}
-                    description={__('Gestión unificada de entradas/salidas para Empleados, Proveedores y Productores con Código de Visitante (80000001+).')}
+                    description={conProductores
+                        ? __('Gestión unificada de entradas/salidas para Empleados, Proveedores y Productores con Código de Visitante (80000001+).')
+                        : __('Gestión unificada de entradas/salidas para Empleados y Proveedores con Código de Visitante (80000001+).')}
                     colorClassName="bg-[#104a29]"
                 >
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -1333,7 +1338,7 @@ export default function Index({
                 </ModuleHeader>
 
                 {/* Tarjetas de Estadísticas Totalmente Responsivas */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+                <div className={`grid grid-cols-2 sm:grid-cols-3 ${conProductores ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} gap-3 sm:gap-4 lg:gap-6`}>
                     <StatCard
                         icon={<FileText className="h-6 w-6" />}
                         title={__('TOTAL ACCESOS')}
@@ -1364,12 +1369,14 @@ export default function Index({
                         value={stats.proveedores}
                         colorClassName="bg-amber-100 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400"
                     />
-                    <StatCard
-                        icon={<Sprout className="h-6 w-6" />}
-                        title={__('PRODUCTORES')}
-                        value={stats.productores || 0}
-                        colorClassName="bg-purple-100 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400"
-                    />
+                    {conProductores && (
+                        <StatCard
+                            icon={<Sprout className="h-6 w-6" />}
+                            title={__('PRODUCTORES')}
+                            value={stats.productores || 0}
+                            colorClassName="bg-purple-100 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400"
+                        />
+                    )}
                 </div>
 
                 {/* Barra de Filtros */}
@@ -1393,7 +1400,7 @@ export default function Index({
                                     <SelectItem value="all">{__('Todos')}</SelectItem>
                                     <SelectItem value="empleado">{__('Empleado')}</SelectItem>
                                     <SelectItem value="proveedor">{__('Proveedor')}</SelectItem>
-                                    <SelectItem value="productor">{__('Productor')}</SelectItem>
+                                    {conProductores && <SelectItem value="productor">{__('Productor')}</SelectItem>}
                                     <SelectItem value="visitante">{__('Visitante Particular')}</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -2379,7 +2386,7 @@ export default function Index({
                                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                                     1. {__('Seleccione Tipo de Acceso')}
                                 </Label>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className={`grid grid-cols-1 ${conProductores ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3`}>
                                     <Button
                                         type="button"
                                         size="lg"
@@ -2416,23 +2423,25 @@ export default function Index({
                                         {__('Proveedor')}
                                     </Button>
 
-                                    <Button
-                                        type="button"
-                                        size="lg"
-                                        variant={tipoAcceso === 'productor' ? 'default' : 'outline'}
-                                        onClick={() => {
-                                            setTipoAcceso('productor');
-                                            setSelectedEntity(null);
-                                            setSearchQuery('');
-                                            setAcompanantesList([]);
-                                            setActiveAuthToken(null);
-                                            setAutorizacionRecibida(null);
-                                        }}
-                                        className={`h-14 text-sm font-semibold ${tipoAcceso === 'productor' ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-md' : ''}`}
-                                    >
-                                        <Sprout className="mr-2 h-5 w-5" />
-                                        {__('Productor')}
-                                    </Button>
+                                    {conProductores && (
+                                        <Button
+                                            type="button"
+                                            size="lg"
+                                            variant={tipoAcceso === 'productor' ? 'default' : 'outline'}
+                                            onClick={() => {
+                                                setTipoAcceso('productor');
+                                                setSelectedEntity(null);
+                                                setSearchQuery('');
+                                                setAcompanantesList([]);
+                                                setActiveAuthToken(null);
+                                                setAutorizacionRecibida(null);
+                                            }}
+                                            className={`h-14 text-sm font-semibold ${tipoAcceso === 'productor' ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-md' : ''}`}
+                                        >
+                                            <Sprout className="mr-2 h-5 w-5" />
+                                            {__('Productor')}
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
 
@@ -3114,12 +3123,12 @@ export default function Index({
                                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                                     {__('Tipo de Visita')} <span className="text-rose-500">*</span>
                                 </Label>
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className={`grid ${conProductores ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
                                     {([
                                         { val: 'visitante', icon: '👤', label: __('Visitante Particular') },
                                         { val: 'proveedor', icon: '🚚', label: __('Proveedor de Servicios') },
                                         { val: 'productor', icon: '🌱', label: __('Productor / Socio Agrícola') },
-                                    ] as const).map((opt) => (
+                                    ] as const).filter((opt) => opt.val !== 'productor' || conProductores).map((opt) => (
                                         <button
                                             key={opt.val}
                                             type="button"

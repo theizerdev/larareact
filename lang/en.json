@@ -1248,5 +1248,7 @@
   "Search by CURP...": "Search by CURP...",
   "Supplier staff": "Supplier staff",
   "Producer staff": "Producer staff",
-  "Time Clock": "Time Clock"
+  "Time Clock": "Time Clock",
+  "Hoshō employee": "Collaborator",
+  "Employees mirrored from BioTime and their link to Hoshō employees.": "Employees mirrored from BioTime and their link to Organization / Collaborators."
 }

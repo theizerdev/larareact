@@ -36,7 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ->onOneServer()
             ->appendOutputTo(storage_path('logs/asistencia-descansos.log'));
 
-        // Espejo de solo lectura de BioTime PRO (relojes, empleados, catálogos
+        // Espejo de solo lectura de BioTime Cloud (relojes, empleados, catálogos
         // y marcajes). Incremental: sólo trae lo nuevo desde la última corrida.
         // Nota: hoy el contenedor de Hoshō no corre schedule:work, así que esto
         // queda latente; se sincroniza con "Sincronizar ahora" o `biotime:sync`.
@@ -76,6 +76,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'password.not_expired' => \App\Http\Middleware\EnsurePasswordNotExpired::class,
+            'modulo' => \App\Http\Middleware\ModuloHabilitado::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -133,7 +133,7 @@ const collapsibleHrefs = (items: CollapsibleEntry[]): string[] =>
         isGroupEntry(item) ? item.children.map((c) => c.href) : [item.href],
     );
 
-// Sub-grupo desplegable dentro de un CollapsibleNavItem (p. ej. "BioTime PRO"
+// Sub-grupo desplegable dentro de un CollapsibleNavItem (p. ej. "BioTime Cloud"
 // vive aquí dentro de "Reloj Checador"). Sin icono, solo título + chevron.
 function NestedNavGroup({
     title,
@@ -373,6 +373,11 @@ export default function AdminSaasLayout({
     const menuVisibility = ((page.props as any)?.menuVisibility || {}) as Record<string, boolean>;
     const isMenuVisible = (key: string) => menuVisibility[key] !== false;
 
+    // Módulos apagados en esta instancia (config/modulos.php). A diferencia de
+    // menuVisibility, aquí el servidor también responde 404 a sus rutas.
+    const modulos = ((page.props as any)?.modulos || {}) as Record<string, boolean>;
+    const moduloActivo = (modulo: string) => modulos[modulo] === true;
+
     const handleNotificationClick = (notification: { id: string; url?: string | null }) => {
         if (notification.url) {
             router.post(
@@ -451,8 +456,8 @@ export default function AdminSaasLayout({
                         >
                             <div className="flex shrink-0 items-center justify-center bg-transparent">
                                 <img
-                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/hosho/icon-dark.png"}
-                                    alt={(auth as any)?.user?.empresa?.razon_social || "Hoshō"}
+                                    src={(auth as any)?.user?.empresa?.logo_mini || (auth as any)?.user?.empresa?.logo || "/image/logo/smurfit/icon.png"}
+                                    alt={(auth as any)?.user?.empresa?.razon_social || "Smurfit Westrock"}
                                     className="h-9 w-auto object-contain"
                                 />
                             </div>
@@ -552,8 +557,9 @@ export default function AdminSaasLayout({
                                     href: '/admin/productores',
                                     permission: 'productores.view',
                                     key: 'organization.partners',
+                                    modulo: 'productores',
                                 },
-                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
+                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key) && (!item.modulo || moduloActivo(item.modulo)));
 
                             if (orgItems.length === 0) return null;
 
@@ -607,7 +613,7 @@ export default function AdminSaasLayout({
                         })()}
 
                         {/* Access Control Group */}
-                        {isMenuVisible('access_control') && (() => {
+                        {isMenuVisible('access_control') && moduloActivo('control_acceso') && (() => {
                             const controlAccesoItems = [
                                 {
                                     title: 'IVMS Employees',
@@ -690,7 +696,7 @@ export default function AdminSaasLayout({
                                 },
                             ].filter(item => (hasPermission(item.permission) || hasPermission('asistencia.view')) && isMenuVisible(item.key));
 
-                            // BioTime PRO (espejo de solo lectura de ZKTeco BioTime): sub-menú
+                            // BioTime Cloud (espejo de solo lectura de ZKTeco BioTime): sub-menú
                             // desplegable propio dentro de Reloj Checador, para no mezclarlo con
                             // los demás asuntos de asistencia.
                             const biotimeItems = [
@@ -702,7 +708,7 @@ export default function AdminSaasLayout({
                             const relojChecadorItems = [
                                 ...asistenciaItems,
                                 ...(biotimeItems.length > 0 && isMenuVisible('reloj_checador.biotime')
-                                    ? [{ title: 'BioTime PRO', children: biotimeItems }]
+                                    ? [{ title: 'BioTime Cloud', children: biotimeItems }]
                                     : []),
                             ];
 
@@ -778,6 +784,7 @@ export default function AdminSaasLayout({
                                     href: '/admin/integrations/validaciones',
                                     permission: 'jaak.view',
                                     key: 'integrations.validations',
+                                    modulo: 'validaciones',
                                 },
                                 {
                                     title: 'Reloj Checador',
@@ -790,8 +797,9 @@ export default function AdminSaasLayout({
                                     href: '/admin/integrations/control-acceso',
                                     permission: 'integrations.view',
                                     key: 'integrations.control_acceso',
+                                    modulo: 'control_acceso',
                                 },
-                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
+                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key) && (!item.modulo || moduloActivo(item.modulo)));
 
                             if (integrationsItems.length === 0) return null;
 
@@ -808,7 +816,7 @@ export default function AdminSaasLayout({
                         })()}
 
                         {/* Validation Results Group */}
-                        {isMenuVisible('identity_validations') && (() => {
+                        {isMenuVisible('identity_validations') && moduloActivo('validaciones') && (() => {
                             const validacionesItems = [
                                 {
                                     title: 'Identity',

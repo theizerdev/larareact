@@ -11,8 +11,11 @@ class ExampleTest extends TestCase
 
     public function test_returns_a_successful_response()
     {
-        $response = $this->get(route('home'));
+        // Con el landing comercial apagado (instancia de cliente), la raíz
+        // lleva al login.
+        $this->get(route('home'))->assertRedirect(route('login'));
 
-        $response->assertOk();
+        config(['modulos.landing' => true]);
+        $this->get(route('home'))->assertOk();
     }
 }

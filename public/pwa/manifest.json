@@ -1,7 +1,7 @@
 {
     "name": "Reloj Checador",
     "short_name": "Kiosko",
-    "description": "Sistema de control de asistencia reloj checador para empleados Driscoll's",
+    "description": "Reloj checador de asistencia para colaboradores de Smurfit Westrock",
     "start_url": "/admin/reloj-checador/kiosko",
     "scope": "/",
     "display": "fullscreen",
@@ -15,16 +15,16 @@
     ],
     "icons": [
         {
-            "src": "/icons/kiosko-192.png",
+            "src": "/image/logo/smurfit/pwa-icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
-            "src": "/icons/kiosko-512.png",
+            "src": "/image/logo/smurfit/pwa-icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         }
     ],
     "screenshots": [],

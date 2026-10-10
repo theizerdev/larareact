@@ -8,14 +8,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// Landing page pública: siempre visible, con o sin sesión. El propio landing
-// decide a dónde llevar al usuario (login o dashboard) según su estado de auth.
+// Landing comercial de Hoshō (clientes, socios, formulario de demo). En la
+// instancia de un cliente va apagada (config/modulos.php): la raíz lleva
+// directo al login o al dashboard y el formulario de contacto responde 404.
 Route::get('/', function () {
+    if (! config('modulos.landing')) {
+        return redirect()->route(auth()->check() ? 'dashboard' : 'login');
+    }
+
     return Inertia::render('Public/Home');
 })->name('home');
 
 Route::post('/contacto', [SolicitudDemoController::class, 'store'])
-    ->middleware('throttle:5,1')
+    ->middleware(['modulo:landing', 'throttle:5,1'])
     ->name('contacto.store');
 
 // Módulo de Control de Garita (Lector QR)
@@ -53,7 +58,7 @@ Route::middleware(['guest'])->group(function () {
 
 Route::post('locale', function (Request $request) {
     $request->validate([
-        'locale' => 'required|in:en,es,ar',
+        'locale' => 'required|in:en,es,hi',
     ]);
 
     session(['locale' => $request->locale]);
@@ -87,8 +92,10 @@ use App\Http\Controllers\VisitaTemporalPreRegistroController;
 Route::get('/preregistro/{token}', [ProveedorPreRegistroController::class, 'showWizard'])->name('preregistro.wizard');
 Route::post('/preregistro/{token}', [ProveedorPreRegistroController::class, 'submitWizard'])->name('preregistro.submit');
 
-Route::get('/preregistro-productor/{token}', [ProductorPreRegistroController::class, 'showWizard'])->name('preregistro-productor.wizard');
-Route::post('/preregistro-productor/{token}', [ProductorPreRegistroController::class, 'submitWizard'])->name('preregistro-productor.submit');
+Route::middleware('modulo:productores')->group(function () {
+    Route::get('/preregistro-productor/{token}', [ProductorPreRegistroController::class, 'showWizard'])->name('preregistro-productor.wizard');
+    Route::post('/preregistro-productor/{token}', [ProductorPreRegistroController::class, 'submitWizard'])->name('preregistro-productor.submit');
+});
 
 Route::get('/preregistro-empleado/{token}', [EmpleadoPreRegistroController::class, 'showWizard'])->name('preregistro-empleado.wizard');
 Route::post('/preregistro-empleado/{token}', [EmpleadoPreRegistroController::class, 'submitWizard'])->name('preregistro-empleado.submit');
@@ -108,9 +115,11 @@ Route::get('/carnet-proveedor/{proveedor}', [\App\Http\Controllers\Admin\Proveed
 Route::get('/admin/proveedores/{proveedor}/carnet', [\App\Http\Controllers\Admin\ProveedorController::class, 'carnet'])->name('proveedores.carnet');
 Route::post('/admin/proveedores/{proveedor}/send-carnet-whatsapp', [\App\Http\Controllers\Admin\ProveedorController::class, 'sendCarnetWhatsApp'])->name('proveedores.send-carnet-whatsapp')->middleware(['auth','verified'])->can('proveedores.send-carnet-whatsapp');
 
-Route::get('/carnet-productor/{productor}', [\App\Http\Controllers\Admin\ProductorController::class, 'carnetPublico'])->name('productores.carnet.publico');
-Route::get('/admin/productores/{productor}/carnet', [\App\Http\Controllers\Admin\ProductorController::class, 'carnet'])->name('productores.carnet');
-Route::post('/admin/productores/{productor}/send-carnet-whatsapp', [\App\Http\Controllers\Admin\ProductorController::class, 'sendCarnetWhatsApp'])->name('productores.send-carnet-whatsapp')->middleware(['auth','verified'])->can('productores.send-carnet-whatsapp');
+Route::middleware('modulo:productores')->group(function () {
+    Route::get('/carnet-productor/{productor}', [\App\Http\Controllers\Admin\ProductorController::class, 'carnetPublico'])->name('productores.carnet.publico');
+    Route::get('/admin/productores/{productor}/carnet', [\App\Http\Controllers\Admin\ProductorController::class, 'carnet'])->name('productores.carnet');
+    Route::post('/admin/productores/{productor}/send-carnet-whatsapp', [\App\Http\Controllers\Admin\ProductorController::class, 'sendCarnetWhatsApp'])->name('productores.send-carnet-whatsapp')->middleware(['auth','verified'])->can('productores.send-carnet-whatsapp');
+});
 
 
 use App\Http\Controllers\Admin\RelojChecadorKioskoController;
