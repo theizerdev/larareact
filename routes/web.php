@@ -11,7 +11,7 @@ use Inertia\Inertia;
 // Landing page pública: siempre visible, con o sin sesión. El propio landing
 // decide a dónde llevar al usuario (login o dashboard) según su estado de auth.
 Route::get('/', function () {
-    return Inertia::render('Public/Home');
+    return redirect()->route('dashboard');
 })->name('home');
 
 Route::post('/contacto', [SolicitudDemoController::class, 'store'])

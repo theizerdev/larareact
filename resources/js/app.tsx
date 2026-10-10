@@ -7,7 +7,7 @@ import AdminLayout from '@/layouts/admin-layout';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Smurfit Westrock';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
@@ -31,30 +32,31 @@
         </style>
 
         @php
-            $favicon = '/image/logo/hosho/favicon.png';
-            $ogDescription = 'Plataforma empresarial de control de accesos con verificación biométrica, prueba de vida y validación documental. Gestión de flota, activos con GPS, ITSM, inventarios, control de jornada laboral y mensajería corporativa.';
+            $favicon = '/storage/empresas/logos_mini/ygqMbkSqgVmQvsMBkmZtaYor1iAyGZPGCWXyme71.png';
+            $appName = config('app.name', 'Smurfit Westrock');
+            $ogDescription = 'Plataforma empresarial de control de accesos, gestión de flota, activos y control de jornada laboral - ' . $appName;
         @endphp
         <link rel="icon" href="{{ $favicon }}" type="image/png">
-        <link rel="apple-touch-icon" href="/image/logo/hosho/apple-touch-icon.png">
+        <link rel="apple-touch-icon" href="{{ $favicon }}">
 
         {{-- Server-rendered title/description/Open Graph so link previews on
              redes sociales y correo (que no ejecutan JS) siempre encuentren
              estas etiquetas — la app es 100% client-rendered (sin SSR), por
              lo que nada de esto puede depender de React/Inertia. --}}
-        <title>Hoshō by Innovación Móvil</title>
+        <title>{{ $appName }}</title>
         <meta name="description" content="{{ $ogDescription }}">
-        <meta property="og:site_name" content="Hoshō">
-        <meta property="og:title" content="Hoshō by Innovación Móvil">
+        <meta property="og:site_name" content="{{ $appName }}">
+        <meta property="og:title" content="{{ $appName }}">
         <meta property="og:description" content="{{ $ogDescription }}">
         <meta property="og:url" content="{{ url()->current() }}">
-        <meta property="og:image" content="{{ url('/image/logo/hosho/og-image.png') }}">
+        <meta property="og:image" content="{{ url($favicon) }}">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
-        <meta property="og:image:alt" content="Hoshō — plataforma de control de accesos">
+        <meta property="og:image:alt" content="{{ $appName }}">
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="Hoshō by Innovación Móvil">
+        <meta name="twitter:title" content="{{ $appName }}">
         <meta name="twitter:description" content="{{ $ogDescription }}">
-        <meta name="twitter:image" content="{{ url('/image/logo/hosho/og-image.png') }}">
+        <meta name="twitter:image" content="{{ url($favicon) }}">
 
         @if(request()->is('admin/reloj-checador/kiosko*'))
         {{-- PWA Kiosko --}}

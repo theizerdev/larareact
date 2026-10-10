@@ -156,6 +156,15 @@ function CameraWidget({ onCapture, onCancel, title, faceGuide = false, docGuide 
         faceStableCountRef.current = 0;
         if (countdownIntervalRef.current) { clearInterval(countdownIntervalRef.current); countdownIntervalRef.current = null; }
         try {
+            if (!navigator?.mediaDevices?.getUserMedia) {
+                const isNonSecure = typeof window !== 'undefined' && !window.isSecureContext;
+                setError(
+                    isNonSecure
+                        ? 'La cámara requiere una conexión segura (HTTPS). Configure HTTPS o acceda desde localhost.'
+                        : 'Sin acceso a la cámara. Por favor active los permisos del navegador.'
+                );
+                return;
+            }
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: { width: 640, height: 480, facingMode: mode }
             });
@@ -873,6 +882,16 @@ export default function GaritaControl({
 
         if (isScanningCamera) {
             setCameraError(null);
+            if (!navigator?.mediaDevices?.getUserMedia) {
+                const isNonSecure = typeof window !== 'undefined' && !window.isSecureContext;
+                setCameraError(
+                    isNonSecure
+                        ? 'La cámara requiere una conexión segura (HTTPS). Configure HTTPS o acceda desde localhost.'
+                        : 'No se pudo acceder a la cámara en este dispositivo o navegador.'
+                );
+                setIsScanningCamera(false);
+                return;
+            }
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
             })

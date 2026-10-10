@@ -69,6 +69,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'preregistro/*',
             'preregistro-productor/*',
+            'admin/api/reloj-checador/*',
         ]);
 
         $middleware->alias([

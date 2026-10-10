@@ -133,9 +133,16 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
     };
 
     useEffect(() => {
+        let streamTrack: MediaStream | null = null;
         if (configuracion?.requiere_foto_marcaje) {
-            navigator.mediaDevices?.getUserMedia({ video: true })
+            if (!navigator?.mediaDevices?.getUserMedia) {
+                console.warn('Cámara de evidencia: navigator.mediaDevices no disponible (requiere HTTPS o no hay cámara detectada).');
+                setCameraActive(false);
+                return;
+            }
+            navigator.mediaDevices.getUserMedia({ video: true })
                 .then((stream) => {
+                    streamTrack = stream;
                     if (videoRef.current) {
                         videoRef.current.srcObject = stream;
                         setCameraActive(true);
@@ -143,6 +150,11 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                 })
                 .catch(() => setCameraActive(false));
         }
+        return () => {
+            if (streamTrack) {
+                streamTrack.getTracks().forEach(t => t.stop());
+            }
+        };
     }, [configuracion]);
 
     // Listener para Lectores Físicos (Pistolas USB/Bluetooth) con tecla Enter
@@ -181,6 +193,15 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
     };
 
     const startQrCamera = (mode: 'environment' | 'user' = facingMode) => {
+        if (!navigator?.mediaDevices?.getUserMedia) {
+            const isNonSecure = typeof window !== 'undefined' && !window.isSecureContext;
+            setErrorMessage(
+                isNonSecure
+                    ? 'La cámara requiere una conexión segura (HTTPS). Para usar la cámara en quiosco o red local, configure HTTPS o acceda desde localhost.'
+                    : 'No se detectó soporte de cámara en este dispositivo o navegador.'
+            );
+            return;
+        }
         setFacingMode(mode);
         setQrModalOpen(true);
     };
@@ -201,6 +222,18 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
 
         if (qrModalOpen) {
             setErrorMessage(null);
+
+            if (!navigator?.mediaDevices?.getUserMedia) {
+                const isNonSecure = typeof window !== 'undefined' && !window.isSecureContext;
+                setErrorMessage(
+                    isNonSecure
+                        ? 'La cámara requiere una conexión segura (HTTPS). Para usar la cámara en quiosco o red local, configure HTTPS o acceda desde localhost.'
+                        : 'No se detectó soporte de cámara en este dispositivo o navegador.'
+                );
+                setQrModalOpen(false);
+                return;
+            }
+
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
             })
@@ -311,7 +344,15 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
 
     const getCsrfToken = () => {
         const meta = document.querySelector('meta[name="csrf-token"]');
-        return meta ? meta.getAttribute('content') || '' : '';
+        if (meta) {
+            const content = meta.getAttribute('content');
+            if (content) return content;
+        }
+        const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+        if (match) {
+            return decodeURIComponent(match[1]);
+        }
+        return '';
     };
 
     // Función Central de Búsqueda
@@ -322,13 +363,15 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
         setErrorMessage(null);
         setSuccessMessage(null);
 
+        const token = getCsrfToken();
         try {
             const response = await fetch('/admin/api/reloj-checador/buscar', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-CSRF-TOKEN': token,
+                    'X-XSRF-TOKEN': token,
                 },
                 body: JSON.stringify({ query: queryValue.trim() }),
             });
@@ -376,13 +419,15 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
             }
         }
 
+        const token = getCsrfToken();
         try {
             const response = await fetch('/admin/api/reloj-checador/registrar', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-CSRF-TOKEN': token,
+                    'X-XSRF-TOKEN': token,
                 },
                 body: JSON.stringify({
                     empleado_id: empleado.id,

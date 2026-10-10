@@ -13,73 +13,88 @@ class CarnetGeneratorService
     public static function generarCarnetPNG(Empleado $empleado): ?string
     {
         try {
-            $empleado->loadMissing(['departamento', 'sucursal', 'empresa']);
+            $empleado->loadMissing(['departamento', 'cargo', 'sucursal', 'empresa']);
 
             $width = 680;
-            $height = 1080;
+            $height = 1140;
 
             $im = imagecreatetruecolor($width, $height);
             if (!$im) {
                 return null;
             }
 
-            // Habilitar alpha y antialiasing
+            // Habilitar alpha
             imagealphablending($im, true);
             imagesavealpha($im, true);
 
-            // Asignación de Colores
-            $white     = imagecolorallocate($im, 255, 255, 255);
-            $darkGreen = imagecolorallocate($im, 16, 74, 41);     // #104a29
-            $black     = imagecolorallocate($im, 26, 32, 44);    // #1a202c
-            $red       = imagecolorallocatealpha($im, 211, 18, 42, 20);  // ~rgba(211, 18, 42, 0.85)
-            $purple    = imagecolorallocatealpha($im, 88, 28, 93, 25);   // ~rgba(88, 28, 93, 0.8)
-            $blue      = imagecolorallocatealpha($im, 16, 117, 188, 25); // ~rgba(16, 117, 188, 0.8)
+            // Colores corporativos Smurfit Westrock
+            $white      = imagecolorallocate($im, 255, 255, 255);
+            $navyBg     = imagecolorallocate($im, 14, 42, 109);     // #0e2a6d
+            $navyDark   = imagecolorallocate($im, 8, 26, 66);      // #081a42
+            $cyan       = imagecolorallocate($im, 0, 163, 224);     // #00a3e0
+            $slotBg     = imagecolorallocate($im, 5, 15, 36);      // #050f24
+            $slotBorder = imagecolorallocate($im, 60, 90, 150);
 
-            // Fondo Blanco
-            imagefilledrectangle($im, 0, 0, $width, $height, $white);
-
-            // Manchas orgánicas superiores (Rojo, Morado, Azul)
-            imagefilledellipse($im, 100, 30, 200, 120, $red);
-            imagefilledellipse($im, 290, 20, 180, 110, $purple);
-            imagefilledellipse($im, 460, 15, 190, 100, $blue);
-
-            // Marco verde exterior (Borde grueso de 16px)
-            for ($i = 0; $i < 16; $i++) {
-                imagerectangle($im, $i, $i, $width - 1 - $i, $height - 1 - $i, $darkGreen);
+            // Fondo con degradado o relleno navy
+            for ($y = 0; $y < $height; $y++) {
+                $factor = $y / $height;
+                $r = (int) (16 * (1 - $factor) + 8 * $factor);
+                $g = (int) (46 * (1 - $factor) + 26 * $factor);
+                $b = (int) (109 * (1 - $factor) + 66 * $factor);
+                $color = imagecolorallocate($im, $r, $g, $b);
+                imageline($im, 0, $y, $width, $y, $color);
             }
 
-            // --- 1. Nombre del Empleado (Lado izquierdo) ---
-            $nombreCompleto = trim("{$empleado->nombres} {$empleado->apellidos}");
-            $palabras = array_filter(explode(' ', $nombreCompleto));
+            // Borde exterior blanco fino
+            imagerectangle($im, 2, 2, $width - 3, $height - 3, imagecolorallocatealpha($im, 255, 255, 255, 60));
+            imagerectangle($im, 3, 3, $width - 4, $height - 4, imagecolorallocatealpha($im, 255, 255, 255, 60));
 
-            $yPos = 160;
-            foreach ($palabras as $palabra) {
-                $wordText = ucfirst(strtolower($palabra));
-                imagestring($im, 5, 45, $yPos, $wordText, $black);
-                $yPos += 35;
+            // 1. Ranura superior (Lanyard Slot)
+            $slotW = 108;
+            $slotH = 26;
+            $slotX = (int) (($width - $slotW) / 2);
+            $slotY = 24;
+            imagefilledrectangle($im, $slotX, $slotY, $slotX + $slotW, $slotY + $slotH, $slotBg);
+            imagerectangle($im, $slotX, $slotY, $slotX + $slotW, $slotY + $slotH, $slotBorder);
+
+            // 2. Logotipo Smurfit Westrock
+            $logoPath = public_path('image/logo/clientes/smurfit-westrock-logo-dark.png');
+            if (!file_exists($logoPath)) {
+                $logoPath = public_path('image/logo/clientes/smurfit-westrock-logo.png');
+            }
+            if (file_exists($logoPath)) {
+                $logoData = @file_get_contents($logoPath);
+                if ($logoData) {
+                    $logoImg = @imagecreatefromstring($logoData);
+                    if ($logoImg) {
+                        $origW = imagesx($logoImg);
+                        $origH = imagesy($logoImg);
+                        $logoTargetH = 72;
+                        $logoTargetW = (int) ($origW * ($logoTargetH / $origH));
+                        $logoX = (int) (($width - $logoTargetW) / 2);
+                        $logoY = 75;
+                        imagecopyresampled($im, $logoImg, $logoX, $logoY, 0, 0, $logoTargetW, $logoTargetH, $origW, $origH);
+                        imagedestroy($logoImg);
+                    }
+                }
             }
 
-            // --- 2. Foto del Empleado (Lado derecho) ---
-            $photoX = 390;
-            $photoY = 120;
-            $photoW = 230;
-            $photoH = 270;
+            // 3. Foto del Empleado centrada con brackets cian
+            $photoW = 280;
+            $photoH = 330;
+            $photoX = (int) (($width - $photoW) / 2);
+            $photoY = 175;
 
-            // Marco verde para la foto
-            for ($t = 0; $t < 6; $t++) {
-                imagerectangle($im, $photoX - $t, $photoY - $t, $photoX + $photoW + $t, $photoY + $photoH + $t, $darkGreen);
-            }
+            // Foto contenedor blanco/neutro
+            imagefilledrectangle($im, $photoX, $photoY, $photoX + $photoW, $photoY + $photoH, $white);
 
             if (!empty($empleado->foto_empleado)) {
+                $userImg = null;
                 if (str_starts_with($empleado->foto_empleado, 'data:image')) {
                     $parts = explode(',', $empleado->foto_empleado);
                     if (count($parts) === 2) {
                         $imgData = base64_decode($parts[1]);
                         $userImg = @imagecreatefromstring($imgData);
-                        if ($userImg) {
-                            imagecopyresampled($im, $userImg, $photoX, $photoY, 0, 0, $photoW, $photoH, imagesx($userImg), imagesy($userImg));
-                            imagedestroy($userImg);
-                        }
                     }
                 } else {
                     $fullPath = storage_path('app/public/' . ltrim($empleado->foto_empleado, '/'));
@@ -90,62 +105,74 @@ class CarnetGeneratorService
                         $imgData = @file_get_contents($fullPath);
                         if ($imgData) {
                             $userImg = @imagecreatefromstring($imgData);
-                            if ($userImg) {
-                                imagecopyresampled($im, $userImg, $photoX, $photoY, 0, 0, $photoW, $photoH, imagesx($userImg), imagesy($userImg));
-                                imagedestroy($userImg);
-                            }
                         }
                     }
                 }
+
+                if ($userImg) {
+                    imagecopyresampled($im, $userImg, $photoX, $photoY, 0, 0, $photoW, $photoH, imagesx($userImg), imagesy($userImg));
+                    imagedestroy($userImg);
+                }
             }
 
-            // --- 3. Franja Central Verde (Departamento y Sucursal) ---
-            $bannerY1 = 430;
-            $bannerY2 = 610;
-            imagefilledrectangle($im, 16, $bannerY1, $width - 16, $bannerY2, $darkGreen);
+            // Brackets cian (Superior Derecho e Inferior Izquierdo)
+            $bracketThick = 7;
+            $bracketArmW = 65;
+            $bracketArmH = 85;
+            $offset = 12;
 
-            $deptoText  = $empleado->departamento?->nombre ?? 'General';
-            $sucursalText = $empleado->sucursal?->nombre ?? 'Principal';
+            // Bracket Superior Derecho
+            $trX = $photoX + $photoW + $offset;
+            $trY = $photoY - $offset;
+            imagefilledrectangle($im, $trX - $bracketArmW, $trY, $trX, $trY + $bracketThick, $cyan);
+            imagefilledrectangle($im, $trX - $bracketThick, $trY, $trX, $trY + $bracketArmH, $cyan);
 
-            $deptoX = (int) (($width - (strlen($deptoText) * 12)) / 2);
-            imagestring($im, 5, max(30, $deptoX), $bannerY1 + 45, $deptoText, $white);
+            // Bracket Inferior Izquierdo
+            $blX = $photoX - $offset;
+            $blY = $photoY + $photoH + $offset;
+            imagefilledrectangle($im, $blX, $blY - $bracketThick, $blX + $bracketArmW, $blY, $cyan);
+            imagefilledrectangle($im, $blX, $blY - $bracketArmH, $blX + $bracketThick, $blY, $cyan);
 
-            $sucursalX = (int) (($width - (strlen($sucursalText) * 12)) / 2);
-            imagestring($im, 5, max(30, $sucursalX), $bannerY1 + 105, $sucursalText, $white);
+            // 4. Nombre y Apellidos
+            $nombres = mb_strtoupper($empleado->nombres, 'UTF-8');
+            $apellidos = mb_strtoupper($empleado->apellidos, 'UTF-8');
+            $nomX = (int) (($width - (strlen($nombres) * 9.5)) / 2);
+            imagestring($im, 5, max(30, $nomX), 540, $nombres, $white);
+            $apeX = (int) (($width - (strlen($apellidos) * 9.5)) / 2);
+            imagestring($im, 5, max(30, $apeX), 570, $apellidos, $white);
 
-            // --- 4. Código QR (Sección Inferior) ---
-            $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($empleado->documento_identidad);
+            // 5. NSS y Código de Empleado (ID)
+            $nssStr = 'NSS: ' . ($empleado->curp ?? $empleado->documento_identidad ?? '---');
+            $nssX = (int) (($width - (strlen($nssStr) * 9.5)) / 2);
+            imagestring($im, 5, max(30, $nssX), 620, $nssStr, $white);
+
+            $accessCode = $empleado->codigo_acceso ?? $empleado->documento_identidad ?? (string) $empleado->id;
+            $idStr = 'ID: ' . $accessCode;
+            $idX = (int) (($width - (strlen($idStr) * 9.5)) / 2);
+            imagestring($im, 5, max(30, $idX), 655, $idStr, $white);
+
+            // 6. Código QR
+            $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($accessCode) . "&color=0a1c42";
             $qrData = @file_get_contents($qrUrl);
             if ($qrData) {
                 $qrImg = @imagecreatefromstring($qrData);
                 if ($qrImg) {
-                    $qrSize = 190;
-                    $qrX = (int) (($width - $qrSize) / 2);
-                    $qrY = 640;
-                    imagecopyresampled($im, $qrImg, $qrX, $qrY, 0, 0, $qrSize, $qrSize, imagesx($qrImg), imagesy($qrImg));
+                    $qrBgSize = 160;
+                    $qrSize = 144;
+                    $qrBgX = (int) (($width - $qrBgSize) / 2);
+                    $qrBgY = 720;
+                    // Caja blanca para el QR
+                    imagefilledrectangle($im, $qrBgX, $qrBgY, $qrBgX + $qrBgSize, $qrBgY + $qrBgSize, $white);
+                    imagerectangle($im, $qrBgX, $qrBgY, $qrBgX + $qrBgSize, $qrBgY + $qrBgSize, $cyan);
+                    imagecopyresampled($im, $qrImg, $qrBgX + 8, $qrBgY + 8, 0, 0, $qrSize, $qrSize, imagesx($qrImg), imagesy($qrImg));
                     imagedestroy($qrImg);
                 }
             }
 
-            // --- 5. Logotipo institucional (Hoshō) ---
-            $logoPath = public_path('image/logo/hosho/lockup.png');
-            if (!file_exists($logoPath)) {
-                $logoPath = public_path('image/logo/driscolls_logo.png');
-            }
-            if (file_exists($logoPath)) {
-                $logoData = @file_get_contents($logoPath);
-                if ($logoData) {
-                    $logoImg = @imagecreatefromstring($logoData);
-                    if ($logoImg) {
-                        $logoW = 340;
-                        $logoH = 140;
-                        $logoX = (int) (($width - $logoW) / 2);
-                        $logoY = 870;
-                        imagecopyresampled($im, $logoImg, $logoX, $logoY, 0, 0, $logoW, $logoH, imagesx($logoImg), imagesy($logoImg));
-                        imagedestroy($logoImg);
-                    }
-                }
-            }
+            // 7. Cargo y Departamento en la base
+            $cargoTxt = mb_strtoupper($empleado->cargo?->nombre ?? $empleado->departamento?->nombre ?? 'CONTROL DE ACCESO', 'UTF-8');
+            $cargX = (int) (($width - (strlen($cargoTxt) * 9.5)) / 2);
+            imagestring($im, 5, max(30, $cargX), 915, $cargoTxt, $cyan);
 
             // Guardar imagen en storage
             $directory = storage_path('app/public/carnets');
