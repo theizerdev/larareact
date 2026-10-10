@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Cliente HTTP de SOLO LECTURA contra la API REST de BioTime PRO
- * (ZKTeco BioTime 8.0).
+ * Cliente HTTP de SOLO LECTURA contra la API REST de BioTime Cloud
+ * (ZKTeco; misma API REST que BioTime 8.x).
  *
  * - Autenticación: POST /jwt-api-token-auth/ {username,password} -> {token}
  *   y luego header `Authorization: JWT <token>` en cada petición.
@@ -385,7 +385,7 @@ class BioTimeService
         $client = Http::timeout((int) config('biotime.timeout', 20))
             ->connectTimeout(10);
 
-        if (! config('biotime.verify_ssl', false)) {
+        if (! config('biotime.verify_ssl', true)) {
             $client = $client->withoutVerifying();
         }
 

@@ -3,7 +3,7 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | BioTime PRO (ZKTeco BioTime 8.0) — integración de solo lectura
+    | BioTime Cloud (ZKTeco) — integración de solo lectura
     |--------------------------------------------------------------------------
     |
     | La URL, usuario y contraseña de cada instancia se guardan por empresa
@@ -48,7 +48,8 @@ return [
     // producción: lotes cortos = locks cortos).
     'db_chunk' => (int) env('BIOTIME_DB_CHUNK', 200),
 
-    // Verificación TLS. El servidor conocido es HTTP plano, así que por
-    // defecto va desactivada; se puede forzar por env si algún día es HTTPS.
-    'verify_ssl' => (bool) env('BIOTIME_VERIFY_SSL', false),
+    // Verificación TLS. BioTime Cloud se sirve por HTTPS, así que va encendida
+    // por defecto; sólo se apaga por env para un BioTime local en HTTP plano
+    // (con http:// no aplica de todos modos).
+    'verify_ssl' => (bool) env('BIOTIME_VERIFY_SSL', true),
 ];

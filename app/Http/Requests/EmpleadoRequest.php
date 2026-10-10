@@ -40,6 +40,7 @@ class EmpleadoRequest extends FormRequest
             'telefono' => 'nullable|string|max:50',
             'correo' => 'nullable|email|max:255',
             'genero' => 'nullable|string|in:M,F,Otro',
+            'fecha_ingreso' => 'nullable|date',
             'departamento_id' => 'required|exists:departamentos,id',
             // Required, not nullable: the visit forms auto-fill the visit's
             // responsable from the employee's own, and a missing one surfaces

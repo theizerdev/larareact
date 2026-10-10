@@ -14,7 +14,7 @@ class BioTimeSync extends Command
         {--only= : Lista separada por comas: terminals,catalogs,employees,transactions}
         {--since= : Fecha/hora ISO que fuerza el inicio de la ventana de marcajes}';
 
-    protected $description = 'Sincroniza (solo lectura) relojes, empleados, catálogos y marcajes de BioTime PRO hacia las tablas espejo biotime_*';
+    protected $description = 'Sincroniza (solo lectura) relojes, empleados, catálogos y marcajes de BioTime Cloud hacia las tablas espejo biotime_*';
 
     public function handle(): int
     {

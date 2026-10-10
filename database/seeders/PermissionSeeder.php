@@ -65,7 +65,7 @@ class PermissionSeeder extends Seeder
                 // Permisos ZapSign (firma electrónica, dentro de Validaciones)
                 'zapsign.view' => 'Ver configuración de ZapSign',
                 'zapsign.manage' => 'Gestionar configuración ZapSign',
-                // Integración BioTime PRO (ZKTeco) — espejo de solo lectura
+                // Integración BioTime Cloud (ZKTeco) — espejo de solo lectura
                 'biotime.view' => 'Ver datos de BioTime (relojes, empleados, marcajes)',
                 'biotime.manage' => 'Sincronizar y vincular datos de BioTime',
                 // Módulo Validaciones (resultados de identidad / KYC de las personas)
