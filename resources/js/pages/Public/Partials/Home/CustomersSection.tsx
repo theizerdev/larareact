@@ -6,7 +6,6 @@ import Reveal from './Reveal';
 const SECTOR_ICONS = [Factory, Warehouse, Landmark, Building2];
 
 const CLIENT_LOGOS = [
-    { name: "Driscoll's", src: '/image/logo/clientes/driscolls-logo.png' },
     { name: 'Persistent', src: '/image/logo/clientes/persistent-logo.svg' },
     { name: 'WALOOK', src: '/image/logo/clientes/walook-logo.png' },
     { name: 'TecNovum', src: '/image/logo/clientes/tecnovum-logo.png' },

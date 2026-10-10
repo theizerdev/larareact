@@ -24,9 +24,9 @@ class EmpleadoImportTest extends TestCase
                 'nombres' => 'Juan Carlos',
                 'apellidos' => 'Perez Garcia',
                 'correo' => 'juan.perez@example.com',
-                'telefono' => '4361174564',
+                'telefono' => '3300000000',
                 'departamento' => 'Empaque',
-                'empresa' => 'Driscolls',
+                'empresa' => 'Smurfit Westrock',
                 'vehiculos' => [
                     [
                         'tipo_vehiculo' => 'Automovil',
@@ -46,7 +46,7 @@ class EmpleadoImportTest extends TestCase
             'documento_identidad' => '999111',
             'nombres' => 'Juan Carlos',
             'apellidos' => 'Perez Garcia',
-            'telefono' => '4361174564',
+            'telefono' => '3300000000',
         ]);
 
         $empleado = Empleado::where('documento_identidad', '999111')->first();
