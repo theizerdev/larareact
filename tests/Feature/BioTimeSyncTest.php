@@ -124,6 +124,24 @@ class BioTimeSyncTest extends TestCase
         $this->assertNull(BiotimeEmpleado::where('emp_code', '200')->first()->empleado_id);
     }
 
+    public function test_employees_from_biotime_cloud_keep_uuid_id(): void
+    {
+        $uuid = '99f206c2-be94-11f1-991f-0a58a9feac02';
+        $envelope = fn (array $rows) => ['count' => count($rows), 'next' => null, 'previous' => null, 'msg' => '', 'code' => 0, 'data' => $rows];
+        Http::fake([
+            '*/jwt-api-token-auth/' => Http::response(['token' => 'faketoken-abc'], 200),
+            '*/personnel/api/employees/*' => Http::response($envelope([
+                ['id' => $uuid, 'emp_code' => '01', 'first_name' => 'Francisco', 'last_name' => 'Perez', 'department' => ['dept_code' => '1'], 'position' => ['position_code' => '1'], 'area' => [['area_name' => 'Sistemas gdl']], 'hire_date' => '2026-10-01', 'enable_att' => true],
+            ])),
+        ]);
+        $empresa = $this->empresa();
+
+        $summary = BioTimeSyncService::for($empresa)->sync($empresa, only: ['employees']);
+
+        $this->assertTrue($summary['ok'], json_encode($summary['errors']));
+        $this->assertSame($uuid, BiotimeEmpleado::where('emp_code', '01')->first()->biotime_id);
+    }
+
     public function test_transactions_resolve_employee_link(): void
     {
         $this->fakeBioTime();

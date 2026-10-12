@@ -246,7 +246,7 @@ class BioTimeController extends Controller
             'type' => $exit === 0 ? 'success' : 'error',
             'message' => $exit === 0
                 ? __('BioTime sync finished. :out', ['out' => trim(Artisan::output())])
-                : __('BioTime sync finished with errors. Check the biotime log.'),
+                : __('BioTime sync finished with errors. Check the biotime log.').' '.trim(Artisan::output()),
         ]);
     }
 
