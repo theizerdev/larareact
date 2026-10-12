@@ -105,7 +105,7 @@ class UserController extends Controller
             'roles' => 'array',
         ]);
 
-        $this->guardRoleAndTenantAssignment($request, $validated);
+        $validated = $this->guardRoleAndTenantAssignment($request, $validated);
 
         try {
             $rawPassword = $validated['password'];
@@ -164,7 +164,7 @@ class UserController extends Controller
             'roles' => 'array',
         ]);
 
-        $this->guardRoleAndTenantAssignment($request, $validated);
+        $validated = $this->guardRoleAndTenantAssignment($request, $validated);
 
         try {
             if (! empty($validated['password'])) {
@@ -264,32 +264,48 @@ class UserController extends Controller
      * grant/keep the super-admin role, and are pinned to their own
      * empresa/sucursal exactly like the other tenant-scoped modules.
      */
-    private function guardRoleAndTenantAssignment(Request $request, array $validated): void
+    private function guardRoleAndTenantAssignment(Request $request, array $validated): array
     {
         $actor = $request->user();
 
         if (! $actor || $actor->isSuperAdmin()) {
-            return;
+            return $validated;
         }
 
-        if (in_array('super-admin', $validated['roles'] ?? [], true)) {
-            throw ValidationException::withMessages([
-                'roles' => __('You are not allowed to assign the super-admin role.'),
-            ]);
+        // isSuperAdmin() reconoce estos alias y la búsqueda de roles no distingue
+        // mayúsculas, así que se comparan todos en minúsculas (antes solo se
+        // bloqueaba la cadena exacta "super-admin").
+        $privileged = array_map('strtolower', ['Super Administrador', 'super-admin', 'Super Admin', 'super_admin']);
+
+        foreach ($validated['roles'] ?? [] as $role) {
+            if (is_string($role) && in_array(strtolower($role), $privileged, true)) {
+                throw ValidationException::withMessages([
+                    'roles' => __('You are not allowed to assign the super-admin role.'),
+                ]);
+            }
         }
 
-        if ($actor->empresa_id && array_key_exists('empresa_id', $validated)
-            && $validated['empresa_id'] && (int) $validated['empresa_id'] !== (int) $actor->empresa_id) {
-            throw ValidationException::withMessages([
-                'empresa_id' => __('You are not allowed to assign this company.'),
-            ]);
+        // Un usuario con empresa/sucursal solo administra dentro de la suya. Se fijan
+        // siempre: antes, enviar empresa_id = null dejaba al usuario sin tenant y
+        // por tanto sin aislamiento (el scope solo filtra si hay empresa_id).
+        if ($actor->empresa_id) {
+            if (! empty($validated['empresa_id']) && (int) $validated['empresa_id'] !== (int) $actor->empresa_id) {
+                throw ValidationException::withMessages([
+                    'empresa_id' => __('You are not allowed to assign this company.'),
+                ]);
+            }
+            $validated['empresa_id'] = $actor->empresa_id;
         }
 
-        if ($actor->sucursal_id && array_key_exists('sucursal_id', $validated)
-            && $validated['sucursal_id'] && (int) $validated['sucursal_id'] !== (int) $actor->sucursal_id) {
-            throw ValidationException::withMessages([
-                'sucursal_id' => __('You are not allowed to assign this branch.'),
-            ]);
+        if ($actor->sucursal_id) {
+            if (! empty($validated['sucursal_id']) && (int) $validated['sucursal_id'] !== (int) $actor->sucursal_id) {
+                throw ValidationException::withMessages([
+                    'sucursal_id' => __('You are not allowed to assign this branch.'),
+                ]);
+            }
+            $validated['sucursal_id'] = $actor->sucursal_id;
         }
+
+        return $validated;
     }
 }

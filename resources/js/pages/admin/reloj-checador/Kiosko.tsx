@@ -376,6 +376,17 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                 body: JSON.stringify({ query: queryValue.trim() }),
             });
 
+            if (response.status === 401 || response.status === 419) {
+                setEmpleado(null);
+                setErrorMessage('Tu sesión expiró. Recarga la página e inicia sesión de nuevo.');
+                return;
+            }
+            if (response.status >= 500) {
+                setEmpleado(null);
+                setErrorMessage('Error del servidor. Intenta de nuevo en unos segundos.');
+                return;
+            }
+
             const data = await response.json();
 
             if (response.ok && data.success) {
@@ -388,8 +399,10 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                 setErrorMessage(data.message || 'No se encontró ningún empleado activo con ese número o QR.');
             }
         } catch (err: any) {
+            // Antes cualquier fallo (sin red, respuesta no JSON) se mostraba como
+            // "empleado no encontrado", lo que confundía al colaborador.
             setEmpleado(null);
-            setErrorMessage('No se encontró ningún empleado activo con ese número o QR.');
+            setErrorMessage('No se pudo conectar con el servidor. Verifica la conexión e intenta de nuevo.');
         } finally {
             setLoadingSearch(false);
         }
@@ -439,6 +452,15 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                 }),
             });
 
+            if (response.status === 401 || response.status === 419) {
+                setErrorMessage('Tu sesión expiró. El marcaje NO se registró: recarga la página e inicia sesión de nuevo.');
+                return;
+            }
+            if (response.status >= 500) {
+                setErrorMessage('Error del servidor. El marcaje NO se registró; intenta de nuevo.');
+                return;
+            }
+
             const data = await response.json();
 
             if (response.ok && data.success) {
@@ -454,7 +476,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                 setErrorMessage(data.message || 'Error al registrar el marcaje.');
             }
         } catch (err: any) {
-            setErrorMessage('Error al registrar el marcaje.');
+            setErrorMessage('No se pudo conectar con el servidor. El marcaje NO se registró; verifica la conexión e intenta de nuevo.');
         } finally {
             setLoadingSearch(false);
         }

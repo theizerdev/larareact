@@ -11,6 +11,7 @@ use App\Services\NotificacionAsistenciaWhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class RelojChecadorKioskoController extends Controller
@@ -80,6 +81,22 @@ class RelojChecadorKioskoController extends Controller
                         ->orWhere('codigo_acceso', 'like', "%{$cleanQuery}");
                 }
             })
+            // Una coincidencia exacta debe ganar a una parcial: antes `first()` devolvía
+            // el empleado de menor id aunque solo coincidiera por sufijo (LIKE '%123').
+            ->orderByRaw(
+                'CASE
+                    WHEN codigo_acceso = ? OR codigo_acceso = ? OR documento_identidad = ? OR documento_identidad = ? OR curp = ? OR telefono = ? THEN 0
+                    WHEN codigo_acceso = ? OR documento_identidad = ? OR codigo_acceso = ? OR documento_identidad = ? THEN 1
+                    WHEN id = ? THEN 2
+                    ELSE 3
+                END',
+                [
+                    $query, $cleanQuery, $query, $cleanQuery, $query, $query,
+                    $padded8, $padded6, $isNumeric ? (string) $intVal : null, $isNumeric ? (string) $intVal : null,
+                    $query,
+                ]
+            )
+            ->orderBy('id')
             ->first();
 
         if (! $empleado) {
@@ -165,6 +182,28 @@ class RelojChecadorKioskoController extends Controller
         ]);
 
         $empleado = Empleado::findOrFail($validated['empleado_id']);
+        // Doble toque / reintento: si ya se registró el mismo tipo de marcaje para este
+        // empleado hace segundos, se responde igual sin duplicar el registro (ni
+        // recalcular horas ni reenviar el WhatsApp).
+        $duplicado = AsistenciaMarcaje::where('empleado_id', $empleado->id)
+            ->where('tipo_marcaje', $validated['tipo_marcaje'])
+            ->where('created_at', '>=', now()->subSeconds(10))
+            ->latest('id')
+            ->first();
+
+        if ($duplicado) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Marcaje registrado con éxito.',
+                'marcaje' => [
+                    'tipo_marcaje' => $duplicado->tipo_marcaje,
+                    'hora' => $duplicado->fecha_hora->format('H:i:s'),
+                    'fecha' => $duplicado->fecha_hora->format('d/m/Y'),
+                ],
+                'empleado_nombre' => $empleado->nombre_completo,
+            ]);
+        }
+
         $now = Carbon::now();
 
         // Aplicar redondeo si está configurado en ConfiguracionAsistencia
@@ -184,12 +223,17 @@ class RelojChecadorKioskoController extends Controller
         // Guardar foto si se envió en base64
         $fotoPath = null;
         if (! empty($validated['fotografia_base64'])) {
-            $image = str_replace('data:image/png;base64,', '', $validated['fotografia_base64']);
-            $image = str_replace('data:image/jpeg;base64,', '', $image);
+            $image = preg_replace('#^data:image/(png|jpe?g);base64,#i', '', $validated['fotografia_base64']);
             $image = str_replace(' ', '+', $image);
-            $imageName = 'marcajes/'.time()."_{$empleado->id}.jpg";
-            Storage::disk('public')->put($imageName, base64_decode($image));
-            $fotoPath = $imageName;
+            $binary = base64_decode($image, true);
+
+            // Solo se guarda si realmente es una imagen y no es desmedida; nombre
+            // impredecible (antes time()_id, que colisionaba y era adivinable).
+            if ($binary !== false && strlen($binary) <= 5 * 1024 * 1024 && @getimagesizefromstring($binary) !== false) {
+                $imageName = 'marcajes/'.time()."_{$empleado->id}_".Str::random(10).'.jpg';
+                Storage::disk('public')->put($imageName, $binary);
+                $fotoPath = $imageName;
+            }
         }
 
         $lat = $validated['latitud'] ?? null;

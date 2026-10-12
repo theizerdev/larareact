@@ -1134,6 +1134,22 @@ export default function GaritaControl({
         });
     };
 
+    // Marcar la salida de caseta de un acceso abierto. El handler se invocaba desde
+    // los botones "Marcar Salida de Caseta" pero nunca se había definido
+    // (ReferenceError: nadie podía registrar su salida desde la garita).
+    const handleMarcarSalida = (accesoId: number) => {
+        playScanBeep();
+        router.patch(`/admin/visitas-accesos/${accesoId}/marcar-salida`, {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                notifySuccess(__('Salida marcada correctamente.'));
+            },
+            onError: () => {
+                notifyError(__('No se pudo marcar la salida. Intente nuevamente.'));
+            },
+        });
+    };
+
     const handleRegistrarIngresoProveedorGarita = (tipoAcceso: 'proveedor' | 'productor') => {
         playScanBeep();
         const payload: any = {

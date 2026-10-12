@@ -27,6 +27,9 @@ class ConfiguracionSox extends Model
         'azure_redirect_uri',
     ];
 
+    /** El secreto de Azure es de solo escritura: no se serializa. */
+    protected $hidden = ['azure_client_secret'];
+
     protected $casts = [
         'min_password_length' => 'integer',
         'password_history_limit' => 'integer',

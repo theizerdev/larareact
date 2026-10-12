@@ -50,7 +50,7 @@ interface AutorizarAccesoProps {
 export default function AutorizarAcceso({ autorizacion }: AutorizarAccesoProps) {
     const [accion, setAccion] = useState<'autorizar' | 'rechazar'>('autorizar');
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         accion: 'autorizar',
         motivo_autorizacion: autorizacion.motivo_autorizacion || '',
     });
@@ -59,11 +59,12 @@ export default function AutorizarAcceso({ autorizacion }: AutorizarAccesoProps) 
         e.preventDefault();
         setAccion(act);
 
+        // `data` no es una opción válida de post(): Inertia envía el estado del
+        // formulario, cuyo `accion` siempre era 'autorizar' (un rechazo se
+        // registraba como autorización). Se fuerza la acción pulsada al enviar.
+        transform((formData) => ({ ...formData, accion: act }));
+
         post(`/autorizar-acceso/${autorizacion.token}`, {
-            data: {
-                accion: act,
-                motivo_autorizacion: data.motivo_autorizacion,
-            },
             onSuccess: () => {
                 if (act === 'autorizar') {
                     notifySuccess('Acceso autorizado correctamente. La caseta de seguridad ha sido notificada al instante.');

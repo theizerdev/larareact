@@ -56,6 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(prepend: [
             \App\Http\Middleware\RegionalConfiguration::class,
+            \App\Http\Middleware\DenyPublicRegistration::class,
         ]);
 
         $middleware->web(append: [
@@ -63,6 +64,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            \App\Http\Middleware\EnsureUserActive::class,
             \App\Http\Middleware\EnsurePasswordNotExpired::class,
         ]);
 

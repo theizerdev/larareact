@@ -6,6 +6,7 @@ use App\Models\VisitaAccesoAutorizacion;
 use App\Notifications\VisitaAutorizacionRespondidaNotification;
 use App\Services\NotificationDispatcher;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class VisitaAccesoAutorizacionController extends Controller
@@ -66,11 +67,28 @@ class VisitaAccesoAutorizacionController extends Controller
 
         $status = $request->accion === 'autorizar' ? 'autorizado' : 'rechazado';
 
-        $autorizacion->update([
-            'status'              => $status,
-            'motivo_autorizacion' => $request->motivo_autorizacion,
-            'autorizado_at'       => now(),
-        ]);
+        // Transición pendiente → decisión de forma atómica: con dos envíos casi
+        // simultáneos (doble clic, dos dispositivos) solo el primero se aplica y
+        // se notifica; antes el último sobrescribía la decisión del primero.
+        $aplicada = DB::transaction(function () use ($autorizacion, $status, $request) {
+            $actual = VisitaAccesoAutorizacion::whereKey($autorizacion->id)->lockForUpdate()->first();
+
+            if (! $actual || $actual->status !== 'pendiente') {
+                return false;
+            }
+
+            $actual->update([
+                'status'              => $status,
+                'motivo_autorizacion' => $request->motivo_autorizacion,
+                'autorizado_at'       => now(),
+            ]);
+
+            return true;
+        });
+
+        if (! $aplicada) {
+            return redirect()->back()->with('error', 'Esta solicitud ya ha sido procesada previamente.');
+        }
 
         $autorizacion->loadMissing('responsable');
 

@@ -13,7 +13,7 @@ import {
     Building2,
     Clock,
 } from 'lucide-react';
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useRef, useState, Suspense, lazy } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -196,6 +196,8 @@ export default function SucursalesIndexPage({
     const mapZoom = data.latitud && data.longitud ? 14 : paisSeleccionado ? 6 : 4;
 
     const [geocoding, setGeocoding] = useState(false);
+    // Origen de las coordenadas (se asigna al teclearlas); estaba sin declarar y rompía la edición manual.
+    const coordsSourceRef = useRef<'manual' | 'map' | 'geocode'>('manual');
 
     const handleForceGeocode = async () => {
         if (!data.direccion || data.direccion.trim() === '') {

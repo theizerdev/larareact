@@ -969,8 +969,12 @@ class VisitaAccesoController extends Controller
         // Guardar fotos de documentos en storage si son base64
         $savePhoto = function (?string $b64, string $folder, string $name): ?string {
             if (!$b64 || !str_starts_with($b64, 'data:image')) return $b64;
-            $extension = str_contains($b64, 'png') ? 'png' : 'jpg';
-            $data = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $b64));
+            // Endpoint público: solo PNG/JPEG/WebP reales y de tamaño acotado (antes se
+            // decodificaba y guardaba cualquier contenido sin límite).
+            if (!preg_match('#^data:image/(png|jpe?g|webp);base64,(.+)$#is', $b64, $m)) return null;
+            $data = base64_decode(str_replace(' ', '+', $m[2]), true);
+            if ($data === false || strlen($data) > 8 * 1024 * 1024 || @getimagesizefromstring($data) === false) return null;
+            $extension = strtolower($m[1]) === 'png' ? 'png' : (strtolower($m[1]) === 'webp' ? 'webp' : 'jpg');
             $path = "{$folder}/{$name}.{$extension}";
             Storage::disk('public')->put($path, $data);
             return $path;
@@ -1057,6 +1061,9 @@ class VisitaAccesoController extends Controller
                 // 1. Buscar primero en Empleados (por codigo_acceso, documento_identidad, ID o Nombres)
                 $empleado = Empleado::query()
                     ->with(['departamento', 'cargo', 'responsable', 'vehiculos', 'empresa', 'sucursal'])
+                    // Un empleado dado de baja no debe identificarse como válido en garita
+                    // (el kiosko ya lo filtraba así).
+                    ->where('status', true)
                     ->where(function ($q) use ($search, $cleanSearch, $isNumeric, $intVal, $padded8, $padded6) {
                         $q->where('codigo_acceso', $search)
                           ->orWhere('codigo_acceso', $cleanSearch)
@@ -1075,6 +1082,22 @@ class VisitaAccesoController extends Controller
                               ->orWhere('codigo_acceso', 'like', "%{$cleanSearch}");
                         }
                     })
+                    // Coincidencia exacta primero: sin orden, `first()` devolvía el de menor id
+                    // aunque solo coincidiera por subcadena (LIKE '%q%').
+                    ->orderByRaw(
+                        'CASE
+                            WHEN codigo_acceso = ? OR codigo_acceso = ? OR documento_identidad = ? OR documento_identidad = ? THEN 0
+                            WHEN codigo_acceso = ? OR documento_identidad = ? OR codigo_acceso = ? OR documento_identidad = ? THEN 1
+                            WHEN id = ? THEN 2
+                            ELSE 3
+                        END',
+                        [
+                            $search, $cleanSearch, $search, $cleanSearch,
+                            $padded8, $padded6, $isNumeric ? (string) $intVal : null, $isNumeric ? (string) $intVal : null,
+                            $search,
+                        ]
+                    )
+                    ->orderBy('id')
                     ->first();
 
                 if ($empleado) {

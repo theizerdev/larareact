@@ -29,11 +29,22 @@ class NotificationController extends Controller
             };
         }
 
+        // Solo rutas internas: un redirect_to externo permitiría usar la app
+        // para redirigir a un sitio ajeno (open redirect).
+        if (is_string($targetUrl) && ! $this->isInternalPath($targetUrl)) {
+            $targetUrl = null;
+        }
+
         if ($targetUrl && ! $request->boolean('no_redirect', false)) {
             return redirect($targetUrl);
         }
 
         return back();
+    }
+
+    private function isInternalPath(string $url): bool
+    {
+        return str_starts_with($url, '/') && ! str_starts_with($url, '//') && ! str_contains($url, '\\');
     }
 
     /**

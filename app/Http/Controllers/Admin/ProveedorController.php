@@ -182,12 +182,14 @@ class ProveedorController extends Controller
         ]);
     }
 
+    /** Carnet por enlace firmado (sin sesión): solo los campos que dibuja el gafete. */
     public function carnetPublico(Proveedor $proveedor)
     {
-        $proveedor->load(['pais', 'paisTelefono', 'empresa', 'sucursal']);
-
         return Inertia::render('admin/Proveedores/Carnet', [
-            'proveedor' => $proveedor,
+            'proveedor' => $proveedor->only([
+                'id', 'razon_social', 'nombre_comercial', 'rfc', 'documento_identidad',
+                'curp', 'codigo_acceso', 'responsable',
+            ]),
         ]);
     }
 
@@ -224,7 +226,7 @@ class ProveedorController extends Controller
                 $prefix = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
                 $to = $prefix . $cleanPhone;
 
-                $carnetUrl = url("/carnet-proveedor/{$proveedor->id}");
+                $carnetUrl = \Illuminate\Support\Facades\URL::signedRoute('proveedores.carnet.publico', ['proveedor' => $proveedor->id]);
 
                 $msg  = "🪪 *¡SU GAFETE / CARNET ROJO DE PROVEEDOR ESTÁ LISTO!*\n\n";
                 $msg .= "Estimado Proveedor *{$proveedor->nombre_comercial}*,\n";

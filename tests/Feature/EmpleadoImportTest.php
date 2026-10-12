@@ -16,6 +16,17 @@ class EmpleadoImportTest extends TestCase
 
     public function test_import_service_executes_successfully()
     {
+        // Fixtures con FK válidas (empresa 1 / sucursal 1).
+        \Illuminate\Support\Facades\DB::table('empresas')->insert([
+            'id' => 1, 'razon_social' => 'Smurfit Westrock', 'nombre_comercial' => 'Smurfit Westrock',
+            'documento' => 'SMU-0001', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        \Illuminate\Support\Facades\DB::table('sucursales')->insert([
+            'id' => 1, 'empresa_id' => 1, 'nombre' => 'Planta', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        User::factory()->create(); // el servicio asigna user_id = 1 a los catálogos que crea
+
         $service = new EmpleadoImportService();
 
         $records = [
@@ -62,6 +73,8 @@ class EmpleadoImportTest extends TestCase
         $user = User::factory()->create([
             'password' => Hash::make('secret123')
         ]);
+        // La ruta exige empleados.import o empleados.create.
+        $user->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'empleados.create', 'guard_name' => 'web']));
 
         $responseInvalid = $this->actingAs($user)->postJson('/admin/empleados/import-verify-password', [
             'password' => 'wrongpass'

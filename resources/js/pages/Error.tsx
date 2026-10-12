@@ -33,7 +33,7 @@ export default function ErrorPage({ status }: ErrorPageProps) {
             title: '419',
             name: __('Page Expired'),
             description: __('Your session has expired due to inactivity. Please refresh and try again.'),
-            icon: <RefreshCw className="w-16 h-16 text-amber-500 animate-spin-slow' }} style={{ animationDuration: '6s' }}" />,
+            icon: <RefreshCw className="w-16 h-16 text-amber-500 animate-spin" style={{ animationDuration: '6s' }} />,
             bgGradient: 'from-amber-500/10 to-yellow-500/5',
             borderColor: 'border-amber-500/20'
         },
@@ -117,7 +117,7 @@ export default function ErrorPage({ status }: ErrorPageProps) {
                                 {__('Refresh Page')}
                             </Button>
                         ) : (
-                            <Link href="/admin/dashboard" className="w-full sm:w-auto">
+                            <Link href="/dashboard" className="w-full sm:w-auto">
                                 <Button className="w-full bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-2 shadow-lg">
                                     <Home className="w-4 h-4" />
                                     {__('Go to Dashboard')}

@@ -101,12 +101,14 @@ class ProductorController extends Controller
         ]);
     }
 
+    /** Carnet por enlace firmado (sin sesión): solo los campos que dibuja el gafete. */
     public function carnetPublico(Productor $productor)
     {
-        $productor->load(['pais', 'paisTelefono', 'empresa', 'sucursal']);
-
         return Inertia::render('admin/Productores/Carnet', [
-            'productor' => $productor,
+            'productor' => $productor->only([
+                'id', 'razon_social', 'nombre_comercial', 'rfc', 'documento_identidad',
+                'curp', 'codigo_acceso', 'responsable',
+            ]),
         ]);
     }
 
@@ -143,7 +145,7 @@ class ProductorController extends Controller
                 $prefix = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
                 $to = $prefix . $cleanPhone;
 
-                $carnetUrl = url("/carnet-productor/{$productor->id}");
+                $carnetUrl = \Illuminate\Support\Facades\URL::signedRoute('productores.carnet.publico', ['productor' => $productor->id]);
 
                 $msg  = "🪪 *¡SU GAFETE / CARNET AZUL DE PRODUCTOR ESTÁ LISTO!*\n\n";
                 $msg .= "Estimado Productor *{$productor->nombre_comercial}*,\n";

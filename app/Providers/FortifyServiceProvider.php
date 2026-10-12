@@ -67,6 +67,12 @@ class FortifyServiceProvider extends ServiceProvider
             }
 
             if (\Illuminate\Support\Facades\Hash::check($password, $user->password)) {
+                // Una cuenta desactivada no puede iniciar sesión. Se responde igual
+                // que ante credenciales inválidas para no revelar el estado.
+                if (in_array($user->status, \App\Http\Middleware\EnsureUserActive::BLOCKED_STATUSES, true)) {
+                    return null;
+                }
+
                 $user->update([
                     'failed_login_attempts' => 0,
                     'locked_until' => null,

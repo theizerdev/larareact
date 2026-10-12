@@ -145,12 +145,28 @@ class EmpleadoController extends Controller
         ]);
     }
 
+    /**
+     * Carnet accesible por enlace firmado (sin sesión). Solo expone lo que la
+     * vista del gafete dibuja: antes enviaba el modelo completo (salario,
+     * tarjetas de acceso, fotos del documento, etc.) a cualquiera que probara ids.
+     */
     public function carnetPublico(Empleado $empleado)
     {
-        $empleado->load(['paisTelefono', 'departamento', 'cargo', 'empresa', 'sucursal']);
+        $empleado->load(['departamento:id,nombre', 'cargo:id,nombre', 'sucursal:id,nombre']);
 
         return Inertia::render('admin/Empleados/Carnet', [
-            'empleado' => $empleado,
+            'empleado' => [
+                'id' => $empleado->id,
+                'nombres' => $empleado->nombres,
+                'apellidos' => $empleado->apellidos,
+                'foto_empleado' => $empleado->foto_empleado,
+                'documento_identidad' => $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso,
+                'curp' => $empleado->curp,
+                'departamento' => $empleado->departamento ? ['nombre' => $empleado->departamento->nombre] : null,
+                'cargo' => $empleado->cargo ? ['nombre' => $empleado->cargo->nombre] : null,
+                'sucursal' => $empleado->sucursal ? ['nombre' => $empleado->sucursal->nombre] : null,
+            ],
         ]);
     }
 
@@ -187,7 +203,7 @@ class EmpleadoController extends Controller
                 $prefix = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
                 $to = $prefix . $cleanPhone;
 
-                $carnetUrl = url("/carnet-empleado/{$empleado->id}");
+                $carnetUrl = \Illuminate\Support\Facades\URL::signedRoute('empleados.carnet.publico', ['empleado' => $empleado->id]);
                 $deptoNombre = $empleado->departamento->nombre ?? 'General';
 
                 $msg  = "🪪 *¡TU GAFETE / CARNET DIGITAL SMURFIT WESTROCK ESTÁ LISTO!*\n\n";

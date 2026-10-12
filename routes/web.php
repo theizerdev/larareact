@@ -81,7 +81,7 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth','verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->can('dashboard.view');
-    Route::get('/api/dashboard/stats', [DashboardController::class, 'stats'])->name('api.dashboard.stats');
+    Route::get('/api/dashboard/stats', [DashboardController::class, 'stats'])->name('api.dashboard.stats')->can('dashboard.view');
 });
 
 use App\Http\Controllers\ProveedorPreRegistroController;
@@ -107,17 +107,18 @@ Route::post('/preregistro-visita/{token}/tipo-servicio', [VisitaTemporalPreRegis
 use App\Http\Controllers\VisitaAccesoAutorizacionController;
 Route::get('/autorizar-acceso/{token}', [VisitaAccesoAutorizacionController::class, 'show'])->name('autorizar-acceso.show');
 Route::post('/autorizar-acceso/{token}', [VisitaAccesoAutorizacionController::class, 'autorizar'])->name('autorizar-acceso.post');
-Route::get('/api/autorizar-acceso/{token}/check', [VisitaAccesoAutorizacionController::class, 'checkStatus'])->name('autorizar-acceso.check');
+Route::get('/api/autorizar-acceso/{token}/check', [VisitaAccesoAutorizacionController::class, 'checkStatus'])->middleware('throttle:120,1')->name('autorizar-acceso.check');
 Route::get('/pase-digital/{uuid}', [VisitaAccesoController::class, 'pasePublico'])->name('pase-digital-visita.show');
 Route::post('/pase-digital/{uuid}/datos-acceso', [VisitaAccesoController::class, 'actualizarDatosAcceso'])->name('pase-digital-visita.datos-acceso');
-Route::get('/carnet-empleado/{empleado}', [\App\Http\Controllers\Admin\EmpleadoController::class, 'carnetPublico'])->name('empleados.carnet.publico');
-Route::get('/carnet-proveedor/{proveedor}', [\App\Http\Controllers\Admin\ProveedorController::class, 'carnetPublico'])->name('proveedores.carnet.publico');
-Route::get('/admin/proveedores/{proveedor}/carnet', [\App\Http\Controllers\Admin\ProveedorController::class, 'carnet'])->name('proveedores.carnet');
+// Los carnets públicos exigen URL firmada: los ids son secuenciales y sin firma cualquiera podía recorrerlos.
+Route::get('/carnet-empleado/{empleado}', [\App\Http\Controllers\Admin\EmpleadoController::class, 'carnetPublico'])->middleware(['signed', 'throttle:60,1'])->name('empleados.carnet.publico');
+Route::get('/carnet-proveedor/{proveedor}', [\App\Http\Controllers\Admin\ProveedorController::class, 'carnetPublico'])->middleware(['signed', 'throttle:60,1'])->name('proveedores.carnet.publico');
+Route::get('/admin/proveedores/{proveedor}/carnet', [\App\Http\Controllers\Admin\ProveedorController::class, 'carnet'])->middleware('auth')->name('proveedores.carnet');
 Route::post('/admin/proveedores/{proveedor}/send-carnet-whatsapp', [\App\Http\Controllers\Admin\ProveedorController::class, 'sendCarnetWhatsApp'])->name('proveedores.send-carnet-whatsapp')->middleware(['auth','verified'])->can('proveedores.send-carnet-whatsapp');
 
 Route::middleware('modulo:productores')->group(function () {
-    Route::get('/carnet-productor/{productor}', [\App\Http\Controllers\Admin\ProductorController::class, 'carnetPublico'])->name('productores.carnet.publico');
-    Route::get('/admin/productores/{productor}/carnet', [\App\Http\Controllers\Admin\ProductorController::class, 'carnet'])->name('productores.carnet');
+    Route::get('/carnet-productor/{productor}', [\App\Http\Controllers\Admin\ProductorController::class, 'carnetPublico'])->middleware(['signed', 'throttle:60,1'])->name('productores.carnet.publico');
+    Route::get('/admin/productores/{productor}/carnet', [\App\Http\Controllers\Admin\ProductorController::class, 'carnet'])->middleware('auth')->name('productores.carnet');
     Route::post('/admin/productores/{productor}/send-carnet-whatsapp', [\App\Http\Controllers\Admin\ProductorController::class, 'sendCarnetWhatsApp'])->name('productores.send-carnet-whatsapp')->middleware(['auth','verified'])->can('productores.send-carnet-whatsapp');
 });
 

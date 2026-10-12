@@ -58,6 +58,16 @@ class TaskMonitoringController extends Controller
 
         $command = $request->input('command');
 
+        // Solo se pueden ejecutar tareas que existan en el programador. Antes se
+        // pasaba cualquier texto a Artisan::call(), lo que permitía ejecutar
+        // cualquier comando de la aplicación con solo el permiso de ver monitoreo.
+        if (! in_array($command, $this->scheduledCommands(), true)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Error executing task: ').__('The command is not a scheduled task.'),
+            ]);
+        }
+
         try {
             // Si es un comando de Artisan, lo ejecutamos directamente
             if (str_starts_with($command, 'artisan ')) {
@@ -79,6 +89,29 @@ class TaskMonitoringController extends Controller
                 'message' => __('Error executing task: ').$e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Comandos registrados en el programador, con el mismo formato que muestra index().
+     *
+     * @return array<int, string>
+     */
+    private function scheduledCommands(): array
+    {
+        Artisan::call('schedule:list', ['--json' => true]);
+        $raw = json_decode(Artisan::output(), true) ?? [];
+
+        return collect($raw)
+            ->map(function ($item) {
+                $command = $item['command'] ?? '';
+
+                return str_starts_with($command, 'php artisan ')
+                    ? 'artisan '.substr($command, strlen('php artisan '))
+                    : $command;
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**

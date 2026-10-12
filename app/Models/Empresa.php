@@ -23,6 +23,23 @@ class Empresa extends Model
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
     }
 
+    /**
+     * Credenciales de integraciones: nunca deben serializarse al navegador.
+     * Antes cualquier página que enviara un Empresa (listado, garita, pase
+     * digital público) incluía estos valores descifrados. Las pantallas de
+     * integraciones los leen como atributos explícitos, así que no se ven afectadas.
+     */
+    protected $hidden = [
+        'api_key',
+        'whatsapp_api_key',
+        'control_acceso_app_token',
+        'control_acceso_user_token',
+        'jaak_api_key',
+        'zapsign_api_token',
+        'didit_api_key',
+        'biotime_password',
+    ];
+
     protected $fillable = [
         'pais_id',
         'razon_social',

@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureUserActive;
 use App\Models\ConfiguracionSox;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AzureSsoController extends Controller
 {
+    private const MSG_NOT_LINKED = 'El inicio de sesión vía Microsoft Entra ID se encuentra en proceso de vinculación. Ingrese a la consola de Cumplimiento SOX para configurar el Tenant ID.';
+
     /**
      * Redirect to Microsoft Entra ID OAuth2 / SAML authorization endpoint.
      */
@@ -24,14 +28,13 @@ class AzureSsoController extends Controller
         $clientId = $config->azure_client_id ?: config('services.azure.client_id');
         $redirectUri = $config->azure_redirect_uri ?: route('auth.azure.callback');
 
-        if (!$config->sso_azure_enabled && !$tenantId) {
-            return redirect()->route('login')->with(
-                'status',
-                'El inicio de sesión vía Microsoft Entra ID se encuentra en proceso de vinculación. Ingrese a la consola de Cumplimiento SOX para configurar el Tenant ID.'
-            );
+        // SSO solo funciona habilitado y con un tenant corporativo concreto.
+        // Sin tenant se usaría el endpoint "common" y cualquier cuenta
+        // Microsoft del mundo podría autenticarse.
+        if (! $config->sso_azure_enabled || ! $tenantId || ! $clientId) {
+            return redirect()->route('login')->with('status', self::MSG_NOT_LINKED);
         }
 
-        $tenant = $tenantId ?: 'common';
         $state = Str::random(40);
         $request->session()->put('azure_sso_state', $state);
 
@@ -44,7 +47,7 @@ class AzureSsoController extends Controller
             'state' => $state,
         ]);
 
-        return redirect("https://login.microsoftonline.com/{$tenant}/oauth2/v2.0/authorize?{$params}");
+        return redirect("https://login.microsoftonline.com/{$tenantId}/oauth2/v2.0/authorize?{$params}");
     }
 
     /**
@@ -53,18 +56,27 @@ class AzureSsoController extends Controller
     public function callback(Request $request): RedirectResponse
     {
         $code = $request->query('code');
-        $state = $request->query('state');
-        $savedState = $request->session()->pull('azure_sso_state');
+        $state = (string) $request->query('state', '');
+        $savedState = (string) $request->session()->pull('azure_sso_state', '');
 
-        if (!$code) {
+        if (! $code) {
             return redirect()->route('login')->with('status', 'No se recibió autorización de Microsoft Entra ID.');
         }
 
+        // Protección CSRF del flujo OAuth: el state debe ser el que emitimos.
+        if ($state === '' || $savedState === '' || ! hash_equals($savedState, $state)) {
+            return redirect()->route('login')->with('status', 'No se pudo validar la solicitud de inicio de sesión. Intente nuevamente.');
+        }
+
         $config = ConfiguracionSox::current();
-        $tenantId = $config->azure_tenant_id ?: config('services.azure.tenant', 'common');
+        $tenantId = $config->azure_tenant_id ?: config('services.azure.tenant');
         $clientId = $config->azure_client_id ?: config('services.azure.client_id');
         $clientSecret = $config->azure_client_secret ?: config('services.azure.client_secret');
         $redirectUri = $config->azure_redirect_uri ?: route('auth.azure.callback');
+
+        if (! $config->sso_azure_enabled || ! $tenantId || ! $clientId) {
+            return redirect()->route('login')->with('status', self::MSG_NOT_LINKED);
+        }
 
         try {
             // Exchange code for token with Microsoft
@@ -83,6 +95,10 @@ class AzureSsoController extends Controller
             $tokenData = $tokenResponse->json();
             $accessToken = $tokenData['access_token'] ?? null;
 
+            if (! $accessToken) {
+                return redirect()->route('login')->with('status', 'Error al autenticar token con Microsoft Entra ID.');
+            }
+
             // Get profile from Graph API
             $profileResponse = Http::withToken($accessToken)->get('https://graph.microsoft.com/v1.0/me');
             if ($profileResponse->failed()) {
@@ -91,33 +107,29 @@ class AzureSsoController extends Controller
 
             $profile = $profileResponse->json();
             $email = $profile['mail'] ?? $profile['userPrincipalName'] ?? null;
-            $name = $profile['displayName'] ?? 'Usuario Corporativo';
 
-            if (!$email) {
+            if (! $email || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 return redirect()->route('login')->with('status', 'El usuario no tiene correo corporativo asociado en Entra ID.');
             }
 
-            // Find or associate user in Hosho
+            // Solo entra quien ya fue dado de alta por un administrador (con su
+            // empresa y rol). No se crean cuentas automáticamente: una cuenta
+            // sin empresa quedaría sin aislamiento por tenant.
             $user = User::where('email', $email)->first();
 
-            if (!$user) {
-                // If user doesn't exist, create corporate user with SOX baseline
-                $user = User::create([
-                    'name' => $name,
-                    'email' => $email,
-                    'password' => Str::password(32),
-                    'status' => 'activo',
-                    'email_verified_at' => now(),
-                    'password_changed_at' => now(),
-                    'failed_login_attempts' => 0,
-                ]);
+            if (! $user || in_array($user->status, EnsureUserActive::BLOCKED_STATUSES, true)) {
+                Log::warning('SSO Entra ID rechazado: usuario no registrado o desactivado.', ['ip' => $request->ip()]);
 
-                $user->recordPasswordHistory($user->password);
+                return redirect()->route('login')->with(
+                    'status',
+                    'Su cuenta corporativa no tiene acceso a Hoshō. Contacte a su administrador.'
+                );
             }
 
             // Check if locked
             if ($user->isLocked()) {
                 $mins = $user->lockoutRemainingMinutes();
+
                 return redirect()->route('login')->with(
                     'status',
                     "Esta cuenta está temporalmente bloqueada por política SOX. Intente en {$mins} minuto(s) o contacte al administrador."
@@ -131,6 +143,7 @@ class AzureSsoController extends Controller
             ]);
 
             Auth::login($user);
+            $request->session()->regenerate();
 
             activity('auth')
                 ->causedBy($user)
@@ -146,7 +159,10 @@ class AzureSsoController extends Controller
             return redirect()->intended(route('dashboard'));
 
         } catch (\Throwable $e) {
-            return redirect()->route('login')->with('status', 'Excepción durante la autenticación SSO: ' . $e->getMessage());
+            // El detalle va al log; al usuario no se le expone (puede incluir URLs/secretos).
+            Log::error('Error en SSO Entra ID: '.$e->getMessage());
+
+            return redirect()->route('login')->with('status', 'No fue posible completar el inicio de sesión corporativo. Intente nuevamente.');
         }
     }
 }

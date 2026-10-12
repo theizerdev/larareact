@@ -194,7 +194,7 @@ class EmpleadoPreRegistroController extends Controller
                     $empresa = $preRegistro->empresa;
                     $whatsappService = new WhatsAppService($empresa);
 
-                    $carnetUrl = url("/carnet-empleado/{$empleado->id}");
+                    $carnetUrl = \Illuminate\Support\Facades\URL::signedRoute('empleados.carnet.publico', ['empleado' => $empleado->id]);
                     $message = "Estimado Colaborador *{$preRegistro->nombres} {$preRegistro->apellidos}*, hemos recibido la información de tu registro satisfactoriamente.\n\n"
                         . "🪪 *Tu Gafete / Carnet Digital Smurfit Westrock:* \n🔗 {$carnetUrl}\n\n"
                         . "Presenta este carnet o código QR en garita para tu control de accesos.";

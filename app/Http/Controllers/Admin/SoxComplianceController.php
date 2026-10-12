@@ -172,8 +172,12 @@ class SoxComplianceController extends Controller
                 'properties' => $log->properties,
             ]);
 
+        // El secreto de Azure es de solo escritura: nunca viaja al navegador.
+        $configData = $config->makeHidden('azure_client_secret')->toArray();
+        $configData['azure_client_secret_configured'] = filled($config->azure_client_secret);
+
         return Inertia::render('admin/seguridad/sox/index', [
-            'config' => $config,
+            'config' => $configData,
             'stats' => [
                 'score' => $scorePercent,
                 'totalUsers' => $totalUsers,
@@ -209,13 +213,21 @@ class SoxComplianceController extends Controller
             'azure_redirect_uri' => 'nullable|string|max:255',
         ]);
 
+        // Campo de solo escritura: vacío significa "conservar el secreto actual".
+        if (blank($validated['azure_client_secret'] ?? null)) {
+            unset($validated['azure_client_secret']);
+        }
+
         $config = ConfiguracionSox::current($request->user()->empresa_id);
         $config->update($validated);
 
         activity('auth')
             ->causedBy($request->user())
             ->performedOn($config)
-            ->withProperties($validated)
+            // Nunca se registra el valor del secreto en la bitácora.
+            ->withProperties(\Illuminate\Support\Arr::except($validated, ['azure_client_secret']) + [
+                'azure_client_secret_actualizado' => array_key_exists('azure_client_secret', $validated),
+            ])
             ->event('sox_settings_updated')
             ->log("Parámetros de Seguridad y Cumplimiento SOX actualizados por {$request->user()->name}");
 
@@ -247,8 +259,11 @@ class SoxComplianceController extends Controller
      */
     public function forcePasswordReset(Request $request, User $user): RedirectResponse
     {
+        // Debe superar la vigencia configurada (hasta 365 días), no un valor fijo.
+        $vigenciaDias = ConfiguracionSox::current($user->empresa_id)->password_expires_days;
+
         $user->update([
-            'password_changed_at' => now()->subDays(100), // Exceeds 90 days immediately
+            'password_changed_at' => now()->subDays($vigenciaDias + 1),
         ]);
 
         activity('auth')

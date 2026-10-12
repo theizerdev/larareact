@@ -426,7 +426,7 @@ export default function Wizard({ preRegistro, paises, tipoServicios }: PreRegist
                                         <Label htmlFor="doc_id">{__('National ID / Passport Number')}</Label>
                                         <Input 
                                             id="doc_id" 
-                                            value={profileData.documento_identity || profileData.documento_identidad} 
+                                            value={profileData.documento_identidad} 
                                             onChange={(e) => setProfileData(p => ({ ...p, documento_identidad: e.target.value }))}
                                             placeholder="e.g. 12345678-A"
                                             className={cn("bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800", errors.documento_identidad && "border-rose-500")}

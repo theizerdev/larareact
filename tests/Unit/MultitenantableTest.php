@@ -32,6 +32,14 @@ class MultitenantableTest extends TestCase
 
     public function test_auth_user_resolution_does_not_cause_infinite_recursion()
     {
+        // Empresa/sucursal reales: con FK activas no se pueden referenciar ids inexistentes.
+        \Illuminate\Support\Facades\DB::table('empresas')->insert([
+            'id' => 10, 'razon_social' => 'E10', 'documento' => 'D10', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        \Illuminate\Support\Facades\DB::table('sucursales')->insert([
+            'id' => 20, 'empresa_id' => 10, 'nombre' => 'S20', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
         $role = Role::firstOrCreate(['name' => 'operador', 'guard_name' => 'web']);
         $user = User::factory()->create([
             'empresa_id' => 10,
@@ -49,6 +57,13 @@ class MultitenantableTest extends TestCase
 
     public function test_empresa_query_does_not_attempt_sucursal_id_filter()
     {
+        \Illuminate\Support\Facades\DB::table('empresas')->insert([
+            'id' => 1, 'razon_social' => 'E1', 'documento' => 'D1', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        \Illuminate\Support\Facades\DB::table('sucursales')->insert([
+            'id' => 1, 'empresa_id' => 1, 'nombre' => 'S1', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
         $role = Role::firstOrCreate(['name' => 'operador', 'guard_name' => 'web']);
         $user = User::factory()->create([
             'empresa_id' => 1,

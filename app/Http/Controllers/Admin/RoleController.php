@@ -72,7 +72,7 @@ class RoleController extends Controller
                 'more_permissions_count' => $morePermissionsCount,
                 // Todos los permisos para el modal de edición
                 'all_permissions' => $allPermissions,
-                'is_super_admin' => $role->name === 'Super Admin',
+                'is_super_admin' => $this->isSuperAdminRole($role),
             ];
         });
 
@@ -99,6 +99,10 @@ class RoleController extends Controller
             'permissions.*' => 'exists:permissions,name',
         ]);
 
+        if ($this->isReservedName($validated['name']) && ! $request->user()?->isSuperAdmin()) {
+            return back()->withErrors(['name' => 'Ese nombre de rol está reservado.']);
+        }
+
         DB::transaction(function () use ($validated) {
             $role = Role::create(['name' => $validated['name'], 'guard_name' => 'web']);
             if (isset($validated['permissions'])) {
@@ -121,9 +125,17 @@ class RoleController extends Controller
                 return back()->withErrors(['name' => 'No puedes cambiar el nombre del Super Admin.']);
             }
 
-            if ($request->has('permissions') && count((array) $request->input('permissions', [])) < Permission::count()) {
+            // Antes solo se comprobaba si la clave venía en la petición: omitirla
+            // vaciaba todos los permisos del rol, y repetir nombres burlaba el conteo.
+            $enviados = collect((array) $request->input('permissions', []))->unique();
+            if (! $request->has('permissions') || $enviados->count() < Permission::count()) {
                 return back()->withErrors(['permissions' => 'No puedes quitarle permisos al rol Super Admin.']);
             }
+        }
+
+        if ($request->filled('name') && $request->name !== $role->name
+            && $this->isReservedName((string) $request->name) && ! $request->user()?->isSuperAdmin()) {
+            return back()->withErrors(['name' => 'Ese nombre de rol está reservado.']);
         }
 
         $validated = $request->validate([
@@ -164,5 +176,15 @@ class RoleController extends Controller
     private function isSuperAdminRole(Role $role): bool
     {
         return in_array($role->name, ['Super Administrador', 'super-admin', 'Super Admin', 'super_admin'], true);
+    }
+
+    /**
+     * Nombres que User::isSuperAdmin() trata como super administrador. Si un
+     * usuario sin ese rol pudiera crear/renombrar un rol con uno de estos
+     * nombres (y asignárselo) obtendría acceso total sin aislamiento por tenant.
+     */
+    private function isReservedName(string $name): bool
+    {
+        return in_array(strtolower(trim($name)), ['super administrador', 'super-admin', 'super admin', 'super_admin'], true);
     }
 }
