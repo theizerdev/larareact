@@ -12,6 +12,8 @@ use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 /**
  * Mantiene Organización / Colaboradores al día con el padrón de BioTime.
@@ -22,6 +24,10 @@ use Illuminate\Support\Facades\Log;
  *   sólo cuando BioTime lo cambió en esta corrida; los demás sólo se rellenan
  *   si están vacíos. Así una corrección hecha a mano en el sistema no se pierde
  *   a menos que alguien vuelva a cambiar ese mismo dato en el reloj.
+ *
+ * - Cuenta: cada colaborador del reloj con correo válido y libre recibe una
+ *   cuenta de Usuarios SIN rol (no ve nada hasta que un admin se lo asigne)
+ *   y un correo para definir su contraseña. Nadie conoce la inicial.
  *
  * No borra ni desactiva a nadie y no toca fotos (la API no las expone).
  */
@@ -40,9 +46,12 @@ class BioTimeEmpleadoProvisioner
         'cargo_id' => 'position_code',
     ];
 
+    /** TLD reservados (RFC 2606 / 6761): ningún buzón real vive en ellos. */
+    private const DOMINIOS_SIN_CORREO = ['invalid', 'test', 'example', 'localhost', 'local'];
+
     /**
      * @param  array<int, array<int,string>>  $cambios  biotime_empleados.id => columnas que BioTime cambió en esta corrida
-     * @return array{creados: int, actualizados: int, omitidos: array<int,string>, nuevos: array<int,string>}
+     * @return array{creados: int, actualizados: int, cuentas: int, omitidos: array<int,string>, sin_cuenta: array<int,string>, nuevos: array<int,string>}
      */
     public function sincronizar(
         Empresa $empresa,
@@ -51,7 +60,7 @@ class BioTimeEmpleadoProvisioner
         ?Sucursal $sucursal = null,
         ?User $usuario = null,
     ): array {
-        $res = ['creados' => 0, 'actualizados' => 0, 'omitidos' => [], 'nuevos' => []];
+        $res = ['creados' => 0, 'actualizados' => 0, 'cuentas' => 0, 'omitidos' => [], 'sin_cuenta' => [], 'nuevos' => []];
 
         $bios = BiotimeEmpleado::query()
             ->where('empresa_id', $empresa->id)
@@ -104,13 +113,90 @@ class BioTimeEmpleadoProvisioner
             }
         }
 
-        if (! $dryRun && ($res['creados'] || $res['actualizados'])) {
+        if (! $dryRun) {
+            [$res['cuentas'], $res['sin_cuenta']] = $this->cuentas($empresa);
+        }
+
+        if (! $dryRun && ($res['creados'] || $res['actualizados'] || $res['cuentas'])) {
             Log::channel('biotime')->info('BioTime alta/actualización de empleados', [
-                'empresa_id' => $empresa->id, 'creados' => $res['creados'], 'actualizados' => $res['actualizados'],
+                'empresa_id' => $empresa->id, 'creados' => $res['creados'], 'actualizados' => $res['actualizados'], 'cuentas' => $res['cuentas'],
             ]);
         }
 
         return $res;
+    }
+
+    /**
+     * Da cuenta de Usuarios a los colaboradores del reloj que aún no tienen.
+     * Se omite (y se reporta) a quien no tenga correo válido o use uno que ya
+     * es de otro usuario: vincular a mano es más seguro que adivinar.
+     *
+     * @return array{0: int, 1: array<int,string>}
+     */
+    private function cuentas(Empresa $empresa): array
+    {
+        $ids = BiotimeEmpleado::query()
+            ->where('empresa_id', $empresa->id)
+            ->whereNotNull('empleado_id')
+            ->pluck('empleado_id');
+
+        $empleados = Empleado::withoutTenant()
+            ->whereIn('id', $ids)
+            ->where('empresa_id', $empresa->id)
+            ->whereNull('user_id')
+            ->get();
+
+        $creadas = 0;
+        $omitidos = [];
+
+        foreach ($empleados as $empleado) {
+            $nombre = trim("{$empleado->nombres} {$empleado->apellidos}");
+            $correo = Str::lower(trim((string) $empleado->correo));
+
+            if (! filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+                $omitidos[] = "{$nombre}: sin correo válido, no se le creó cuenta.";
+
+                continue;
+            }
+
+            // Dominios reservados (los del demo usan .invalid) nunca reciben el
+            // enlace para definir la contraseña: la cuenta quedaría inservible.
+            if (in_array(Str::afterLast($correo, '.'), self::DOMINIOS_SIN_CORREO, true)) {
+                $omitidos[] = "{$nombre}: {$correo} no recibe correo, no se le creó cuenta.";
+
+                continue;
+            }
+
+            if (User::withoutTenant()->where('email', $correo)->exists()) {
+                $omitidos[] = "{$nombre}: el correo {$correo} ya es de otro usuario; vincúlalo a mano.";
+
+                continue;
+            }
+
+            $user = DB::transaction(function () use ($empleado, $nombre, $correo) {
+                // Sin rol y con una contraseña que nadie conoce: la persona la
+                // define con el enlace de restablecimiento. password_changed_at
+                // vacío obliga a cambiarla si alguien llegara a entrar con otra.
+                $user = User::withoutTenant()->create([
+                    'name' => $nombre,
+                    'email' => $correo,
+                    'password' => Str::password(40),
+                    'status' => 'activo',
+                    'empresa_id' => $empleado->empresa_id,
+                    'sucursal_id' => $empleado->sucursal_id,
+                ]);
+                $empleado->update(['user_id' => $user->id]);
+
+                return $user;
+            });
+
+            // En la cola: el primer sync puede crear cientos de cuentas y no
+            // debe esperar a que salga cada correo.
+            dispatch(fn () => Password::broker()->sendResetLink(['email' => $user->email]));
+            $creadas++;
+        }
+
+        return [$creadas, $omitidos];
     }
 
     private function crear(BiotimeEmpleado $bio, string $codigo, Empresa $empresa, Sucursal $sucursal, User $usuario, $deptos, $cargos): void
@@ -150,7 +236,9 @@ class BioTimeEmpleadoProvisioner
         }
 
         $sucursal = Sucursal::withoutTenant()->find($empleado->sucursal_id);
-        $usuario = $empleado->user_id ? User::query()->find($empleado->user_id) : User::query()->where('empresa_id', $empresa->id)->orderBy('id')->first();
+        // user_id del empleado es su propia cuenta: los catálogos los firma el
+        // primer usuario de la empresa, igual que en el alta.
+        $usuario = User::query()->where('empresa_id', $empresa->id)->orderBy('id')->first();
 
         $puedeCatalogar = $sucursal !== null && $usuario !== null;
         $departamento = $puedeCatalogar ? $this->departamento($deptos[$bio->dept_code] ?? null, $empresa, $sucursal, $usuario) : null;

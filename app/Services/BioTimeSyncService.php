@@ -237,9 +237,12 @@ class BioTimeSyncService
 
         if ($empresa->biotime_auto_alta) {
             $alta = app(BioTimeEmpleadoProvisioner::class)->sincronizar($empresa, $cambios);
-            $resultado += ['created' => $alta['creados'], 'updated' => $alta['actualizados'], 'skipped' => count($alta['omitidos'])];
+            $resultado += ['created' => $alta['creados'], 'updated' => $alta['actualizados'], 'accounts' => $alta['cuentas'], 'skipped' => count($alta['omitidos'])];
             foreach ($alta['omitidos'] as $motivo) {
                 Log::channel('biotime')->warning("BioTime alta automática omitida: {$motivo}", ['empresa_id' => $empresa->id]);
+            }
+            foreach ($alta['sin_cuenta'] as $motivo) {
+                Log::channel('biotime')->info("BioTime cuenta de usuario no creada: {$motivo}", ['empresa_id' => $empresa->id]);
             }
         }
 

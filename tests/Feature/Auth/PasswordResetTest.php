@@ -59,7 +59,8 @@ class PasswordResetTest extends TestCase
     {
         Notification::fake();
 
-        $user = User::factory()->create();
+        // Sin fecha de cambio, como una cuenta recién creada desde BioTime.
+        $user = User::factory()->create(['password_changed_at' => null]);
 
         $this->post(route('password.email'), ['email' => $user->email]);
 
@@ -67,8 +68,8 @@ class PasswordResetTest extends TestCase
             $response = $this->post(route('password.update'), [
                 'token' => $notification->token,
                 'email' => $user->email,
-                'password' => 'password',
-                'password_confirmation' => 'password',
+                'password' => 'Nueva-Contrasena-2026!',
+                'password_confirmation' => 'Nueva-Contrasena-2026!',
             ]);
 
             $response
@@ -77,6 +78,9 @@ class PasswordResetTest extends TestCase
 
             return true;
         });
+
+        // Restablecerla cuenta como cambio: la política SOX no la da por vencida.
+        $this->assertFalse($user->fresh()->isPasswordExpired());
     }
 
     public function test_password_cannot_be_reset_with_invalid_token(): void

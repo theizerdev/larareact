@@ -100,6 +100,14 @@ class BioTimeCrearEmpleados extends Command
             $this->warn('   '.$motivo);
         }
 
+        if (! $dryRun) {
+            $this->info("   {$r['cuentas']} cuentas de usuario creadas (sin rol; se envió el enlace para definir contraseña).");
+        }
+
+        foreach ($r['sin_cuenta'] as $motivo) {
+            $this->line('   '.$motivo);
+        }
+
         return $r['omitidos'] === [];
     }
 }

@@ -22,8 +22,11 @@ class ResetUserPassword implements ResetsUserPasswords
             'password' => $this->passwordRules($user),
         ])->validate();
 
+        // Sin password_changed_at la política SOX la daría por vencida y
+        // pediría cambiarla otra vez justo después de restablecerla.
         $user->forceFill([
             'password' => $input['password'],
+            'password_changed_at' => now(),
         ])->save();
 
         $user->recordPasswordHistory($user->password);
