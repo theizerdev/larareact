@@ -520,7 +520,7 @@ class AsistenciaReporteController extends Controller
         $sucursales = Sucursal::where('status', true)
             ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
             ->orderBy('nombre', 'asc')
-            ->get(['id', 'nombre', 'zona_horaria', 'ciudad', 'estado']);
+            ->get(['id', 'nombre', 'zona_horaria']);
 
         $responsables = Responsable::where('status', true)
             ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
