@@ -197,6 +197,11 @@ const defaultJornada = [
     { dia: 'Domingo', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' }
 ];
 
+const normalizeJornada = (val: any) => {
+    if (Array.isArray(val) && val.length > 0) return val;
+    return defaultJornada;
+};
+
 // ─── Formulario inicial vacío ─────────────────────────────────────────────────
 
 const initialForm = {
@@ -559,7 +564,7 @@ export default function EmpleadosIndexPage({
             departamento_id: emp.departamento_id || '',
             responsable_id: emp.responsable_id || '',
             cargo_id: emp.cargo_id || '',
-            jornada_laboral: emp.jornada_laboral || defaultJornada,
+            jornada_laboral: normalizeJornada(emp.jornada_laboral),
             foto_empleado: emp.foto_empleado || null,
             foto_empleado_2: emp.foto_empleado_2 || null,
             foto_documento: emp.foto_documento || null,
@@ -1369,13 +1374,13 @@ export default function EmpleadosIndexPage({
                                         </p>
 
                                         <div className="space-y-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                                            {((data.jornada_laboral as any[]) || []).map((jornada, idx) => (
+                                            {normalizeJornada(data.jornada_laboral).map((jornada: any, idx: number) => (
                                                 <div key={jornada.dia} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2 border-b last:border-0 border-slate-100 dark:border-slate-800/50">
                                                     <div className="flex items-center gap-3 w-36">
                                                         <Switch
                                                             checked={!!jornada.activo}
                                                             onCheckedChange={(checked) => {
-                                                                const updated = [...(data.jornada_laboral as any[])];
+                                                                const updated = [...normalizeJornada(data.jornada_laboral)];
                                                                 updated[idx].activo = checked;
                                                                 setData('jornada_laboral', updated);
                                                             }}
@@ -1391,7 +1396,7 @@ export default function EmpleadosIndexPage({
                                                                 value={jornada.hora_ingreso || '08:00'}
                                                                 disabled={!jornada.activo}
                                                                 onChange={(e) => {
-                                                                    const updated = [...(data.jornada_laboral as any[])];
+                                                                    const updated = [...normalizeJornada(data.jornada_laboral)];
                                                                     updated[idx].hora_ingreso = e.target.value;
                                                                     setData('jornada_laboral', updated);
                                                                 }}
@@ -1406,7 +1411,7 @@ export default function EmpleadosIndexPage({
                                                                 value={jornada.hora_salida || '17:00'}
                                                                 disabled={!jornada.activo}
                                                                 onChange={(e) => {
-                                                                    const updated = [...(data.jornada_laboral as any[])];
+                                                                    const updated = [...normalizeJornada(data.jornada_laboral)];
                                                                     updated[idx].hora_salida = e.target.value;
                                                                     setData('jornada_laboral', updated);
                                                                 }}

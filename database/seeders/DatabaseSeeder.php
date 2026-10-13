@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             EmpresaSucursalSeeder::class,
             UsersSeeder::class,
             TipoServicioSeeder::class,
+            SmurfitWestrockSeeder::class,
         ]);
     }
 }
