@@ -74,28 +74,50 @@ class SucursalController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($request) {
-            Sucursal::create($request->validated());
-        });
+        try {
+            DB::transaction(function () use ($request) {
+                Sucursal::create($request->validated());
+            });
 
-        return back()->with('notification', [
-            'type' => 'success',
-            'message' => __('Branch created successfully.'),
-        ]);
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Branch created successfully.'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al crear sucursal: '.$e->getMessage());
+
+            return back()
+                ->withErrors(['general' => __('There was an error creating the branch. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error creating the branch. Please try again.'),
+                ]);
+        }
     }
 
     public function update(SucursalRequest $request, Sucursal $sucursal)
     {
         $this->guardEmpresa($request, $request->validated());
 
-        DB::transaction(function () use ($sucursal, $request) {
-            $sucursal->update($request->validated());
-        });
+        try {
+            DB::transaction(function () use ($sucursal, $request) {
+                $sucursal->update($request->validated());
+            });
 
-        return back()->with('notification', [
-            'type' => 'success',
-            'message' => __('Branch updated successfully.'),
-        ]);
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Branch updated successfully.'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar sucursal {$sucursal->id}: ".$e->getMessage());
+
+            return back()
+                ->withErrors(['general' => __('There was an error updating the branch. Please try again.')])
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('There was an error updating the branch. Please try again.'),
+                ]);
+        }
     }
 
     public function destroy(Sucursal $sucursal)

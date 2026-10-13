@@ -76,6 +76,7 @@ export default function AuthSplitLayout({
                         </p>
                         <div className="flex items-center justify-between gap-1.5 pt-1">
                             <img src="/image/logo/certifications/iso20000.svg" alt="ISO 20000" className="h-11 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
+                            <img src="/image/logo/certifications/sox.svg" alt="SOX Sección 404" className="h-11 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
                             <img src="/image/logo/certifications/ctpat.svg" alt="CTPAT" className="h-8 sm:h-9 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
                             <img src="/image/logo/certifications/oea_mexico.svg" alt="OEA México" className="h-8 sm:h-9 w-auto object-contain hover:scale-105 transition-transform shrink-0" />
                             <img src="/image/logo/certifications/iso27001.svg" alt="ISO 27001" className="h-11 sm:h-12 w-auto object-contain hover:scale-105 transition-transform shrink-0" />

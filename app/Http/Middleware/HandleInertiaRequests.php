@@ -37,6 +37,12 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $currentLocale = app()->getLocale();
+        $user = $request->user();
+        $daysUntilExpired = null;
+        if ($user) {
+            $vigencia = \App\Models\ConfiguracionSox::current($user->empresa_id)->password_expires_days;
+            $daysUntilExpired = $user->daysUntilPasswordExpires($vigencia);
+        }
      
         return [
             ...parent::share($request),
@@ -63,6 +69,7 @@ class HandleInertiaRequests extends Middleware
                         ->when(! $request->user()->isSuperAdmin(), fn ($p) => $p->reject(fn ($n) => str_starts_with($n, 'monitoreo.') || in_array($n, ['paises.create', 'paises.edit', 'paises.delete'], true)))
                         ->values()->toArray(),
                     'is_super_admin' => $request->user()->isSuperAdmin(),
+                    'password_days_remaining' => $daysUntilExpired,
                 ]) : null,
             ],
             // Selector de empresa del Super Administrador (null para los demás).

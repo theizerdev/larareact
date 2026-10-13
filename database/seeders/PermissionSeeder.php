@@ -30,6 +30,10 @@ class PermissionSeeder extends Seeder
                 'roles.create' => 'Crear Rol',
                 'roles.edit' => 'Editar Rol',
                 'roles.delete' => 'Eliminar Rol',
+
+                // Módulo: Cumplimiento SOX
+                'sox.view' => 'Ver Cumplimiento SOX',
+                'sox.manage' => 'Gestionar Políticas SOX',
             ],
 
             // Sector: Configuración

@@ -2,18 +2,31 @@
 
 namespace App\Listeners;
 
-use Illuminate\Auth\Events\Login;
-use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\PasswordReset;
 
 class LogAuthenticationActivity
 {
     /**
-     * Prevent duplicate execution within the same request lifecycle.
+     * Prevent duplicate execution within the same HTTP request lifecycle.
      */
-    private static array $handledEvents = [];
+    private function shouldHandle(string $key): bool
+    {
+        try {
+            $request = request();
+            $attr = '__auth_activity_' . $key;
+            if ($request->attributes->has($attr)) {
+                return false;
+            }
+            $request->attributes->set($attr, true);
+            return true;
+        } catch (\Throwable) {
+            return true;
+        }
+    }
 
     /**
      * Handle user login events.
@@ -21,29 +34,29 @@ class LogAuthenticationActivity
     public function handleLogin(Login $event): void
     {
         $user = $event->user;
-        $key = 'login_' . ($user?->id ?? 'guest') . '_' . request()->ip();
-
-        if (isset(self::$handledEvents[$key])) {
+        if (!$user) {
             return;
         }
-        self::$handledEvents[$key] = true;
 
-        if ($user) {
-            activity('auth')
-                ->causedBy($user)
-                ->performedOn($user)
-                ->withProperties([
-                    'ip_address' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
-                    'url' => request()->fullUrl(),
-                    'method' => request()->method(),
-                    'tabla' => 'users',
-                    'identificador' => $user->email ?? $user->name,
-                    'evento' => 'login',
-                ])
-                ->event('login')
-                ->log("Inicio de sesión exitoso de {$user->name}");
+        $key = 'login_' . $user->id . '_' . spl_object_id($event);
+        if (!$this->shouldHandle($key)) {
+            return;
         }
+
+        activity('auth')
+            ->causedBy($user)
+            ->performedOn($user)
+            ->withProperties([
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'url' => request()->fullUrl(),
+                'method' => request()->method(),
+                'tabla' => 'users',
+                'identificador' => $user->email ?? $user->name,
+                'evento' => 'login',
+            ])
+            ->event('login')
+            ->log("Inicio de sesión exitoso de {$user->name}");
     }
 
     /**
@@ -52,29 +65,29 @@ class LogAuthenticationActivity
     public function handleLogout(Logout $event): void
     {
         $user = $event->user;
-        $key = 'logout_' . ($user?->id ?? 'guest') . '_' . request()->ip();
-
-        if (isset(self::$handledEvents[$key])) {
+        if (!$user) {
             return;
         }
-        self::$handledEvents[$key] = true;
 
-        if ($user) {
-            activity('auth')
-                ->causedBy($user)
-                ->performedOn($user)
-                ->withProperties([
-                    'ip_address' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
-                    'url' => request()->fullUrl(),
-                    'method' => request()->method(),
-                    'tabla' => 'users',
-                    'identificador' => $user->email ?? $user->name,
-                    'evento' => 'logout',
-                ])
-                ->event('logout')
-                ->log("Cierre de sesión de {$user->name}");
+        $key = 'logout_' . $user->id . '_' . spl_object_id($event);
+        if (!$this->shouldHandle($key)) {
+            return;
         }
+
+        activity('auth')
+            ->causedBy($user)
+            ->performedOn($user)
+            ->withProperties([
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'url' => request()->fullUrl(),
+                'method' => request()->method(),
+                'tabla' => 'users',
+                'identificador' => $user->email ?? $user->name,
+                'evento' => 'logout',
+            ])
+            ->event('logout')
+            ->log("Cierre de sesión de {$user->name}");
     }
 
     /**
@@ -84,12 +97,11 @@ class LogAuthenticationActivity
     {
         $email = $event->credentials['email'] ?? $event->credentials['username'] ?? 'Desconocido';
         $user = $event->user;
-        $key = 'failed_' . $email . '_' . request()->ip();
+        $key = 'failed_' . $email . '_' . spl_object_id($event);
 
-        if (isset(self::$handledEvents[$key])) {
+        if (!$this->shouldHandle($key)) {
             return;
         }
-        self::$handledEvents[$key] = true;
 
         $activity = activity('auth')
             ->withProperties([
@@ -115,12 +127,11 @@ class LogAuthenticationActivity
      */
     public function handleLockout(Lockout $event): void
     {
-        $key = 'lockout_' . request()->ip();
+        $key = 'lockout_' . spl_object_id($event);
 
-        if (isset(self::$handledEvents[$key])) {
+        if (!$this->shouldHandle($key)) {
             return;
         }
-        self::$handledEvents[$key] = true;
 
         activity('auth')
             ->withProperties([
@@ -141,29 +152,30 @@ class LogAuthenticationActivity
     public function handlePasswordReset(PasswordReset $event): void
     {
         $user = $event->user;
-        $key = 'password_reset_' . ($user?->id ?? 'guest') . '_' . request()->ip();
-
-        if (isset(self::$handledEvents[$key])) {
+        if (!$user) {
             return;
         }
-        self::$handledEvents[$key] = true;
 
-        if ($user) {
-            activity('auth')
-                ->causedBy($user)
-                ->performedOn($user)
-                ->withProperties([
-                    'ip_address' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
-                    'url' => request()->fullUrl(),
-                    'method' => request()->method(),
-                    'tabla' => 'users',
-                    'identificador' => $user->email,
-                    'evento' => 'password_reset',
-                ])
-                ->event('password_reset')
-                ->log("Restablecimiento de contraseña de {$user->name}");
+        $key = 'password_reset_' . $user->id . '_' . spl_object_id($event);
+
+        if (!$this->shouldHandle($key)) {
+            return;
         }
+
+        activity('auth')
+            ->causedBy($user)
+            ->performedOn($user)
+            ->withProperties([
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'url' => request()->fullUrl(),
+                'method' => request()->method(),
+                'tabla' => 'users',
+                'identificador' => $user->email,
+                'evento' => 'password_reset',
+            ])
+            ->event('password_reset')
+            ->log("Restablecimiento de contraseña de {$user->name}");
     }
 
     /**

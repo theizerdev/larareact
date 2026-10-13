@@ -64,6 +64,12 @@ return Application::configure(basePath: dirname(__DIR__))
             ->onOneServer()
             ->runInBackground()
             ->appendOutputTo(storage_path('logs/biotime-sync.log'));
+
+        // Auditoría diaria de contraseñas y cuentas SOX
+        $schedule->command('sox:audit-users')
+            ->dailyAt('01:00')
+            ->withoutOverlapping()
+            ->onOneServer();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // La app corre detrás del Apache del host, que termina TLS y reenvía por HTTP
@@ -74,6 +80,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(prepend: [
             RegionalConfiguration::class,
+            \App\Http\Middleware\DenyPublicRegistration::class,
         ]);
 
         $middleware->web(append: [
@@ -82,6 +89,9 @@ return Application::configure(basePath: dirname(__DIR__))
             EmpresaActiva::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            \App\Http\Middleware\SecurityHeaders::class,
+            \App\Http\Middleware\EnsureUserActive::class,
+            \App\Http\Middleware\EnsurePasswordNotExpired::class,
         ]);
 
         // Un usuario normal sin empresa no se puede cargar: el scope Multitenantable lo oculta
@@ -111,6 +121,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'superadmin' => \App\Http\Middleware\SoloSuperAdmin::class,
+            'password.not_expired' => \App\Http\Middleware\EnsurePasswordNotExpired::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

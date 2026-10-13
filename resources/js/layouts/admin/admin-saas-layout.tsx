@@ -14,6 +14,7 @@ import {
     Search,
     Settings,
     Shield,
+    AlertTriangle,
     Sun,
     User,
     Globe,
@@ -52,6 +53,7 @@ import { useInitials } from '@/hooks/use-initials';
 import { useTemplateSettings } from '@/hooks/use-template-settings';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn, toUrl } from '@/lib/utils';
+import { notifySuccess, notifyError } from '@/utils/notifications';
 import { dashboard, home, logout } from '@/routes';
 import { index as cargosIndex } from '@/routes/admin/cargos';
 import { index as departamentosIndex } from '@/routes/admin/departamentos';
@@ -368,6 +370,17 @@ export default function AdminSaasLayout({
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const { __ } = useTranslate();
 
+    const flashNotification = (page.props as any)?.notification;
+    React.useEffect(() => {
+        if (flashNotification) {
+            if (flashNotification.type === 'success') {
+                notifySuccess(flashNotification.message);
+            } else if (flashNotification.type === 'error') {
+                notifyError(flashNotification.message);
+            }
+        }
+    }, [flashNotification]);
+
     const userPermissions = (auth as any)?.user?.permissions || [];
     const hasPermission = (permission: string) => {
         return userPermissions.includes(permission);
@@ -383,6 +396,13 @@ export default function AdminSaasLayout({
     // bandera vive en config/contpaqi.php (CONTPAQI_MODULO_VISIBLE) y llega
     // como prop compartida, la misma que usa el dashboard.
     const nominaVisible = (page.props as any)?.nominaVisible === true;
+
+    const passwordDaysRemaining = (auth as any)?.user?.password_days_remaining;
+    const [dismissPasswordBanner, setDismissPasswordBanner] = React.useState(false);
+    const showPasswordWarning = !dismissPasswordBanner &&
+        typeof passwordDaysRemaining === 'number' &&
+        passwordDaysRemaining <= 10 &&
+        passwordDaysRemaining >= 0;
 
     const markAsRead = (id: string) => {
         router.post(
@@ -861,7 +881,14 @@ export default function AdminSaasLayout({
                                     permission: 'roles.view',
                                     key: 'security.roles',
                                 },
-                            ].filter(item => hasPermission(item.permission) && isMenuVisible(item.key));
+                                {
+                                    title: 'Cumplimiento SOX',
+                                    href: '/admin/seguridad/sox',
+                                    permission: 'sox.view',
+                                    key: 'security.sox',
+                                    customCheck: () => hasPermission('sox.view') || hasPermission('users.view'),
+                                },
+                            ].filter(item => ((item as any).customCheck ? (item as any).customCheck() : hasPermission(item.permission)) && isMenuVisible(item.key));
 
                             if (securityItems.length === 0) return null;
 
@@ -899,10 +926,11 @@ export default function AdminSaasLayout({
                                     key: 'monitoring.sessions',
                                 },
                                 {
-                                    title: 'System Activity',
+                                    title: 'Activity Logs',
                                     href: '/admin/monitoring/activity',
                                     permission: 'monitoreo.activities',
                                     key: 'monitoring.activity',
+                                    customCheck: () => hasPermission('monitoreo.activities') || hasPermission('monitoreo.view'),
                                 },
                                 {
                                     title: 'System Logs',
@@ -1298,6 +1326,37 @@ export default function AdminSaasLayout({
                             settings.contentWidth === 'compact' ? 'mx-auto max-w-[1200px] w-full' : 'w-full'
                         )}
                     >
+                        {showPasswordWarning && (
+                            <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
+                                <div className="flex items-center gap-3">
+                                    <AlertTriangle className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                                    <div className="text-sm">
+                                        <span className="font-semibold">Aviso de seguridad (Cumplimiento SOX):</span>{' '}
+                                        Tu contraseña expira en{' '}
+                                        <span className="font-bold underline">
+                                            {passwordDaysRemaining === 0 ? 'menos de 24 horas' : `${passwordDaysRemaining} días`}
+                                        </span>.
+                                        {' '}Renuévala para evitar el bloqueo automático de tu sesión.
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 self-end sm:self-auto">
+                                    <Link
+                                        href={securityEdit()}
+                                        className="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-amber-700 transition"
+                                    >
+                                        Renovar ahora
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDismissPasswordBanner(true)}
+                                        className="p-1 rounded text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                                        title="Cerrar aviso"
+                                    >
+                                        <X className="size-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         {children}
                     </main>
                 </div>
