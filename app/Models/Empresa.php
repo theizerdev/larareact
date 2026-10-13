@@ -49,6 +49,7 @@ class Empresa extends Model
         'api_key',
         'whatsapp_api_key',
         'mapbox_api_key',
+        'mapbox_access_token',
         'google_maps_api_key',
         'control_acceso_app_token',
         'control_acceso_user_token',

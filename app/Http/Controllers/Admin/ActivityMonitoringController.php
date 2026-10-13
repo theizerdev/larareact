@@ -35,6 +35,12 @@ class ActivityMonitoringController extends Controller
         'DiaFestivo' => 'Día Festivo',
         'Role' => 'Rol',
         'Permission' => 'Permiso',
+        'ConfiguracionSox' => 'Configuración SOX',
+        'PasswordHistory' => 'Historial de Contraseña',
+        'Consulta' => 'Consulta Médica',
+        'Paciente' => 'Paciente',
+        'HistoriaClinica' => 'Historia Clínica',
+        'Receta' => 'Receta Médica',
     ];
 
     /**

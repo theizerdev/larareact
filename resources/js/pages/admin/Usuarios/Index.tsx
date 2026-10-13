@@ -11,10 +11,12 @@ import {
     Building2,
     GitBranch,
     ShieldAlert,
+    ShieldCheck,
     Phone,
     Copy,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
+import { SoxPasswordRequirements } from '@/components/sox-password-requirements';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -119,6 +121,11 @@ interface UsersPageProps {
         empresa_id?: string;
         perPage?: string;
     };
+    soxPolicies?: {
+        minLength: number;
+        historyLimit: number;
+        expireDays: number;
+    };
 }
 
 const initialForm = {
@@ -135,7 +142,7 @@ const initialForm = {
 };
 
 export default function UsersIndexPage({
-    auth, users, stats, roles, empresas, sucursales, paises, filters,
+    auth, users, stats, roles, empresas, sucursales, paises, filters, soxPolicies,
 }: UsersPageProps) {
     const { __ } = useTranslate();
 
@@ -435,10 +442,20 @@ return;
                     description={__('Manage system users, passwords, access status and roles.')}
                     colorClassName="bg-slate-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New User')}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => router.get('/admin/seguridad/sox')}
+                            className="gap-1.5 text-xs border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                        >
+                            <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
+                            Cumplimiento SOX
+                        </Button>
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New User')}
+                        </Button>
+                    </div>
                 </ModuleHeader>
 
                 {/* Stat Cards */}
@@ -625,6 +642,16 @@ return;
                                     required={!editingUser}
                                 />
                                 {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+
+                                {(!editingUser || data.password.length > 0) && (
+                                    <div className="mt-2.5">
+                                        <SoxPasswordRequirements
+                                            password={data.password}
+                                            minLength={soxPolicies?.minLength ?? 15}
+                                            historyLimit={soxPolicies?.historyLimit ?? 8}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             {/* Teléfono */}

@@ -49,6 +49,9 @@ Route::middleware(['guest'])->group(function () {
     Route::post('/forgot-password/reset', [ForgotPasswordOtpController::class, 'resetPassword'])
         ->middleware('throttle:6,1')
         ->name('password.otp-reset');
+    // Microsoft Entra ID (Azure AD SSO)
+    Route::get('/auth/sso/azure/redirect', [\App\Http\Controllers\Auth\AzureSsoController::class, 'redirect'])->name('auth.azure.redirect');
+    Route::get('/auth/sso/azure/callback', [\App\Http\Controllers\Auth\AzureSsoController::class, 'callback'])->name('auth.azure.callback');
 });
 
 Route::post('locale', function (Request $request) {
@@ -148,6 +151,13 @@ Route::middleware('auth')->group(function () {
 if (file_exists(__DIR__.'/notifications.php')) {
     require __DIR__.'/notifications.php';
 }
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/password/expired', [\App\Http\Controllers\Auth\PasswordExpiredController::class, 'show'])->name('password.expired');
+    Route::post('/password/expired', [\App\Http\Controllers\Auth\PasswordExpiredController::class, 'update'])
+        ->middleware('throttle:6,1')
+        ->name('password.expired.update');
+});
 
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';
