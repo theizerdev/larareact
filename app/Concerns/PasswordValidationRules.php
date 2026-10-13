@@ -12,9 +12,17 @@ trait PasswordValidationRules
      *
      * @return array<int, Password|ValidationRule|array<mixed>|string>
      */
-    protected function passwordRules(): array
+    protected function passwordRules(?\App\Models\User $user = null): array
     {
-        return ['required', 'string', Password::default(), 'confirmed'];
+        $targetUser = $user ?? (method_exists($this, 'user') ? $this->user() : auth()->user());
+
+        $rules = ['required', 'string', Password::default(), 'confirmed'];
+
+        if ($targetUser) {
+            $rules[] = new \App\Rules\NotInPasswordHistory($targetUser);
+        }
+
+        return $rules;
     }
 
     /**

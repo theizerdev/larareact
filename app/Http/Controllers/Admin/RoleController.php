@@ -24,14 +24,12 @@ class RoleController extends Controller
         }
 
         $roles = $query->get()->map(function ($role) {
-            $users = $role->users->take(5); // Tomar los primeros 5 usuarios para mostrar en cards
+            $users = $role->users->take(5);
             $moreUsersCount = $role->users->count() - $users->count();
 
-            // Para las cards: solo primeros 3 permisos para visualización
             $permissionsPreview = $role->permissions->take(3);
             $morePermissionsCount = $role->permissions->count() - $permissionsPreview->count();
 
-            // Para el modal: TODOS los permisos para que se muestren seleccionados
             $allPermissions = $role->permissions->map(function ($permission) {
                 return [
                     'id' => $permission->id,
@@ -61,7 +59,6 @@ class RoleController extends Controller
                     ];
                 }),
                 'more_users_count' => $moreUsersCount,
-                // Permisos para visualización en cards/lista
                 'permissions' => $permissionsPreview->map(function ($permission) {
                     return [
                         'id' => $permission->id,
@@ -70,9 +67,8 @@ class RoleController extends Controller
                     ];
                 }),
                 'more_permissions_count' => $morePermissionsCount,
-                // Todos los permisos para el modal de edición
                 'all_permissions' => $allPermissions,
-                'is_super_admin' => $role->name === 'Super Admin',
+                'is_super_admin' => $this->isSuperAdminRole($role),
             ];
         });
 
@@ -93,6 +89,10 @@ class RoleController extends Controller
 
     public function store(Request $request)
     {
+        if ($this->isReservedName($request->input('name', ''))) {
+            return back()->withErrors(['name' => __('No se permite crear roles con nombres reservados de super administrador.')]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|unique:roles,name|max:255',
             'permissions' => 'array',
@@ -111,9 +111,12 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
-        // Don't allow changing the name of Super Admin if you want to protect it
-        if ($role->name === 'Super Admin' && $request->name !== 'Super Admin') {
+        if ($this->isSuperAdminRole($role) && $request->name !== $role->name) {
             return back()->withErrors(['name' => 'No puedes cambiar el nombre del Super Admin.']);
+        }
+
+        if ($this->isReservedName($request->input('name', '')) && ! $this->isSuperAdminRole($role)) {
+            return back()->withErrors(['name' => __('No se permite asignar nombres reservados de super administrador.')]);
         }
 
         $validated = $request->validate([
@@ -127,8 +130,8 @@ class RoleController extends Controller
 
             if (isset($validated['permissions'])) {
                 $role->syncPermissions($validated['permissions']);
-            } else {
-                $role->syncPermissions([]); // Clear if none selected
+            } elseif (! $this->isSuperAdminRole($role)) {
+                $role->syncPermissions([]); // Clear if none selected only for non-superadmin
             }
         });
 
@@ -137,12 +140,22 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
-        if ($role->name === 'Super Admin') {
+        if ($this->isSuperAdminRole($role)) {
             return back()->withErrors(['error' => 'No puedes eliminar el rol Super Admin.']);
         }
 
         $role->delete();
 
         return back();
+    }
+
+    private function isSuperAdminRole(Role $role): bool
+    {
+        return in_array($role->name, ['Super Administrador', 'super-admin', 'Super Admin', 'super_admin'], true);
+    }
+
+    private function isReservedName(string $name): bool
+    {
+        return in_array(strtolower(trim($name)), ['super administrador', 'super-admin', 'super admin', 'super_admin'], true);
     }
 }

@@ -2,17 +2,24 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Concerns\PasswordValidationRules;
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Models\User;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 class ForgotPasswordOtpController extends Controller
 {
+    use PasswordValidationRules;
+
+    private const OTP_MAX_ATTEMPTS = 5;
+    private const OTP_TTL_MINUTES = 10;
+
     /**
      * Muestra la vista de recuperación de contraseña con OTP.
      */
@@ -54,11 +61,12 @@ class ForgotPasswordOtpController extends Controller
             ]);
         }
 
-        // Generar un OTP de 6 dígitos
-        $otp = sprintf('%06d', mt_rand(100000, 999999));
+        // Generar un OTP de 6 dígitos criptográficamente seguro
+        $otp = (string) random_int(100000, 999999);
 
-        // Guardar el OTP en caché (válido por 10 minutos)
-        \Illuminate\Support\Facades\Cache::put("otp_{$user->id}", $otp, now()->addMinutes(10));
+        // Guardar el OTP en caché (válido por 10 minutos) y reiniciar el contador de intentos
+        Cache::put("otp_{$user->id}", $otp, now()->addMinutes(self::OTP_TTL_MINUTES));
+        Cache::forget("otp_attempts_{$user->id}");
 
         // Obtener el código telefónico del país
         $pais = Pais::find($request->pais_telefono_id);
@@ -74,10 +82,10 @@ class ForgotPasswordOtpController extends Controller
 
         $message = "Tu código de verificación (OTP) para restablecer tu contraseña es: *{$otp}*. Válido por 10 minutos.";
         
-        // Registrar en logs locales para facilitar el testing
-        Log::info("OTP generado para {$user->email}: {$otp} (Teléfono: {$cleanNumber})");
+        // El código OTP es un secreto: jamás se escribe en el log.
+        Log::info("OTP de recuperación generado para el usuario #{$user->id}");
 
-        $sent = $whatsappService->sendMessage($cleanNumber, $message,true);
+        $sent = $whatsappService->sendMessage($cleanNumber, $message, true);
 
         // Limpiar cualquier estado previo de verificación de la sesión
         session()->forget(['otp_verified_phone', 'otp_verified_pais_id', 'otp_verified_at']);
@@ -118,16 +126,33 @@ class ForgotPasswordOtpController extends Controller
         }
 
         // Validar el OTP guardado en caché
-        $cachedOtp = \Illuminate\Support\Facades\Cache::get("otp_{$user->id}");
+        $cachedOtp = Cache::get("otp_{$user->id}");
+        $attemptsKey = "otp_attempts_{$user->id}";
+        $attempts = (int) Cache::get($attemptsKey, 0);
 
-        if (!$cachedOtp || $cachedOtp !== $request->otp) {
+        // Tope de intentos por cuenta: al agotarlo el código se invalida
+        if ($cachedOtp && $attempts >= self::OTP_MAX_ATTEMPTS) {
+            Cache::forget("otp_{$user->id}");
+            Cache::forget($attemptsKey);
+
+            return back()->withErrors([
+                'otp' => __('Demasiados intentos. Solicita un nuevo código OTP.'),
+            ]);
+        }
+
+        if (!$cachedOtp || !hash_equals((string) $cachedOtp, (string) $request->otp)) {
+            if ($cachedOtp) {
+                Cache::put($attemptsKey, $attempts + 1, now()->addMinutes(self::OTP_TTL_MINUTES));
+            }
+
             return back()->withErrors([
                 'otp' => __('El código OTP ingresado es incorrecto o ha expirado.'),
             ]);
         }
 
         // Limpiar el OTP de la caché tras ser verificado
-        \Illuminate\Support\Facades\Cache::forget("otp_{$user->id}");
+        Cache::forget("otp_{$user->id}");
+        Cache::forget($attemptsKey);
 
         // Registrar el estado de verificación en la sesión
         session([
@@ -143,22 +168,24 @@ class ForgotPasswordOtpController extends Controller
     }
 
     /**
-     * Restablece la contraseña tras una verificación exitosa.
+     * Restablece la contraseña tras una verificación exitosa aplicando la política SOX.
      */
     public function resetPassword(Request $request)
     {
         $request->validate([
             'pais_telefono_id' => 'required|exists:pais,id',
             'telefono' => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
         ]);
 
         $verifiedPhone = session('otp_verified_phone');
         $verifiedPaisId = session('otp_verified_pais_id');
+        $verifiedAt = session('otp_verified_at');
 
-        // Validar que la sesión coincida
+        // Validar que la sesión coincida y que la verificación no haya caducado
         if (
             empty($verifiedPhone) ||
+            empty($verifiedAt) ||
+            \Illuminate\Support\Carbon::parse($verifiedAt)->addMinutes(self::OTP_TTL_MINUTES)->isPast() ||
             $verifiedPhone !== $request->telefono ||
             (int) $verifiedPaisId !== (int) $request->pais_telefono_id
         ) {
@@ -177,9 +204,14 @@ class ForgotPasswordOtpController extends Controller
             ]);
         }
 
-        // Actualizar la contraseña del usuario
-        $user->password = Hash::make($request->password);
-        $user->save();
+        // Misma política que el resto de flujos de cambio de contraseña (SOX):
+        // longitud/complejidad, historial y registro de la fecha de cambio.
+        \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'password' => $this->passwordRules($user),
+        ])->validate();
+
+        $user->forceFill(['password' => $request->password])->save();
+        $user->recordPasswordHistory($user->password);
 
         // Obtener el código telefónico del país y formatear número
         $pais = Pais::find($request->pais_telefono_id);

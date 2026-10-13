@@ -35,6 +35,12 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->onOneServer()
             ->appendOutputTo(storage_path('logs/asistencia-descansos.log'));
+
+        // Auditoría diaria de contraseñas y cuentas SOX
+        $schedule->command('sox:audit-users')
+            ->dailyAt('01:00')
+            ->withoutOverlapping()
+            ->onOneServer();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // La app corre detrás del Apache del host, que termina TLS y reenvía por HTTP
@@ -45,6 +51,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(prepend: [
             \App\Http\Middleware\RegionalConfiguration::class,
+            \App\Http\Middleware\DenyPublicRegistration::class,
         ]);
 
         $middleware->web(append: [
@@ -52,6 +59,9 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            \App\Http\Middleware\SecurityHeaders::class,
+            \App\Http\Middleware\EnsureUserActive::class,
+            \App\Http\Middleware\EnsurePasswordNotExpired::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
@@ -63,6 +73,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'password.not_expired' => \App\Http\Middleware\EnsurePasswordNotExpired::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
