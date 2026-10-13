@@ -24,6 +24,22 @@ class Empresa extends Model
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
     }
 
+    /**
+     * Credenciales de integraciones: nunca deben serializarse al navegador.
+     */
+    protected $hidden = [
+        'api_key',
+        'whatsapp_api_key',
+        'mapbox_access_token',
+        'google_maps_api_key',
+        'control_acceso_app_token',
+        'control_acceso_user_token',
+        'jaak_api_key',
+        'zapsign_api_token',
+        'didit_api_key',
+        'biotime_password',
+    ];
+
     protected $fillable = [
         'pais_id',
         'razon_social',

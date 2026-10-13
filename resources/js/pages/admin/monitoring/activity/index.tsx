@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import {
-    Activity, Download, Trash2, Search, Filter, Eye, RefreshCw,
+    Activity, ArrowUpRight, Download, Trash2, Search, Filter, Eye, RefreshCw,
     PlusCircle, Edit3, User, Globe,
     Laptop, Copy, Calendar, RotateCcw,
     Server, Layers, Clock, Check, LogIn, LogOut, ShieldAlert, KeyRound
@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useInitials } from '@/hooks/use-initials';
 import { useTranslate } from '@/hooks/use-translate';
+import { cn } from '@/lib/utils';
 
 interface ChangeItem {
     key: string;
@@ -122,6 +123,17 @@ export default function ActivityMonitoring({
     const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
     const [copiedJson, setCopiedJson] = useState(false);
 
+    // Helper for today's ISO string (YYYY-MM-DD local)
+    const getTodayDateString = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    const todayStr = getTodayDateString();
+    const isTodayFilterActive = Boolean(dateFrom && dateTo && dateFrom === todayStr && dateTo === todayStr);
+
     // Apply Filter Request
     const handleApplyFilters = () => {
         router.get(
@@ -139,14 +151,15 @@ export default function ActivityMonitoring({
         );
     };
 
-    // Quick filter click on KPI card
+    // Quick filter click on KPI card (toggles back to all if re-clicked)
     const handleQuickFilter = (selectedEvent: string) => {
-        setEventFilter(selectedEvent);
+        const nextEvent = eventFilter === selectedEvent && selectedEvent !== 'all' ? 'all' : selectedEvent;
+        setEventFilter(nextEvent);
         router.get(
             '/admin/monitoring/activity',
             {
                 search: search || undefined,
-                event: selectedEvent !== 'all' ? selectedEvent : undefined,
+                event: nextEvent !== 'all' ? nextEvent : undefined,
                 log_name: logNameFilter !== 'all' ? logNameFilter : undefined,
                 subject_type: subjectTypeFilter !== 'all' ? subjectTypeFilter : undefined,
                 user_id: userFilter !== 'all' ? userFilter : undefined,
@@ -155,6 +168,41 @@ export default function ActivityMonitoring({
             },
             { preserveState: true, preserveScroll: true }
         );
+    };
+
+    // Quick filter click on Today KPI card
+    const handleToggleTodayFilter = () => {
+        if (isTodayFilterActive) {
+            setDateFrom('');
+            setDateTo('');
+            router.get(
+                '/admin/monitoring/activity',
+                {
+                    search: search || undefined,
+                    event: eventFilter !== 'all' ? eventFilter : undefined,
+                    log_name: logNameFilter !== 'all' ? logNameFilter : undefined,
+                    subject_type: subjectTypeFilter !== 'all' ? subjectTypeFilter : undefined,
+                    user_id: userFilter !== 'all' ? userFilter : undefined,
+                },
+                { preserveState: true, preserveScroll: true }
+            );
+        } else {
+            setDateFrom(todayStr);
+            setDateTo(todayStr);
+            router.get(
+                '/admin/monitoring/activity',
+                {
+                    search: search || undefined,
+                    event: eventFilter !== 'all' ? eventFilter : undefined,
+                    log_name: logNameFilter !== 'all' ? logNameFilter : undefined,
+                    subject_type: subjectTypeFilter !== 'all' ? subjectTypeFilter : undefined,
+                    user_id: userFilter !== 'all' ? userFilter : undefined,
+                    date_from: todayStr,
+                    date_to: todayStr,
+                },
+                { preserveState: true, preserveScroll: true }
+            );
+        }
     };
 
     // Reset Filters
@@ -305,7 +353,7 @@ export default function ActivityMonitoring({
     };
 
     const breadcrumbs = [
-        { title: __('Dashboard'), href: '/dashboard' },
+        { title: __('Dashboard'), href: '/admin/dashboard' },
         { title: __('Monitoring'), href: '#' },
         { title: __('System Activity Logs'), href: '/admin/monitoring/activity' },
     ];
@@ -330,6 +378,99 @@ export default function ActivityMonitoring({
     const updatedPct = Math.min(100, Math.round((stats.updated / totalLogsVal) * 100));
     const deletedPct = Math.min(100, Math.round((stats.deleted / totalLogsVal) * 100));
     const todayPct = Math.min(100, Math.round((stats.today / totalLogsVal) * 100));
+
+    const statCards = [
+        {
+            id: 'all',
+            title: __('Total Logs'),
+            value: stats.total,
+            subtitle: __('Recorded actions'),
+            pct: 100,
+            isActive: eventFilter === 'all' && !isTodayFilterActive,
+            onClick: () => handleQuickFilter('all'),
+            titleTooltip: __('Click to filter all events'),
+            glowColor: 'bg-sky-400/20 dark:bg-sky-500/10',
+            dotColor: 'bg-sky-500',
+            pingColor: 'bg-sky-400',
+            icon: <Activity className="h-4.5 w-4.5 stroke-[2.2]" />,
+            iconStyle: 'bg-sky-50 text-sky-600 border-sky-100 dark:bg-sky-950/60 dark:text-sky-400 dark:border-sky-800/60',
+            badgeStyle: 'bg-sky-50 text-sky-700 border-sky-200/80 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800/60',
+            meterGradient: 'from-sky-500 to-cyan-400',
+            activeBorder: 'border-sky-500/80 dark:border-sky-400/80 ring-2 ring-sky-500/20 shadow-lg shadow-sky-500/10 bg-gradient-to-b from-sky-500/[0.04] to-transparent',
+        },
+        {
+            id: 'today',
+            title: __('Today'),
+            value: stats.today,
+            subtitle: __('Actions last 24h'),
+            pct: todayPct,
+            isActive: isTodayFilterActive,
+            onClick: handleToggleTodayFilter,
+            titleTooltip: isTodayFilterActive ? __('Click to clear filter') : __('Click to filter today\'s events'),
+            glowColor: 'bg-blue-400/20 dark:bg-blue-500/10',
+            dotColor: 'bg-blue-500',
+            pingColor: 'bg-blue-400',
+            icon: <Calendar className="h-4.5 w-4.5 stroke-[2.2]" />,
+            iconStyle: 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-800/60',
+            badgeStyle: 'bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/60',
+            meterGradient: 'from-blue-500 to-indigo-500',
+            activeBorder: 'border-blue-500/80 dark:border-blue-400/80 ring-2 ring-blue-500/20 shadow-lg shadow-blue-500/10 bg-gradient-to-b from-blue-500/[0.04] to-transparent',
+        },
+        {
+            id: 'created',
+            title: __('Created'),
+            value: stats.created,
+            subtitle: __('New records'),
+            pct: createdPct,
+            isActive: eventFilter === 'created',
+            onClick: () => handleQuickFilter('created'),
+            titleTooltip: __('Click to filter created events'),
+            glowColor: 'bg-emerald-400/20 dark:bg-emerald-500/10',
+            dotColor: 'bg-emerald-500',
+            pingColor: 'bg-emerald-400',
+            icon: <PlusCircle className="h-4.5 w-4.5 stroke-[2.2]" />,
+            iconStyle: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800/60',
+            badgeStyle: 'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60',
+            meterGradient: 'from-emerald-500 to-teal-400',
+            activeBorder: 'border-emerald-500/80 dark:border-emerald-400/80 ring-2 ring-emerald-500/20 shadow-lg shadow-emerald-500/10 bg-gradient-to-b from-emerald-500/[0.04] to-transparent',
+        },
+        {
+            id: 'updated',
+            title: __('Updated'),
+            value: stats.updated,
+            subtitle: __('Modified records'),
+            pct: updatedPct,
+            isActive: eventFilter === 'updated',
+            onClick: () => handleQuickFilter('updated'),
+            titleTooltip: __('Click to filter updated events'),
+            glowColor: 'bg-indigo-400/20 dark:bg-indigo-500/10',
+            dotColor: 'bg-indigo-500',
+            pingColor: 'bg-indigo-400',
+            icon: <Edit3 className="h-4.5 w-4.5 stroke-[2.2]" />,
+            iconStyle: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-400 dark:border-indigo-800/60',
+            badgeStyle: 'bg-indigo-50 text-indigo-700 border-indigo-200/80 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800/60',
+            meterGradient: 'from-indigo-500 to-purple-400',
+            activeBorder: 'border-indigo-500/80 dark:border-indigo-400/80 ring-2 ring-indigo-500/20 shadow-lg shadow-indigo-500/10 bg-gradient-to-b from-indigo-500/[0.04] to-transparent',
+        },
+        {
+            id: 'deleted',
+            title: __('Deleted'),
+            value: stats.deleted,
+            subtitle: __('Removed records'),
+            pct: deletedPct,
+            isActive: eventFilter === 'deleted',
+            onClick: () => handleQuickFilter('deleted'),
+            titleTooltip: __('Click to filter deleted events'),
+            glowColor: 'bg-rose-400/20 dark:bg-rose-500/10',
+            dotColor: 'bg-rose-500',
+            pingColor: 'bg-rose-400',
+            icon: <Trash2 className="h-4.5 w-4.5 stroke-[2.2]" />,
+            iconStyle: 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-800/60',
+            badgeStyle: 'bg-rose-50 text-rose-700 border-rose-200/80 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/60',
+            meterGradient: 'from-rose-500 to-pink-500',
+            activeBorder: 'border-rose-500/80 dark:border-rose-400/80 ring-2 ring-rose-500/20 shadow-lg shadow-rose-500/10 bg-gradient-to-b from-rose-500/[0.04] to-transparent',
+        },
+    ];
 
     return (
         <>
@@ -380,151 +521,92 @@ export default function ActivityMonitoring({
                     </div>
                 </div>
 
-                {/* Enhanced Interactive KPI Cards Grid */}
+                {/* Modern Glassmorphic KPI Cards Grid */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                    {/* Total Activity */}
-                    <Card
-                        className={`shadow-sm border-l-4 border-l-sky-500 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
-                            eventFilter === 'all' ? 'ring-2 ring-sky-500/60 bg-sky-50/20 dark:bg-sky-950/20' : 'bg-card'
-                        }`}
-                        onClick={() => handleQuickFilter('all')}
-                        title={__('Click to filter all events')}
-                    >
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                                {__('Total Logs')}
-                                {eventFilter === 'all' && <Check className="h-3.5 w-3.5 text-sky-600" />}
-                            </CardTitle>
-                            <div className="p-2.5 rounded-xl bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 ring-1 ring-sky-500/20">
-                                <Activity className="h-5 w-5" />
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <div className="text-2xl font-extrabold tracking-tight">{stats.total.toLocaleString()}</div>
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{__('Recorded actions')}</span>
-                                <span className="font-mono text-[10px] bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 font-bold px-1.5 py-0.5 rounded">100%</span>
-                            </div>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                <div className="bg-sky-500 h-full rounded-full w-full" />
-                            </div>
-                        </CardContent>
-                    </Card>
+                    {statCards.map((card) => (
+                        <div
+                            key={card.id}
+                            onClick={card.onClick}
+                            title={card.titleTooltip}
+                            className={cn(
+                                "relative group overflow-hidden rounded-2xl p-4 sm:p-5 cursor-pointer transition-all duration-300",
+                                "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border select-none",
+                                card.isActive
+                                    ? cn("shadow-lg -translate-y-1", card.activeBorder)
+                                    : "border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-black/40 hover:-translate-y-1"
+                            )}
+                        >
+                            {/* Ambient Glow Blob */}
+                            <div
+                                className={cn(
+                                    "absolute -top-10 -right-10 w-28 h-28 rounded-full blur-2xl pointer-events-none transition-all duration-500 group-hover:scale-125",
+                                    card.glowColor,
+                                    card.isActive ? "opacity-50" : "opacity-20 group-hover:opacity-35"
+                                )}
+                            />
 
-                    {/* Today's Activity */}
-                    <Card className="shadow-sm border-l-4 border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-md bg-card">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{__('Today')}</CardTitle>
-                            <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/20">
-                                <Calendar className="h-5 w-5" />
+                            {/* Top Header: Dot + Title + Icon */}
+                            <div className="flex items-center justify-between gap-2 relative z-10">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <span className="relative flex h-2 w-2 shrink-0">
+                                        {card.isActive && (
+                                            <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", card.pingColor)} />
+                                        )}
+                                        <span className={cn("relative inline-flex rounded-full h-2 w-2", card.dotColor)} />
+                                    </span>
+                                    <span className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400 truncate">
+                                        {card.title}
+                                    </span>
+                                </div>
+
+                                <div className={cn(
+                                    "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-xs",
+                                    card.iconStyle
+                                )}>
+                                    {card.icon}
+                                </div>
                             </div>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <div className="text-2xl font-extrabold tracking-tight">{stats.today.toLocaleString()}</div>
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{__('Actions last 24h')}</span>
-                                <span className="font-mono text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-bold px-1.5 py-0.5 rounded">
-                                    {todayPct}%
+
+                            {/* Center Hero Metric & Percentage Pill */}
+                            <div className="flex items-baseline justify-between gap-2 my-2.5 relative z-10">
+                                <div className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50 font-mono">
+                                    {card.value.toLocaleString()}
+                                </div>
+                                <span className={cn(
+                                    "inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border font-mono tracking-tight shrink-0",
+                                    card.badgeStyle
+                                )}>
+                                    {card.pct}%
                                 </span>
                             </div>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${todayPct}%` }} />
-                            </div>
-                        </CardContent>
-                    </Card>
 
-                    {/* Created */}
-                    <Card
-                        className={`shadow-sm border-l-4 border-l-emerald-500 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
-                            eventFilter === 'created' ? 'ring-2 ring-emerald-500/60 bg-emerald-50/20 dark:bg-emerald-950/20' : 'bg-card'
-                        }`}
-                        onClick={() => handleQuickFilter('created')}
-                        title={__('Click to filter created events')}
-                    >
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                                {__('Created')}
-                                {eventFilter === 'created' && <Check className="h-3.5 w-3.5 text-emerald-600" />}
-                            </CardTitle>
-                            <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
-                                <PlusCircle className="h-5 w-5" />
+                            {/* Micro Meter Line (high-tech refined track) */}
+                            <div className="w-full bg-slate-100 dark:bg-slate-800/80 h-1.5 rounded-full overflow-hidden my-2.5 relative z-10">
+                                <div
+                                    className={cn(
+                                        "h-full rounded-full transition-all duration-700 bg-gradient-to-r",
+                                        card.meterGradient
+                                    )}
+                                    style={{ width: `${Math.max(card.pct, card.value > 0 ? 4 : 0)}%` }}
+                                />
                             </div>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <div className="text-2xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400">{stats.created.toLocaleString()}</div>
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{__('New records')}</span>
-                                <span className="font-mono text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded">
-                                    {createdPct}%
-                                </span>
-                            </div>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${createdPct}%` }} />
-                            </div>
-                        </CardContent>
-                    </Card>
 
-                    {/* Updated */}
-                    <Card
-                        className={`shadow-sm border-l-4 border-l-indigo-500 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
-                            eventFilter === 'updated' ? 'ring-2 ring-indigo-500/60 bg-indigo-50/20 dark:bg-indigo-950/20' : 'bg-card'
-                        }`}
-                        onClick={() => handleQuickFilter('updated')}
-                        title={__('Click to filter updated events')}
-                    >
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                                {__('Updated')}
-                                {eventFilter === 'updated' && <Check className="h-3.5 w-3.5 text-indigo-600" />}
-                            </CardTitle>
-                            <div className="p-2.5 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/20">
-                                <Edit3 className="h-5 w-5" />
+                            {/* Bottom: Subtitle & Status / Filter Action */}
+                            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 relative z-10">
+                                <span className="truncate font-medium">{card.subtitle}</span>
+                                {card.isActive ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white shadow-xs shrink-0">
+                                        <Check className="size-2.5 stroke-[3]" />
+                                        {__('Active')}
+                                    </span>
+                                ) : (
+                                    <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-0.5 group-hover:translate-x-0.5 duration-200 shrink-0">
+                                        {__('Filter')} <ArrowUpRight className="size-3" />
+                                    </span>
+                                )}
                             </div>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <div className="text-2xl font-extrabold tracking-tight text-indigo-600 dark:text-indigo-400">{stats.updated.toLocaleString()}</div>
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{__('Modified records')}</span>
-                                <span className="font-mono text-[10px] bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded">
-                                    {updatedPct}%
-                                </span>
-                            </div>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                <div className="bg-indigo-500 h-full rounded-full transition-all duration-500" style={{ width: `${updatedPct}%` }} />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Deleted */}
-                    <Card
-                        className={`shadow-sm border-l-4 border-l-rose-500 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
-                            eventFilter === 'deleted' ? 'ring-2 ring-rose-500/60 bg-rose-50/20 dark:bg-rose-950/20' : 'bg-card'
-                        }`}
-                        onClick={() => handleQuickFilter('deleted')}
-                        title={__('Click to filter deleted events')}
-                    >
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                                {__('Deleted')}
-                                {eventFilter === 'deleted' && <Check className="h-3.5 w-3.5 text-rose-600" />}
-                            </CardTitle>
-                            <div className="p-2.5 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 ring-1 ring-rose-500/20">
-                                <Trash2 className="h-5 w-5" />
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <div className="text-2xl font-extrabold tracking-tight text-rose-600 dark:text-rose-400">{stats.deleted.toLocaleString()}</div>
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{__('Removed records')}</span>
-                                <span className="font-mono text-[10px] bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold px-1.5 py-0.5 rounded">
-                                    {deletedPct}%
-                                </span>
-                            </div>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                <div className="bg-rose-500 h-full rounded-full transition-all duration-500" style={{ width: `${deletedPct}%` }} />
-                            </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Filters Section */}
@@ -873,7 +955,7 @@ export default function ActivityMonitoring({
                                                 {getEventBadge(selectedActivity.event).label}
                                             </Badge>
                                             <Badge variant="outline" className="text-xs font-mono px-3 py-1 bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-700">
-                                                Log: {selectedActivity.log_name}
+                                                {__('Log')}: {selectedActivity.log_name}
                                             </Badge>
                                         </div>
                                     </div>
@@ -1028,7 +1110,7 @@ export default function ActivityMonitoring({
                                                             {selectedActivity.causer.email}
                                                         </p>
                                                         <Badge variant="outline" className="text-[10px] font-mono mt-1">
-                                                            User ID: #{selectedActivity.causer.id}
+                                                            {__('User ID')}: #{selectedActivity.causer.id}
                                                         </Badge>
                                                     </div>
                                                 </div>

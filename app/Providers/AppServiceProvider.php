@@ -26,6 +26,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->permitirTemporalesEnServidorDeDesarrollo();
+
+        \Illuminate\Support\Facades\Event::subscribe(\App\Listeners\LogAuthenticationActivity::class);
     }
 
     /**
@@ -65,14 +67,27 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
+        Password::defaults(function (): Password {
+            $min = 15;
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasTable('configuraciones_sox')) {
+                    $min = \App\Models\ConfiguracionSox::current()->min_password_length ?? 15;
+                }
+            } catch (\Throwable) {
+                $min = 15;
+            }
+
+            $rule = Password::min($min)
                 ->mixedCase()
                 ->letters()
                 ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
-        );
+                ->symbols();
+
+            if (app()->isProduction()) {
+                $rule->uncompromised();
+            }
+
+            return $rule;
+        });
     }
 }
