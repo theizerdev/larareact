@@ -99,15 +99,7 @@ class SucursalController extends Controller
         } catch (\Exception $e) {
             Log::error('Error al crear sucursal: '.$e->getMessage());
 
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => __('There was an error creating the branch. Please try again.'),
-                ], 500);
-            }
-
             return back()
-                ->withInput()
                 ->withErrors(['general' => __('There was an error creating the branch. Please try again.')])
                 ->with('notification', [
                     'type' => 'error',
@@ -156,15 +148,7 @@ class SucursalController extends Controller
         } catch (\Exception $e) {
             Log::error("Error al actualizar sucursal {$sucursal->id}: ".$e->getMessage());
 
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => __('There was an error updating the branch. Please try again.'),
-                ], 500);
-            }
-
             return back()
-                ->withInput()
                 ->withErrors(['general' => __('There was an error updating the branch. Please try again.')])
                 ->with('notification', [
                     'type' => 'error',

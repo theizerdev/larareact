@@ -114,4 +114,16 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Registro público
+    |--------------------------------------------------------------------------
+    |
+    | Las cuentas las crea un administrador. /register responde 404 salvo que
+    | se active explícitamente con ALLOW_PUBLIC_REGISTRATION=true.
+    |
+    */
+
+    'allow_public_registration' => (bool) env('ALLOW_PUBLIC_REGISTRATION', false),
+
 ];

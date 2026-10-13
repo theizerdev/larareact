@@ -36,23 +36,29 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $currentLocale = app()->getLocale();
+        $user = $request->user();
+        $daysUntilExpired = null;
+        if ($user) {
+            $vigencia = \App\Models\ConfiguracionSox::current($user->empresa_id)->password_expires_days;
+            $daysUntilExpired = $user->daysUntilPasswordExpires($vigencia);
+        }
      
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user() ? array_merge($request->user()->toArray(), [
-                    'empresa' => $request->user()->empresa ? [
-                        'id' => $request->user()->empresa->id,
-                        'logo' => $request->user()->empresa->logo,
-                        'logo_mini' => $request->user()->empresa->logo_mini,
-                        'mapbox_api_key' => $request->user()->empresa->mapbox_api_key,
-                        'mapbox_active' => (bool) $request->user()->empresa->mapbox_active,
-                        'google_maps_api_key' => $request->user()->empresa->google_maps_api_key,
-                        'google_maps_active' => (bool) $request->user()->empresa->google_maps_active,
+                'user' => $user ? array_merge($user->toArray(), [
+                    'empresa' => $user->empresa ? [
+                        'id' => $user->empresa->id,
+                        'logo' => $user->empresa->logo,
+                        'logo_mini' => $user->empresa->logo_mini,
+                        'mapbox_api_key' => $user->empresa->mapbox_api_key,
+                        'mapbox_active' => (bool) $user->empresa->mapbox_active,
+                        'google_maps_api_key' => $user->empresa->google_maps_api_key,
+                        'google_maps_active' => (bool) $user->empresa->google_maps_active,
                     ] : null,
-                    'permissions' => $request->user()->getAllPermissions()->pluck('name')->toArray(),
-                    'is_super_admin' => $request->user()->isSuperAdmin(),
+                    'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+                    'password_days_remaining' => $daysUntilExpired,
                 ]) : null,
             ],
             'menuVisibility' => fn () => \App\Models\MenuVisibilitySetting::map(),

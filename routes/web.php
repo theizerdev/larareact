@@ -37,18 +37,16 @@ Route::middleware(['guest'])->group(function () {
     Route::post('/forgot-password/send-otp', [ForgotPasswordOtpController::class, 'sendOtp'])
         ->middleware('throttle:6,1')
         ->name('password.send-otp');
-    // verify-otp had NO throttling at all - a 6-digit OTP is only 1M
-    // possibilities, and confirmed in QA testing (2026-08-21): 15 rapid
-    // wrong guesses all went through with zero pushback. throttle:6,1
-    // limits brute force to 60 guesses over the OTP's 10-minute validity
-    // window per IP, matching the throttle:6,1 already used on
-    // settings/password elsewhere in this app.
     Route::post('/forgot-password/verify-otp', [ForgotPasswordOtpController::class, 'verifyOtp'])
         ->middleware('throttle:6,1')
         ->name('password.verify-otp');
     Route::post('/forgot-password/reset', [ForgotPasswordOtpController::class, 'resetPassword'])
         ->middleware('throttle:6,1')
         ->name('password.otp-reset');
+
+    // Microsoft Entra ID (Azure AD SSO)
+    Route::get('/auth/sso/azure/redirect', [\App\Http\Controllers\Auth\AzureSsoController::class, 'redirect'])->name('auth.azure.redirect');
+    Route::get('/auth/sso/azure/callback', [\App\Http\Controllers\Auth\AzureSsoController::class, 'callback'])->name('auth.azure.callback');
 });
 
 Route::post('locale', function (Request $request) {
@@ -132,6 +130,13 @@ Route::middleware('auth')->group(function () {
 if (file_exists(__DIR__.'/notifications.php')) {
     require __DIR__.'/notifications.php';
 }
+Route::middleware(['auth'])->group(function () {
+    Route::get('/password/expired', [\App\Http\Controllers\Auth\PasswordExpiredController::class, 'show'])->name('password.expired');
+    Route::post('/password/expired', [\App\Http\Controllers\Auth\PasswordExpiredController::class, 'update'])
+        ->middleware('throttle:6,1')
+        ->name('password.expired.update');
+});
+
 
 if (file_exists(__DIR__.'/larareact-settings.php')) {
     require __DIR__.'/larareact-settings.php';
