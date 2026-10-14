@@ -8,6 +8,7 @@ use App\Models\Empleado;
 use App\Models\Empresa;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 /**
@@ -23,7 +24,9 @@ class KioskoComidaTest extends TestCase
         $empresa = Empresa::create(['razon_social' => 'Emp Comida', 'documento' => 'DOC-COM']);
         $empleado = new Empleado();
         $empleado->forceFill(['nombres' => 'N', 'apellidos' => 'A', 'documento_identidad' => 'DC1', 'empresa_id' => $empresa->id, 'status' => true])->save();
+        // Registrar en el kiosko exige asistencia.kiosko (auditoría 2026-10-14).
         $user = User::factory()->create(['empresa_id' => $empresa->id]);
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'asistencia.kiosko', 'guard_name' => 'web']));
 
         return [$empresa, $empleado, $user];
     }
