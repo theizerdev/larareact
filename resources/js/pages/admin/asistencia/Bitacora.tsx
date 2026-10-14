@@ -319,9 +319,9 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
             case 'entrada':
                 return { label: 'Entrada', class: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', icon: LogIn };
             case 'salida_comida':
-                return { label: 'Salida Comida', class: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', icon: Utensils };
+                return { label: 'Inicio Comida', class: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', icon: Utensils };
             case 'entrada_comida':
-                return { label: 'Regreso Comida', class: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20', icon: Utensils };
+                return { label: 'Fin Comida', class: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20', icon: LogIn };
             case 'descanso_inicio':
                 return { label: 'Descanso Inicio', class: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20', icon: Coffee };
             case 'descanso_fin':
@@ -485,8 +485,8 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                 <SelectContent>
                                     <SelectItem value="todos">Todos los eventos</SelectItem>
                                     <SelectItem value="entrada">Entradas</SelectItem>
-                                    <SelectItem value="salida_comida">Salidas a Comida</SelectItem>
-                                    <SelectItem value="entrada_comida">Regresos de Comida</SelectItem>
+                                    <SelectItem value="salida_comida">Inicio de Comida (Salida)</SelectItem>
+                                    <SelectItem value="entrada_comida">Fin de Comida (Regreso)</SelectItem>
                                     <SelectItem value="descanso_inicio">Inicio Descanso Ley Silla</SelectItem>
                                     <SelectItem value="descanso_fin">Fin Descanso Ley Silla</SelectItem>
                                     <SelectItem value="salida">Salidas</SelectItem>

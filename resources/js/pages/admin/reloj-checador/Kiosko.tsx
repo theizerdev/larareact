@@ -84,10 +84,37 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
     const [documentInput, setDocumentInput] = useState('');
     const [loadingSearch, setLoadingSearch] = useState(false);
     const [empleado, setEmpleado] = useState<EmpleadoFound | null>(null);
+    const [ultimoMarcaje, setUltimoMarcaje] = useState<{ tipo: string; hora: string; tipo_nombre?: string } | null>(null);
     const [sugerenciaMarcaje, setSugerenciaMarcaje] = useState<string>('entrada');
     const [tipoMarcajeSeleccionado, setTipoMarcajeSeleccionado] = useState<string>('entrada');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    // Mapeo legible de tipos de marcaje para el usuario final del kiosko
+    const getNombreMarcaje = (tipoMarcaje: string): string => {
+        switch (tipoMarcaje) {
+            case 'entrada':
+                return 'INICIO DE JORNADA';
+            case 'salida_comida':
+                return 'INICIO DE COMIDA';
+            case 'entrada_comida':
+                return 'FIN DE COMIDA';
+            case 'salida':
+                return 'SALIDA DE JORNADA';
+            case 'descanso_inicio':
+                return 'INICIO DE DESCANSO';
+            case 'descanso_fin':
+                return 'FIN DE DESCANSO';
+            case 'incidente_inicio':
+                return 'INICIO DE INCIDENTE';
+            case 'incidente_fin':
+                return 'FIN DE INCIDENTE';
+            case 'entrada_extraordinaria':
+                return 'TIEMPO EXTRA';
+            default:
+                return tipoMarcaje.replace('_', ' ').toUpperCase();
+        }
+    };
 
     // Geoubicación del Kiosko / Dispositivo
     const [gpsPosition, setGpsPosition] = useState<{ lat: number; lng: number } | null>(null);
@@ -360,6 +387,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
     const handleNumpadClear = () => {
         setDocumentInput('');
         setEmpleado(null);
+        setUltimoMarcaje(null);
         setErrorMessage(null);
         if (inputRef.current) inputRef.current.focus();
     };
@@ -414,10 +442,12 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
             if (response.ok && data.success) {
                 playBeepSound();
                 setEmpleado(data.empleado);
+                setUltimoMarcaje(data.ultimo_marcaje || null);
                 setSugerenciaMarcaje(data.sugerencia_marcaje);
                 setTipoMarcajeSeleccionado(data.sugerencia_marcaje);
             } else {
                 setEmpleado(null);
+                setUltimoMarcaje(null);
                 setErrorMessage(data.message || 'No se encontró ningún empleado activo con ese número o QR.');
             }
         } catch (err: any) {
@@ -487,7 +517,12 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
 
             if (response.ok && data.success) {
                 playBeepSound();
-                setSuccessMessage(`¡Marcaje de ${tipo.replace('_', ' ').toUpperCase()} registrado exitosamente para ${data.empleado_nombre}!`);
+                const tipoFinal = data?.marcaje?.tipo_marcaje || tipo;
+                const nombreMarcaje = data?.marcaje?.tipo_nombre
+                    ? data.marcaje.tipo_nombre.toUpperCase()
+                    : getNombreMarcaje(tipoFinal);
+
+                setSuccessMessage(`¡Marcaje de ${nombreMarcaje} registrado exitosamente para ${data.empleado_nombre}!`);
                 setIsDescansoModalOpen(false);
                 setIsIncidenteModalOpen(false);
                 setTimeout(() => {
@@ -671,9 +706,17 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                     )}
                                 </div>
                                 <div className="space-y-1">
-                                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs">
-                                        Empleado Verificado
-                                    </Badge>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs">
+                                            Empleado Verificado
+                                        </Badge>
+                                        {ultimoMarcaje && (
+                                            <Badge variant="outline" className="text-[11px] bg-slate-950/80 text-amber-300 border-amber-500/40 flex items-center gap-1 font-mono">
+                                                <Clock className="w-3 h-3 text-amber-400" />
+                                                <span>Último: {getNombreMarcaje(ultimoMarcaje.tipo)} ({ultimoMarcaje.hora.slice(0, 5)} hrs)</span>
+                                            </Badge>
+                                        )}
+                                    </div>
                                     <h2 className="text-xl font-bold text-white">{empleado.nombre_completo}</h2>
                                     <p className="text-xs text-slate-400">{empleado.cargo || 'Sin cargo'} • {empleado.departamento || 'Sin departamento'}</p>
                                     <p className="text-xs text-emerald-400 font-medium">Turno: {empleado.turno}</p>
@@ -682,7 +725,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
 
                             <div className="space-y-3">
                                 <Label className="text-slate-300 text-xs font-semibold uppercase tracking-wider block">
-                                    SELECCIONE EL ACCIÓN A REGISTRAR:
+                                    SELECCIONE LA ACCIÓN A REGISTRAR:
                                 </Label>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -736,7 +779,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                 <Button
                                                     onClick={() => setIsComidaModalOpen(true)}
                                                     disabled={loadingSearch}
-                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all ${
                                                         sugerenciaMarcaje === 'salida_comida'
                                                             ? 'bg-amber-600 hover:bg-amber-500 text-white ring-4 ring-amber-500/40 shadow-lg'
                                                             : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
@@ -744,12 +787,13 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                 >
                                                     <Utensils className="w-5 h-5 text-amber-400" />
                                                     <span>INICIO COMIDA</span>
+                                                    <span className="text-[10px] text-amber-200/80 font-normal">Salida a Comer</span>
                                                 </Button>
 
                                                 <Button
                                                     onClick={() => handleRegisterMarcaje('entrada_comida')}
                                                     disabled={loadingSearch}
-                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
+                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all ${
                                                         sugerenciaMarcaje === 'entrada_comida'
                                                             ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-4 ring-indigo-500/40 shadow-lg'
                                                             : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
@@ -757,6 +801,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                 >
                                                     <LogIn className="w-5 h-5 text-indigo-400" />
                                                     <span>FIN COMIDA</span>
+                                                    <span className="text-[10px] text-indigo-200/80 font-normal">Regreso de Comer</span>
                                                 </Button>
 
                                                 <Button
@@ -1063,7 +1108,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                 className="px-6 py-3.5 rounded-2xl text-base font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-xl flex items-center gap-3 mx-auto transition-all active:scale-95"
                                             >
                                                 <UtensilsCrossed className="w-5 h-5" />
-                                                <span>Registrar Salida a Comer (Sin adquirir alimento de comedor)</span>
+                                                <span>Registrar Inicio de Comida (Sin adquirir platillo del comedor)</span>
                                             </button>
                                         </div>
                                     </div>

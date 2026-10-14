@@ -85,7 +85,11 @@ class RelojChecadorKioskoController extends Controller
                     $siguienteMarcaje = 'descanso_fin';
                     break;
                 case 'descanso_fin':
-                    $siguienteMarcaje = 'descanso_inicio';
+                    $yaComio = AsistenciaMarcaje::where('empleado_id', $empleado->id)
+                        ->whereDate('fecha_hora', Carbon::today())
+                        ->where('tipo_marcaje', 'salida_comida')
+                        ->exists();
+                    $siguienteMarcaje = $yaComio ? 'salida' : 'salida_comida';
                     break;
                 case 'incidente_inicio':
                     $siguienteMarcaje = 'incidente_fin';
@@ -114,9 +118,11 @@ class RelojChecadorKioskoController extends Controller
             ],
             'ultimo_marcaje' => $ultimoMarcaje ? [
                 'tipo' => $ultimoMarcaje->tipo_marcaje,
+                'tipo_nombre' => self::formatearTipoMarcaje($ultimoMarcaje->tipo_marcaje),
                 'hora' => $ultimoMarcaje->fecha_hora->format('H:i:s'),
             ] : null,
             'sugerencia_marcaje' => $siguienteMarcaje,
+            'sugerencia_nombre' => self::formatearTipoMarcaje($siguienteMarcaje),
         ]);
     }
 
@@ -149,6 +155,7 @@ class RelojChecadorKioskoController extends Controller
                 'message' => 'Marcaje registrado con éxito.',
                 'marcaje' => [
                     'tipo_marcaje' => $duplicado->tipo_marcaje,
+                    'tipo_nombre' => self::formatearTipoMarcaje($duplicado->tipo_marcaje),
                     'hora' => $duplicado->fecha_hora->format('H:i:s'),
                     'fecha' => $duplicado->fecha_hora->format('d/m/Y'),
                 ],
@@ -250,10 +257,30 @@ class RelojChecadorKioskoController extends Controller
             'message' => 'Marcaje registrado con éxito.',
             'marcaje' => [
                 'tipo_marcaje' => $marcaje->tipo_marcaje,
+                'tipo_nombre' => self::formatearTipoMarcaje($marcaje->tipo_marcaje),
                 'hora' => $marcaje->fecha_hora->format('H:i:s'),
                 'fecha' => $marcaje->fecha_hora->format('d/m/Y'),
             ],
             'empleado_nombre' => $empleado->nombre_completo,
         ]);
+    }
+
+    /**
+     * Devuelve una etiqueta clara y comprensible para el empleado y el quiosco.
+     */
+    public static function formatearTipoMarcaje(?string $tipo): string
+    {
+        return match ($tipo) {
+            'entrada' => 'Inicio de Jornada',
+            'salida_comida' => 'Inicio de Comida',
+            'entrada_comida' => 'Fin de Comida',
+            'salida' => 'Salida de Jornada',
+            'descanso_inicio' => 'Inicio de Descanso',
+            'descanso_fin' => 'Fin de Descanso',
+            'incidente_inicio' => 'Inicio de Incidente',
+            'incidente_fin' => 'Fin de Incidente',
+            'entrada_extraordinaria' => 'Tiempo Extra',
+            default => $tipo ? str_replace('_', ' ', ucfirst($tipo)) : '',
+        };
     }
 }
