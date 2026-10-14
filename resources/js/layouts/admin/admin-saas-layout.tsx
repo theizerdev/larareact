@@ -689,6 +689,12 @@ export default function AdminSaasLayout({
                                     key: 'reloj_checador.bitacora',
                                 },
                                 {
+                                    title: 'Opciones de Comedor',
+                                    href: '/admin/asistencia/comedor',
+                                    permission: 'asistencia.configuracion',
+                                    key: 'reloj_checador.comedor',
+                                },
+                                {
                                     title: 'Configuración y Turnos',
                                     href: '/admin/asistencia/configuracion',
                                     permission: 'asistencia.configuracion',

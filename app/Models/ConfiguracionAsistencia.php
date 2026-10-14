@@ -137,7 +137,82 @@ class ConfiguracionAsistencia extends Model
      */
     public function opcionesComida(): array
     {
-        return self::normalizarOpcionesComida($this->opciones_comida);
+        return self::obtenerOpcionesParaKiosko($this->empresa_id);
+    }
+
+    /**
+     * Obtiene las opciones de comida disponibles para el Kiosko.
+     * Prioriza el catálogo dinámico (OpcionComida) y recurre a la columna json o defaults.
+     */
+    /**
+     * Obtiene las opciones de comida disponibles para el Kiosko.
+     * Prioriza el catálogo dinámico (OpcionComida) y recurre a la columna json o defaults.
+     */
+    public static function obtenerOpcionesParaKiosko(?int $empresaId, ?int $sucursalId = null, ?string $zonaHoraria = null): array
+    {
+        if ($empresaId) {
+            $opcionesModel = OpcionComida::where('empresa_id', $empresaId)
+                ->where('status', true)
+                ->where(function ($q) use ($sucursalId) {
+                    $q->whereNull('sucursal_id');
+                    if ($sucursalId) {
+                        $q->orWhere('sucursal_id', $sucursalId);
+                    }
+                })
+                ->orderBy('orden', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
+
+            if ($opcionesModel->isNotEmpty()) {
+                return $opcionesModel->map(fn ($o) => [
+                    'id' => $o->id,
+                    'nombre' => $o->nombre,
+                    'tipo' => $o->tipo,
+                    'costo' => (float) $o->costo_empleado,
+                    'costo_empleado' => (float) $o->costo_empleado,
+                    'costo_empresa' => (float) $o->costo_empresa,
+                    'descripcion' => $o->descripcion,
+                    'icono' => $o->icono,
+                    'color' => $o->color,
+                    'hora_inicio' => $o->hora_inicio,
+                    'hora_fin' => $o->hora_fin,
+                    'disponible_ahora' => self::estaEnHorario($o->hora_inicio, $o->hora_fin, $zonaHoraria),
+                ])->values()->all();
+            }
+        }
+
+        $config = $empresaId ? self::where('empresa_id', $empresaId)->first() : null;
+        return self::normalizarOpcionesComida($config?->opciones_comida);
+    }
+
+    /**
+     * Determina si la hora actual en la zona horaria dada cae dentro del rango [hora_inicio, hora_fin].
+     * Soporta turnos que cruzan la medianoche (ej. 19:00 a 01:00).
+     */
+    public static function estaEnHorario(?string $horaInicio, ?string $horaFin, ?string $tz = null): bool
+    {
+        if (empty($horaInicio) || empty($horaFin)) {
+            return true;
+        }
+
+        try {
+            $now = now($tz ?: config('app.timezone', 'America/Mexico_City'));
+            $currentMin = (int) $now->format('H') * 60 + (int) $now->format('i');
+
+            $iniParts = explode(':', $horaInicio);
+            $finParts = explode(':', $horaFin);
+            $iniMin = (int) ($iniParts[0] ?? 0) * 60 + (int) ($iniParts[1] ?? 0);
+            $finMin = (int) ($finParts[0] ?? 0) * 60 + (int) ($finParts[1] ?? 0);
+
+            if ($iniMin <= $finMin) {
+                return $currentMin >= $iniMin && $currentMin <= $finMin;
+            }
+
+            // Cruza la medianoche
+            return $currentMin >= $iniMin || $currentMin <= $finMin;
+        } catch (\Throwable $e) {
+            return true;
+        }
     }
 
     /**

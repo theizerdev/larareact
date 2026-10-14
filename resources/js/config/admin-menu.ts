@@ -43,6 +43,7 @@ export const ADMIN_MENU_NODES: AdminMenuNode[] = [
     // Reloj Checador
     { key: 'reloj_checador', labelKey: 'Reloj Checador' },
     { key: 'reloj_checador.kiosko', labelKey: 'Kiosko Checador', parent: 'reloj_checador' },
+    { key: 'reloj_checador.comedor', labelKey: 'Opciones de Comedor', parent: 'reloj_checador' },
     { key: 'reloj_checador.nomina', labelKey: 'Pre-Nómina y Horas Extra', parent: 'reloj_checador' },
     { key: 'reloj_checador.bitacora', labelKey: 'Bitácora de Marcajes', parent: 'reloj_checador' },
     { key: 'reloj_checador.configuracion', labelKey: 'Configuración y Turnos', parent: 'reloj_checador' },

@@ -7,6 +7,10 @@ import {
     LogIn, 
     Utensils, 
     Coffee, 
+    Moon,
+    Apple,
+    Sandwich,
+    Clock,
     CheckCircle2, 
     AlertCircle, 
     Camera, 
@@ -35,8 +39,18 @@ interface Configuracion {
 }
 
 interface OpcionComida {
+    id?: number;
     nombre: string;
+    tipo?: string;
     costo: number;
+    costo_empleado?: number;
+    costo_empresa?: number;
+    descripcion?: string;
+    icono?: string;
+    color?: string;
+    hora_inicio?: string | null;
+    hora_fin?: string | null;
+    disponible_ahora?: boolean;
 }
 
 interface Props {
@@ -925,50 +939,214 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                 </DialogContent>
             </Dialog>
 
-            {/* MODAL SELECCIÓN DE TIPO DE COMIDA (INICIO COMIDA) */}
+            {/* MODAL SELECCIÓN DE TIPO DE COMIDA (INICIO COMIDA) - EXTRA GRANDE Y LEGIBLE */}
             <Dialog open={isComidaModalOpen} onOpenChange={setIsComidaModalOpen}>
-                <DialogContent className="max-w-lg bg-slate-900 border border-amber-500/40 text-white">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-amber-400">
-                            <Utensils className="w-5 h-5 text-amber-400" />
-                            Seleccione su Comida
-                        </DialogTitle>
-                        <DialogDescription className="text-xs text-slate-400">
-                            Toque el tipo de comida para registrar su INICIO COMIDA.
-                        </DialogDescription>
-                    </DialogHeader>
+                <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[95vw] md:max-w-[92vw] lg:max-w-6xl xl:max-w-7xl max-h-[92vh] overflow-y-auto bg-slate-900/98 backdrop-blur-2xl border-2 border-amber-500/60 text-white p-6 sm:p-8 md:p-10 rounded-3xl shadow-2xl">
+                    {(() => {
+                        const estaDisponibleAhora = (opcion: OpcionComida) => {
+                            if (opcion.disponible_ahora !== undefined) {
+                                return Boolean(opcion.disponible_ahora);
+                            }
+                            if (!opcion.hora_inicio || !opcion.hora_fin) return true;
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                        {opciones_comida.map((opcion, idx) => (
-                            <button
-                                key={idx}
-                                type="button"
-                                disabled={loadingSearch}
-                                onClick={() => {
-                                    setIsComidaModalOpen(false);
-                                    handleRegisterMarcaje('salida_comida', { comida_opcion: idx });
-                                }}
-                                className="p-5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-amber-600 hover:border-amber-400 text-center transition-all flex flex-col items-center gap-2 disabled:opacity-50"
-                            >
-                                <Utensils className="w-6 h-6 text-amber-400" />
-                                <span className="font-bold text-sm text-white uppercase">{opcion.nombre}</span>
-                                <span className="font-mono text-lg font-black text-amber-300">
-                                    {Number(opcion.costo) > 0 ? `$${Number(opcion.costo).toFixed(2)}` : 'Sin costo'}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
+                            try {
+                                const nowStr = currentTime.toLocaleTimeString('en-US', {
+                                    timeZone: tz,
+                                    hour12: false,
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                });
 
-                    <div className="pt-2 flex justify-end">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setIsComidaModalOpen(false)}
-                            className="border-slate-700 bg-slate-800 text-slate-300"
-                        >
-                            Cancelar
-                        </Button>
-                    </div>
+                                const [hAct, mAct] = nowStr.split(':').map(Number);
+                                const [hIni, mIni] = opcion.hora_inicio.slice(0, 5).split(':').map(Number);
+                                const [hFin, mFin] = opcion.hora_fin.slice(0, 5).split(':').map(Number);
+
+                                const minAct = hAct * 60 + mAct;
+                                const minIni = hIni * 60 + mIni;
+                                const minFin = hFin * 60 + mFin;
+
+                                if (minIni <= minFin) {
+                                    return minAct >= minIni && minAct <= minFin;
+                                }
+                                return minAct >= minIni || minAct <= minFin;
+                            } catch {
+                                return true;
+                            }
+                        };
+
+                        const opcionesDisponibles = opciones_comida
+                            .map((opcion, idx) => ({
+                                ...opcion,
+                                _idx: idx,
+                                _disponible: estaDisponibleAhora(opcion),
+                            }))
+                            .filter((o) => o._disponible);
+
+                        const horaPlanta = currentTime.toLocaleTimeString('es-MX', {
+                            timeZone: tz,
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                        });
+
+                        return (
+                            <>
+                                <DialogHeader className="pb-4 border-b border-slate-800">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/30 to-amber-600/10 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/10">
+                                                <Utensils className="w-7 h-7" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <DialogTitle className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                                                    <span>Seleccione su Alimento / Comida</span>
+                                                </DialogTitle>
+                                                <DialogDescription className="text-sm sm:text-base text-slate-300">
+                                                    Toque el platillo deseado para confirmar el marcaje de <strong className="text-amber-400">INICIO COMIDA</strong>.
+                                                </DialogDescription>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-slate-800/90 border border-slate-700/80 text-slate-200 font-mono text-sm sm:text-base shrink-0 shadow-inner">
+                                            <Clock className="w-5 h-5 text-amber-400 animate-pulse" />
+                                            <span>Hora en Planta: <strong className="text-amber-400 font-black text-lg sm:text-xl">{horaPlanta}</strong></span>
+                                        </div>
+                                    </div>
+                                </DialogHeader>
+
+                                {/* SUB-CABECERA: INDICADOR DE DISPONIBILIDAD */}
+                                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                                    <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-sm">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                                        <span>Alimentos Disponibles en este Horario ({opcionesDisponibles.length})</span>
+                                    </div>
+
+                                    <p className="text-xs sm:text-sm text-slate-400">
+                                        Solo se muestran las opciones disponibles para la hora actual de servicio.
+                                    </p>
+                                </div>
+
+                                {/* LISTADO DE PLATILLOS DISPONIBLES O MENSAJE DE ESPERA */}
+                                {opcionesDisponibles.length === 0 ? (
+                                    <div className="py-14 px-6 rounded-3xl bg-slate-800/60 border border-slate-700/80 text-center space-y-4 my-6 w-full">
+                                        <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg">
+                                            <Clock className="w-8 h-8" />
+                                        </div>
+                                        <h3 className="text-xl sm:text-2xl font-bold text-white">No hay opciones de comida disponibles en este horario</h3>
+                                        <p className="text-sm text-slate-300 max-w-md mx-auto">
+                                            El servicio de comedor se activa automáticamente en los horarios configurados para cada turno (Desayuno, Almuerzo, Cena o Refrigerio).
+                                        </p>
+                                        <div className="text-xs sm:text-sm font-mono text-amber-300 bg-amber-500/15 py-2 px-5 rounded-xl inline-block border border-amber-500/30">
+                                            Hora actual en planta: {horaPlanta}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-3">
+                                        {opcionesDisponibles.map((opcion) => {
+                                            const iconProps = { className: "w-8 h-8 sm:w-9 sm:h-9 text-amber-400" };
+                                            const renderIcon = () => {
+                                                switch (opcion.icono) {
+                                                    case 'coffee': return <Coffee {...iconProps} />;
+                                                    case 'moon': return <Moon {...iconProps} />;
+                                                    case 'apple': return <Apple {...iconProps} />;
+                                                    case 'sandwich': return <Sandwich {...iconProps} />;
+                                                    default: return <Utensils {...iconProps} />;
+                                                }
+                                            };
+
+                                            const tipoLabel = opcion.tipo ? {
+                                                desayuno: 'Desayuno',
+                                                almuerzo: 'Almuerzo / Comida',
+                                                cena: 'Cena',
+                                                refrigerio: 'Refrigerio',
+                                            }[opcion.tipo] : null;
+
+                                            return (
+                                                <button
+                                                    key={opcion.id ?? opcion._idx}
+                                                    type="button"
+                                                    disabled={loadingSearch}
+                                                    onClick={() => {
+                                                        setIsComidaModalOpen(false);
+                                                        handleRegisterMarcaje('salida_comida', { comida_opcion: opcion.id ?? opcion._idx });
+                                                    }}
+                                                    className="p-6 rounded-2xl border-2 border-amber-500/60 bg-gradient-to-b from-slate-800/95 via-slate-800/80 to-slate-900/95 hover:border-amber-400 hover:from-slate-750 hover:shadow-2xl hover:shadow-amber-500/25 active:scale-[0.98] ring-1 ring-amber-500/30 text-center transition-all flex flex-col items-center justify-between gap-4 shadow-xl min-h-[320px] group cursor-pointer"
+                                                >
+                                                    {/* Cabecera de la tarjeta: Badge de tipo y disponibilidad */}
+                                                    <div className="flex items-center justify-between w-full gap-2">
+                                                        {tipoLabel ? (
+                                                            <span className="text-xs font-black tracking-wider uppercase px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                                                {tipoLabel}
+                                                            </span>
+                                                        ) : <span />}
+
+                                                        <span className="text-xs font-black tracking-wider uppercase px-2.5 py-1 rounded-lg bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 flex items-center gap-1.5 shadow-sm">
+                                                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                                            Disponible
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Contenido principal: Ícono, Nombre y Descripción */}
+                                                    <div className="flex flex-col items-center gap-2.5 w-full my-1">
+                                                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-amber-500/20 border border-amber-500/40 shadow-inner">
+                                                            {renderIcon()}
+                                                        </div>
+
+                                                        <h3 className="font-black text-lg sm:text-xl text-white tracking-normal leading-tight text-center px-1">
+                                                            {opcion.nombre}
+                                                        </h3>
+
+                                                        {opcion.descripcion && (
+                                                            <p className="text-xs sm:text-sm text-slate-300 text-center line-clamp-3 leading-relaxed px-2">
+                                                                {opcion.descripcion}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Horario estipulado: Bien espaciado y en una sola línea */}
+                                                    {opcion.hora_inicio && opcion.hora_fin ? (
+                                                        <div className="w-full flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-slate-200 bg-slate-950/80 px-4 py-2.5 rounded-xl border border-slate-800 shadow-inner whitespace-nowrap">
+                                                            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                                                            <span className="text-slate-300">Servicio:</span>
+                                                            <strong className="text-amber-300 font-mono tracking-wide">
+                                                                {opcion.hora_inicio.slice(0, 5)} - {opcion.hora_fin.slice(0, 5)} hrs
+                                                            </strong>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-full text-center text-xs text-slate-400 italic py-2">
+                                                            Disponible todo el día
+                                                        </div>
+                                                    )}
+
+                                                    {/* Pie: Solo el Costo en Pesos Mexicanos (Sin etiqueta "Costo Colaborador") */}
+                                                    <div className="pt-3 border-t border-slate-700/80 w-full flex items-center justify-center">
+                                                        <span className="font-mono text-2xl font-black text-amber-400 tracking-wide">
+                                                            {Number(opcion.costo) > 0 ? `$${Number(opcion.costo).toFixed(2)} MXN` : 'Sin costo'}
+                                                        </span>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                <div className="pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    <p className="text-xs sm:text-sm text-slate-400 flex items-center gap-1.5">
+                                        <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                                        <span>Los alimentos estipulados por horario se validan automáticamente con el reloj de la planta.</span>
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setIsComidaModalOpen(false)}
+                                        className="h-12 px-8 rounded-xl text-base font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 hover:text-white border-slate-700 w-full sm:w-auto shadow-md"
+                                    >
+                                        Cerrar / Cancelar
+                                    </Button>
+                                </div>
+                            </>
+                        );
+                    })()}
                 </DialogContent>
             </Dialog>
 

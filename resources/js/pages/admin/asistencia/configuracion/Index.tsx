@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, Link } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
 import { 
@@ -29,6 +29,7 @@ import {
     TrendingDown,
     Activity,
     Utensils,
+    ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -624,14 +625,23 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                             </div>
 
                             <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <Utensils className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                                        Tipos de Comida (Kiosko Checador)
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Opciones que ve el colaborador al registrar INICIO COMIDA. El costo queda guardado en cada marcaje.
-                                    </CardDescription>
+                                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div>
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            <Utensils className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                            Tipos de Comida (Kiosko Checador)
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Opciones base de comida para el kiosko. Puede administrarlas en detalle desde el nuevo módulo.
+                                        </CardDescription>
+                                    </div>
+                                    <Button asChild size="sm" variant="outline" className="gap-1.5 shrink-0 border-amber-500/40 hover:bg-amber-50 dark:hover:bg-amber-950/20">
+                                        <Link href="/admin/asistencia/comedor">
+                                            <Utensils className="w-3.5 h-3.5 text-amber-500" />
+                                            <span>Gestionar Catálogo de Comedor</span>
+                                            <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                                        </Link>
+                                    </Button>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AsistenciaMarcaje;
 use App\Models\ConfiguracionAsistencia;
 use App\Models\Empleado;
+use App\Models\OpcionComida;
 use App\Services\CalculoAsistenciaLftService;
 use App\Services\RegistroMarcajeService;
 use Carbon\Carbon;
@@ -38,7 +39,7 @@ class RelojChecadorKioskoController extends Controller
         return Inertia::render('admin/reloj-checador/Kiosko', [
             'configuracion' => $configuracion,
             'zona_horaria'  => $zonaHoraria,
-            'opciones_comida' => ConfiguracionAsistencia::normalizarOpcionesComida($configuracion?->opciones_comida),
+            'opciones_comida' => ConfiguracionAsistencia::obtenerOpcionesParaKiosko($empresa?->id, $sucursal?->id, $zonaHoraria),
         ]);
     }
 
@@ -180,7 +181,23 @@ class RelojChecadorKioskoController extends Controller
         // del navegador, y quedan fijos en el marcaje.
         $comida = null;
         if ($validated['tipo_marcaje'] === 'salida_comida' && isset($validated['comida_opcion'])) {
-            $comida = ConfiguracionAsistencia::normalizarOpcionesComida($config?->opciones_comida)[$validated['comida_opcion']] ?? null;
+            $opcionIdentificador = $validated['comida_opcion'];
+
+            // 1. Intentar buscar por ID en OpcionComida
+            $opcionModel = OpcionComida::where('empresa_id', $empleado->empresa_id)
+                ->where('status', true)
+                ->find($opcionIdentificador);
+
+            if ($opcionModel) {
+                $comida = [
+                    'nombre' => $opcionModel->nombre,
+                    'costo' => (float) $opcionModel->costo_empleado,
+                ];
+            } else {
+                // 2. Si no es un ID directo (o en tests/fallback donde viene un índice 0, 1, 2)
+                $opcionesKiosko = ConfiguracionAsistencia::obtenerOpcionesParaKiosko($empleado->empresa_id, $empleado->sucursal_id);
+                $comida = $opcionesKiosko[$opcionIdentificador] ?? null;
+            }
 
             if (! $comida) {
                 return response()->json(['success' => false, 'message' => 'El tipo de comida seleccionado ya no existe.'], 422);
