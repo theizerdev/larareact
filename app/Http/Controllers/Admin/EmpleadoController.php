@@ -201,7 +201,7 @@ class EmpleadoController extends Controller
             if (strlen($cleanPhone) >= 9) {
                 $pais = $empleado->paisTelefono ?: Pais::find($empleado->pais_telefono_id);
                 $prefix = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '51';
-                $to = $prefix . $cleanPhone;
+                $to = \App\Services\WhatsAppService::numeroConLada($empleado->telefono, $prefix);
 
                 $carnetUrl = \Illuminate\Support\Facades\URL::signedRoute('empleados.carnet.publico', ['empleado' => $empleado->id]);
                 $deptoNombre = $empleado->departamento->nombre ?? 'General';

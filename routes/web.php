@@ -138,14 +138,22 @@ use App\Http\Controllers\Admin\RelojChecadorKioskoController;
 // employee. This is worse than the garita leak (read+write, real
 // financial/payroll impact), fixed the same way pending confirmation
 // this doesn't break how physical time-clock kiosks actually operate.
+//
+// 2026-10-14: `auth` solo no bastaba. Cualquier cuenta (también las que el
+// alta de BioTime crea sin rol, o el viewer de solo lectura) podía registrar
+// marcajes de cualquier empleado. Ver y buscar siguen la regla del menú
+// (asistencia.kiosko o asistencia.view); registrar exige asistencia.kiosko.
 Route::middleware('auth')->group(function () {
     Route::get('admin/reloj-checador/kiosko', [RelojChecadorKioskoController::class, 'kioskoView'])
+        ->middleware('permission:asistencia.kiosko|asistencia.view')
         ->name('reloj-checador.kiosko');
 
     Route::post('admin/api/reloj-checador/buscar', [RelojChecadorKioskoController::class, 'buscarEmpleado'])
+        ->middleware('permission:asistencia.kiosko|asistencia.view')
         ->name('api.reloj-checador.buscar');
 
     Route::post('admin/api/reloj-checador/registrar', [RelojChecadorKioskoController::class, 'registrarMarcaje'])
+        ->middleware('permission:asistencia.kiosko')
         ->name('api.reloj-checador.registrar');
 });
 

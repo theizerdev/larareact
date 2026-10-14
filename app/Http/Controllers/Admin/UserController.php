@@ -103,6 +103,9 @@ class UserController extends Controller
             'empresa_id' => 'nullable|exists:empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
             'roles' => 'array',
+            // Solo nombres: Spatie resuelve un entero como id de rol, y
+            // roles: [1] asignaba super-admin sin pasar por las guardas.
+            'roles.*' => 'string',
         ]);
 
         $validated = $this->guardRoleAndTenantAssignment($request, $validated);
@@ -145,6 +148,8 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $this->guardSuperAdminTarget($request, $user);
+
         $passwordRules = ['nullable', 'string'];
         if (!empty($request->input('password'))) {
             $passwordRules[] = Password::default();
@@ -162,9 +167,12 @@ class UserController extends Controller
             'empresa_id' => 'nullable|exists:empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
             'roles' => 'array',
+            // Solo nombres: Spatie resuelve un entero como id de rol, y
+            // roles: [1] asignaba super-admin sin pasar por las guardas.
+            'roles.*' => 'string',
         ]);
 
-        $validated = $this->guardRoleAndTenantAssignment($request, $validated);
+        $validated = $this->guardRoleAndTenantAssignment($request, $validated, $user);
 
         try {
             if (! empty($validated['password'])) {
@@ -199,6 +207,8 @@ class UserController extends Controller
 
     public function unlock(Request $request, User $user)
     {
+        $this->guardSuperAdminTarget($request, $user);
+
         $user->unlock();
 
         activity('auth')
@@ -217,8 +227,10 @@ class UserController extends Controller
         ]);
     }
 
-    public function destroy(User $user)
+    public function destroy(Request $request, User $user)
     {
+        $this->guardSuperAdminTarget($request, $user);
+
         try {
             $user->delete();
 
@@ -236,8 +248,10 @@ class UserController extends Controller
         }
     }
 
-    public function toggleStatus(User $user)
+    public function toggleStatus(Request $request, User $user)
     {
+        $this->guardSuperAdminTarget($request, $user);
+
         try {
             $user->status = $user->status === 'activo' ? 'inactivo' : 'activo';
             $user->save();
@@ -257,6 +271,18 @@ class UserController extends Controller
     }
 
     /**
+     * Una cuenta super-admin solo la modifica otro super-admin. Antes cualquier
+     * usuario con users.edit podía cambiarle la contraseña o el correo (y
+     * entrar como él), desactivarla o desbloquearla.
+     */
+    private function guardSuperAdminTarget(Request $request, User $target): void
+    {
+        $actor = $request->user();
+
+        abort_if($target->isSuperAdmin() && ! $actor?->isSuperAdmin(), 403, __('You are not allowed to modify a super-admin account.'));
+    }
+
+    /**
      * `roles` had no restriction on which roles could be assigned, and
      * empresa_id/sucursal_id only checked exists:*. Confirmed in QA testing
      * (2026-08-21): a zero-permission account granted itself "super-admin"
@@ -264,7 +290,7 @@ class UserController extends Controller
      * grant/keep the super-admin role, and are pinned to their own
      * empresa/sucursal exactly like the other tenant-scoped modules.
      */
-    private function guardRoleAndTenantAssignment(Request $request, array $validated): array
+    private function guardRoleAndTenantAssignment(Request $request, array $validated, ?User $target = null): array
     {
         $actor = $request->user();
 
@@ -281,6 +307,28 @@ class UserController extends Controller
             if (is_string($role) && in_array(strtolower($role), $privileged, true)) {
                 throw ValidationException::withMessages([
                     'roles' => __('You are not allowed to assign the super-admin role.'),
+                ]);
+            }
+        }
+
+        // Nadie otorga lo que no tiene: un rol NUEVO para el usuario solo se
+        // asigna si quien lo asigna ya posee todos sus permisos. Antes bastaba
+        // users.edit (operador/encargado) para darse a sí mismo el rol admin.
+        // Los roles que el usuario ya tenía se conservan sin evaluarse, para
+        // que editar sus otros datos no exija privilegios extra.
+        $actuales = $target ? $target->getRoleNames()->map(fn ($r) => strtolower($r))->all() : [];
+        $permisosActor = $actor->getAllPermissions()->pluck('name');
+
+        foreach ($validated['roles'] ?? [] as $role) {
+            if (in_array(strtolower($role), $actuales, true)) {
+                continue;
+            }
+
+            $rol = Role::query()->where('guard_name', 'web')->where('name', $role)->first();
+
+            if ($rol && $rol->permissions->pluck('name')->diff($permisosActor)->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'roles' => __('You cannot assign a role with permissions you do not have.'),
                 ]);
             }
         }

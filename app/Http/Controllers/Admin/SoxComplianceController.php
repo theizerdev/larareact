@@ -7,6 +7,7 @@ use App\Models\ConfiguracionSox;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Activitylog\Models\Activity;
@@ -219,6 +220,29 @@ class SoxComplianceController extends Controller
         }
 
         $config = ConfiguracionSox::current($request->user()->empresa_id);
+
+        // El proveedor de identidad decide quién entra como quién: con un tenant
+        // de Entra ID ajeno se puede emitir el correo de cualquier usuario (por
+        // ejemplo el del super-admin). Por eso solo un super-admin cambia el SSO;
+        // users.edit sigue ajustando la política de contraseñas y bloqueos.
+        if (! $request->user()->isSuperAdmin()) {
+            foreach (['sso_azure_enabled', 'azure_tenant_id', 'azure_client_id', 'azure_client_secret', 'azure_redirect_uri'] as $campo) {
+                if (! array_key_exists($campo, $validated)) {
+                    continue;
+                }
+
+                $cambia = $campo === 'sso_azure_enabled'
+                    ? (bool) $validated[$campo] !== (bool) $config->{$campo}
+                    : (string) $validated[$campo] !== (string) $config->{$campo};
+
+                if ($cambia) {
+                    throw ValidationException::withMessages([
+                        $campo => 'Solo un Super Administrador puede cambiar la configuración del inicio de sesión corporativo (SSO).',
+                    ]);
+                }
+            }
+        }
+
         $config->update($validated);
 
         activity('auth')
@@ -239,6 +263,9 @@ class SoxComplianceController extends Controller
      */
     public function unlockUser(Request $request, User $user): RedirectResponse
     {
+        // Una cuenta super-admin solo la gestiona otro super-admin.
+        abort_if($user->isSuperAdmin() && ! $request->user()->isSuperAdmin(), 403);
+
         $user->unlock();
 
         activity('auth')
@@ -259,6 +286,9 @@ class SoxComplianceController extends Controller
      */
     public function forcePasswordReset(Request $request, User $user): RedirectResponse
     {
+        // Una cuenta super-admin solo la gestiona otro super-admin.
+        abort_if($user->isSuperAdmin() && ! $request->user()->isSuperAdmin(), 403);
+
         // Debe superar la vigencia configurada (hasta 365 días), no un valor fijo.
         $vigenciaDias = ConfiguracionSox::current($user->empresa_id)->password_expires_days;
 

@@ -46,8 +46,9 @@ class IntegrationController extends Controller
             'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_connected' => $whatsappConnected,
             'control_acceso_base_url' => $empresa->control_acceso_base_url,
-            'control_acceso_app_token' => $empresa->control_acceso_app_token,
-            'control_acceso_user_token' => $empresa->control_acceso_user_token,
+            // Credenciales: solo para quien puede editar la integración.
+            'control_acceso_app_token' => $request->user()->can('integrations.edit') ? $empresa->control_acceso_app_token : null,
+            'control_acceso_user_token' => $request->user()->can('integrations.edit') ? $empresa->control_acceso_user_token : null,
             'control_acceso_active' => (bool) $empresa->control_acceso_active,
             'biotime_base_url' => $empresa->biotime_base_url,
             'biotime_company' => $empresa->biotime_company,
@@ -336,14 +337,16 @@ class IntegrationController extends Controller
             'paises' => $paises,
             'empresa_id' => $empresa->id,
             'empresa_nombre' => $empresa->razon_social ?? $empresa->name ?? 'Empresa',
-            'whatsapp_api_key' => $empresa->whatsapp_api_key,
+            // Con el token cualquiera envía mensajes desde el número de la empresa:
+            // solo lo recibe quien puede gestionar la integración.
+            'whatsapp_api_key' => $this->puedeGestionarWhatsApp($request) ? $empresa->whatsapp_api_key : null,
             'whatsapp_api_url' => $empresa->whatsapp_api_url ?? config('whatsapp.api_url', 'http://82.165.213.124:8092'),
             'whatsapp_instance' => $empresa->whatsapp_instance ?? ('empresa_'.$empresa->id),
             'whatsapp_rate_limit' => $empresa->whatsapp_rate_limit ?? 60,
             'whatsapp_active' => (bool) $empresa->whatsapp_active,
             'whatsapp_phone' => $empresa->whatsapp_phone,
             'whatsapp_status' => $empresa->whatsapp_status,
-            'live_status' => $status,
+            'live_status' => $this->estadoWhatsAppVisible($request, $status),
             'locale' => $currentLocale,
             'translations' => $translations,
         ]);
@@ -368,7 +371,7 @@ class IntegrationController extends Controller
 
         return response()->json([
             'success' => true,
-            'status' => $status,
+            'status' => $this->estadoWhatsAppVisible($request, $status),
             'whatsapp_status' => $empresa->whatsapp_status,
             'whatsapp_phone' => $empresa->whatsapp_phone,
         ]);
@@ -688,8 +691,9 @@ class IntegrationController extends Controller
 
         return inertia('admin/integrations/control-acceso', [
             'control_acceso_base_url' => $empresa->control_acceso_base_url,
-            'control_acceso_app_token' => $empresa->control_acceso_app_token,
-            'control_acceso_user_token' => $empresa->control_acceso_user_token,
+            // Credenciales: solo para quien puede editar la integración.
+            'control_acceso_app_token' => $request->user()->can('integrations.edit') ? $empresa->control_acceso_app_token : null,
+            'control_acceso_user_token' => $request->user()->can('integrations.edit') ? $empresa->control_acceso_user_token : null,
             'control_acceso_active' => (bool) $empresa->control_acceso_active,
         ]);
     }
@@ -898,6 +902,32 @@ class IntegrationController extends Controller
     /**
      * Sincroniza el estado local de la empresa con la respuesta del servicio de WhatsApp.
      */
+    private function puedeGestionarWhatsApp(Request $request): bool
+    {
+        return $request->user()->can('whatsapp.manage') || $request->user()->can('integrations.edit');
+    }
+
+    /**
+     * Estado en vivo de la pasarela para quien solo tiene whatsapp.view: sin el
+     * token de la instancia, sin el QR (escanearlo vincula otro teléfono como
+     * remitente de la empresa) y sin la respuesta cruda que los repite.
+     */
+    private function estadoWhatsAppVisible(Request $request, $status)
+    {
+        if (! is_array($status) || $this->puedeGestionarWhatsApp($request)) {
+            return $status;
+        }
+
+        unset($status['raw']);
+        foreach (['token', 'qrCode'] as $campo) {
+            if (array_key_exists($campo, $status)) {
+                $status[$campo] = null;
+            }
+        }
+
+        return $status;
+    }
+
     private function syncLocalWhatsAppStatus(Empresa $empresa, $status)
     {
         $updateData = [];

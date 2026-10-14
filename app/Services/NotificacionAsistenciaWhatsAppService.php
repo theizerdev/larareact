@@ -30,7 +30,7 @@ class NotificacionAsistenciaWhatsAppService
 
             $pais = $empleado->paisTelefono ?: Pais::find($empleado->pais_telefono_id);
             $prefix = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '52';
-            $fullPhone = $prefix . $cleanPhone;
+            $fullPhone = WhatsAppService::numeroConLada($empleado->telefono, $prefix);
 
             $horaFormatted = Carbon::parse($marcaje->fecha_hora)->format('H:i');
             $fechaFormatted = Carbon::parse($marcaje->fecha_hora)->format('d/m/Y');
@@ -180,7 +180,7 @@ class NotificacionAsistenciaWhatsAppService
 
             $pais = $empleado->paisTelefono ?: Pais::find($empleado->pais_telefono_id);
             $prefix = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '52';
-            $fullPhone = $prefix . $cleanPhone;
+            $fullPhone = WhatsAppService::numeroConLada($empleado->telefono, $prefix);
 
             $horaSalida = Carbon::parse($marcajeSalidaComida->fecha_hora)->format('H:i');
 
@@ -216,7 +216,7 @@ class NotificacionAsistenciaWhatsAppService
 
             $pais = $empleado->paisTelefono ?: Pais::find($empleado->pais_telefono_id);
             $prefix = $pais ? preg_replace('/[^0-9]/', '', $pais->codigo_telefonico) : '52';
-            $fullPhone = $prefix . $cleanPhone;
+            $fullPhone = WhatsAppService::numeroConLada($empleado->telefono, $prefix);
 
             $mensaje = "⏰ *AVISO DE PRÓXIMO FIN DE JORNADA*\n\n";
             $mensaje .= "Hola *{$empleado->nombres}*,\n";

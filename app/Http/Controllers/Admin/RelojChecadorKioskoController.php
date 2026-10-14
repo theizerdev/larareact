@@ -7,11 +7,10 @@ use App\Models\AsistenciaMarcaje;
 use App\Models\ConfiguracionAsistencia;
 use App\Models\Empleado;
 use App\Services\CalculoAsistenciaLftService;
-use App\Services\NotificacionAsistenciaWhatsAppService;
+use App\Services\RegistroMarcajeService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class RelojChecadorKioskoController extends Controller
@@ -51,53 +50,8 @@ class RelojChecadorKioskoController extends Controller
             'query' => 'required|string',
         ]);
 
-        $query = trim($request->input('query'));
         $user = $request->user();
-        $empresaId = $user ? $user->empresa_id : null;
-
-        $cleanQuery = preg_replace('/[^a-zA-Z0-9]/', '', $query);
-        $isNumeric = ctype_digit($cleanQuery);
-        $intVal = $isNumeric ? (int)$cleanQuery : null;
-        $padded8 = $isNumeric ? sprintf('%08d', $intVal) : null;
-        $padded6 = $isNumeric ? sprintf('%06d', $intVal) : null;
-
-        $empleado = Empleado::with(['turnoLaboral', 'departamento', 'cargo'])
-            ->where('status', true)
-            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
-            ->where(function ($q) use ($query, $cleanQuery, $isNumeric, $intVal, $padded8, $padded6) {
-                $q->where('codigo_acceso', $query)
-                    ->orWhere('codigo_acceso', $cleanQuery)
-                    ->orWhere('documento_identidad', $query)
-                    ->orWhere('documento_identidad', $cleanQuery)
-                    ->orWhere('curp', $query)
-                    ->orWhere('telefono', $query)
-                    ->orWhere('id', $query);
-
-                if ($isNumeric && $intVal > 0) {
-                    $q->orWhere('codigo_acceso', $padded8)
-                        ->orWhere('documento_identidad', $padded6)
-                        ->orWhere('codigo_acceso', (string)$intVal)
-                        ->orWhere('documento_identidad', (string)$intVal)
-                        ->orWhere('codigo_acceso', 'like', "%{$cleanQuery}");
-                }
-            })
-            // Una coincidencia exacta debe ganar a una parcial: antes `first()` devolvía
-            // el empleado de menor id aunque solo coincidiera por sufijo (LIKE '%123').
-            ->orderByRaw(
-                'CASE
-                    WHEN codigo_acceso = ? OR codigo_acceso = ? OR documento_identidad = ? OR documento_identidad = ? OR curp = ? OR telefono = ? THEN 0
-                    WHEN codigo_acceso = ? OR documento_identidad = ? OR codigo_acceso = ? OR documento_identidad = ? THEN 1
-                    WHEN id = ? THEN 2
-                    ELSE 3
-                END',
-                [
-                    $query, $cleanQuery, $query, $cleanQuery, $query, $query,
-                    $padded8, $padded6, $isNumeric ? (string) $intVal : null, $isNumeric ? (string) $intVal : null,
-                    $query,
-                ]
-            )
-            ->orderBy('id')
-            ->first();
+        $empleado = app(RegistroMarcajeService::class)->buscarEmpleado($request->input('query'), $user ? $user->empresa_id : null);
 
         if (! $empleado) {
             return response()->json([
@@ -182,14 +136,8 @@ class RelojChecadorKioskoController extends Controller
         ]);
 
         $empleado = Empleado::findOrFail($validated['empleado_id']);
-        // Doble toque / reintento: si ya se registró el mismo tipo de marcaje para este
-        // empleado hace segundos, se responde igual sin duplicar el registro (ni
-        // recalcular horas ni reenviar el WhatsApp).
-        $duplicado = AsistenciaMarcaje::where('empleado_id', $empleado->id)
-            ->where('tipo_marcaje', $validated['tipo_marcaje'])
-            ->where('created_at', '>=', now()->subSeconds(10))
-            ->latest('id')
-            ->first();
+        $registro = app(RegistroMarcajeService::class);
+        $duplicado = $registro->duplicadoReciente($empleado, $validated['tipo_marcaje']);
 
         if ($duplicado) {
             return response()->json([
@@ -220,21 +168,7 @@ class RelojChecadorKioskoController extends Controller
             }
         }
 
-        // Guardar foto si se envió en base64
-        $fotoPath = null;
-        if (! empty($validated['fotografia_base64'])) {
-            $image = preg_replace('#^data:image/(png|jpe?g);base64,#i', '', $validated['fotografia_base64']);
-            $image = str_replace(' ', '+', $image);
-            $binary = base64_decode($image, true);
-
-            // Solo se guarda si realmente es una imagen y no es desmedida; nombre
-            // impredecible (antes time()_id, que colisionaba y era adivinable).
-            if ($binary !== false && strlen($binary) <= 5 * 1024 * 1024 && @getimagesizefromstring($binary) !== false) {
-                $imageName = 'marcajes/'.time()."_{$empleado->id}_".Str::random(10).'.jpg';
-                Storage::disk('public')->put($imageName, $binary);
-                $fotoPath = $imageName;
-            }
-        }
+        $fotoPath = $registro->guardarFoto($validated['fotografia_base64'] ?? null, $empleado->id);
 
         $lat = $validated['latitud'] ?? null;
         $lon = $validated['longitud'] ?? null;
@@ -261,12 +195,8 @@ class RelojChecadorKioskoController extends Controller
         // Recalcular asistencia del día automáticamente
         $calculoService->calcularHorasDiarias($empleado, $now->toDateString());
 
-        // Enviar notificación instantánea por WhatsApp al empleado
-        try {
-            app(NotificacionAsistenciaWhatsAppService::class)->notificarMarcaje($empleado, $marcaje);
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error enviando WhatsApp marcaje: " . $e->getMessage());
-        }
+        // WhatsApp al empleado, fuera de la petición (ver RegistroMarcajeService).
+        $registro->notificarEnCola($empleado, $marcaje);
 
         return response()->json([
             'success' => true,

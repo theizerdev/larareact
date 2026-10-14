@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['verified', 'permission:monitoreo.view'])->group(function () {
     Route::get('/monitoring/logs', [LogMonitoringController::class, 'index'])->name('monitoring.logs.index');
-    Route::delete('/monitoring/logs/clear', [LogMonitoringController::class, 'clear'])->name('monitoring.logs.clear');
+    // Borrar el log del sistema es una acción de operación del servidor.
+    Route::delete('/monitoring/logs/clear', [LogMonitoringController::class, 'clear'])
+        ->middleware('permission:monitoreo.server')
+        ->name('monitoring.logs.clear');
     Route::get('/monitoring/logs/download', [LogMonitoringController::class, 'download'])->name('monitoring.logs.download');
 });

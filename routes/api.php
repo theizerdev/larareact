@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\KioskoApiController;
 use App\Http\Controllers\Api\MovilDataController;
+use App\Http\Middleware\EnsureUserActive;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -13,7 +14,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Rutas públicas de API
-Route::post('/login', [AuthController::class, 'login']);
+// Mismo limitador que el login web de Fortify (5 por minuto por correo + IP):
+// sin él la app permitía adivinar contraseñas a ritmo libre.
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
 // Acceso de trabajadores con sólo el número de empleado (sin contraseña).
 // El throttle es la única barrera contra enumerar números ajenos, porque el
@@ -21,8 +24,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login-empleado', [AuthController::class, 'loginEmpleado'])
     ->middleware('throttle:10,1');
 
-// Rutas protegidas por Sanctum
-Route::middleware('auth:sanctum')->group(function () {
+// Rutas protegidas por Sanctum. EnsureUserActive: una cuenta desactivada
+// pierde el acceso aunque conserve su token.
+Route::middleware(['auth:sanctum', EnsureUserActive::class])->group(function () {
     // Usuario autenticado (incluye roles y permisos para que la app móvil
     // pueda decidir si es un "trabajador" en modo restringido)
     Route::get('/user', function (Request $request) {
@@ -46,20 +50,32 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/configuracion', [KioskoApiController::class, 'configuracion']);
         Route::get('/mi-empleado', [KioskoApiController::class, 'miEmpleado']);
         Route::get('/mi-historial', [KioskoApiController::class, 'miHistorial']);
-        Route::post('/buscar', [KioskoApiController::class, 'buscar']);
+        // Buscar a cualquier empleado es función del kiosko (mismo permiso que
+        // en el web). Registrar valida dentro: el propio empleado o el permiso.
+        Route::post('/buscar', [KioskoApiController::class, 'buscar'])
+            ->middleware('permission:asistencia.kiosko|asistencia.view');
         Route::post('/registrar', [KioskoApiController::class, 'registrar']);
     });
 
     // Datos para las pantallas de la app móvil (Dashboard, Empleados, Bitácora).
     // Nota: /api/dashboard/stats ya existe en routes/web.php (auth de sesión),
     // por eso el resumen del móvil usa una ruta distinta para evitar colisión.
-    Route::get('/dashboard/resumen', [MovilDataController::class, 'dashboardStats']);
-    Route::get('/empleados', [MovilDataController::class, 'empleados']);
-    Route::get('/empleados/{id}', [MovilDataController::class, 'empleadoDetalle'])->whereNumber('id');
-    Route::get('/empleados/{id}/marcajes', [MovilDataController::class, 'empleadoMarcajes'])->whereNumber('id');
-    Route::get('/asistencia/bitacora', [MovilDataController::class, 'bitacora']);
-    Route::get('/asistencia/nomina', [MovilDataController::class, 'nomina']);
-    Route::get('/accesos', [MovilDataController::class, 'accesos']);
+    // Cada pantalla exige el mismo permiso que su equivalente web: antes solo
+    // pedían token, y el que se obtiene con el número de empleado (sin
+    // contraseña) leía CURP, teléfono y salario de toda la plantilla.
+    Route::get('/dashboard/resumen', [MovilDataController::class, 'dashboardStats'])
+        ->middleware('permission:dashboard.view');
+    Route::middleware('permission:empleados.view')->group(function () {
+        Route::get('/empleados', [MovilDataController::class, 'empleados']);
+        Route::get('/empleados/{id}', [MovilDataController::class, 'empleadoDetalle'])->whereNumber('id');
+        Route::get('/empleados/{id}/marcajes', [MovilDataController::class, 'empleadoMarcajes'])->whereNumber('id');
+    });
+    Route::get('/asistencia/bitacora', [MovilDataController::class, 'bitacora'])
+        ->middleware('permission:asistencia.bitacora|asistencia.view');
+    Route::get('/asistencia/nomina', [MovilDataController::class, 'nomina'])
+        ->middleware('permission:asistencia.nomina|asistencia.view');
+    Route::get('/accesos', [MovilDataController::class, 'accesos'])
+        ->middleware('permission:visitas_temporales.view');
 
     // Notificaciones
     Route::get('/notifications', [MovilDataController::class, 'notifications']);

@@ -80,6 +80,9 @@ class MovilDataController extends Controller
      */
     public function bitacora(Request $request)
     {
+        // Una fecha mal escrita respondía 500 (Carbon::parse lanza excepción).
+        $request->validate(['fecha' => 'nullable|date']);
+
         $fecha = $request->query('fecha')
             ? Carbon::parse($request->query('fecha'))
             : Carbon::today();
@@ -237,6 +240,7 @@ class MovilDataController extends Controller
     {
         DB::table('notifications')
             ->where('id', $id)
+            ->where('notifiable_type', get_class($request->user()))
             ->where('notifiable_id', $request->user()->id)
             ->update(['read_at' => now()]);
 
@@ -246,6 +250,7 @@ class MovilDataController extends Controller
     public function markAllNotificationsRead(Request $request)
     {
         DB::table('notifications')
+            ->where('notifiable_type', get_class($request->user()))
             ->where('notifiable_id', $request->user()->id)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);

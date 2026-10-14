@@ -102,7 +102,10 @@ class SecurityRegressionTest extends TestCase
 
     public function test_sox_actualizar_no_registra_el_secreto_y_vacio_conserva_el_actual(): void
     {
+        // El SSO solo lo cambia un super-admin (AuditoriaPermisosApiTest).
+        Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
         $admin = $this->userWith(['users.edit']);
+        $admin->assignRole('super-admin');
         $base = [
             'min_password_length' => 15, 'password_history_limit' => 8, 'password_expires_days' => 90,
             'max_failed_attempts' => 5, 'lockout_minutes' => 15,
@@ -134,7 +137,8 @@ class SecurityRegressionTest extends TestCase
 
     public function test_ejecutar_tarea_rechaza_comandos_que_no_estan_programados(): void
     {
-        $u = $this->userWith(['monitoreo.view']);
+        // Ejecutar tareas exige monitoreo.server; con él, la lista blanca sigue aplicando.
+        $u = $this->userWith(['monitoreo.view', 'monitoreo.server']);
 
         $this->actingAs($u)->post('/admin/monitoring/tasks/run', ['command' => 'artisan about --only=environment'])->assertRedirect();
 
@@ -356,7 +360,7 @@ class SecurityRegressionTest extends TestCase
         $e = $this->empresa('DOC-G');
         $this->empleado(['nombres' => 'Parcial', 'apellidos' => 'Y', 'documento_identidad' => 'DY', 'codigo_acceso' => '00000123', 'empresa_id' => $e->id]);
         $exacto = $this->empleado(['nombres' => 'Exacto', 'apellidos' => 'X', 'documento_identidad' => 'DX', 'codigo_acceso' => '123', 'empresa_id' => $e->id]);
-        $u = User::factory()->create(['empresa_id' => $e->id]);
+        $u = $this->userWith(['asistencia.kiosko'], ['empresa_id' => $e->id]);
 
         $res = $this->actingAs($u)->postJson('/admin/api/reloj-checador/buscar', ['query' => '123'])->assertOk();
 
@@ -367,7 +371,7 @@ class SecurityRegressionTest extends TestCase
     {
         $e = $this->empresa('DOC-H');
         $emp = $this->empleado(['nombres' => 'N', 'apellidos' => 'A', 'documento_identidad' => 'D2', 'empresa_id' => $e->id]);
-        $u = User::factory()->create(['empresa_id' => $e->id]);
+        $u = $this->userWith(['asistencia.kiosko'], ['empresa_id' => $e->id]);
         $payload = ['empleado_id' => $emp->id, 'tipo_marcaje' => 'entrada'];
 
         $this->actingAs($u)->postJson('/admin/api/reloj-checador/registrar', $payload)->assertOk();

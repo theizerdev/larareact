@@ -47,6 +47,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ->onOneServer()
             ->runInBackground()
             ->appendOutputTo(storage_path('logs/biotime-sync.log'));
+
+        // Borra los tokens de la app móvil ya caducados (config/sanctum.php).
+        $schedule->command('sanctum:prune-expired --hours=24')
+            ->daily()
+            ->onOneServer();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // La app corre detrás del Apache del host, que termina TLS y reenvía por HTTP

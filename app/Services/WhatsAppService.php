@@ -226,6 +226,23 @@ class WhatsAppService
     }
 
     /**
+     * Número completo (lada + número) a partir del teléfono guardado y la lada
+     * de su país. Un teléfono capturado en formato internacional ("+52 961...")
+     * ya trae su lada y no se le antepone otra: los colaboradores que llegan
+     * de BioTime lo guardan así y los avisos salían a "5252..." (inexistente).
+     */
+    public static function numeroConLada(string $telefono, string $lada): string
+    {
+        $digitos = preg_replace('/[^0-9]/', '', $telefono);
+
+        if (str_starts_with(trim($telefono), '+')) {
+            return $digitos;
+        }
+
+        return preg_replace('/[^0-9]/', '', $lada).$digitos;
+    }
+
+    /**
      * Normaliza y formatea el número de teléfono con código de país.
      * En México (+52), la API de WhatsApp requiere el prefijo 521 para números móviles de 10 dígitos.
      */

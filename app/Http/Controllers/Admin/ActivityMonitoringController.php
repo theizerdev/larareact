@@ -380,7 +380,19 @@ class ActivityMonitoringController extends Controller
      */
     public function clear(Request $request)
     {
+        $registros = DB::table('activity_log')->count();
+
         DB::table('activity_log')->truncate();
+
+        // Pista de auditoría SOX: el vaciado mismo queda registrado.
+        activity('auth')
+            ->causedBy($request->user())
+            ->withProperties([
+                'registros_eliminados' => $registros,
+                'ip_address' => $request->ip(),
+            ])
+            ->event('activity_log_cleared')
+            ->log("Bitácora de actividad vaciada por {$request->user()->name} ({$registros} registros)");
 
         return back()->with('notification', [
             'type' => 'success',
