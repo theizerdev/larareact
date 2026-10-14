@@ -39,6 +39,7 @@ class RelojChecadorKioskoController extends Controller
         return Inertia::render('admin/reloj-checador/Kiosko', [
             'configuracion' => $configuracion,
             'zona_horaria'  => $zonaHoraria,
+            'opciones_comida' => ConfiguracionAsistencia::normalizarOpcionesComida($configuracion?->opciones_comida),
         ]);
     }
 
@@ -179,6 +180,7 @@ class RelojChecadorKioskoController extends Controller
             'incidente_causa' => 'nullable|string|max:255',
             'duracion_descanso_minutos' => 'nullable|integer|min:1|max:120',
             'tipo_entrada' => 'nullable|string|in:normal,extraordinaria_doble,extraordinaria_triple',
+            'comida_opcion' => 'nullable|integer|min:0',
         ]);
 
         $empleado = Empleado::findOrFail($validated['empleado_id']);
@@ -240,6 +242,17 @@ class RelojChecadorKioskoController extends Controller
         $lon = $validated['longitud'] ?? null;
         $geoloc = ($lat && $lon) ? "{$lat}, {$lon}" : null;
 
+        // Tipo de comida: el nombre y el costo se toman de la configuración, no
+        // del navegador, y quedan fijos en el marcaje.
+        $comida = null;
+        if ($validated['tipo_marcaje'] === 'salida_comida' && isset($validated['comida_opcion'])) {
+            $comida = ConfiguracionAsistencia::normalizarOpcionesComida($config?->opciones_comida)[$validated['comida_opcion']] ?? null;
+
+            if (! $comida) {
+                return response()->json(['success' => false, 'message' => 'El tipo de comida seleccionado ya no existe.'], 422);
+            }
+        }
+
         $marcaje = AsistenciaMarcaje::create([
             'empresa_id' => $empleado->empresa_id,
             'sucursal_id' => $empleado->sucursal_id,
@@ -254,6 +267,8 @@ class RelojChecadorKioskoController extends Controller
             'observaciones' => $validated['observaciones'] ?? null,
             'incidente_causa' => $validated['incidente_causa'] ?? null,
             'duracion_descanso_minutos' => $validated['duracion_descanso_minutos'] ?? null,
+            'comida_tipo' => $comida['nombre'] ?? null,
+            'comida_costo' => $comida['costo'] ?? null,
             'tipo_entrada' => $validated['tipo_entrada'] ?? 'normal',
             'registrado_por_user_id' => $request->user()?->id,
         ]);

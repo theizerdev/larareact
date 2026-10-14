@@ -53,7 +53,7 @@ class AsistenciaReporteController extends Controller
                 $q->whereHas('empleado', fn ($sub) => $sub->where('responsable_id', $respId));
             })
             ->when($request->tipo_marcaje, fn ($q, $t) => $q->where('tipo_marcaje', $t))
-            ->when($request->origen, fn ($q, $o) => $q->where('origen', $o))
+            ->when($request->origen, fn ($q, $o) => $q->deOrigen($o))
             ->when($request->fecha_inicio, fn ($q, $f) => $q->whereDate('fecha_hora', '>=', $f))
             ->when($request->fecha_fin, fn ($q, $f) => $q->whereDate('fecha_hora', '<=', $f));
 
@@ -70,7 +70,7 @@ class AsistenciaReporteController extends Controller
                 $q->when($empresaId, fn ($sub) => $sub->where('empresa_id', $empresaId))
                   ->when($sucursalId, fn ($sub, $s) => $sub->where('sucursal_id', $s))
                   ->when($request->tipo_marcaje, fn ($sub, $t) => $sub->where('tipo_marcaje', $t))
-                  ->when($request->origen, fn ($sub, $o) => $sub->where('origen', $o))
+                  ->when($request->origen, fn ($sub, $o) => $sub->deOrigen($o))
                   ->when($request->fecha_inicio, fn ($sub, $f) => $sub->whereDate('fecha_hora', '>=', $f))
                   ->when($request->fecha_fin, fn ($sub, $f) => $sub->whereDate('fecha_hora', '<=', $f));
             })
@@ -108,7 +108,7 @@ class AsistenciaReporteController extends Controller
                 ->where('empleado_id', $emp->id)
                 ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
                 ->when($request->tipo_marcaje, fn ($q, $t) => $q->where('tipo_marcaje', $t))
-                ->when($request->origen, fn ($q, $o) => $q->where('origen', $o))
+                ->when($request->origen, fn ($q, $o) => $q->deOrigen($o))
                 ->when($request->fecha_inicio, fn ($q, $f) => $q->whereDate('fecha_hora', '>=', $f))
                 ->when($request->fecha_fin, fn ($q, $f) => $q->whereDate('fecha_hora', '<=', $f))
                 ->latest('fecha_hora')
@@ -282,7 +282,7 @@ class AsistenciaReporteController extends Controller
         ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
         ->when($sucursalId, fn ($q, $s) => $q->where('sucursal_id', $s))
         ->when($request->tipo_marcaje, fn ($q, $t) => $q->where('tipo_marcaje', $t))
-        ->when($request->origen, fn ($q, $o) => $q->where('origen', $o))
+        ->when($request->origen, fn ($q, $o) => $q->deOrigen($o))
         ->when($request->fecha_inicio, fn ($q, $f) => $q->whereDate('fecha_hora', '>=', $f))
         ->when($request->fecha_fin, fn ($q, $f) => $q->whereDate('fecha_hora', '<=', $f))
         ->when($request->search, function ($q, $search) {
@@ -354,7 +354,7 @@ class AsistenciaReporteController extends Controller
                             $m->sucursal?->nombre ?? 'General',
                             $responsableNombre,
                             $tiposLabels[$m->tipo_marcaje] ?? ucfirst($m->tipo_marcaje),
-                            ucfirst($m->origen ?? 'N/A'),
+                            AsistenciaMarcaje::labelOrigen($m->origen),
                             $m->latitud ?? '',
                             $m->longitud ?? '',
                             $mapsUrl,
@@ -457,7 +457,7 @@ class AsistenciaReporteController extends Controller
             $sheet->setCellValue("H{$row}", $m->sucursal?->nombre ?? 'General');
             $sheet->setCellValue("I{$row}", $responsableNombre);
             $sheet->setCellValue("J{$row}", $tiposLabels[$m->tipo_marcaje] ?? ucfirst($m->tipo_marcaje));
-            $sheet->setCellValue("K{$row}", ucfirst($m->origen ?? 'N/A'));
+            $sheet->setCellValue("K{$row}", AsistenciaMarcaje::labelOrigen($m->origen));
             $sheet->setCellValue("L{$row}", $m->latitud ?? '');
             $sheet->setCellValue("M{$row}", $m->longitud ?? '');
 

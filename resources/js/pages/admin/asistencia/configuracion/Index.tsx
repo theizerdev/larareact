@@ -27,7 +27,8 @@ import {
     Check,
     Sliders,
     TrendingDown,
-    Activity
+    Activity,
+    Utensils,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,6 +107,7 @@ interface Props {
     turnos: TurnoLaboral[];
     diasFestivos: DiaFestivo[];
     cronogramaReforma?: Record<number, { normales: number; tex_doble: number; tex_triple: number; total: number }>;
+    opcionesComida: { nombre: string; costo: number }[];
 }
 
 const DIAS_SEMANA = [
@@ -153,7 +155,7 @@ const CRONOGRAMA_OFICIAL: Record<number, { normales: number; tex_doble: number; 
     2030: { normales: 40, tex_doble: 9,  tex_triple: 4, total: 53 },
 };
 
-export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, diasFestivos }: Props) {
+export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, diasFestivos, opcionesComida }: Props) {
     const [activeTab, setActiveTab] = useState('politicas');
 
     // Formulario de Configuración General y Reforma Laboral
@@ -192,7 +194,13 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
         notif_responsable_enabled: configuracion?.notif_responsable_enabled ?? true,
         notif_dg_email: configuracion?.notif_dg_email ?? '',
         notif_dg_enabled: configuracion?.notif_dg_enabled ?? true,
+        // Tipos de comida del kiosko (INICIO COMIDA)
+        opciones_comida: opcionesComida.map((o) => ({ nombre: o.nombre, costo: String(o.costo) })),
     });
+
+    const setOpcionComida = (idx: number, campo: 'nombre' | 'costo', valor: string) => {
+        configForm.setData('opciones_comida', configForm.data.opciones_comida.map((o, i) => (i === idx ? { ...o, [campo]: valor } : o)));
+    };
 
     const handleSelectRegimenAno = (ano: number) => {
         const info = CRONOGRAMA_OFICIAL[ano];
@@ -614,6 +622,54 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                     </CardContent>
                                 </Card>
                             </div>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Utensils className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                        Tipos de Comida (Kiosko Checador)
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Opciones que ve el colaborador al registrar INICIO COMIDA. El costo queda guardado en cada marcaje.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {configForm.data.opciones_comida.map((opcion, idx) => (
+                                            <div key={idx} className="p-4 rounded-xl border space-y-3 bg-muted/20">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-xs">Comida {idx + 1}</Label>
+                                                    <Input
+                                                        maxLength={60}
+                                                        value={opcion.nombre}
+                                                        onChange={(e) => setOpcionComida(idx, 'nombre', e.target.value)}
+                                                    />
+                                                    {configForm.errors[`opciones_comida.${idx}.nombre` as keyof typeof configForm.errors] && (
+                                                        <p className="text-xs text-destructive">{configForm.errors[`opciones_comida.${idx}.nombre` as keyof typeof configForm.errors]}</p>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-xs">Costo</Label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">$</span>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            value={opcion.costo}
+                                                            onChange={(e) => setOpcionComida(idx, 'costo', e.target.value)}
+                                                            className="pl-7"
+                                                        />
+                                                    </div>
+                                                    {configForm.errors[`opciones_comida.${idx}.costo` as keyof typeof configForm.errors] && (
+                                                        <p className="text-xs text-destructive">{configForm.errors[`opciones_comida.${idx}.costo` as keyof typeof configForm.errors]}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
 
                             <div className="flex justify-end">
                                 <Button type="submit" disabled={configForm.processing} className="gap-2">

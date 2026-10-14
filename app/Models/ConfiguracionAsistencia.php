@@ -58,6 +58,7 @@ class ConfiguracionAsistencia extends Model
         'ley_silla_intervalo_horas',
         'ley_silla_descanso_minutos',
         'opciones_descanso_minutos',
+        'opciones_comida',
         'whatsapp_recordatorio_descanso',
         'whatsapp_recordatorio_horas_post_entrada',
         // Reforma Laboral 48h -> 40h
@@ -93,6 +94,7 @@ class ConfiguracionAsistencia extends Model
             'requiere_foto_marcaje' => 'boolean',
             'whatsapp_recordatorio_descanso' => 'boolean',
             'opciones_descanso_minutos' => 'array',
+            'opciones_comida' => 'array',
             'porcentaje_prima_dominical' => 'decimal:2',
             'ley_silla_intervalo_horas' => 'decimal:2',
             'whatsapp_recordatorio_horas_post_entrada' => 'decimal:2',
@@ -118,6 +120,44 @@ class ConfiguracionAsistencia extends Model
             'notif_responsable_enabled' => 'boolean',
             'notif_dg_enabled' => 'boolean',
         ];
+    }
+
+    /**
+     * Tipos de comida que ofrece el kiosko al registrar INICIO COMIDA mientras
+     * la empresa no configure los suyos.
+     */
+    public const OPCIONES_COMIDA_DEFAULT = [
+        ['nombre' => 'Desayuno', 'costo' => 0],
+        ['nombre' => 'Comida', 'costo' => 0],
+        ['nombre' => 'Cena', 'costo' => 0],
+    ];
+
+    /**
+     * @return array<int, array{nombre: string, costo: float}>
+     */
+    public function opcionesComida(): array
+    {
+        return self::normalizarOpcionesComida($this->opciones_comida);
+    }
+
+    /**
+     * @return array<int, array{nombre: string, costo: float}>
+     */
+    public static function normalizarOpcionesComida(?array $opciones): array
+    {
+        $opciones = array_values(array_filter(
+            $opciones ?? [],
+            fn ($o) => is_array($o) && filled($o['nombre'] ?? null)
+        ));
+
+        if ($opciones === []) {
+            $opciones = self::OPCIONES_COMIDA_DEFAULT;
+        }
+
+        return array_map(fn ($o) => [
+            'nombre' => trim((string) $o['nombre']),
+            'costo' => round((float) ($o['costo'] ?? 0), 2),
+        ], $opciones);
     }
 
     public function empresa(): BelongsTo

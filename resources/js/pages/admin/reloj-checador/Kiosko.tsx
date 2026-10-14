@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { 
-    Clock, 
     ShieldCheck, 
     UserCheck, 
     LogOut, 
@@ -28,15 +27,22 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import ClientLogo from '@/components/client-logo';
 
 interface Configuracion {
     requiere_foto_marcaje?: boolean;
     tolerancia_retardo_minutos?: number;
 }
 
+interface OpcionComida {
+    nombre: string;
+    costo: number;
+}
+
 interface Props {
     configuracion?: Configuracion;
     zona_horaria?: string | null;
+    opciones_comida?: OpcionComida[];
 }
 
 interface EmpleadoFound {
@@ -49,7 +55,7 @@ interface EmpleadoFound {
     turno?: string;
 }
 
-export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Props) {
+export default function RelojChecadorKiosko({ configuracion, zona_horaria, opciones_comida = [] }: Props) {
     // Reloj digital en tiempo real (usa la zona horaria de la empresa/sucursal o America/Mexico_City por defecto)
     const tz = zona_horaria || 'America/Mexico_City';
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -110,6 +116,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
     const [isDescansoModalOpen, setIsDescansoModalOpen] = useState(false);
     const [selectedMinutosDescanso, setSelectedMinutosDescanso] = useState<number>(15);
     const [isIncidenteModalOpen, setIsIncidenteModalOpen] = useState(false);
+    const [isComidaModalOpen, setIsComidaModalOpen] = useState(false);
     const [incidenteCausaInput, setIncidenteCausaInput] = useState<string>('');
 
     const inputRef = useRef<HTMLInputElement | null>(null);
@@ -504,16 +511,19 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
 
     return (
         <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-4 md:p-8 font-sans select-none">
-            <Head title="Kiosko Reloj Checador - Escáner QR Gafete" />
+            <Head title="Kiosko Checador" />
 
             {/* BARRA SUPERIOR */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 bg-emerald-600/20 rounded-2xl border border-emerald-500/30 text-emerald-400">
-                        <Clock className="w-8 h-8 animate-pulse" />
-                    </div>
+                <div className="flex items-center gap-4">
+                    <ClientLogo
+                        onDarkBackground
+                        className="h-10 md:h-12 w-auto object-contain"
+                        textClassName="text-lg font-bold text-white"
+                    />
+                    <div className="h-10 w-px bg-slate-800" />
                     <div>
-                        <h1 className="text-xl font-bold text-white tracking-wide">RELOJ CHECADOR DIGITAL</h1>
+                        <h1 className="text-xl font-bold text-white tracking-wide">KIOSKO CHECADOR</h1>
                         <p className="text-xs text-slate-400">Control de Asistencia por Numpad, QR Gafete & Pistola Lector</p>
                     </div>
                 </div>
@@ -681,15 +691,6 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                                 </Button>
 
                                                 <Button
-                                                    onClick={() => handleRegisterMarcaje('entrada_extraordinaria', { tipo_entrada: 'extraordinaria_doble' })}
-                                                    disabled={loadingSearch}
-                                                    className="h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl bg-purple-900/80 hover:bg-purple-800 text-purple-200 border border-purple-700/60 shadow-lg transition-all"
-                                                >
-                                                    <Sparkles className="w-5 h-5 text-purple-400" />
-                                                    <span>TIEMPO EXTRA</span>
-                                                </Button>
-
-                                                <Button
                                                     onClick={() => {
                                                         if (esDescansoActivo) {
                                                             handleRegisterMarcaje('descanso_fin');
@@ -709,7 +710,16 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                                 </Button>
 
                                                 <Button
-                                                    onClick={() => handleRegisterMarcaje('salida_comida')}
+                                                    onClick={() => handleRegisterMarcaje('entrada_extraordinaria', { tipo_entrada: 'extraordinaria_doble' })}
+                                                    disabled={loadingSearch}
+                                                    className="h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl bg-purple-900/80 hover:bg-purple-800 text-purple-200 border border-purple-700/60 shadow-lg transition-all"
+                                                >
+                                                    <Sparkles className="w-5 h-5 text-purple-400" />
+                                                    <span>TIEMPO EXTRA</span>
+                                                </Button>
+
+                                                <Button
+                                                    onClick={() => setIsComidaModalOpen(true)}
                                                     disabled={loadingSearch}
                                                     className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
                                                         sugerenciaMarcaje === 'salida_comida'
@@ -911,6 +921,53 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria }: Pro
                                 Confirmar {selectedMinutosDescanso} min
                             </Button>
                         </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* MODAL SELECCIÓN DE TIPO DE COMIDA (INICIO COMIDA) */}
+            <Dialog open={isComidaModalOpen} onOpenChange={setIsComidaModalOpen}>
+                <DialogContent className="max-w-lg bg-slate-900 border border-amber-500/40 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-amber-400">
+                            <Utensils className="w-5 h-5 text-amber-400" />
+                            Seleccione su Comida
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-400">
+                            Toque el tipo de comida para registrar su INICIO COMIDA.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                        {opciones_comida.map((opcion, idx) => (
+                            <button
+                                key={idx}
+                                type="button"
+                                disabled={loadingSearch}
+                                onClick={() => {
+                                    setIsComidaModalOpen(false);
+                                    handleRegisterMarcaje('salida_comida', { comida_opcion: idx });
+                                }}
+                                className="p-5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-amber-600 hover:border-amber-400 text-center transition-all flex flex-col items-center gap-2 disabled:opacity-50"
+                            >
+                                <Utensils className="w-6 h-6 text-amber-400" />
+                                <span className="font-bold text-sm text-white uppercase">{opcion.nombre}</span>
+                                <span className="font-mono text-lg font-black text-amber-300">
+                                    {Number(opcion.costo) > 0 ? `$${Number(opcion.costo).toFixed(2)}` : 'Sin costo'}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsComidaModalOpen(false)}
+                            className="border-slate-700 bg-slate-800 text-slate-300"
+                        >
+                            Cancelar
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>

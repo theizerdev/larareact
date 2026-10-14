@@ -49,6 +49,7 @@ class AsistenciaConfiguracionController extends Controller
             'turnos' => $turnos,
             'diasFestivos' => $diasFestivos,
             'cronogramaReforma' => ConfiguracionAsistencia::CRONOGRAMA_REFORMA,
+            'opcionesComida' => $configuracion->opcionesComida(),
         ]);
     }
 
@@ -92,6 +93,13 @@ class AsistenciaConfiguracionController extends Controller
             'notif_responsable_enabled' => 'nullable|boolean',
             'notif_dg_email' => 'nullable|email|max:150',
             'notif_dg_enabled' => 'nullable|boolean',
+            // Tipos de comida del kiosko (INICIO COMIDA)
+            'opciones_comida' => 'nullable|array|size:3',
+            'opciones_comida.*.nombre' => 'required|string|max:60',
+            'opciones_comida.*.costo' => 'required|numeric|min:0|max:99999',
+        ], [], [
+            'opciones_comida.*.nombre' => 'nombre de la comida',
+            'opciones_comida.*.costo' => 'costo de la comida',
         ]);
 
         $configuracion = ConfiguracionAsistencia::firstOrCreate(['empresa_id' => $user->empresa_id]);

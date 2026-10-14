@@ -67,6 +67,8 @@ interface MarcajeIndividual {
     geolocalizacion?: string | null;
     fotografia_path?: string | null;
     observaciones?: string | null;
+    comida_tipo?: string | null;
+    comida_costo?: number | string | null;
     sucursal?: { nombre: string; zona_horaria?: string };
 }
 
@@ -335,18 +337,22 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
 
     const getOrigenBadge = (origenStr: string) => {
         switch (origenStr) {
-            case 'kiosko_tactil':
             case 'kiosko':
+            case 'kiosko_tactil':
+                return { label: 'Kiosko Checador', class: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200' };
             case 'reloj_checador':
-                return { label: 'Reloj Checador', class: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200' };
-            case 'garita':
-                return { label: 'Garita Acceso', class: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200' };
+            case 'reloj':
+            case 'biotime':
+                return { label: 'Reloj Checador', class: 'bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300 border-violet-200' };
+            case 'app':
             case 'app_movil':
-                return { label: 'App Móvil', class: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200' };
-            case 'reconocimiento_facial':
-                return { label: 'Facial AI', class: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300 border-cyan-200' };
-            case 'manual_admin':
-                return { label: 'Manual Admin', class: 'bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200' };
+            case 'app_smurfit':
+                return { label: 'App Smurfit', class: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200' };
+            case 'app_biotime':
+            case 'biotime_app':
+                return { label: 'App BioTime', class: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300 border-cyan-200' };
+            case 'garita':
+                return { label: 'Garita de Acceso', class: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200' };
             default:
                 return { label: origenStr, class: 'bg-gray-50 text-gray-700 border-gray-200' };
         }
@@ -496,11 +502,11 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="todos">Todos los orígenes</SelectItem>
-                                    <SelectItem value="kiosko">Reloj Checador (Kiosko)</SelectItem>
-                                    <SelectItem value="app">App Móvil</SelectItem>
+                                    <SelectItem value="kiosko">Kiosko Checador</SelectItem>
+                                    <SelectItem value="reloj_checador">Reloj Checador</SelectItem>
+                                    <SelectItem value="app">App Smurfit</SelectItem>
+                                    <SelectItem value="app_biotime">App BioTime</SelectItem>
                                     <SelectItem value="garita">Garita de Acceso</SelectItem>
-                                    <SelectItem value="facial">Reconocimiento Facial</SelectItem>
-                                    <SelectItem value="manual_admin">Manual Admin</SelectItem>
                                 </SelectContent>
                             </Select>
                         </FilterField>
@@ -681,7 +687,7 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                         {ultimo && origenBadge ? (
                                                             <div className="space-y-1">
                                                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                                                    <Badge variant="outline" className={`capitalize font-normal border text-xs ${origenBadge.class}`}>{origenBadge.label}</Badge>
+                                                                    <Badge variant="outline" className={`font-normal border text-xs ${origenBadge.class}`}>{origenBadge.label}</Badge>
                                                                     {ultimo.latitud && ultimo.longitud && (
                                                                         <a
                                                                             href={`https://www.google.com/maps?q=${ultimo.latitud},${ultimo.longitud}`}
@@ -952,6 +958,13 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                                 <Badge variant="outline" className={`text-[10px] font-normal border ${origenBadge.class}`}>
                                                                     {origenBadge.label}
                                                                 </Badge>
+                                                                {m.comida_tipo && (
+                                                                    <Badge variant="outline" className="text-[10px] font-normal border gap-1 bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200">
+                                                                        <Utensils className="w-3 h-3" />
+                                                                        {m.comida_tipo}
+                                                                        {Number(m.comida_costo) > 0 && <span className="font-mono">· ${Number(m.comida_costo).toFixed(2)}</span>}
+                                                                    </Badge>
+                                                                )}
                                                                 {m.latitud && m.longitud ? (
                                                                     <a
                                                                         href={`https://www.google.com/maps?q=${m.latitud},${m.longitud}`}
