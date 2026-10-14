@@ -211,6 +211,7 @@ class AuthController extends Controller
             ], 423);
         }
 
+        return $this->emitirToken($user);
     }
 
     /**
