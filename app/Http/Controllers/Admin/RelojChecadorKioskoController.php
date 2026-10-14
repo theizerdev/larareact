@@ -103,6 +103,20 @@ class RelojChecadorKioskoController extends Controller
             }
         }
 
+        $minutosDescanso = $empleado->turnoLaboral?->minutos_descanso ?? 30;
+
+        $marcajesHoy = AsistenciaMarcaje::where('empleado_id', $empleado->id)
+            ->whereDate('fecha_hora', Carbon::today())
+            ->orderBy('fecha_hora', 'asc')
+            ->get()
+            ->map(fn ($m) => [
+                'id' => $m->id,
+                'tipo' => $m->tipo_marcaje,
+                'tipo_nombre' => self::formatearTipoMarcaje($m->tipo_marcaje),
+                'hora' => $m->fecha_hora->format('H:i'),
+                'comida_tipo' => $m->comida_tipo,
+            ]);
+
         return response()->json([
             'success' => true,
             'empleado' => [
@@ -114,8 +128,10 @@ class RelojChecadorKioskoController extends Controller
                 'departamento' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
+                'minutos_descanso' => $minutosDescanso,
                 'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
             ],
+            'marcajes_hoy' => $marcajesHoy,
             'ultimo_marcaje' => $ultimoMarcaje ? [
                 'tipo' => $ultimoMarcaje->tipo_marcaje,
                 'tipo_nombre' => self::formatearTipoMarcaje($ultimoMarcaje->tipo_marcaje),
@@ -143,13 +159,20 @@ class RelojChecadorKioskoController extends Controller
             'tipo_entrada' => 'nullable|string|in:normal,extraordinaria_doble,extraordinaria_triple',
             'comida_opcion' => 'nullable',
             'no_adquirio_alimento' => 'nullable|boolean',
+            'fecha_hora_local' => 'nullable|string',
         ]);
 
         $empleado = Empleado::findOrFail($validated['empleado_id']);
         $registro = app(RegistroMarcajeService::class);
         $duplicado = $registro->duplicadoReciente($empleado, $validated['tipo_marcaje']);
 
+        $minutosDescanso = $empleado->turnoLaboral?->minutos_descanso ?? 30;
+
         if ($duplicado) {
+            $horaRegresoEstimada = ($duplicado->tipo_marcaje === 'salida_comida')
+                ? Carbon::parse($duplicado->fecha_hora)->addMinutes($minutosDescanso)->format('h:i A')
+                : null;
+
             return response()->json([
                 'success' => true,
                 'message' => 'Marcaje registrado con éxito.',
@@ -158,12 +181,22 @@ class RelojChecadorKioskoController extends Controller
                     'tipo_nombre' => self::formatearTipoMarcaje($duplicado->tipo_marcaje),
                     'hora' => $duplicado->fecha_hora->format('H:i:s'),
                     'fecha' => $duplicado->fecha_hora->format('d/m/Y'),
+                    'minutos_descanso' => $minutosDescanso,
+                    'hora_regreso_estimada' => $horaRegresoEstimada,
                 ],
                 'empleado_nombre' => $empleado->nombre_completo,
             ]);
         }
 
         $now = Carbon::now();
+        if (!empty($validated['fecha_hora_local'])) {
+            try {
+                $parsedLocal = Carbon::parse($validated['fecha_hora_local']);
+                if ($parsedLocal->diffInHours(Carbon::now()) <= 48) {
+                    $now = $parsedLocal;
+                }
+            } catch (\Exception $e) {}
+        }
 
         // Aplicar redondeo si está configurado en ConfiguracionAsistencia
         $config = ConfiguracionAsistencia::where('empresa_id', $empleado->empresa_id)->first();
@@ -252,6 +285,10 @@ class RelojChecadorKioskoController extends Controller
         // WhatsApp al empleado, fuera de la petición (ver RegistroMarcajeService).
         $registro->notificarEnCola($empleado, $marcaje);
 
+        $horaRegresoEstimada = ($marcaje->tipo_marcaje === 'salida_comida')
+            ? Carbon::parse($marcaje->fecha_hora)->addMinutes($minutosDescanso)->format('h:i A')
+            : null;
+
         return response()->json([
             'success' => true,
             'message' => 'Marcaje registrado con éxito.',
@@ -260,6 +297,8 @@ class RelojChecadorKioskoController extends Controller
                 'tipo_nombre' => self::formatearTipoMarcaje($marcaje->tipo_marcaje),
                 'hora' => $marcaje->fecha_hora->format('H:i:s'),
                 'fecha' => $marcaje->fecha_hora->format('d/m/Y'),
+                'minutos_descanso' => $minutosDescanso,
+                'hora_regreso_estimada' => $horaRegresoEstimada,
             ],
             'empleado_nombre' => $empleado->nombre_completo,
         ]);
