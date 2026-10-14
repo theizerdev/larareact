@@ -607,6 +607,20 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                                     <IconComp className="w-3.5 h-3.5 shrink-0" />
                                                                     <span>{badge.label}</span>
                                                                 </Badge>
+                                                                {ultimo.comida_tipo && (() => {
+                                                                    const esSinConsumo = ultimo.comida_tipo.toLowerCase().includes('no adquirió') || ultimo.comida_tipo.toLowerCase().includes('sin consumo');
+                                                                    return (
+                                                                        <div className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-md border w-fit ${
+                                                                            esSinConsumo
+                                                                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                                                                                : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+                                                                        }`}>
+                                                                            <Utensils className={`w-3 h-3 shrink-0 ${esSinConsumo ? 'text-slate-400' : 'text-amber-500'}`} />
+                                                                            <span className="truncate max-w-[220px]" title={ultimo.comida_tipo}>{ultimo.comida_tipo}</span>
+                                                                            {Number(ultimo.comida_costo) > 0 && <span className="font-mono font-bold text-[11px]">(${Number(ultimo.comida_costo).toFixed(2)})</span>}
+                                                                        </div>
+                                                                    );
+                                                                })()}
                                                                 <div className="font-mono text-xs text-slate-600">{formatFechaHora(ultimo.fecha_hora)}</div>
                                                             </div>
                                                         ) : <span className="text-xs text-muted-foreground">Sin registros</span>}
@@ -721,8 +735,8 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
             </div>
 
             <Dialog open={!!selectedEmpleado} onOpenChange={(open) => { if (!open) setSelectedEmpleado(null); }}>
-                <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
+                <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[94vw] md:max-w-4xl lg:max-w-5xl xl:max-w-6xl max-h-[92vh] overflow-y-auto p-6 sm:p-8 rounded-2xl shadow-2xl">
+                    <DialogHeader className="pb-3 border-b border-border/60">
                         <DialogTitle className="flex items-center gap-2 text-base font-bold">
                             <ShieldCheck className="w-5 h-5 text-indigo-600" />
                             Historial y Auditoría de Bitácora
@@ -958,13 +972,29 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                                 <Badge variant="outline" className={`text-[10px] font-normal border ${origenBadge.class}`}>
                                                                     {origenBadge.label}
                                                                 </Badge>
-                                                                {m.comida_tipo && (
-                                                                    <Badge variant="outline" className="text-[10px] font-normal border gap-1 bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200">
-                                                                        <Utensils className="w-3 h-3" />
-                                                                        {m.comida_tipo}
-                                                                        {Number(m.comida_costo) > 0 && <span className="font-mono">· ${Number(m.comida_costo).toFixed(2)}</span>}
-                                                                    </Badge>
-                                                                )}
+                                                                {m.comida_tipo && (() => {
+                                                                    const esSinConsumo = m.comida_tipo.toLowerCase().includes('no adquirió') || m.comida_tipo.toLowerCase().includes('sin consumo');
+                                                                    return (
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className={`text-xs font-semibold border gap-1.5 px-3 py-1 shadow-2xs ${
+                                                                                esSinConsumo
+                                                                                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                                                                                    : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/40'
+                                                                            }`}
+                                                                        >
+                                                                            <Utensils className={`w-3.5 h-3.5 shrink-0 ${esSinConsumo ? 'text-slate-500' : 'text-amber-600 dark:text-amber-400'}`} />
+                                                                            <span>{m.comida_tipo}</span>
+                                                                            {Number(m.comida_costo) > 0 ? (
+                                                                                <span className="font-mono font-bold text-amber-700 dark:text-amber-200">
+                                                                                    · ${Number(m.comida_costo).toFixed(2)} MXN
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="font-mono text-slate-500 dark:text-slate-400">· $0.00 MXN</span>
+                                                                            )}
+                                                                        </Badge>
+                                                                    );
+                                                                })()}
                                                                 {m.latitud && m.longitud ? (
                                                                     <a
                                                                         href={`https://www.google.com/maps?q=${m.latitud},${m.longitud}`}

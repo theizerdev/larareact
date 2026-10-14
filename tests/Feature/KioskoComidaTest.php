@@ -96,4 +96,20 @@ class KioskoComidaTest extends TestCase
 
         $this->assertNull(AsistenciaMarcaje::withoutGlobalScopes()->sole()->comida_tipo);
     }
+
+    public function test_permite_registrar_inicio_comida_sin_adquirir_alimento(): void
+    {
+        [, $empleado, $user] = $this->escenario();
+
+        $this->actingAs($user)->postJson('/admin/api/reloj-checador/registrar', [
+            'empleado_id' => $empleado->id,
+            'tipo_marcaje' => 'salida_comida',
+            'no_adquirio_alimento' => true,
+        ])->assertOk()->assertJson(['success' => true]);
+
+        $marcaje = AsistenciaMarcaje::withoutGlobalScopes()->where('empleado_id', $empleado->id)->sole();
+        $this->assertSame('No adquirió alimento de las opciones disponibles', $marcaje->comida_tipo);
+        $this->assertSame('0.00', $marcaje->comida_costo);
+        $this->assertStringContainsString('no adquirió alimento', $marcaje->observaciones);
+    }
 }

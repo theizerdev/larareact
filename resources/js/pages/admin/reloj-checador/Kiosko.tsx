@@ -6,6 +6,7 @@ import {
     LogOut, 
     LogIn, 
     Utensils, 
+    UtensilsCrossed,
     Coffee, 
     Moon,
     Apple,
@@ -1014,30 +1015,56 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                     </div>
                                 </DialogHeader>
 
-                                {/* SUB-CABECERA: INDICADOR DE DISPONIBILIDAD */}
-                                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                                {/* SUB-CABECERA: INDICADOR DE DISPONIBILIDAD Y OPCIÓN RÁPIDA DE NO CONSUMO */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                                     <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-sm">
                                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                                         <span>Alimentos Disponibles en este Horario ({opcionesDisponibles.length})</span>
                                     </div>
 
-                                    <p className="text-xs sm:text-sm text-slate-400">
-                                        Solo se muestran las opciones disponibles para la hora actual de servicio.
-                                    </p>
+                                    <button
+                                        type="button"
+                                        disabled={loadingSearch}
+                                        onClick={() => {
+                                            setIsComidaModalOpen(false);
+                                            handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
+                                        }}
+                                        className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-amber-400 flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
+                                    >
+                                        <UtensilsCrossed className="w-4 h-4 text-amber-400" />
+                                        <span>No Adquirir Ningún Alimento (Sin Consumo)</span>
+                                    </button>
                                 </div>
 
                                 {/* LISTADO DE PLATILLOS DISPONIBLES O MENSAJE DE ESPERA */}
                                 {opcionesDisponibles.length === 0 ? (
-                                    <div className="py-14 px-6 rounded-3xl bg-slate-800/60 border border-slate-700/80 text-center space-y-4 my-6 w-full">
+                                    <div className="py-14 px-6 rounded-3xl bg-slate-800/60 border border-slate-700/80 text-center space-y-5 my-6 w-full">
                                         <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg">
                                             <Clock className="w-8 h-8" />
                                         </div>
-                                        <h3 className="text-xl sm:text-2xl font-bold text-white">No hay opciones de comida disponibles en este horario</h3>
-                                        <p className="text-sm text-slate-300 max-w-md mx-auto">
-                                            El servicio de comedor se activa automáticamente en los horarios configurados para cada turno (Desayuno, Almuerzo, Cena o Refrigerio).
-                                        </p>
-                                        <div className="text-xs sm:text-sm font-mono text-amber-300 bg-amber-500/15 py-2 px-5 rounded-xl inline-block border border-amber-500/30">
-                                            Hora actual en planta: {horaPlanta}
+                                        <div className="space-y-2">
+                                            <h3 className="text-xl sm:text-2xl font-bold text-white">No hay opciones de comida disponibles en este horario</h3>
+                                            <p className="text-sm text-slate-300 max-w-md mx-auto">
+                                                El servicio de comedor se activa automáticamente en los horarios configurados para cada turno (Desayuno, Almuerzo, Cena o Refrigerio).
+                                            </p>
+                                            <div className="text-xs sm:text-sm font-mono text-amber-300 bg-amber-500/15 py-1.5 px-4 rounded-xl inline-block border border-amber-500/30">
+                                                Hora actual en planta: {horaPlanta}
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-2">
+                                            <button
+                                                type="button"
+                                                disabled={loadingSearch}
+                                                onClick={() => {
+                                                    setIsComidaModalOpen(false);
+                                                    handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
+                                                }}
+                                                className="px-6 py-3.5 rounded-2xl text-base font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-xl flex items-center gap-3 mx-auto transition-all active:scale-95"
+                                            >
+                                                <UtensilsCrossed className="w-5 h-5" />
+                                                <span>Registrar Salida a Comer (Sin adquirir alimento de comedor)</span>
+                                            </button>
                                         </div>
                                     </div>
                                 ) : (
@@ -1127,6 +1154,51 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                 </button>
                                             );
                                         })}
+
+                                        {/* TARJETA ESPECIAL: NO ADQUIRIR ALIMENTO / COMIDA PROPIA */}
+                                        <button
+                                            type="button"
+                                            disabled={loadingSearch}
+                                            onClick={() => {
+                                                setIsComidaModalOpen(false);
+                                                handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
+                                            }}
+                                            className="p-6 rounded-2xl border-2 border-dashed border-slate-700 hover:border-amber-400 bg-slate-900/90 hover:bg-slate-800/90 text-center transition-all flex flex-col items-center justify-between gap-4 shadow-xl min-h-[320px] group cursor-pointer active:scale-[0.98]"
+                                        >
+                                            <div className="flex items-center justify-between w-full gap-2">
+                                                <span className="text-xs font-black tracking-wider uppercase px-3 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">
+                                                    OPCIÓN
+                                                </span>
+                                                <span className="text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700">
+                                                    Sin Consumo
+                                                </span>
+                                            </div>
+
+                                            <div className="flex flex-col items-center gap-2.5 w-full my-1">
+                                                <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-slate-800 border border-slate-700 shadow-inner text-slate-400 group-hover:text-amber-400">
+                                                    <UtensilsCrossed className="w-8 h-8" />
+                                                </div>
+
+                                                <h3 className="font-black text-lg sm:text-xl text-white tracking-normal leading-tight text-center px-1">
+                                                    No Adquirir Alimento
+                                                </h3>
+
+                                                <p className="text-xs sm:text-sm text-slate-400 text-center line-clamp-3 leading-relaxed px-2">
+                                                    Trae comida propia de casa, ayuno o no desea consumir platillos del comedor en este turno.
+                                                </p>
+                                            </div>
+
+                                            <div className="w-full flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-slate-300 bg-slate-950/80 px-4 py-2.5 rounded-xl border border-slate-800 shadow-inner whitespace-nowrap">
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                                <span>Disponible en cualquier turno</span>
+                                            </div>
+
+                                            <div className="pt-3 border-t border-slate-800 w-full flex items-center justify-center">
+                                                <span className="font-mono text-2xl font-black text-slate-300 tracking-wide">
+                                                    $0.00 MXN
+                                                </span>
+                                            </div>
+                                        </button>
                                     </div>
                                 )}
 
