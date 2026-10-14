@@ -127,9 +127,9 @@ class ConfiguracionAsistencia extends Model
      * la empresa no configure los suyos.
      */
     public const OPCIONES_COMIDA_DEFAULT = [
-        ['nombre' => 'Desayuno', 'costo' => 0],
-        ['nombre' => 'Comida', 'costo' => 0],
-        ['nombre' => 'Cena', 'costo' => 0],
+        ['nombre' => 'Opción 1', 'costo' => 0],
+        ['nombre' => 'Opción 2', 'costo' => 0],
+        ['nombre' => 'Opción 3', 'costo' => 0],
     ];
 
     /**

@@ -85,6 +85,9 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
     const [loadingSearch, setLoadingSearch] = useState(false);
     const [empleado, setEmpleado] = useState<EmpleadoFound | null>(null);
     const [ultimoMarcaje, setUltimoMarcaje] = useState<{ tipo: string; hora: string; tipo_nombre?: string } | null>(null);
+    // Si la foto no carga se muestran las iniciales en lugar del texto alternativo.
+    const [fotoFallida, setFotoFallida] = useState(false);
+    useEffect(() => setFotoFallida(false), [empleado?.id]);
     const [sugerenciaMarcaje, setSugerenciaMarcaje] = useState<string>('entrada');
     const [tipoMarcajeSeleccionado, setTipoMarcajeSeleccionado] = useState<string>('entrada');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -699,8 +702,13 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                         <Card className="bg-slate-900/90 border-2 border-emerald-500/40 shadow-2xl backdrop-blur-xl space-y-6 p-6">
                             <div className="flex items-center gap-4 border-b border-slate-800 pb-4">
                                 <div className="w-20 h-20 rounded-2xl bg-slate-950 border border-slate-700 overflow-hidden flex items-center justify-center text-slate-500 font-bold text-xl">
-                                    {empleado.foto_empleado ? (
-                                        <img src={empleado.foto_empleado} alt={empleado.nombre_completo} className="w-full h-full object-cover" />
+                                    {empleado.foto_empleado && !fotoFallida ? (
+                                        <img
+                                            src={empleado.foto_empleado}
+                                            alt={empleado.nombre_completo}
+                                            className="w-full h-full object-cover"
+                                            onError={() => setFotoFallida(true)}
+                                        />
                                     ) : (
                                         <span>{empleado.nombre_completo.substring(0, 2).toUpperCase()}</span>
                                     )}
@@ -1191,11 +1199,13 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                     )}
 
                                                     {/* Pie: Solo el Costo en Pesos Mexicanos (Sin etiqueta "Costo Colaborador") */}
-                                                    <div className="pt-3 border-t border-slate-700/80 w-full flex items-center justify-center">
-                                                        <span className="font-mono text-2xl font-black text-amber-400 tracking-wide">
-                                                            {Number(opcion.costo) > 0 ? `$${Number(opcion.costo).toFixed(2)} MXN` : 'Sin costo'}
-                                                        </span>
-                                                    </div>
+                                                    {Number(opcion.costo) > 0 && (
+                                                        <div className="pt-3 border-t border-slate-700/80 w-full flex items-center justify-center">
+                                                            <span className="font-mono text-2xl font-black text-amber-400 tracking-wide">
+                                                                ${Number(opcion.costo).toFixed(2)} MXN
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </button>
                                             );
                                         })}

@@ -147,6 +147,24 @@ class Empleado extends Model
         return $this->hasMany(EmpleadoVehiculo::class, 'empleado_id');
     }
 
+    /**
+     * URL pública de una foto del colaborador. El alta guarda la ruta ya con
+     * el prefijo ("/storage/empleados/x.jpg"); otras rutas llegan sin él o como
+     * URL completa, así que se normaliza para no armar "/storage//storage/...".
+     */
+    public static function urlFoto(?string $ruta): ?string
+    {
+        if (blank($ruta)) {
+            return null;
+        }
+
+        if (preg_match('#^(https?:|data:)#i', $ruta)) {
+            return $ruta;
+        }
+
+        return asset('storage/'.preg_replace('#^/?(storage/)+#', '', ltrim($ruta, '/')));
+    }
+
     public function marcajes(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(AsistenciaMarcaje::class, 'empleado_id');

@@ -112,7 +112,7 @@ class KioskoApiController extends Controller
                 'departamento' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
-                'foto_empleado' => $empleado->foto_empleado ? asset('storage/'.$empleado->foto_empleado) : null,
+                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
                 'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
             ],
             'ultimo_marcaje' => $ultimoMarcaje ? [
@@ -182,7 +182,7 @@ class KioskoApiController extends Controller
                 'departamento' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
-                'foto_empleado' => $empleado->foto_empleado ? asset('storage/'.$empleado->foto_empleado) : null,
+                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
                 'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
                 'permite_app_movil' => (bool) $empleado->permite_app_movil,
                 'intervalo_geolocalizacion_minutos' => $empleado->intervalo_geolocalizacion_minutos ?? 15,

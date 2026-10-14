@@ -11,7 +11,6 @@ use App\Models\VisitaAcceso;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Endpoints de solo lectura para las pantallas de la app móvil
@@ -65,7 +64,7 @@ class MovilDataController extends Controller
                 'codigo_acceso' => $e->codigo_acceso ?: $e->documento_identidad,
                 'departamento' => $e->departamento?->nombre,
                 'cargo' => $e->cargo?->nombre,
-                'foto_empleado' => $e->foto_empleado ? Storage::url($e->foto_empleado) : null,
+                'foto_empleado' => Empleado::urlFoto($e->foto_empleado),
                 'status' => (bool) $e->status,
                 'permite_app_movil' => (bool) $e->permite_app_movil,
                 'intervalo_geolocalizacion_minutos' => $e->intervalo_geolocalizacion_minutos ?? 15,
@@ -140,7 +139,7 @@ class MovilDataController extends Controller
             'cargo' => $e->cargo?->nombre,
             'turno' => $e->turnoLaboral?->nombre,
             'salario_diario' => $e->salario_diario,
-            'foto_empleado' => $e->foto_empleado ? Storage::url($e->foto_empleado) : null,
+            'foto_empleado' => Empleado::urlFoto($e->foto_empleado),
             'status' => (bool) $e->status,
             'permite_app_movil' => (bool) $e->permite_app_movil,
             'intervalo_geolocalizacion_minutos' => $e->intervalo_geolocalizacion_minutos ?? 15,
