@@ -47,6 +47,7 @@ class BioTimeAltaAutomaticaTest extends TestCase
             '*/personnel/api/positions/*' => Http::response($env([['id' => 1, 'position_code' => 'P1', 'position_name' => 'Montacargista']])),
             '*/personnel/api/employees/*' => Http::response($env($empleados)),
             '*/iclock/api/transactions/*' => Http::response($env([])),
+            '*/att/api/*' => Http::response($env([])),
         ]);
     }
 

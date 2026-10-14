@@ -59,6 +59,8 @@ class BioTimeSyncTest extends TestCase
                 ['id' => 5001, 'emp_code' => '100', 'punch_time' => '2026-08-20 08:00:00', 'punch_state' => '0', 'verify_type' => 1, 'terminal_sn' => 'AEW1', 'terminal_alias' => 'Planta', 'area_alias' => 'Ops', 'temperature' => 36.5],
                 ['id' => 5002, 'emp_code' => '100', 'punch_time' => '2026-08-20 17:00:00', 'punch_state' => '1', 'verify_type' => 15, 'terminal_sn' => 'AEW1', 'terminal_alias' => 'Planta', 'area_alias' => 'Ops'],
             ])),
+
+            '*/att/api/*' => Http::response($envelope([])),
         ]);
     }
 

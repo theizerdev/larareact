@@ -48,6 +48,12 @@ return [
     // producción: lotes cortos = locks cortos).
     'db_chunk' => (int) env('BIOTIME_DB_CHUNK', 200),
 
+    // Tope de permisos/incidencias (/att/api/leaves/) que se espejan. BioTime
+    // ignora los filtros de fecha y empleado en ese endpoint, y un BioTime
+    // Cloud compartido devuelve los de todas sus empresas (más de 100 mil):
+    // por encima de este total se omite esa parte en lugar de recorrerla.
+    'leaves_max' => (int) env('BIOTIME_LEAVES_MAX', 20000),
+
     // Verificación TLS. BioTime Cloud se sirve por HTTPS, así que va encendida
     // por defecto; sólo se apaga por env para un BioTime local en HTTP plano
     // (con http:// no aplica de todos modos).

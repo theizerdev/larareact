@@ -709,6 +709,8 @@ export default function AdminSaasLayout({
                                 { title: 'Relojes BioTime', href: '/admin/biotime/dispositivos', permission: 'biotime.view' },
                                 { title: 'Empleados BioTime', href: '/admin/biotime/empleados', permission: 'biotime.view' },
                                 { title: 'Marcajes BioTime', href: '/admin/biotime/marcajes', permission: 'biotime.view' },
+                                { title: 'Turnos BioTime', href: '/admin/biotime/turnos', permission: 'biotime.view' },
+                                { title: 'Permisos BioTime', href: '/admin/biotime/permisos', permission: 'biotime.view' },
                             ].filter(item => hasPermission(item.permission));
 
                             const relojChecadorItems = [
