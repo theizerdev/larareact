@@ -46,7 +46,9 @@ class Empleado extends Model
                 'foto_documento',
                 'foto_documento_reverso',
                 'motivo_registro',
-                'status'
+                'status',
+                'permite_app_movil',
+                'intervalo_geolocalizacion_minutos',
             ])
             ->logOnlyDirty()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
@@ -81,6 +83,8 @@ class Empleado extends Model
         'turno_laboral_id',
         'fecha_ingreso',
         'status',
+        'permite_app_movil',
+        'intervalo_geolocalizacion_minutos',
         'kyc_estatus',
         'kyc_validado_en',
     ];
@@ -89,6 +93,8 @@ class Empleado extends Model
     {
         return [
             'status' => 'boolean',
+            'permite_app_movil' => 'boolean',
+            'intervalo_geolocalizacion_minutos' => 'integer',
             'jornada_laboral' => 'array',
             'fecha_ingreso' => 'date:Y-m-d',
             'salario_diario' => 'decimal:2',

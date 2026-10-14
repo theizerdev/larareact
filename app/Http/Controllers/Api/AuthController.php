@@ -93,6 +93,14 @@ class AuthController extends Controller
             ], 403);
         }
 
+        $empleadoVinculado = Empleado::where('user_id', $user->id)->first();
+        if ($empleadoVinculado && ! $user->hasAnyRole(self::ROLES_ADMIN) && ! $empleadoVinculado->permite_app_movil) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permiso para acceder a la aplicación móvil. Contacta a Recursos Humanos.',
+            ], 403);
+        }
+
         $user->update(['failed_login_attempts' => 0, 'locked_until' => null]);
 
         return $this->emitirToken($user);
@@ -114,6 +122,7 @@ class AuthController extends Controller
         $user->tokens()->where('name', 'movil_app')->delete();
 
         $token = $user->createToken('movil_app')->plainTextToken;
+        $empleado = Empleado::where('user_id', $user->id)->first();
 
         return response()->json([
             'success' => true,
@@ -122,6 +131,13 @@ class AuthController extends Controller
                 'roles' => $user->getRoleNames()->values(),
                 'permissions' => $user->getAllPermissions()->pluck('name')->values(),
             ]),
+            'empleado' => $empleado ? [
+                'id' => $empleado->id,
+                'nombre_completo' => $empleado->nombre_completo,
+                'permite_app_movil' => (bool) $empleado->permite_app_movil,
+                'intervalo_geolocalizacion_minutos' => $empleado->intervalo_geolocalizacion_minutos ?? 15,
+            ] : null,
+            'intervalo_geolocalizacion_minutos' => $empleado?->intervalo_geolocalizacion_minutos ?? 15,
         ]);
     }
 
@@ -152,6 +168,13 @@ class AuthController extends Controller
                 'success' => false,
                 'message' => 'Número de empleado no válido.',
             ], 401);
+        }
+
+        if (! $empleado->permite_app_movil) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permiso para acceder a la aplicación móvil. Contacta a Recursos Humanos.',
+            ], 403);
         }
 
         $user = $empleado->user;
@@ -188,7 +211,6 @@ class AuthController extends Controller
             ], 423);
         }
 
-        return $this->emitirToken($user);
     }
 
     /**

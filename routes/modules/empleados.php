@@ -24,6 +24,7 @@ Route::middleware(['permission:empleados.import|empleados.create'])->group(funct
 Route::middleware(['permission:empleados.edit'])->group(function () {
     Route::put('/empleados/{empleado}', [EmpleadoController::class, 'update'])->name('empleados.update');
     Route::patch('/empleados/{empleado}/toggle-status', [EmpleadoController::class, 'toggleStatus'])->name('empleados.toggle-status');
+    Route::patch('/empleados/{empleado}/toggle-app-movil', [EmpleadoController::class, 'toggleAppMovil'])->name('empleados.toggle-app-movil');
 });
 
 Route::middleware(['permission:empleados.delete'])->group(function () {

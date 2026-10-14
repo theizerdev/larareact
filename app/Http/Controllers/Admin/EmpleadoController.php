@@ -106,6 +106,11 @@ class EmpleadoController extends Controller
         $data['foto_documento'] = $this->handleImageUpload($request->input('foto_documento'), 'foto_documento');
         $data['foto_documento_reverso'] = $this->handleImageUpload($request->input('foto_documento_reverso'), 'foto_documento_reverso');
 
+        $data['permite_app_movil'] = $request->boolean('permite_app_movil');
+        $data['intervalo_geolocalizacion_minutos'] = $request->filled('intervalo_geolocalizacion_minutos')
+            ? (int) $request->input('intervalo_geolocalizacion_minutos')
+            : 15;
+
         $empleado = AccessCodeService::createWithRetry(fn () => Empleado::create($data));
 
         // Validación de identidad (KYC) contra JAAK si la empresa la tiene activa.
@@ -326,6 +331,13 @@ class EmpleadoController extends Controller
             }
         }
 
+        if ($request->has('permite_app_movil')) {
+            $data['permite_app_movil'] = $request->boolean('permite_app_movil');
+        }
+        if ($request->filled('intervalo_geolocalizacion_minutos')) {
+            $data['intervalo_geolocalizacion_minutos'] = (int) $request->input('intervalo_geolocalizacion_minutos');
+        }
+
         $empleado->update($data);
 
         // Sincronizar vehículos
@@ -369,6 +381,22 @@ class EmpleadoController extends Controller
         return back()->with('notification', [
             'type' => 'success',
             'message' => __('Status updated successfully.'),
+        ]);
+    }
+
+    public function toggleAppMovil(Empleado $empleado)
+    {
+        $nuevoEstatus = ! $empleado->permite_app_movil;
+        $empleado->update([
+            'permite_app_movil' => $nuevoEstatus,
+            'intervalo_geolocalizacion_minutos' => $empleado->intervalo_geolocalizacion_minutos ?: 15,
+        ]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => $nuevoEstatus
+                ? 'Acceso a la app móvil activado para el empleado.'
+                : 'Acceso a la app móvil desactivado para el empleado.',
         ]);
     }
 

@@ -58,6 +58,8 @@ class EmpleadoRequest extends FormRequest
             'sucursal_id' => 'required|exists:sucursales,id',
             'user_id' => 'required|exists:users,id',
             'status' => 'nullable|integer|in:0,1',
+            'permite_app_movil' => 'nullable|boolean',
+            'intervalo_geolocalizacion_minutos' => 'nullable|integer|min:1|max:1440',
         ];
     }
 

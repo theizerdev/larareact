@@ -144,6 +144,14 @@ class KioskoApiController extends Controller
             ], 404);
         }
 
+        if (! $empleado->permite_app_movil) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permiso para utilizar la app móvil. Contacta a Recursos Humanos.',
+                'permite_app_movil' => false,
+            ], 403);
+        }
+
         $ultimoMarcaje = AsistenciaMarcaje::where('empleado_id', $empleado->id)
             ->whereDate('fecha_hora', Carbon::today())
             ->latest('fecha_hora')
@@ -176,7 +184,10 @@ class KioskoApiController extends Controller
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
                 'foto_empleado' => $empleado->foto_empleado ? asset('storage/'.$empleado->foto_empleado) : null,
                 'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
+                'permite_app_movil' => (bool) $empleado->permite_app_movil,
+                'intervalo_geolocalizacion_minutos' => $empleado->intervalo_geolocalizacion_minutos ?? 15,
             ],
+            'intervalo_geolocalizacion_minutos' => $empleado->intervalo_geolocalizacion_minutos ?? 15,
             'ultimo_marcaje' => $ultimoMarcaje ? [
                 'tipo' => $ultimoMarcaje->tipo_marcaje,
                 'hora' => Carbon::parse($ultimoMarcaje->fecha_hora)->format('H:i:s'),
@@ -216,6 +227,12 @@ class KioskoApiController extends Controller
                     'success' => false,
                     'message' => 'Empleado no encontrado o inactivo.',
                 ], 404);
+            }
+            if (! $propioEmpleado->permite_app_movil) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para registrar marcajes desde la app móvil.',
+                ], 403);
             }
             $empleado = $propioEmpleado;
         } else {

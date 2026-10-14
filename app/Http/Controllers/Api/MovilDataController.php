@@ -67,6 +67,8 @@ class MovilDataController extends Controller
                 'cargo' => $e->cargo?->nombre,
                 'foto_empleado' => $e->foto_empleado ? Storage::url($e->foto_empleado) : null,
                 'status' => (bool) $e->status,
+                'permite_app_movil' => (bool) $e->permite_app_movil,
+                'intervalo_geolocalizacion_minutos' => $e->intervalo_geolocalizacion_minutos ?? 15,
             ]);
 
         return response()->json([
@@ -140,6 +142,8 @@ class MovilDataController extends Controller
             'salario_diario' => $e->salario_diario,
             'foto_empleado' => $e->foto_empleado ? Storage::url($e->foto_empleado) : null,
             'status' => (bool) $e->status,
+            'permite_app_movil' => (bool) $e->permite_app_movil,
+            'intervalo_geolocalizacion_minutos' => $e->intervalo_geolocalizacion_minutos ?? 15,
         ]);
     }
 

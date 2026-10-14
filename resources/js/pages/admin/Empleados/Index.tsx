@@ -25,6 +25,9 @@ import {
     Send,
     FileSpreadsheet,
     Sparkles,
+    Smartphone,
+    MapPin,
+    Clock,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -147,6 +150,8 @@ interface Empleado {
     sucursal_id: number;
     user_id: number;
     status: boolean;
+    permite_app_movil?: boolean;
+    intervalo_geolocalizacion_minutos?: number | null;
     pais_telefono?: Pais | null;
     departamento?: Departamento | null;
     responsable?: Responsable | null;
@@ -228,6 +233,8 @@ const initialForm = {
     sucursal_id: '' as string | number,
     user_id: '' as string | number,
     status: 1 as number,
+    permite_app_movil: false,
+    intervalo_geolocalizacion_minutos: 15,
 };
 
 // ─── Componente de Captura de Cámara Integrado ───────────────────────────────
@@ -541,6 +548,8 @@ export default function EmpleadosIndexPage({
             foto_empleado_2: null,
             foto_documento_reverso: null,
             vehiculos: [],
+            permite_app_movil: false,
+            intervalo_geolocalizacion_minutos: 15,
         }));
 
         setActiveTab('general');
@@ -574,6 +583,8 @@ export default function EmpleadosIndexPage({
             sucursal_id: emp.sucursal_id || '',
             user_id: emp.user_id || '',
             status: emp.status ? 1 : 0,
+            permite_app_movil: Boolean(emp.permite_app_movil),
+            intervalo_geolocalizacion_minutos: emp.intervalo_geolocalizacion_minutos ?? 15,
         });
         setActiveTab('general');
         setActiveCameraField(null);
@@ -613,6 +624,13 @@ export default function EmpleadosIndexPage({
         router.patch(`/admin/empleados/${emp.id}/toggle-status`, {}, {
             preserveScroll: true,
             onSuccess: () => notifySuccess(__('Status updated successfully.')),
+        });
+    };
+
+    const handleToggleAppMovil = (emp: Empleado) => {
+        router.patch(`/admin/empleados/${emp.id}/toggle-app-movil`, {}, {
+            preserveScroll: true,
+            onSuccess: () => notifySuccess(__('Mobile app access updated successfully.')),
         });
     };
 
@@ -785,6 +803,36 @@ export default function EmpleadosIndexPage({
             ),
         },
         {
+            header: __('App Móvil'),
+            hideOn: 'mobile',
+            stopRowClick: true,
+            cell: (emp) => (
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            checked={Boolean(emp.permite_app_movil)}
+                            onCheckedChange={() => handleToggleAppMovil(emp)}
+                        />
+                        <span className={cn(
+                            'text-xs font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1',
+                            emp.permite_app_movil
+                                ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-800'
+                                : 'bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900/30 dark:text-slate-400 dark:border-slate-800'
+                        )}>
+                            <Smartphone className="w-3 h-3" />
+                            {emp.permite_app_movil ? 'Permitido' : 'Bloqueado'}
+                        </span>
+                    </div>
+                    {emp.permite_app_movil && (
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-mono pl-1">
+                            <Clock className="w-2.5 h-2.5 text-indigo-500" />
+                            GPS: c/{emp.intervalo_geolocalizacion_minutos || 15} min
+                        </span>
+                    )}
+                </div>
+            ),
+        },
+        {
             header: 'Actions',
             className: 'text-right',
             hideable: false,
@@ -808,6 +856,10 @@ export default function EmpleadosIndexPage({
                         <DropdownMenuItem onClick={() => router.post(`/admin/empleados/${emp.id}/enviar-carnet`)}>
                             <Send className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                             {__('Enviar Carnet por WhatsApp')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleToggleAppMovil(emp)}>
+                            <Smartphone className="mr-2 h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                            {emp.permite_app_movil ? 'Desactivar App Móvil' : 'Permitir App Móvil'}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(emp)}>
                             <ToggleRight className="mr-2 h-4 w-4" />
@@ -974,20 +1026,24 @@ export default function EmpleadosIndexPage({
                         </DialogHeader>
 
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-2">
-                            <TabsList className="grid grid-cols-4 w-full mb-6">
-                                <TabsTrigger value="general" className="flex items-center gap-2">
+                            <TabsList className="grid grid-cols-5 w-full mb-6">
+                                <TabsTrigger value="general" className="flex items-center gap-1.5 text-xs sm:text-sm">
                                     <UserIcon className="h-4 w-4" />
                                     {__('General')}
                                 </TabsTrigger>
-                                <TabsTrigger value="laboral" className="flex items-center gap-2">
+                                <TabsTrigger value="laboral" className="flex items-center gap-1.5 text-xs sm:text-sm">
                                     <Briefcase className="h-4 w-4" />
                                     {__('Job Position')}
                                 </TabsTrigger>
-                                <TabsTrigger value="fotos" className="flex items-center gap-2">
+                                <TabsTrigger value="movil" className="flex items-center gap-1.5 text-xs sm:text-sm">
+                                    <Smartphone className="h-4 w-4 text-indigo-500" />
+                                    App Móvil
+                                </TabsTrigger>
+                                <TabsTrigger value="fotos" className="flex items-center gap-1.5 text-xs sm:text-sm">
                                     <Camera className="h-4 w-4" />
                                     {__('Photographs')}
                                 </TabsTrigger>
-                                <TabsTrigger value="vehiculos" className="flex items-center gap-2">
+                                <TabsTrigger value="vehiculos" className="flex items-center gap-1.5 text-xs sm:text-sm">
                                     <Car className="h-4 w-4" />
                                     {__('Vehicles')}
                                 </TabsTrigger>
@@ -1423,6 +1479,150 @@ export default function EmpleadosIndexPage({
                                             ))}
                                         </div>
                                     </div>
+                                </div>
+                            </TabsContent>
+
+                            {/* ══ Tab: App Móvil (Acceso y Verificación GPS) ═════════════════════════════════ */}
+                            <TabsContent value="movil" className="space-y-6">
+                                <div className="rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/50 via-white to-slate-50 dark:from-indigo-950/20 dark:via-slate-900/40 dark:to-slate-900/20 p-5 space-y-4 shadow-sm">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-indigo-100 dark:border-indigo-900/40">
+                                        <div className="flex items-start gap-3">
+                                            <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                                <Smartphone className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-semibold text-base text-slate-800 dark:text-slate-100">
+                                                        Autorización para la App Móvil
+                                                    </h3>
+                                                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                                        Exclusivo App Móvil
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
+                                                    Indica si el sistema le permite a este colaborador iniciar sesión, checar asistencia y reportar su ubicación geográfica desde la aplicación móvil.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 self-end sm:self-center">
+                                            <Switch
+                                                id="permite_app_movil"
+                                                checked={Boolean(data.permite_app_movil)}
+                                                onCheckedChange={(checked) => setData('permite_app_movil', checked)}
+                                            />
+                                            <Label htmlFor="permite_app_movil" className="font-semibold text-sm cursor-pointer select-none">
+                                                {data.permite_app_movil ? 'Acceso Permitido' : 'Acceso Denegado'}
+                                            </Label>
+                                        </div>
+                                    </div>
+
+                                    {/* Si está permitido el acceso a la app móvil */}
+                                    {data.permite_app_movil ? (
+                                        <div className="space-y-4 pt-2">
+                                            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 space-y-4">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                                        <MapPin className="w-5 h-5" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center justify-between">
+                                                            <Label htmlFor="custom_intervalo" className="font-semibold text-sm text-slate-800 dark:text-slate-200">
+                                                                Frecuencia de Verificación de Ubicación (GPS)
+                                                            </Label>
+                                                            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                                                                Cada {data.intervalo_geolocalizacion_minutos || 15} minutos
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                                            Define cada cuántos minutos el sistema y la app móvil verificarán y actualizarán la ubicación geográfica de este colaborador.
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Botones de selección rápida (Presets) */}
+                                                <div>
+                                                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-2">
+                                                        Intervalos predeterminados sugeridos:
+                                                    </span>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {[
+                                                            { min: 5, label: '5 min (Rastreo continuo / Campo)' },
+                                                            { min: 10, label: '10 min' },
+                                                            { min: 15, label: '15 min (Recomendado)' },
+                                                            { min: 30, label: '30 min (Equilibrado)' },
+                                                            { min: 60, label: '60 min (1 hora)' },
+                                                            { min: 120, label: '120 min (2 horas)' },
+                                                        ].map((preset) => (
+                                                            <button
+                                                                key={preset.min}
+                                                                type="button"
+                                                                onClick={() => setData('intervalo_geolocalizacion_minutos', preset.min)}
+                                                                className={cn(
+                                                                    'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
+                                                                    Number(data.intervalo_geolocalizacion_minutos) === preset.min
+                                                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                                                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/60'
+                                                                )}
+                                                            >
+                                                                {preset.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Input para intervalo personalizado */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                                    <div>
+                                                        <Label htmlFor="custom_intervalo" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                                                            Intervalo en minutos (Personalizado)
+                                                        </Label>
+                                                        <div className="relative mt-1">
+                                                            <Input
+                                                                id="custom_intervalo"
+                                                                type="number"
+                                                                min="1"
+                                                                max="1440"
+                                                                value={data.intervalo_geolocalizacion_minutos || 15}
+                                                                onChange={(e) => setData('intervalo_geolocalizacion_minutos', parseInt(e.target.value) || 15)}
+                                                                className="font-mono pr-16"
+                                                                placeholder="15"
+                                                            />
+                                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground select-none">
+                                                                minutos
+                                                            </span>
+                                                        </div>
+                                                        {errors.intervalo_geolocalizacion_minutos && (
+                                                            <p className="text-red-500 text-xs mt-1">{errors.intervalo_geolocalizacion_minutos}</p>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-200/60 dark:border-slate-800">
+                                                        <Clock className="w-4 h-4 text-indigo-500 shrink-0" />
+                                                        <span>
+                                                            La app móvil utilizará este valor ({data.intervalo_geolocalizacion_minutos || 15} min) para programar la verificación de coordenadas GPS periódica mientras el usuario tenga la app activa.
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-start gap-2 p-3 text-xs bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-800 dark:text-amber-300">
+                                                <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                                                <span>
+                                                    <strong>Nota importante:</strong> Esta configuración aplica exclusivamente a la aplicación móvil. El empleado podrá checar normalmente en kioskos físicos de garita o pared.
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/30 text-xs text-slate-600 dark:text-slate-400 space-y-1">
+                                            <p className="font-semibold text-slate-800 dark:text-slate-200">
+                                                Acceso móvil denegado
+                                            </p>
+                                            <p>
+                                                El colaborador no podrá registrar asistencia ni consultar sus datos desde la aplicación móvil. Los intentos de inicio de sesión con su número de empleado serán rechazados con aviso de autorización requerida.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </TabsContent>
 
