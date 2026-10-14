@@ -46,6 +46,8 @@ class AsistenciaMarcaje extends Model
         'registrado_por_user_id',
         'incidente_causa',
         'duracion_descanso_minutos',
+        'comida_tipo',
+        'comida_costo',
         'geolocalizacion',
         'tipo_entrada',
     ];
@@ -54,12 +56,49 @@ class AsistenciaMarcaje extends Model
         'fecha_hora_local',
     ];
 
+    /**
+     * Orígenes del marcaje agrupados como se muestran en la bitácora. La llave
+     * es el valor del filtro; 'valores' son los que puede traer la columna
+     * origen (incluye los históricos, p. ej. 'biotime' de los relojes físicos).
+     */
+    public const ORIGENES = [
+        'kiosko' => ['label' => 'Kiosko Checador', 'valores' => ['kiosko', 'kiosko_tactil']],
+        'reloj_checador' => ['label' => 'Reloj Checador', 'valores' => ['reloj_checador', 'reloj', 'biotime']],
+        'app' => ['label' => 'App Smurfit', 'valores' => ['app', 'app_movil', 'app_smurfit']],
+        'app_biotime' => ['label' => 'App BioTime', 'valores' => ['app_biotime', 'biotime_app']],
+        'garita' => ['label' => 'Garita de Acceso', 'valores' => ['garita']],
+    ];
+
+    public static function labelOrigen(?string $origen): string
+    {
+        if (blank($origen)) {
+            return 'N/A';
+        }
+
+        foreach (self::ORIGENES as $grupo) {
+            if (in_array($origen, $grupo['valores'], true)) {
+                return $grupo['label'];
+            }
+        }
+
+        return ucfirst(str_replace('_', ' ', $origen));
+    }
+
+    /**
+     * Filtra por la llave de ORIGENES (o por el valor exacto si no es una llave).
+     */
+    public function scopeDeOrigen($query, string $origen)
+    {
+        return $query->whereIn('origen', self::ORIGENES[$origen]['valores'] ?? [$origen]);
+    }
+
     protected function casts(): array
     {
         return [
             'fecha_hora' => 'datetime',
             'latitud' => 'decimal:7',
             'longitud' => 'decimal:7',
+            'comida_costo' => 'decimal:2',
         ];
     }
 

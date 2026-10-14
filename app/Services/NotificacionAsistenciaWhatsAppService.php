@@ -34,7 +34,7 @@ class NotificacionAsistenciaWhatsAppService
 
             $horaFormatted = Carbon::parse($marcaje->fecha_hora)->format('H:i');
             $fechaFormatted = Carbon::parse($marcaje->fecha_hora)->format('d/m/Y');
-            $origenNombre = ucfirst($marcaje->origen ?? 'kiosko');
+            $origenNombre = \App\Models\AsistenciaMarcaje::labelOrigen($marcaje->origen ?? 'kiosko');
 
             $ws = new WhatsAppService($empresa);
 
