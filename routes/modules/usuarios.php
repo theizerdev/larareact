@@ -9,4 +9,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/usuarios/{user}', [UserController::class, 'update'])->name('usuarios.update');
     Route::delete('/usuarios/{user}', [UserController::class, 'destroy'])->name('usuarios.destroy');
     Route::patch('/usuarios/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('usuarios.toggle-status');
+    Route::post('/usuarios/{user}/unlock', [UserController::class, 'unlock'])->name('usuarios.unlock');
 });

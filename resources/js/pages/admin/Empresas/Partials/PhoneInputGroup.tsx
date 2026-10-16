@@ -1,25 +1,11 @@
 import { ChevronDown, Search } from 'lucide-react';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Genera el emoji de bandera a partir del código ISO2 del país.
- * Funciona combinando los Regional Indicator Symbols de cada letra.
- */
-function getFlagEmoji(iso2?: string | null): string {
-    if (!iso2 || iso2.length !== 2) {
-return '🌐';
-}
 
-    return iso2
-        .toUpperCase()
-        .split('')
-        .map((c) => String.fromCodePoint(0x1f1e6 + (c.charCodeAt(0) - 65)))
-        .join('');
-}
 
 /**
  * Normaliza el código telefónico: quita cualquier '+' inicial y devuelve '+XX'.
@@ -74,7 +60,6 @@ export default function PhoneInputGroup({
     const containerRef = useRef<HTMLDivElement>(null);
 
     const selectedPais = paises.find((p) => p.id === Number(selectedPaisId));
-    const flag = getFlagEmoji(selectedPais?.codigo_iso2);
     const code = formatCode(selectedPais?.codigo_telefonico);
 
     // Filtra países por nombre, código ISO2 o código telefónico
@@ -98,6 +83,7 @@ return paises;
         const handler = (e: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
                 setIsOpen(false);
+                setSearch('');
             }
         };
         document.addEventListener('mousedown', handler);
@@ -105,18 +91,19 @@ return paises;
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Enfoca el buscador al abrir y limpia al cerrar
+    // Enfoca el buscador al abrir
     useEffect(() => {
         if (isOpen) {
-            setTimeout(() => searchRef.current?.focus(), 60);
-        } else {
-            setSearch('');
+            const timer = setTimeout(() => searchRef.current?.focus(), 60);
+
+            return () => clearTimeout(timer);
         }
     }, [isOpen]);
 
     const handleSelect = (paisId: string | number) => {
         onPaisChange(paisId);
         setIsOpen(false);
+        setSearch('');
     };
 
     return (
@@ -141,8 +128,12 @@ return paises;
                         'focus:outline-none',
                     )}
                 >
-                    <span className="text-base leading-none select-none">
-                        {selectedPaisId ? flag : '🌐'}
+                    <span className="flex items-center justify-center w-5 select-none shrink-0">
+                        {selectedPais?.codigo_iso2 ? (
+                            <span className={cn('fi', `fi-${selectedPais.codigo_iso2.toLowerCase()}`, 'rounded-[2px] shadow-2xs')} />
+                        ) : (
+                            <span className="text-sm">🌐</span>
+                        )}
                     </span>
                     <span className="tabular-nums text-xs text-muted-foreground min-w-[32px]">
                         {code || '+ --'}
@@ -230,8 +221,12 @@ return paises;
                                         isSelected && 'bg-accent/60 font-medium',
                                     )}
                                 >
-                                    <span className="text-base w-6 leading-none select-none shrink-0">
-                                        {getFlagEmoji(pais.codigo_iso2)}
+                                    <span className="flex items-center justify-center w-5 select-none shrink-0">
+                                        {pais.codigo_iso2 ? (
+                                            <span className={cn('fi', `fi-${pais.codigo_iso2.toLowerCase()}`, 'rounded-[2px] shadow-2xs')} />
+                                        ) : (
+                                            <span className="text-sm">🌐</span>
+                                        )}
                                     </span>
                                     <span className="flex-1 truncate">{pais.nombre}</span>
                                     {pais.codigo_telefonico && (

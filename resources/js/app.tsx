@@ -1,4 +1,5 @@
 import { createInertiaApp } from '@inertiajs/react';
+import 'flag-icons/css/flag-icons.min.css';
 import ErrorBoundary from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';

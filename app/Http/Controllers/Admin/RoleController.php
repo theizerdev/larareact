@@ -17,26 +17,26 @@ class RoleController extends Controller
     {
         $search = $request->input('search');
 
-        $query = Role::with('users');
+        $query = Role::with(['users', 'permissions'])->orderBy('name');
 
         if ($search) {
             $query->where('name', 'like', "%{$search}%");
         }
 
-        $roles = $query->get()->map(function ($role) {
+        $formatPermission = fn ($permission) => [
+            'id' => $permission->id,
+            'name' => $permission->name,
+            'slug' => $permission->slug ?: $permission->name,
+            'module' => $permission->module,
+            'sector' => $permission->sector,
+        ];
+
+        $roles = $query->get()->map(function ($role) use ($formatPermission) {
             $users = $role->users->take(5);
             $moreUsersCount = $role->users->count() - $users->count();
 
             $permissionsPreview = $role->permissions->take(3);
             $morePermissionsCount = $role->permissions->count() - $permissionsPreview->count();
-
-            $allPermissions = $role->permissions->map(function ($permission) {
-                return [
-                    'id' => $permission->id,
-                    'name' => $permission->name,
-                    'slug' => str($permission->name)->limit(10, '...'),
-                ];
-            });
 
             return [
                 'id' => $role->id,
@@ -44,12 +44,12 @@ class RoleController extends Controller
                 'users_count' => $role->users->count(),
                 'permissions_count' => $role->permissions->count(),
                 'users' => $users->map(function ($user) {
-                    $nameParts = explode(' ', $user->name, 2);
+                    $nameParts = explode(' ', trim($user->name), 2);
                     $firstName = $nameParts[0] ?? '';
                     $lastName = $nameParts[1] ?? '';
-                    $initials = strtoupper(
-                        ($firstName ? substr($firstName, 0, 1) : '').
-                        ($lastName ? substr($lastName, 0, 1) : '')
+                    $initials = mb_strtoupper(
+                        ($firstName ? mb_substr($firstName, 0, 1) : '').
+                        ($lastName ? mb_substr($lastName, 0, 1) : '')
                     );
 
                     return [
@@ -57,24 +57,24 @@ class RoleController extends Controller
                         'name' => $user->name,
                         'initials' => $initials,
                     ];
-                }),
+                })->values(),
                 'more_users_count' => $moreUsersCount,
-                'permissions' => $permissionsPreview->map(function ($permission) {
-                    return [
-                        'id' => $permission->id,
-                        'name' => $permission->name,
-                        'slug' => str($permission->name)->limit(10, '...'),
-                    ];
-                }),
+                'permissions' => $permissionsPreview->map($formatPermission)->values(),
                 'more_permissions_count' => $morePermissionsCount,
-                'all_permissions' => $allPermissions,
+                'all_permissions' => $role->permissions->map($formatPermission)->values(),
+                'sector_counts' => $role->permissions->groupBy('sector')->map->count(),
                 'is_super_admin' => $this->isSuperAdminRole($role),
+                'created_at' => $role->created_at?->toIso8601String(),
             ];
         });
 
         $stats = [
             'total' => Role::count(),
             'permissions_total' => Permission::count(),
+            'users_with_roles' => DB::table(config('permission.table_names.model_has_roles', 'model_has_roles'))
+                ->distinct()
+                ->count('model_id'),
+            'roles_without_users' => Role::doesntHave('users')->count(),
         ];
 
         $groupedPermissions = $this->getPermissionsBySector();

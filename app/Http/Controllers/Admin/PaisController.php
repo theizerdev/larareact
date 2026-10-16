@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\Pais;
+use App\Models\Sucursal;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -14,31 +17,54 @@ class PaisController extends Controller
     {
         $search = $request->input('search');
         $status = $request->input('status');
-        $perPage = $request->input('perPage', 10);
-        $sortBy = $request->input('sortBy');
-        $sortDir = $request->input('sortDir', 'asc');
+        $continente = $request->input('continente');
+        $perPage = (int) $request->input('perPage', 10);
+        $sortBy = $request->input('sortBy', 'nombre');
+        $sortDir = strtolower($request->input('sortDir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
-        $query = Pais::query();
+        $query = Pais::withCount(['empresas']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('nombre', 'like', "%{$search}%")
                     ->orWhere('codigo_iso2', 'like', "%{$search}%")
                     ->orWhere('codigo_iso3', 'like', "%{$search}%")
-                    ->orWhere('moneda_principal', 'like', "%{$search}%");
+                    ->orWhere('codigo_telefonico', 'like', "%{$search}%")
+                    ->orWhere('moneda_principal', 'like', "%{$search}%")
+                    ->orWhere('continente', 'like', "%{$search}%");
             });
         }
 
         if ($status !== null && $status !== '') {
-            $query->where('activo', $status);
+            if ($status === '1' || $status === '0') {
+                $query->where('activo', (bool) (int) $status);
+            } elseif ($status === 'con_empresas') {
+                $query->has('empresas');
+            } elseif ($status === 'con_telefono') {
+                $query->whereNotNull('codigo_telefonico')->where('codigo_telefonico', '!=', '');
+            }
         }
 
-        // Aplicamos ordenamiento dinámico seguro
-        $allowedSortColumns = ['nombre', 'codigo_iso2', 'codigo_iso3', 'activo'];
-        if ($sortBy && in_array($sortBy, $allowedSortColumns)) {
-            $query->orderBy($sortBy, $sortDir === 'desc' ? 'desc' : 'asc');
+        if ($continente) {
+            $query->where('continente', $continente);
+        }
+
+        $allowedSortColumns = [
+            'nombre',
+            'codigo_iso2',
+            'codigo_iso3',
+            'codigo_telefonico',
+            'moneda_principal',
+            'continente',
+            'activo',
+            'empresas_count',
+            'created_at',
+        ];
+
+        if (in_array($sortBy, $allowedSortColumns, true)) {
+            $query->orderBy($sortBy, $sortDir);
         } else {
-            $query->orderBy('nombre', 'asc'); // Orden por defecto
+            $query->orderBy('nombre', 'asc');
         }
 
         $paises = $query->paginate($perPage)->withQueryString();
@@ -47,12 +73,21 @@ class PaisController extends Controller
             'total' => Pais::count(),
             'activos' => Pais::where('activo', true)->count(),
             'inactivos' => Pais::where('activo', false)->count(),
+            'con_empresas' => Pais::has('empresas')->count(),
+            'con_telefono' => Pais::whereNotNull('codigo_telefonico')->where('codigo_telefonico', '!=', '')->count(),
         ];
+
+        $continentes = Pais::whereNotNull('continente')
+            ->where('continente', '!=', '')
+            ->distinct()
+            ->orderBy('continente', 'asc')
+            ->pluck('continente');
 
         return inertia('admin/Paises/Index', [
             'paises' => $paises,
             'stats' => $stats,
-            'filters' => $request->only(['search', 'status', 'perPage', 'sortBy', 'sortDir']),
+            'continentes' => $continentes,
+            'filters' => $request->only(['search', 'status', 'continente', 'perPage', 'sortBy', 'sortDir']),
         ]);
     }
 
@@ -136,6 +171,37 @@ class PaisController extends Controller
         }
     }
 
+    public function destroy(Pais $pais)
+    {
+        try {
+            $isReferenced = Empresa::where('pais_id', $pais->id)->exists()
+                || Empresa::where('pais_telefono_id', $pais->id)->exists()
+                || Sucursal::where('pais_telefono_id', $pais->id)->exists()
+                || User::where('pais_telefono_id', $pais->id)->exists();
+
+            if ($isReferenced) {
+                return back()->with('notification', [
+                    'type' => 'error',
+                    'message' => __('Cannot delete this country because it is referenced by companies, branches or users.'),
+                ]);
+            }
+
+            $pais->delete();
+
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Country deleted successfully.'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al eliminar el país {$pais->id}: ".$e->getMessage());
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('There was an error deleting the country. Please try again.'),
+            ]);
+        }
+    }
+
     public function toggleStatus(Pais $pais)
     {
         try {
@@ -163,16 +229,43 @@ class PaisController extends Controller
             'ids.*' => 'exists:pais,id',
         ]);
 
+        $ids = $validated['ids'];
+        $referenced = [];
+
+        foreach ($ids as $id) {
+            if (
+                Empresa::where('pais_id', $id)->exists()
+                || Empresa::where('pais_telefono_id', $id)->exists()
+                || Sucursal::where('pais_telefono_id', $id)->exists()
+                || User::where('pais_telefono_id', $id)->exists()
+            ) {
+                $referenced[] = $id;
+            }
+        }
+
+        $deletable = array_values(array_diff($ids, $referenced));
+
+        if (empty($deletable)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Selected countries cannot be deleted because they are referenced by existing companies, branches or users.'),
+            ]);
+        }
+
         DB::beginTransaction();
 
         try {
-            Pais::destroy($validated['ids']);
+            Pais::destroy($deletable);
 
             DB::commit();
 
-            $message = count($validated['ids']) > 1
+            $message = count($deletable) > 1
                 ? __('Selected countries have been deleted successfully.')
                 : __('Selected country has been deleted successfully.');
+
+            if (! empty($referenced)) {
+                $message .= ' '.count($referenced).' '.__('countries could not be deleted because they have associated records.');
+            }
 
             return back()->with('notification', [
                 'type' => 'success',

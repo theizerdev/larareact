@@ -59,4 +59,12 @@ class Sucursal extends Model
     {
         return $this->belongsTo(Pais::class, 'pais_telefono_id');
     }
+
+    /**
+     * Get the users assigned to this sucursal.
+     */
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
 }

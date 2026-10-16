@@ -16,9 +16,11 @@ class EmpresaController extends Controller
     {
         $search = $request->input('search');
         $status = $request->input('status');
-        $perPage = $request->input('perPage', 10);
+        $perPage = (int) $request->input('perPage', 10);
+        $sortBy = $request->input('sortBy', 'razon_social');
+        $sortDir = strtolower($request->input('sortDir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
-        $query = Empresa::with('pais');
+        $query = Empresa::with('pais')->withCount(['sucursales', 'users']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -28,20 +30,36 @@ class EmpresaController extends Controller
                     ->orWhere('representante_legal', 'like', "%{$search}%")
                     ->orWhere('curp_representante_legal', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('telefono', 'like', "%{$search}%");
+                    ->orWhere('telefono', 'like', "%{$search}%")
+                    ->orWhere('direccion', 'like', "%{$search}%");
             });
         }
 
         if ($status !== null && $status !== '') {
-            $query->where('status', $status);
+            if ($status === '1' || $status === '0') {
+                $query->where('status', (bool) (int) $status);
+            } elseif ($status === 'con_sucursales') {
+                $query->has('sucursales');
+            } elseif ($status === 'con_usuarios') {
+                $query->has('users');
+            }
         }
 
-        $empresas = $query->orderBy('razon_social', 'asc')->paginate($perPage)->withQueryString();
+        $allowedSort = ['razon_social', 'nombre_comercial', 'documento', 'status', 'created_at', 'sucursales_count', 'users_count'];
+        if (in_array($sortBy, $allowedSort, true)) {
+            $query->orderBy($sortBy, $sortDir);
+        } else {
+            $query->orderBy('razon_social', 'asc');
+        }
+
+        $empresas = $query->paginate($perPage)->withQueryString();
 
         $stats = [
             'total' => Empresa::count(),
             'activos' => Empresa::where('status', true)->count(),
             'inactivos' => Empresa::where('status', false)->count(),
+            'con_sucursales' => Empresa::has('sucursales')->count(),
+            'con_usuarios' => Empresa::has('users')->count(),
         ];
 
         return inertia('admin/Empresas/Index', [
@@ -50,7 +68,7 @@ class EmpresaController extends Controller
             'paises' => Pais::where('activo', true)
                 ->orderBy('nombre', 'asc')
                 ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico', 'latitud', 'longitud']),
-            'filters' => $request->only(['search', 'status', 'perPage']),
+            'filters' => $request->only(['search', 'status', 'perPage', 'sortBy', 'sortDir']),
         ]);
     }
 
@@ -61,6 +79,7 @@ class EmpresaController extends Controller
             'nombre_comercial' => 'nullable|string|max:255',
             'documento' => 'required|string|max:255|unique:empresas,documento',
             'pais_id' => 'nullable|exists:pais,id',
+            'pais_telefono_id' => 'nullable|exists:pais,id',
             'direccion' => 'nullable|string',
             'latitud' => 'nullable|numeric',
             'longitud' => 'nullable|numeric',
@@ -99,6 +118,7 @@ class EmpresaController extends Controller
             'nombre_comercial' => 'nullable|string|max:255',
             'documento' => 'required|string|max:255|unique:empresas,documento,'.$empresa->id,
             'pais_id' => 'nullable|exists:pais,id',
+            'pais_telefono_id' => 'nullable|exists:pais,id',
             'direccion' => 'nullable|string',
             'latitud' => 'nullable|numeric',
             'longitud' => 'nullable|numeric',
@@ -125,6 +145,39 @@ class EmpresaController extends Controller
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('There was an error updating the company. Please try again.'),
+            ]);
+        }
+    }
+
+    public function destroy(Empresa $empresa)
+    {
+        try {
+            if ($empresa->sucursales()->exists()) {
+                return back()->with('notification', [
+                    'type' => 'error',
+                    'message' => __('Cannot delete this company because it has registered branches.'),
+                ]);
+            }
+
+            if ($empresa->users()->exists()) {
+                return back()->with('notification', [
+                    'type' => 'error',
+                    'message' => __('Cannot delete this company because it has associated users.'),
+                ]);
+            }
+
+            $empresa->delete();
+
+            return back()->with('notification', [
+                'type' => 'success',
+                'message' => __('Company deleted successfully.'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al eliminar empresa {$empresa->id}: ".$e->getMessage());
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('There was an error deleting the company. Please try again.'),
             ]);
         }
     }

@@ -41,7 +41,13 @@ class UserController extends Controller
         }
 
         if ($status) {
-            $query->where('status', $status);
+            if ($status === 'bloqueado') {
+                $query->whereNotNull('locked_until')->where('locked_until', '>', now());
+            } elseif ($status === '2fa') {
+                $query->whereNotNull('two_factor_confirmed_at');
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         if ($empresaId) {
@@ -52,7 +58,11 @@ class UserController extends Controller
             $query->role($roleName);
         }
 
-        $users = $query->latest()->paginate($perPage)->withQueryString();
+        $sortable = ['name', 'email', 'status', 'created_at'];
+        $sortBy = in_array($request->input('sortBy'), $sortable, true) ? $request->input('sortBy') : 'created_at';
+        $sortDir = $request->input('sortDir') === 'asc' ? 'asc' : 'desc';
+
+        $users = $query->orderBy($sortBy, $sortDir)->paginate($perPage)->withQueryString();
 
         // Enrich items with SOX status attributes
         $users->getCollection()->transform(function (User $user) use ($soxConfig) {
@@ -60,6 +70,7 @@ class UserController extends Controller
             $user->setAttribute('lockout_remaining_minutes', $user->lockoutRemainingMinutes());
             $user->setAttribute('days_remaining', $user->daysUntilPasswordExpires($soxConfig->password_expires_days));
             $user->setAttribute('is_expired', $user->isPasswordExpired($soxConfig->password_expires_days));
+            $user->setAttribute('has_2fa', !is_null($user->two_factor_confirmed_at));
             return $user;
         });
 
@@ -67,6 +78,9 @@ class UserController extends Controller
             'total' => User::count(),
             'activos' => User::where('status', 'activo')->count(),
             'inactivos' => User::where('status', 'inactivo')->count(),
+            'suspendidos' => User::where('status', 'suspendido')->count(),
+            'bloqueados' => User::whereNotNull('locked_until')->where('locked_until', '>', now())->count(),
+            'con_2fa' => User::whereNotNull('two_factor_confirmed_at')->count(),
         ];
 
         return inertia('admin/Usuarios/Index', [
@@ -83,7 +97,7 @@ class UserController extends Controller
             'paises' => Pais::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
-            'filters' => $request->only(['search', 'status', 'role', 'empresa_id', 'perPage']),
+            'filters' => $request->only(['search', 'status', 'role', 'empresa_id', 'perPage', 'sortBy', 'sortDir']),
         ]);
     }
 
@@ -205,8 +219,15 @@ class UserController extends Controller
         ]);
     }
 
-    public function destroy(User $user)
+    public function destroy(Request $request, User $user)
     {
+        if ($request->user()?->is($user)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('You cannot delete your own account.'),
+            ]);
+        }
+
         try {
             $user->delete();
 
@@ -224,8 +245,15 @@ class UserController extends Controller
         }
     }
 
-    public function toggleStatus(User $user)
+    public function toggleStatus(Request $request, User $user)
     {
+        if ($request->user()?->is($user)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('You cannot deactivate your own account.'),
+            ]);
+        }
+
         try {
             $user->status = $user->status === 'activo' ? 'inactivo' : 'activo';
             $user->save();

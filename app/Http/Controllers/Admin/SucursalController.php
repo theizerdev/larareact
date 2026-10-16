@@ -18,8 +18,11 @@ class SucursalController extends Controller
         $status = $request->input('status');
         $empresaId = $request->input('empresa_id');
         $perPage = $request->input('perPage', 10);
+        $sortable = ['nombre', 'empresa_id', 'status', 'created_at', 'users_count'];
+        $sortBy = in_array($request->input('sortBy'), $sortable, true) ? $request->input('sortBy') : 'nombre';
+        $sortDir = $request->input('sortDir') === 'desc' ? 'desc' : 'asc';
 
-        $query = Sucursal::with('empresa');
+        $query = Sucursal::with(['empresa', 'paisTelefono'])->withCount('users');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -30,19 +33,27 @@ class SucursalController extends Controller
         }
 
         if ($status !== null && $status !== '') {
-            $query->where('status', $status);
+            if ($status === 'con_gps') {
+                $query->whereNotNull('latitud')->whereNotNull('longitud');
+            } elseif ($status === 'con_usuarios') {
+                $query->has('users');
+            } else {
+                $query->where('status', (bool) $status);
+            }
         }
 
         if ($empresaId) {
             $query->where('empresa_id', $empresaId);
         }
 
-        $sucursales = $query->orderBy('nombre', 'asc')->paginate($perPage)->withQueryString();
+        $sucursales = $query->orderBy($sortBy, $sortDir)->paginate($perPage)->withQueryString();
 
         $stats = [
             'total' => Sucursal::count(),
             'activos' => Sucursal::where('status', true)->count(),
             'inactivos' => Sucursal::where('status', false)->count(),
+            'con_gps' => Sucursal::whereNotNull('latitud')->whereNotNull('longitud')->count(),
+            'con_usuarios' => Sucursal::has('users')->count(),
         ];
 
         return inertia('admin/Sucursales/Index', [
@@ -54,7 +65,7 @@ class SucursalController extends Controller
             'paises' => Pais::where('activo', true)
                 ->orderBy('nombre', 'asc')
                 ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico', 'latitud', 'longitud']),
-            'filters' => $request->only(['search', 'status', 'empresa_id', 'perPage']),
+            'filters' => $request->only(['search', 'status', 'empresa_id', 'perPage', 'sortBy', 'sortDir']),
         ]);
     }
 

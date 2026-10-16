@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Pais extends Model
 {
@@ -49,5 +50,13 @@ class Pais extends Model
             'USD' => '$',
             default => '$'
         };
+    }
+
+    /**
+     * Get the empresas that belong to this country.
+     */
+    public function empresas(): HasMany
+    {
+        return $this->hasMany(Empresa::class, 'pais_id');
     }
 }
