@@ -44,9 +44,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  */
-use App\Traits\HasSpanishActivityLog;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
+
 
 #[Fillable(['name', 'username', 'status', 'email', 'password', 'password_changed_at', 'failed_login_attempts', 'locked_until', 'telefono', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'layout_settings'])]
 #[Hidden(['password', 'remember_token', 'whatsapp_otp', 'two_factor_secret', 'two_factor_recovery_codes'])]
