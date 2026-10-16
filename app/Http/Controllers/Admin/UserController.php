@@ -109,11 +109,8 @@ class UserController extends Controller
             'roles' => 'array',
         ]);
 
-<<<<<<< HEAD
-        $this->guardRoleAndTenantAssignment($request, $validated);
-=======
         $validated = $this->guardRoleAndTenantAssignment($request, $validated);
->>>>>>> 65a5550e (feat: implement SOX compliance authentication, audit logging, and security modules)
+
 
 
         try {
@@ -286,7 +283,6 @@ class UserController extends Controller
         }
     }
 
-<<<<<<< HEAD
     /** Roles del Super Administrador (mismos alias que User::isSuperAdmin). */
     private const ROLES_SUPERADMIN = ['Super Administrador', 'super-admin', 'Super Admin', 'super_admin'];
 
