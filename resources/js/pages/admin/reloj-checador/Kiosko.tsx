@@ -1,30 +1,30 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import { 
-    ShieldCheck, 
-    UserCheck, 
-    LogOut, 
-    LogIn, 
-    Utensils, 
+import {
+    ShieldCheck,
+    UserCheck,
+    LogOut,
+    LogIn,
+    Utensils,
     UtensilsCrossed,
-    Coffee, 
-    Moon, 
-    Apple, 
-    Sandwich, 
-    Clock, 
-    CheckCircle2, 
-    AlertCircle, 
-    Camera, 
-    Delete, 
-    ArrowLeft, 
-    QrCode, 
-    Scan, 
-    Volume2, 
+    Coffee,
+    Moon,
+    Apple,
+    Sandwich,
+    Clock,
+    CheckCircle2,
+    AlertCircle,
+    Camera,
+    Delete,
+    ArrowLeft,
+    QrCode,
+    Scan,
+    Volume2,
     VolumeX,
-    X, 
-    Sparkles, 
-    SwitchCamera, 
-    AlertTriangle, 
+    X,
+    Sparkles,
+    SwitchCamera,
+    AlertTriangle,
     MapPin,
     Maximize,
     Minimize,
@@ -155,6 +155,9 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
     const [empleado, setEmpleado] = useState<EmpleadoFound | null>(null);
     const [marcajesHoy, setMarcajesHoy] = useState<MarcajeItem[]>([]);
     const [ultimoMarcaje, setUltimoMarcaje] = useState<{ tipo: string; hora: string; tipo_nombre?: string } | null>(null);
+    // Si la foto no carga se muestran las iniciales en lugar del texto alternativo.
+    const [fotoFallida, setFotoFallida] = useState(false);
+    useEffect(() => setFotoFallida(false), [empleado?.id]);
     const [sugerenciaMarcaje, setSugerenciaMarcaje] = useState<string>('entrada');
     const [tipoMarcajeSeleccionado, setTipoMarcajeSeleccionado] = useState<string>('entrada');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -235,7 +238,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
             try {
                 navigator.vibrate(25);
-            } catch (e) {}
+            } catch (e) { }
         }
     };
 
@@ -244,9 +247,9 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen?.().then(() => setIsFullscreen(true)).catch(() => {});
+            document.documentElement.requestFullscreen?.().then(() => setIsFullscreen(true)).catch(() => { });
         } else {
-            document.exitFullscreen?.().then(() => setIsFullscreen(false)).catch(() => {});
+            document.exitFullscreen?.().then(() => setIsFullscreen(false)).catch(() => { });
         }
     };
 
@@ -582,7 +585,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                     if (qrVideoRef.current) {
                         qrVideoRef.current.srcObject = stream;
                         qrVideoRef.current.setAttribute('playsinline', 'true');
-                        qrVideoRef.current.play().catch(() => {});
+                        qrVideoRef.current.play().catch(() => { });
                     }
 
                     const hasBarcodeDetector = 'BarcodeDetector' in window;
@@ -615,7 +618,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                             return;
                                         }
                                     }
-                                } catch (err) {}
+                                } catch (err) { }
                             }
 
                             // 2. Detección por jsQR en 100% del cuadro de imagen (Escaneo omnidireccional 360°)
@@ -950,11 +953,10 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                         type="button"
                         onClick={toggleTts}
                         title={ttsEnabled ? "Voz activa (Clic para silenciar)" : "Voz silenciada (Clic para activar)"}
-                        className={`p-2.5 rounded-xl border transition-all ${
-                            ttsEnabled
+                        className={`p-2.5 rounded-xl border transition-all ${ttsEnabled
                                 ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60'
                                 : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-300 hover:bg-slate-800'
-                        }`}
+                            }`}
                     >
                         {ttsEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
                     </button>
@@ -1162,9 +1164,14 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                         <Card className="bg-slate-900/90 border-2 border-emerald-500/40 shadow-2xl backdrop-blur-xl space-y-5 p-5 sm:p-6">
                             {/* CABECERA DE PERFIL DEL EMPLEADO */}
                             <div className="flex items-center gap-4 border-b border-slate-800 pb-4">
-                                <div className="w-20 h-20 rounded-2xl bg-slate-950 border border-slate-700 overflow-hidden flex items-center justify-center text-slate-500 font-bold text-xl shrink-0">
-                                    {empleado.foto_empleado ? (
-                                        <img src={empleado.foto_empleado} alt={empleado.nombre_completo} className="w-full h-full object-cover" />
+                                <div className="w-20 h-20 rounded-2xl bg-slate-950 border border-slate-700 overflow-hidden flex items-center justify-center text-slate-500 font-bold text-xl">
+                                    {empleado.foto_empleado && !fotoFallida ? (
+                                        <img
+                                            src={empleado.foto_empleado}
+                                            alt={empleado.nombre_completo}
+                                            className="w-full h-full object-cover"
+                                            onError={() => setFotoFallida(true)}
+                                        />
                                     ) : (
                                         <span>{empleado.nombre_completo.substring(0, 2).toUpperCase()}</span>
                                     )}
@@ -1246,13 +1253,12 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                 return (
                                                     <div
                                                         key={h.key}
-                                                        className={`relative flex flex-col items-center text-center p-2 rounded-xl border transition-all ${
-                                                            tieneMarcaje
+                                                        className={`relative flex flex-col items-center text-center p-2 rounded-xl border transition-all ${tieneMarcaje
                                                                 ? 'bg-emerald-950/40 border-emerald-500/60 text-emerald-300 shadow-sm'
                                                                 : esActivo
-                                                                ? 'bg-amber-950/50 border-amber-400 text-amber-300 ring-2 ring-amber-400/40 animate-pulse shadow-md'
-                                                                : 'bg-slate-900/60 border-slate-800/80 text-slate-500'
-                                                        }`}
+                                                                    ? 'bg-amber-950/50 border-amber-400 text-amber-300 ring-2 ring-amber-400/40 animate-pulse shadow-md'
+                                                                    : 'bg-slate-900/60 border-slate-800/80 text-slate-500'
+                                                            }`}
                                                     >
                                                         <div className="flex items-center gap-1 mb-1">
                                                             {tieneMarcaje ? (
@@ -1303,9 +1309,8 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                 </div>
                                 <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                                     <div
-                                        className={`h-full transition-all duration-1000 ease-linear rounded-full ${
-                                            inactivityCountdown <= 5 ? 'bg-rose-500' : 'bg-emerald-500'
-                                        }`}
+                                        className={`h-full transition-all duration-1000 ease-linear rounded-full ${inactivityCountdown <= 5 ? 'bg-rose-500' : 'bg-emerald-500'
+                                            }`}
                                         style={{ width: `${(inactivityCountdown / 15) * 100}%` }}
                                     />
                                 </div>
@@ -1329,11 +1334,10 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                 <Button
                                                     onClick={() => handleRegisterMarcaje('entrada', { tipo_entrada: 'normal' })}
                                                     disabled={loadingSearch}
-                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
-                                                        sugerenciaMarcaje === 'entrada'
+                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${sugerenciaMarcaje === 'entrada'
                                                             ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg'
                                                             : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <LogIn className="w-5 h-5 text-emerald-400" />
                                                     <span>INICIO JORNADA</span>
@@ -1348,11 +1352,10 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                         }
                                                     }}
                                                     disabled={loadingSearch}
-                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
-                                                        esDescansoActivo
+                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${esDescansoActivo
                                                             ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg animate-pulse'
                                                             : 'bg-teal-900/80 hover:bg-teal-800 text-teal-200 border border-teal-700/60 shadow-lg'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <Coffee className="w-5 h-5 text-teal-400" />
                                                     <span>{esDescansoActivo ? 'FIN DESCANSO' : 'DESCANSO'}</span>
@@ -1380,11 +1383,10 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                             }
                                                         }}
                                                         disabled={loadingSearch}
-                                                        className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all w-full ${
-                                                            sugerenciaMarcaje === 'salida_comida'
+                                                        className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all w-full ${sugerenciaMarcaje === 'salida_comida'
                                                                 ? 'bg-amber-600 hover:bg-amber-500 text-white ring-4 ring-amber-500/40 shadow-lg'
                                                                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <Utensils className="w-5 h-5 text-amber-400" />
                                                         <span>INICIO COMIDA</span>
@@ -1410,11 +1412,10 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                 <Button
                                                     onClick={() => handleRegisterMarcaje('entrada_comida')}
                                                     disabled={loadingSearch}
-                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all ${
-                                                        sugerenciaMarcaje === 'entrada_comida'
+                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all ${sugerenciaMarcaje === 'entrada_comida'
                                                             ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-4 ring-indigo-500/40 shadow-lg'
                                                             : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <LogIn className="w-5 h-5 text-indigo-400" />
                                                     <span>FIN COMIDA</span>
@@ -1430,11 +1431,10 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                         }
                                                     }}
                                                     disabled={loadingSearch}
-                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
-                                                        esIncidenteActivo
+                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${esIncidenteActivo
                                                             ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg animate-pulse'
                                                             : 'bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-800/60 shadow-lg'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <AlertTriangle className="w-5 h-5 text-amber-400" />
                                                     <span>{esIncidenteActivo ? 'FIN INCIDENTE' : 'INCIDENTE'}</span>
@@ -1443,11 +1443,10 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                 <Button
                                                     onClick={() => handleRegisterMarcaje('salida')}
                                                     disabled={loadingSearch}
-                                                    className={`col-span-2 sm:col-span-3 h-16 text-base font-bold flex items-center justify-center gap-2 rounded-xl transition-all ${
-                                                        sugerenciaMarcaje === 'salida'
+                                                    className={`col-span-2 sm:col-span-3 h-16 text-base font-bold flex items-center justify-center gap-2 rounded-xl transition-all ${sugerenciaMarcaje === 'salida'
                                                             ? 'bg-rose-600 hover:bg-rose-500 text-white ring-4 ring-rose-500/40 shadow-lg'
                                                             : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <LogOut className="w-6 h-6 text-rose-400" />
                                                     <span>SALIDA JORNADA</span>
@@ -1569,11 +1568,10 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                     key={min}
                                     type="button"
                                     onClick={() => setSelectedMinutosDescanso(min)}
-                                    className={`p-4 rounded-xl text-center border font-bold text-sm transition-all ${
-                                        selectedMinutosDescanso === min
+                                    className={`p-4 rounded-xl text-center border font-bold text-sm transition-all ${selectedMinutosDescanso === min
                                             ? 'bg-teal-600 border-teal-400 text-white shadow-lg ring-2 ring-teal-500/40'
                                             : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-                                    }`}
+                                        }`}
                                 >
                                     {min} min
                                 </button>
@@ -1606,229 +1604,231 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
             <Dialog open={isComidaModalOpen} onOpenChange={setIsComidaModalOpen}>
                 <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[95vw] md:max-w-[92vw] lg:max-w-6xl xl:max-w-7xl max-h-[92vh] overflow-y-auto bg-slate-900/98 backdrop-blur-2xl border-2 border-amber-500/60 text-white p-6 sm:p-8 md:p-10 rounded-3xl shadow-2xl">
                     <DialogHeader className="pb-4 border-b border-slate-800">
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/30 to-amber-600/10 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/10">
-                                                <Utensils className="w-7 h-7" />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <DialogTitle className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-                                                    <span>Seleccione su Alimento / Comida</span>
-                                                </DialogTitle>
-                                                <DialogDescription className="text-sm sm:text-base text-slate-300">
-                                                    Toque el platillo deseado para confirmar el marcaje de <strong className="text-amber-400">INICIO COMIDA</strong>.
-                                                </DialogDescription>
-                                            </div>
-                                        </div>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/30 to-amber-600/10 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/10">
+                                    <Utensils className="w-7 h-7" />
+                                </div>
+                                <div className="space-y-1">
+                                    <DialogTitle className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                                        <span>Seleccione su Alimento / Comida</span>
+                                    </DialogTitle>
+                                    <DialogDescription className="text-sm sm:text-base text-slate-300">
+                                        Toque el platillo deseado para confirmar el marcaje de <strong className="text-amber-400">INICIO COMIDA</strong>.
+                                    </DialogDescription>
+                                </div>
+                            </div>
 
-                                        <div className="flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-slate-800/90 border border-slate-700/80 text-slate-200 font-mono text-sm sm:text-base shrink-0 shadow-inner">
-                                            <Clock className="w-5 h-5 text-amber-400 animate-pulse" />
-                                            <span>Hora en Planta: <strong className="text-amber-400 font-black text-lg sm:text-xl">{horaPlanta}</strong></span>
-                                        </div>
-                                    </div>
-                                </DialogHeader>
+                            <div className="flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-slate-800/90 border border-slate-700/80 text-slate-200 font-mono text-sm sm:text-base shrink-0 shadow-inner">
+                                <Clock className="w-5 h-5 text-amber-400 animate-pulse" />
+                                <span>Hora en Planta: <strong className="text-amber-400 font-black text-lg sm:text-xl">{horaPlanta}</strong></span>
+                            </div>
+                        </div>
+                    </DialogHeader>
 
-                                {/* SUB-CABECERA: INDICADOR DE DISPONIBILIDAD Y OPCIÓN RÁPIDA DE NO CONSUMO */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-                                    <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-sm">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                                        <span>Alimentos Disponibles en este Horario ({opcionesDisponibles.length})</span>
-                                    </div>
+                    {/* SUB-CABECERA: INDICADOR DE DISPONIBILIDAD Y OPCIÓN RÁPIDA DE NO CONSUMO */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                        <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-sm">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span>Alimentos Disponibles en este Horario ({opcionesDisponibles.length})</span>
+                        </div>
 
+                        <button
+                            type="button"
+                            disabled={loadingSearch}
+                            onClick={() => {
+                                setIsComidaModalOpen(false);
+                                handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
+                            }}
+                            className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-amber-400 flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
+                        >
+                            <UtensilsCrossed className="w-4 h-4 text-amber-400" />
+                            <span>No Adquirir Ningún Alimento (Sin Consumo)</span>
+                        </button>
+                    </div>
+
+                    {/* LISTADO DE PLATILLOS DISPONIBLES O MENSAJE DE ESPERA */}
+                    {opcionesDisponibles.length === 0 ? (
+                        <div className="py-14 px-6 rounded-3xl bg-slate-800/60 border border-slate-700/80 text-center space-y-5 my-6 w-full">
+                            <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg">
+                                <Clock className="w-8 h-8" />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-xl sm:text-2xl font-bold text-white">No hay opciones de comida disponibles en este horario</h3>
+                                <p className="text-sm text-slate-300 max-w-md mx-auto">
+                                    El servicio de comedor se activa automáticamente en los horarios configurados para cada turno (Desayuno, Almuerzo, Cena o Refrigerio).
+                                </p>
+                                <div className="text-xs sm:text-sm font-mono text-amber-300 bg-amber-500/15 py-1.5 px-4 rounded-xl inline-block border border-amber-500/30">
+                                    Hora actual en planta: {horaPlanta}
+                                </div>
+                            </div>
+
+                            <div className="pt-2">
+                                <button
+                                    type="button"
+                                    disabled={loadingSearch}
+                                    onClick={() => {
+                                        setIsComidaModalOpen(false);
+                                        handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
+                                    }}
+                                    className="px-6 py-3.5 rounded-2xl text-base font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-xl flex items-center gap-3 mx-auto transition-all active:scale-95"
+                                >
+                                    <UtensilsCrossed className="w-5 h-5" />
+                                    <span>Registrar Inicio de Comida (Sin adquirir platillo del comedor)</span>
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-3">
+                            {opcionesDisponibles.map((opcion) => {
+                                const iconProps = { className: "w-8 h-8 sm:w-9 sm:h-9 text-amber-400" };
+                                const renderIcon = () => {
+                                    switch (opcion.icono) {
+                                        case 'coffee': return <Coffee {...iconProps} />;
+                                        case 'moon': return <Moon {...iconProps} />;
+                                        case 'apple': return <Apple {...iconProps} />;
+                                        case 'sandwich': return <Sandwich {...iconProps} />;
+                                        default: return <Utensils {...iconProps} />;
+                                    }
+                                };
+
+                                const tipoLabel = opcion.tipo ? {
+                                    desayuno: 'Desayuno',
+                                    almuerzo: 'Almuerzo / Comida',
+                                    cena: 'Cena',
+                                    refrigerio: 'Refrigerio',
+                                }[opcion.tipo] : null;
+
+                                return (
                                     <button
+                                        key={opcion.id ?? opcion._idx}
                                         type="button"
                                         disabled={loadingSearch}
                                         onClick={() => {
                                             setIsComidaModalOpen(false);
-                                            handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
+                                            handleRegisterMarcaje('salida_comida', { comida_opcion: opcion.id ?? opcion._idx });
                                         }}
-                                        className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-amber-400 flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
+                                        className="p-6 rounded-2xl border-2 border-amber-500/60 bg-gradient-to-b from-slate-800/95 via-slate-800/80 to-slate-900/95 hover:border-amber-400 hover:from-slate-750 hover:shadow-2xl hover:shadow-amber-500/25 active:scale-[0.98] ring-1 ring-amber-500/30 text-center transition-all flex flex-col items-center justify-between gap-4 shadow-xl min-h-[320px] group cursor-pointer"
                                     >
-                                        <UtensilsCrossed className="w-4 h-4 text-amber-400" />
-                                        <span>No Adquirir Ningún Alimento (Sin Consumo)</span>
-                                    </button>
-                                </div>
-
-                                {/* LISTADO DE PLATILLOS DISPONIBLES O MENSAJE DE ESPERA */}
-                                {opcionesDisponibles.length === 0 ? (
-                                    <div className="py-14 px-6 rounded-3xl bg-slate-800/60 border border-slate-700/80 text-center space-y-5 my-6 w-full">
-                                        <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg">
-                                            <Clock className="w-8 h-8" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <h3 className="text-xl sm:text-2xl font-bold text-white">No hay opciones de comida disponibles en este horario</h3>
-                                            <p className="text-sm text-slate-300 max-w-md mx-auto">
-                                                El servicio de comedor se activa automáticamente en los horarios configurados para cada turno (Desayuno, Almuerzo, Cena o Refrigerio).
-                                            </p>
-                                            <div className="text-xs sm:text-sm font-mono text-amber-300 bg-amber-500/15 py-1.5 px-4 rounded-xl inline-block border border-amber-500/30">
-                                                Hora actual en planta: {horaPlanta}
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-2">
-                                            <button
-                                                type="button"
-                                                disabled={loadingSearch}
-                                                onClick={() => {
-                                                    setIsComidaModalOpen(false);
-                                                    handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
-                                                }}
-                                                className="px-6 py-3.5 rounded-2xl text-base font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-xl flex items-center gap-3 mx-auto transition-all active:scale-95"
-                                            >
-                                                <UtensilsCrossed className="w-5 h-5" />
-                                                <span>Registrar Inicio de Comida (Sin adquirir platillo del comedor)</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-3">
-                                        {opcionesDisponibles.map((opcion) => {
-                                            const iconProps = { className: "w-8 h-8 sm:w-9 sm:h-9 text-amber-400" };
-                                            const renderIcon = () => {
-                                                switch (opcion.icono) {
-                                                    case 'coffee': return <Coffee {...iconProps} />;
-                                                    case 'moon': return <Moon {...iconProps} />;
-                                                    case 'apple': return <Apple {...iconProps} />;
-                                                    case 'sandwich': return <Sandwich {...iconProps} />;
-                                                    default: return <Utensils {...iconProps} />;
-                                                }
-                                            };
-
-                                            const tipoLabel = opcion.tipo ? {
-                                                desayuno: 'Desayuno',
-                                                almuerzo: 'Almuerzo / Comida',
-                                                cena: 'Cena',
-                                                refrigerio: 'Refrigerio',
-                                            }[opcion.tipo] : null;
-
-                                            return (
-                                                <button
-                                                    key={opcion.id ?? opcion._idx}
-                                                    type="button"
-                                                    disabled={loadingSearch}
-                                                    onClick={() => {
-                                                        setIsComidaModalOpen(false);
-                                                        handleRegisterMarcaje('salida_comida', { comida_opcion: opcion.id ?? opcion._idx });
-                                                    }}
-                                                    className="p-6 rounded-2xl border-2 border-amber-500/60 bg-gradient-to-b from-slate-800/95 via-slate-800/80 to-slate-900/95 hover:border-amber-400 hover:from-slate-750 hover:shadow-2xl hover:shadow-amber-500/25 active:scale-[0.98] ring-1 ring-amber-500/30 text-center transition-all flex flex-col items-center justify-between gap-4 shadow-xl min-h-[320px] group cursor-pointer"
-                                                >
-                                                    {/* Cabecera de la tarjeta: Badge de tipo y disponibilidad */}
-                                                    <div className="flex items-center justify-between w-full gap-2">
-                                                        {tipoLabel ? (
-                                                            <span className="text-xs font-black tracking-wider uppercase px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                                                                {tipoLabel}
-                                                            </span>
-                                                        ) : <span />}
-
-                                                        <span className="text-xs font-black tracking-wider uppercase px-2.5 py-1 rounded-lg bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 flex items-center gap-1.5 shadow-sm">
-                                                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                                            Disponible
-                                                        </span>
-                                                    </div>
-
-                                                    {/* Contenido principal: Ícono, Nombre y Descripción */}
-                                                    <div className="flex flex-col items-center gap-2.5 w-full my-1">
-                                                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-amber-500/20 border border-amber-500/40 shadow-inner">
-                                                            {renderIcon()}
-                                                        </div>
-
-                                                        <h3 className="font-black text-lg sm:text-xl text-white tracking-normal leading-tight text-center px-1">
-                                                            {opcion.nombre}
-                                                        </h3>
-
-                                                        {opcion.descripcion && (
-                                                            <p className="text-xs sm:text-sm text-slate-300 text-center line-clamp-3 leading-relaxed px-2">
-                                                                {opcion.descripcion}
-                                                            </p>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Horario estipulado: Bien espaciado y en una sola línea */}
-                                                    {opcion.hora_inicio && opcion.hora_fin ? (
-                                                        <div className="w-full flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-slate-200 bg-slate-950/80 px-4 py-2.5 rounded-xl border border-slate-800 shadow-inner whitespace-nowrap">
-                                                            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
-                                                            <span className="text-slate-300">Servicio:</span>
-                                                            <strong className="text-amber-300 font-mono tracking-wide">
-                                                                {opcion.hora_inicio.slice(0, 5)} - {opcion.hora_fin.slice(0, 5)} hrs
-                                                            </strong>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="w-full text-center text-xs text-slate-400 italic py-2">
-                                                            Disponible todo el día
-                                                        </div>
-                                                    )}
-
-                                                    {/* Pie: Solo el Costo en Pesos Mexicanos (Sin etiqueta "Costo Colaborador") */}
-                                                    <div className="pt-3 border-t border-slate-700/80 w-full flex items-center justify-center">
-                                                        <span className="font-mono text-2xl font-black text-amber-400 tracking-wide">
-                                                            {Number(opcion.costo) > 0 ? `$${Number(opcion.costo).toFixed(2)} MXN` : 'Sin costo'}
-                                                        </span>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-
-                                        {/* TARJETA ESPECIAL: NO ADQUIRIR ALIMENTO / COMIDA PROPIA */}
-                                        <button
-                                            type="button"
-                                            disabled={loadingSearch}
-                                            onClick={() => {
-                                                setIsComidaModalOpen(false);
-                                                handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
-                                            }}
-                                            className="p-6 rounded-2xl border-2 border-dashed border-slate-700 hover:border-amber-400 bg-slate-900/90 hover:bg-slate-800/90 text-center transition-all flex flex-col items-center justify-between gap-4 shadow-xl min-h-[320px] group cursor-pointer active:scale-[0.98]"
-                                        >
-                                            <div className="flex items-center justify-between w-full gap-2">
-                                                <span className="text-xs font-black tracking-wider uppercase px-3 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">
-                                                    OPCIÓN
+                                        {/* Cabecera de la tarjeta: Badge de tipo y disponibilidad */}
+                                        <div className="flex items-center justify-between w-full gap-2">
+                                            {tipoLabel ? (
+                                                <span className="text-xs font-black tracking-wider uppercase px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                                    {tipoLabel}
                                                 </span>
-                                                <span className="text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700">
-                                                    Sin Consumo
-                                                </span>
+                                            ) : <span />}
+
+                                            <span className="text-xs font-black tracking-wider uppercase px-2.5 py-1 rounded-lg bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 flex items-center gap-1.5 shadow-sm">
+                                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                                Disponible
+                                            </span>
+                                        </div>
+
+                                        {/* Contenido principal: Ícono, Nombre y Descripción */}
+                                        <div className="flex flex-col items-center gap-2.5 w-full my-1">
+                                            <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-amber-500/20 border border-amber-500/40 shadow-inner">
+                                                {renderIcon()}
                                             </div>
 
-                                            <div className="flex flex-col items-center gap-2.5 w-full my-1">
-                                                <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-slate-800 border border-slate-700 shadow-inner text-slate-400 group-hover:text-amber-400">
-                                                    <UtensilsCrossed className="w-8 h-8" />
-                                                </div>
+                                            <h3 className="font-black text-lg sm:text-xl text-white tracking-normal leading-tight text-center px-1">
+                                                {opcion.nombre}
+                                            </h3>
 
-                                                <h3 className="font-black text-lg sm:text-xl text-white tracking-normal leading-tight text-center px-1">
-                                                    No Adquirir Alimento
-                                                </h3>
-
-                                                <p className="text-xs sm:text-sm text-slate-400 text-center line-clamp-3 leading-relaxed px-2">
-                                                    Trae comida propia de casa, ayuno o no desea consumir platillos del comedor en este turno.
+                                            {opcion.descripcion && (
+                                                <p className="text-xs sm:text-sm text-slate-300 text-center line-clamp-3 leading-relaxed px-2">
+                                                    {opcion.descripcion}
                                                 </p>
-                                            </div>
+                                            )}
+                                        </div>
 
-                                            <div className="w-full flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-slate-300 bg-slate-950/80 px-4 py-2.5 rounded-xl border border-slate-800 shadow-inner whitespace-nowrap">
-                                                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                                                <span>Disponible en cualquier turno</span>
+                                        {/* Horario estipulado: Bien espaciado y en una sola línea */}
+                                        {opcion.hora_inicio && opcion.hora_fin ? (
+                                            <div className="w-full flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-slate-200 bg-slate-950/80 px-4 py-2.5 rounded-xl border border-slate-800 shadow-inner whitespace-nowrap">
+                                                <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                                                <span className="text-slate-300">Servicio:</span>
+                                                <strong className="text-amber-300 font-mono tracking-wide">
+                                                    {opcion.hora_inicio.slice(0, 5)} - {opcion.hora_fin.slice(0, 5)} hrs
+                                                </strong>
                                             </div>
+                                        ) : (
+                                            <div className="w-full text-center text-xs text-slate-400 italic py-2">
+                                                Disponible todo el día
+                                            </div>
+                                        )}
 
-                                            <div className="pt-3 border-t border-slate-800 w-full flex items-center justify-center">
-                                                <span className="font-mono text-2xl font-black text-slate-300 tracking-wide">
-                                                    $0.00 MXN
+                                        {/* Pie: Solo el Costo en Pesos Mexicanos (Sin etiqueta "Costo Colaborador") */}
+                                        {Number(opcion.costo) > 0 && (
+                                            <div className="pt-3 border-t border-slate-700/80 w-full flex items-center justify-center">
+                                                <span className="font-mono text-2xl font-black text-amber-400 tracking-wide">
+                                                    ${Number(opcion.costo).toFixed(2)} MXN
                                                 </span>
                                             </div>
-                                        </button>
-                                    </div>
-                                )}
+                                        )}
+                                    </button>
+                                );
+                            })}
 
-                                <div className="pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-                                    <p className="text-xs sm:text-sm text-slate-400 flex items-center gap-1.5">
-                                        <Clock className="w-4 h-4 text-amber-400 shrink-0" />
-                                        <span>Los alimentos estipulados por horario se validan automáticamente con el reloj de la planta.</span>
-                                    </p>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => setIsComidaModalOpen(false)}
-                                        className="h-12 px-8 rounded-xl text-base font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 hover:text-white border-slate-700 w-full sm:w-auto shadow-md"
-                                    >
-                                        Cerrar / Cancelar
-                                    </Button>
+                            {/* TARJETA ESPECIAL: NO ADQUIRIR ALIMENTO / COMIDA PROPIA */}
+                            <button
+                                type="button"
+                                disabled={loadingSearch}
+                                onClick={() => {
+                                    setIsComidaModalOpen(false);
+                                    handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
+                                }}
+                                className="p-6 rounded-2xl border-2 border-dashed border-slate-700 hover:border-amber-400 bg-slate-900/90 hover:bg-slate-800/90 text-center transition-all flex flex-col items-center justify-between gap-4 shadow-xl min-h-[320px] group cursor-pointer active:scale-[0.98]"
+                            >
+                                <div className="flex items-center justify-between w-full gap-2">
+                                    <span className="text-xs font-black tracking-wider uppercase px-3 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">
+                                        OPCIÓN
+                                    </span>
+                                    <span className="text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700">
+                                        Sin Consumo
+                                    </span>
                                 </div>
+
+                                <div className="flex flex-col items-center gap-2.5 w-full my-1">
+                                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-slate-800 border border-slate-700 shadow-inner text-slate-400 group-hover:text-amber-400">
+                                        <UtensilsCrossed className="w-8 h-8" />
+                                    </div>
+
+                                    <h3 className="font-black text-lg sm:text-xl text-white tracking-normal leading-tight text-center px-1">
+                                        No Adquirir Alimento
+                                    </h3>
+
+                                    <p className="text-xs sm:text-sm text-slate-400 text-center line-clamp-3 leading-relaxed px-2">
+                                        Trae comida propia de casa, ayuno o no desea consumir platillos del comedor en este turno.
+                                    </p>
+                                </div>
+
+                                <div className="w-full flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-slate-300 bg-slate-950/80 px-4 py-2.5 rounded-xl border border-slate-800 shadow-inner whitespace-nowrap">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                    <span>Disponible en cualquier turno</span>
+                                </div>
+
+                                <div className="pt-3 border-t border-slate-800 w-full flex items-center justify-center">
+                                    <span className="font-mono text-2xl font-black text-slate-300 tracking-wide">
+                                        $0.00 MXN
+                                    </span>
+                                </div>
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <p className="text-xs sm:text-sm text-slate-400 flex items-center gap-1.5">
+                            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                            <span>Los alimentos estipulados por horario se validan automáticamente con el reloj de la planta.</span>
+                        </p>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsComidaModalOpen(false)}
+                            className="h-12 px-8 rounded-xl text-base font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 hover:text-white border-slate-700 w-full sm:w-auto shadow-md"
+                        >
+                            Cerrar / Cancelar
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
 

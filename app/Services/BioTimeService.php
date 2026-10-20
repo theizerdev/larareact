@@ -206,7 +206,7 @@ class BioTimeService
             $result = $this->get($path, array_merge($query, ['page' => $page, 'limit' => $perPage]));
 
             if (! $result['success']) {
-                return ['success' => false, 'data' => array_values($all), 'error' => $result['error'], 'count' => $count];
+                return ['success' => false, 'data' => array_values($all), 'error' => $result['error'], 'count' => $count, 'status' => $result['status']];
             }
 
             $body = is_array($result['data']) ? $result['data'] : [];
@@ -319,6 +319,64 @@ class BioTimeService
     public function listTransactions(array $filters = []): array
     {
         return $this->getPaginated('/iclock/api/transactions/', $filters);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Módulo de asistencia (/att/api/)                                   */
+    /*                                                                     */
+    /*  Estos endpoints sí respetan `page_size` (a diferencia de `limit`), */
+    /*  así que se pide la página grande para no hacer cientos de GET.     */
+    /* ------------------------------------------------------------------ */
+
+    /** Horarios (duración de la jornada). */
+    public function listTimeIntervals(): array
+    {
+        return $this->getPaginated('/att/api/timeintervals/', $this->attPageSize());
+    }
+
+    /** Turnos (horarios asignados a los días de la semana). */
+    public function listShifts(): array
+    {
+        return $this->getPaginated('/att/api/attshifts/', $this->attPageSize());
+    }
+
+    /** Calendarios: turno asignado a cada empleado por rango de fechas. */
+    public function listSchedules(): array
+    {
+        return $this->getPaginated('/att/api/attschedules/', $this->attPageSize());
+    }
+
+    /**
+     * Permisos e incidencias. BioTime ignora los filtros de fecha y empleado
+     * en este endpoint: siempre devuelve el conjunto completo.
+     */
+    public function listLeaves(): array
+    {
+        return $this->getPaginated('/att/api/leaves/', $this->attPageSize());
+    }
+
+    /**
+     * Total de permisos que reporta BioTime, con una sola petición. Sirve
+     * para no recorrer un BioTime Cloud compartido con cientos de miles.
+     *
+     * @return array{success: bool, count: int|null, error: string|null, status: int|null}
+     */
+    public function countLeaves(): array
+    {
+        $result = $this->get('/att/api/leaves/', ['page' => 1, 'page_size' => 1]);
+
+        return [
+            'success' => $result['success'],
+            'count' => $result['success'] ? (int) ($result['data']['count'] ?? 0) : null,
+            'error' => $result['error'],
+            'status' => $result['status'],
+        ];
+    }
+
+    /** @return array{page_size: int} */
+    private function attPageSize(): array
+    {
+        return ['page_size' => (int) config('biotime.page_size', 100)];
     }
 
     /**

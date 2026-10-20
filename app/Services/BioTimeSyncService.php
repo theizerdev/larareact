@@ -3,14 +3,19 @@
 namespace App\Services;
 
 use App\Models\BiotimeArea;
+use App\Models\BiotimeCalendario;
 use App\Models\BiotimeCargo;
 use App\Models\BiotimeDepartamento;
 use App\Models\BiotimeDispositivo;
 use App\Models\BiotimeEmpleado;
+use App\Models\BiotimeHorario;
 use App\Models\BiotimeMarcaje;
+use App\Models\BiotimePermiso;
+use App\Models\BiotimeTurno;
 use App\Models\Empleado;
 use App\Models\Empresa;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -29,7 +34,7 @@ use Illuminate\Support\Str;
 class BioTimeSyncService
 {
     /** Partes válidas del sync, en orden de dependencia. */
-    public const PARTS = ['terminals', 'catalogs', 'employees', 'transactions'];
+    public const PARTS = ['terminals', 'catalogs', 'employees', 'transactions', 'attendance'];
 
     public function __construct(private readonly BioTimeService $client)
     {
@@ -71,6 +76,7 @@ class BioTimeSyncService
                     'catalogs' => $this->syncCatalogs($empresa),
                     'employees' => $this->syncEmployees($empresa),
                     'transactions' => $this->syncTransactions($empresa, $full, $since),
+                    'attendance' => $this->syncAttendance($empresa),
                     default => ['skipped' => "parte desconocida: {$part}"],
                 };
             } catch (\Throwable $e) {
@@ -410,6 +416,239 @@ class BioTimeSyncService
             'to' => $now->toDateTimeString(),
             'max_transaction_id' => $maxId,
         ];
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Asistencia: horarios, turnos, calendarios y permisos (/att/api/)   */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Estos cuatro endpoints devuelven siempre el conjunto completo (no hay
+     * incremental), así que tras cada lectura exitosa se borran del espejo
+     * las filas que ya no existen en BioTime: un turno o calendario eliminado
+     * allá no debe seguir apareciendo aquí.
+     */
+    public function syncAttendance(Empresa $empresa): array
+    {
+        $out = [];
+
+        $horarios = $this->attRows($this->client->listTimeIntervals(), 'horarios');
+        if ($horarios === null) {
+            $out['horarios'] = 'no disponible';
+        } else {
+            foreach ($horarios as $h) {
+                BiotimeHorario::updateOrCreate(
+                    ['empresa_id' => $empresa->id, 'biotime_id' => (string) $h['id']],
+                    [
+                        'alias' => $h['alias'] ?? null,
+                        'use_mode' => isset($h['use_mode']) ? (string) $h['use_mode'] : null,
+                        'in_time' => $h['in_time'] ?? null,
+                        'out_time' => $h['out_time'] ?? null,
+                        'duration' => $this->int($h['duration'] ?? null),
+                        'work_time_duration' => $this->int($h['work_time_duration'] ?? null),
+                        'break_time_duration' => $this->int($h['break_time_duration'] ?? null),
+                        'cross_day' => (bool) $this->bool($h['cross_day'] ?? false),
+                        'in_required' => $this->bool($h['in_required'] ?? null),
+                        'out_required' => $this->bool($h['out_required'] ?? null),
+                        'raw' => $h,
+                    ],
+                );
+            }
+            $out['horarios'] = count($horarios);
+            $out['horarios_eliminados'] = $this->prune(BiotimeHorario::class, $empresa, $horarios);
+        }
+
+        $turnos = $this->attRows($this->client->listShifts(), 'turnos');
+        if ($turnos === null) {
+            $out['turnos'] = 'no disponible';
+        } else {
+            foreach ($turnos as $t) {
+                BiotimeTurno::updateOrCreate(
+                    ['empresa_id' => $empresa->id, 'biotime_id' => (string) $t['id']],
+                    [
+                        'alias' => $t['alias'] ?? null,
+                        'shift_timetable' => is_array($t['shift_timetable'] ?? null)
+                            ? implode(',', $t['shift_timetable'])
+                            : ($t['shift_timetable'] ?? null),
+                        'cycle_unit' => isset($t['cycle_unit']) ? (string) $t['cycle_unit'] : null,
+                        'shift_cycle' => $this->int($t['shift_cycle'] ?? null),
+                        'auto_shift' => $this->bool($t['auto_shift'] ?? null),
+                        'raw' => $t,
+                    ],
+                );
+            }
+            $out['turnos'] = count($turnos);
+            $out['turnos_eliminados'] = $this->prune(BiotimeTurno::class, $empresa, $turnos);
+        }
+
+        $calendarios = $this->attRows($this->client->listSchedules(), 'calendarios');
+        if ($calendarios === null) {
+            $out['calendarios'] = 'no disponible';
+        } else {
+            // En los calendarios `employee` es el id interno de BioTime (no el
+            // emp_code) y `shift` el id del turno.
+            $empMap = BiotimeEmpleado::query()
+                ->where('empresa_id', $empresa->id)
+                ->get(['id', 'biotime_id', 'empleado_id'])
+                ->keyBy(fn ($r) => (string) $r->biotime_id);
+            $turnoMap = BiotimeTurno::query()
+                ->where('empresa_id', $empresa->id)
+                ->pluck('id', 'biotime_id');
+
+            foreach ($calendarios as $c) {
+                $employeeId = $this->code($c['employee'] ?? null, 'id');
+                $shiftId = $this->code($c['shift'] ?? null, 'id');
+                $link = $employeeId !== null ? $empMap->get($employeeId) : null;
+
+                BiotimeCalendario::updateOrCreate(
+                    ['empresa_id' => $empresa->id, 'biotime_id' => (string) $c['id']],
+                    [
+                        'employee_biotime_id' => $employeeId,
+                        'shift_biotime_id' => $shiftId,
+                        'biotime_empleado_id' => $link->id ?? null,
+                        'empleado_id' => $link->empleado_id ?? null,
+                        'biotime_turno_id' => $shiftId !== null ? ($turnoMap[$shiftId] ?? null) : null,
+                        'start_date' => $this->toDate($c['start_date'] ?? null),
+                        'end_date' => $this->toDate($c['end_date'] ?? null),
+                        'raw' => $c,
+                    ],
+                );
+            }
+            $out['calendarios'] = count($calendarios);
+            $out['calendarios_eliminados'] = $this->prune(BiotimeCalendario::class, $empresa, $calendarios);
+        }
+
+        $out += $this->syncLeaves($empresa);
+
+        return $out;
+    }
+
+    /** @return array<string,mixed> */
+    private function syncLeaves(Empresa $empresa): array
+    {
+        $total = $this->client->countLeaves();
+        if (! $total['success']) {
+            if ($total['status'] === 404) {
+                return ['permisos' => 'no disponible'];
+            }
+            throw new \RuntimeException($total['error'] ?? 'No se pudieron leer los permisos.');
+        }
+
+        $max = (int) config('biotime.leaves_max', 20000);
+        if ($total['count'] > $max) {
+            Log::channel('biotime')->warning('BioTime permisos omitidos: el total supera biotime.leaves_max', [
+                'empresa_id' => $empresa->id, 'count' => $total['count'], 'max' => $max,
+            ]);
+
+            return ['permisos' => "omitido: BioTime reporta {$total['count']} y el tope es {$max} (BIOTIME_LEAVES_MAX)"];
+        }
+
+        $permisos = $total['count'] === 0 ? [] : $this->attRows($this->client->listLeaves(), 'permisos');
+        if ($permisos === null) {
+            return ['permisos' => 'no disponible'];
+        }
+
+        $empMap = BiotimeEmpleado::query()
+            ->where('empresa_id', $empresa->id)
+            ->get(['id', 'emp_code', 'empleado_id'])
+            ->keyBy(fn ($r) => (string) $r->emp_code);
+
+        $chunk = max(50, (int) config('biotime.db_chunk', 200));
+
+        foreach (array_chunk($permisos, $chunk) as $slice) {
+            DB::transaction(function () use ($slice, $empresa, $empMap) {
+                foreach ($slice as $p) {
+                    $empCode = isset($p['get_emp_code']) ? (string) $p['get_emp_code'] : ($p['emp_code'] ?? null);
+                    $link = $empCode !== null ? $empMap->get($empCode) : null;
+
+                    BiotimePermiso::updateOrCreate(
+                        ['empresa_id' => $empresa->id, 'biotime_id' => (string) $p['id']],
+                        [
+                            'emp_code' => $empCode,
+                            'biotime_empleado_id' => $link->id ?? null,
+                            'empleado_id' => $link->empleado_id ?? null,
+                            'first_name' => $p['get_emp_first_name'] ?? null,
+                            'last_name' => $p['get_emp_last_name'] ?? null,
+                            'dept_name' => $p['get_emp_dept'] ?? null,
+                            'category' => isset($p['category']) ? (string) $p['category'] : null,
+                            'start_time' => $this->toDate($p['start_time'] ?? null),
+                            'end_time' => $this->toDate($p['end_time'] ?? null),
+                            'apply_reason' => $p['apply_reason'] ?? null,
+                            'apply_time' => $this->toDate($p['apply_time'] ?? null),
+                            'audit_status' => isset($p['audit_status']) ? (string) $p['audit_status'] : null,
+                            'audit_reason' => $p['audit_reason'] ?? null,
+                            'audit_time' => $this->toDate($p['audit_time'] ?? null),
+                            'last_approver' => $p['last_approver'] ?? null,
+                            'raw' => $p,
+                        ],
+                    );
+                }
+            });
+        }
+
+        return [
+            'permisos' => count($permisos),
+            'permisos_eliminados' => $this->prune(BiotimePermiso::class, $empresa, $permisos),
+        ];
+    }
+
+    /**
+     * Filas de un endpoint /att/api/. Null si este BioTime no lo tiene (404,
+     * p. ej. attschedules en BioTime Cloud); cualquier otro error se propaga.
+     *
+     * @return array<int,array<string,mixed>>|null
+     */
+    private function attRows(array $res, string $label): ?array
+    {
+        if ($res['success']) {
+            return $res['data'];
+        }
+
+        if (($res['status'] ?? null) === 404) {
+            return null;
+        }
+
+        throw new \RuntimeException($res['error'] ?? "No se pudieron leer los {$label}.");
+    }
+
+    /**
+     * Borra del espejo las filas de la empresa que ya no vinieron de BioTime.
+     *
+     * @param  class-string<Model>  $model
+     * @param  array<int,array<string,mixed>>  $rows
+     */
+    private function prune(string $model, Empresa $empresa, array $rows): int
+    {
+        $vigentes = array_map(fn ($r) => (string) $r['id'], $rows);
+
+        return $model::query()
+            ->where('empresa_id', $empresa->id)
+            ->when($vigentes !== [], fn ($q) => $q->whereNotIn('biotime_id', $vigentes))
+            ->delete();
+    }
+
+    private function int(mixed $value): ?int
+    {
+        return is_numeric($value) ? (int) $value : null;
+    }
+
+    /**
+     * BioTime manda los sí/no traducidos según el idioma de la instancia
+     * ("Yes", "Sí", "No") y en otros campos como 0/1 o true/false.
+     */
+    private function bool(mixed $value): ?bool
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_numeric($value)) {
+            return (int) $value !== 0;
+        }
+
+        return in_array(mb_strtolower(trim((string) $value)), ['yes', 'sí', 'si', 'true'], true);
     }
 
     /* ------------------------------------------------------------------ */

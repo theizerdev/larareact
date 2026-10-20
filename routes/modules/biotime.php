@@ -10,6 +10,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/biotime/empleados', [BioTimeController::class, 'empleados'])->name('biotime.empleados');
         Route::get('/biotime/empleados/{biotimeEmpleado}/foto', [BioTimeController::class, 'fotoEmpleado'])->name('biotime.empleados.foto');
         Route::get('/biotime/marcajes', [BioTimeController::class, 'marcajes'])->name('biotime.marcajes');
+        Route::get('/biotime/turnos', [BioTimeController::class, 'turnos'])->name('biotime.turnos');
+        Route::get('/biotime/permisos', [BioTimeController::class, 'permisos'])->name('biotime.permisos');
     });
 
     // Acciones (sincronizar / vincular)

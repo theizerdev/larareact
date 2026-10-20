@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BiotimeCalendario;
 use App\Models\BiotimeDispositivo;
 use App\Models\BiotimeEmpleado;
+use App\Models\BiotimeHorario;
 use App\Models\BiotimeMarcaje;
+use App\Models\BiotimePermiso;
+use App\Models\BiotimeTurno;
 use App\Models\Empleado;
 use App\Services\BioTimeService;
 use App\Services\BioTimeSyncService;
@@ -16,6 +20,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 /**
  * Pantallas de solo lectura del espejo de BioTime Cloud.
@@ -191,6 +196,101 @@ class BioTimeController extends Controller
             'dispositivos' => BiotimeDispositivo::when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
                 ->orderBy('alias')->get(['sn', 'alias']),
             'punch_states' => BiotimeMarcaje::PUNCH_STATES,
+        ]);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Horarios, turnos y calendarios                                     */
+    /* ------------------------------------------------------------------ */
+
+    public function turnos(Request $request): InertiaResponse
+    {
+        $empresaId = $this->empresaId($request);
+
+        $horarios = BiotimeHorario::query()
+            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+            ->orderBy('in_time')
+            ->get(['id', 'biotime_id', 'alias', 'use_mode', 'in_time', 'out_time', 'duration', 'work_time_duration', 'break_time_duration', 'cross_day', 'in_required', 'out_required']);
+
+        $turnos = BiotimeTurno::query()
+            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+            ->withCount('calendarios')
+            ->orderBy('alias')
+            ->get()
+            ->map(fn (BiotimeTurno $t) => [
+                'id' => $t->id,
+                'biotime_id' => $t->biotime_id,
+                'alias' => $t->alias,
+                'horarios' => $t->horariosAlias(),
+                'cycle_unit' => $t->cycle_unit,
+                'shift_cycle' => $t->shift_cycle,
+                'calendarios_count' => $t->calendarios_count,
+            ]);
+
+        $calendarios = BiotimeCalendario::query()
+            ->with(['biotimeEmpleado:id,emp_code,first_name,last_name', 'turno:id,alias'])
+            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+            ->when($request->search, function ($q, $search) {
+                $q->whereHas('biotimeEmpleado', function ($be) use ($search) {
+                    $be->where('emp_code', 'like', "%{$search}%")
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->turno, fn ($q, $t) => $q->where('biotime_turno_id', $t))
+            ->orderByDesc('start_date')
+            ->paginate($request->perPage ?? 25)
+            ->withQueryString();
+
+        return Inertia::render('admin/biotime/Turnos', [
+            'horarios' => $horarios,
+            'turnos' => $turnos,
+            'calendarios' => $calendarios,
+            'filters' => $request->only('search', 'turno', 'perPage'),
+            'biotime_active' => (bool) $request->user()?->empresa?->biotime_active,
+        ]);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Permisos e incidencias                                             */
+    /* ------------------------------------------------------------------ */
+
+    public function permisos(Request $request): InertiaResponse
+    {
+        $empresaId = $this->empresaId($request);
+
+        $base = BiotimePermiso::query()
+            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+            ->when($request->search, function ($q, $search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('emp_code', 'like', "%{$search}%")
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->category, fn ($q, $c) => $q->where('category', $c))
+            ->when($request->audit_status, fn ($q, $s) => $q->where('audit_status', $s))
+            // Un permiso cuenta para el rango si se cruza con él.
+            ->when($request->fecha_inicio, fn ($q, $f) => $q->whereDate('end_time', '>=', $f))
+            ->when($request->fecha_fin, fn ($q, $f) => $q->whereDate('start_time', '<=', $f));
+
+        $permisos = (clone $base)
+            ->orderByDesc('start_time')
+            ->paginate($request->perPage ?? 50)
+            ->withQueryString();
+
+        $porEmpresa = fn () => BiotimePermiso::query()->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId));
+
+        return Inertia::render('admin/biotime/Permisos', [
+            'permisos' => $permisos,
+            'stats' => [
+                'total' => (clone $base)->count(),
+                'empleados' => (clone $base)->distinct('emp_code')->count('emp_code'),
+            ],
+            'filters' => $request->only('search', 'category', 'audit_status', 'fecha_inicio', 'fecha_fin', 'perPage'),
+            'categorias' => $porEmpresa()->whereNotNull('category')->distinct()->orderBy('category')->pluck('category'),
+            'estatus' => $porEmpresa()->whereNotNull('audit_status')->distinct()->orderBy('audit_status')->pluck('audit_status'),
+            'biotime_active' => (bool) $request->user()?->empresa?->biotime_active,
         ]);
     }
 

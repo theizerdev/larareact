@@ -124,7 +124,7 @@ class RelojChecadorKioskoController extends Controller
                 'nombre_completo' => $empleado->nombre_completo,
                 'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
                 'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'foto_empleado' => $empleado->foto_empleado ? Storage::url($empleado->foto_empleado) : null,
+                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
                 'departamento' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',

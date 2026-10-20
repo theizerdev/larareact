@@ -67,7 +67,7 @@ class KioskoComidaTest extends TestCase
         ])->assertOk();
 
         $marcaje = AsistenciaMarcaje::withoutGlobalScopes()->where('empleado_id', $empleado->id)->sole();
-        $this->assertSame('Cena', $marcaje->comida_tipo);
+        $this->assertSame('Opción 3', $marcaje->comida_tipo);
         $this->assertSame('0.00', $marcaje->comida_costo);
     }
 
