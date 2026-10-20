@@ -77,15 +77,47 @@ const formatImageUrl = (url?: string | null) => {
     return `/storage/${url.replace(/^\/+/, '')}`;
 };
 
-interface Acompanante {
+interface AcompananteItem {
     nombre: string;
+    nombres?: string;
+    apellidos?: string;
+    curp?: string;
     documento?: string;
+    genero?: string;
+    fecha_nacimiento?: string;
+    edad?: string;
+    correo?: string;
+    cargo?: string;
+    telefono?: string;
+    observacion?: string;
+    foto_carnet?: string;
+    doc_foto_frontal?: string;
+    doc_foto_trasera?: string;
+    [key: string]: any;
+}
+
+interface FormNuevoAcompanante {
+    nombre: string;
+    nombres?: string;
+    apellidos?: string;
+    curp?: string;
+    documento?: string;
+    genero?: string;
+    fecha_nacimiento?: string;
+    edad?: string;
+    correo?: string;
+    cargo?: string;
+    telefono?: string;
+    observacion?: string;
+    foto_carnet?: string;
+    doc_foto_frontal?: string;
+    doc_foto_trasera?: string;
 }
 
 interface GaritaProps {
     searchQuery?: string;
     resultado?: {
-        tipo: 'invitacion' | 'acceso' | 'empleado';
+        tipo: 'invitacion' | 'acceso' | 'empleado' | 'proveedor' | 'proveedor_empleado' | 'productor' | 'productor_empleado';
         data: any;
         acceso_existente?: any;
     } | null;
@@ -639,11 +671,11 @@ export default function GaritaControl({
     const [nuevoVehiculoFotoTrasera, setNuevoVehiculoFotoTrasera] = useState<string>('');
 
     // Estado para Acompañantes en Ingreso de Empleados por Garita
-    const [acompanantesList, setAcompanantesList] = useState<Array<{ nombre: string; documento?: string; telefono?: string; observacion?: string; foto_carnet?: string; doc_foto_frontal?: string; doc_foto_trasera?: string }>>([]);
+    const [acompanantesList, setAcompanantesList] = useState<Array<AcompananteItem>>([]);
     const [isAcompananteModalOpen, setIsAcompananteModalOpen] = useState(false);
     const [selectedAcompananteDetail, setSelectedAcompananteDetail] = useState<any | null>(null);
     const [selectedEmpleadoId, setSelectedEmpleadoId] = useState<string>('');
-    const [nuevoAcompanante, setNuevoAcompanante] = useState({
+    const [nuevoAcompanante, setNuevoAcompanante] = useState<FormNuevoAcompanante>({
         nombres: '',
         apellidos: '',
         nombre: '',
@@ -654,6 +686,7 @@ export default function GaritaControl({
         edad: '',
         correo: '',
         cargo: '',
+        telefono: '',
         observacion: '',
         foto_carnet: '',
         doc_foto_frontal: '',
@@ -2495,6 +2528,7 @@ export default function GaritaControl({
                                 edad: '',
                                 correo: '',
                                 cargo: '',
+                                telefono: '',
                                 observacion: '',
                                 foto_carnet: '',
                                 doc_foto_frontal: '',

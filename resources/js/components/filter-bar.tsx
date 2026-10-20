@@ -39,6 +39,7 @@ export function FilterField({ label, children, className }: FilterFieldProps) {
 interface FilterBarProps {
     children: React.ReactNode;
     className?: string;
+    title?: string;
 }
 
 /**

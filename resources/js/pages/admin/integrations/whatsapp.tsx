@@ -14,11 +14,14 @@ import { Switch } from '@/components/ui/switch';
 import { useTranslate } from '@/hooks/use-translate';
 import type { PaisPhoneOption } from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
 import PhoneInputGroup from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 
 interface LiveStatus {
     isConnected: boolean;
     connectionState: string;
     qrCode: string | null;
+    status?: string | null;
     token?: string | null;
     user: {
         id: string;
@@ -57,6 +60,10 @@ export default function WhatsAppIntegration({
     paises
 }: PageProps) {
     const { __ } = useTranslate();
+    const { can } = usePermission();
+    const canManage = can('whatsapp.manage');
+    const canSend = can('whatsapp.send');
+
     const [copied, setCopied] = useState(false);
     const [liveStatusState, setLiveStatusState] = useState<LiveStatus | null>(live_status);
     const [isPolling, setIsPolling] = useState(false);
@@ -506,7 +513,7 @@ return '';
                                 </CardContent>
                                 <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex flex-col gap-3">
                                     {/* Save Button */}
-                                    <Button type="submit" disabled={configForm.processing} className="w-full gap-2">
+                                    <Button type="submit" disabled={configForm.processing || !canManage} className="w-full gap-2">
                                         <RefreshCw className={`h-4 w-4 ${configForm.processing ? 'animate-spin' : ''}`} />
                                         {__('Save Settings')}
                                     </Button>
@@ -517,6 +524,7 @@ return '';
                                             type="button"
                                             variant="outline"
                                             onClick={handleGenerateToken}
+                                            disabled={!canManage}
                                             className="gap-1 text-slate-700 hover:text-slate-900 border-slate-200 text-xs"
                                         >
                                             <Key className="h-3.5 w-3.5" />
@@ -526,7 +534,7 @@ return '';
                                             type="button"
                                             variant="outline"
                                             onClick={handleSyncCompany}
-                                            disabled={!whatsapp_api_key}
+                                            disabled={!whatsapp_api_key || !canManage}
                                             className="gap-1 text-slate-700 hover:text-emerald-700 border-slate-200 text-xs"
                                         >
                                             <Database className="h-3.5 w-3.5" />
@@ -668,6 +676,7 @@ return '';
                                         </p>
                                         <Button
                                             onClick={handleConnect}
+                                            disabled={!canManage}
                                             className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
                                         >
                                             <Power className="h-4 w-4" />
@@ -723,7 +732,7 @@ return '';
                                 </div>
                             </CardContent>
                             <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
-                                <Button type="submit" disabled={sendingMsg} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                                <Button type="submit" disabled={sendingMsg || !canSend} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
                                     <Send className={`h-4 w-4 ${sendingMsg ? 'animate-pulse' : ''}`} />
                                     {__('Send Message')}
                                 </Button>

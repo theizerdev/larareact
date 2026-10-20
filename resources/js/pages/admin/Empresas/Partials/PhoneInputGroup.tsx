@@ -54,6 +54,7 @@ interface PhoneInputGroupProps {
     placeholder?: string;
     error?: string;
     className?: string;
+    disabled?: boolean;
 }
 
 // ─── Componente ───────────────────────────────────────────────────────────────
@@ -67,6 +68,7 @@ export default function PhoneInputGroup({
     placeholder = '000-0000000',
     error,
     className,
+    disabled = false,
 }: PhoneInputGroupProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -132,12 +134,13 @@ return paises;
                 {/* Selector de país (bandera + código) */}
                 <button
                     type="button"
-                    onClick={() => setIsOpen((v) => !v)}
+                    disabled={disabled}
+                    onClick={() => !disabled && setIsOpen((v) => !v)}
                     className={cn(
                         'flex shrink-0 items-center gap-1.5 pl-3 pr-2 h-9',
                         'rounded-l-md border-r border-input bg-muted/50',
                         'text-sm font-medium text-foreground',
-                        'hover:bg-muted transition-colors',
+                        disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted transition-colors',
                         'focus:outline-none',
                     )}
                 >
@@ -158,6 +161,7 @@ return paises;
                 {/* Input del número de teléfono */}
                 <input
                     type="tel"
+                    disabled={disabled}
                     value={phoneValue}
                     onChange={(e) => onPhoneChange(e.target.value)}
                     placeholder={placeholder}
@@ -166,6 +170,7 @@ return paises;
                         'placeholder:text-muted-foreground',
                         'rounded-r-md',
                         'focus:outline-none',
+                        disabled && 'opacity-50 cursor-not-allowed',
                     )}
                 />
             </div>

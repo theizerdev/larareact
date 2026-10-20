@@ -293,7 +293,7 @@ return '0';
                         </CardHeader>
                         <CardContent>
                             <Chart 
-                                options={lineChartOptions} 
+                                options={lineChartOptions as any} 
                                 series={lineChartSeries} 
                                 type="line" 
                                 height={280} 
@@ -312,7 +312,7 @@ return '0';
                         <CardContent className="flex flex-col justify-between h-[300px]">
                             <div className="pt-2">
                                 <Chart 
-                                    options={donutChartOptions} 
+                                    options={donutChartOptions as any} 
                                     series={donutChartSeries} 
                                     type="donut" 
                                     height={230} 

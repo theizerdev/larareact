@@ -7,6 +7,11 @@ export type User = {
     two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;
+    username?: string | null;
+    telefono?: string | null;
+    permissions?: string[];
+    roles?: string[];
+    is_super_admin?: boolean;
     [key: string]: unknown;
 };
 

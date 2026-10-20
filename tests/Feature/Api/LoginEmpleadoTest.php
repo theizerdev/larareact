@@ -23,6 +23,7 @@ class LoginEmpleadoTest extends TestCase
             'documento_identidad' => '000123',
             'codigo_acceso' => '00000123',
             'status' => true,
+            'permite_app_movil' => true,
         ], $atributos));
     }
 

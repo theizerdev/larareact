@@ -54,7 +54,7 @@ export default function Profile({
                                 >
                                     <Input
                                         id="username"
-                                        defaultValue={auth.user.username}
+                                        defaultValue={auth.user.username || ''}
                                         name="username"
                                         required
                                         autoComplete="username"
@@ -102,7 +102,7 @@ export default function Profile({
                                 >
                                     <Input
                                         id="telefono"
-                                        defaultValue={auth.user.telefono}
+                                        defaultValue={auth.user.telefono || ''}
                                         name="telefono"
                                         required
                                         autoComplete="telefono"

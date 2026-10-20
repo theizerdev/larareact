@@ -47,12 +47,16 @@ import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import ProductorEmpleadosModal from './Partials/ProductorEmpleadosModal';
 import ProductorVehiculosModal from './Partials/ProductorVehiculosModal';
 import MapboxMap, { MapAddressDetails } from '@/components/mapbox-map';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 
 interface Pais {
     id: number;
     nombre: string;
     codigo_iso2: string;
     codigo_telefonico: string;
+    latitud?: number | string | null;
+    longitud?: number | string | null;
 }
 
 interface Empresa {
@@ -157,6 +161,11 @@ export default function Index({
     sucursal,
 }: ProductoresPageProps) {
     const { __ } = useTranslate();
+    const { can } = usePermission();
+    const canCreate = can('productores.create');
+    const canEdit = can('productores.edit');
+    const canDelete = can('productores.delete');
+    const canSendCarnet = can('productores.send-carnet-whatsapp') || canEdit;
 
     // Modal states
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -495,42 +504,48 @@ export default function Index({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => setSelectedProductorForEmployees(productor)}>
-                                <Users className="h-4 w-4 mr-2 text-emerald-600" />
-                                {__('Colaboradores')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setSelectedProductorForVehicles(productor)}>
-                                <Car className="h-4 w-4 mr-2 text-indigo-600" />
-                                {__('Vehículos')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleToggleStatus(productor)}>
-                                <ToggleRight className="h-4 w-4 mr-2 text-amber-600" />
-                                {isActive ? __('Suspender') : __('Activar')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleOpenEditModal(productor)}>
-                                <Pencil className="h-4 w-4 mr-2 text-slate-600" />
-                                {__('Editar Productor')}
-                            </DropdownMenuItem>
+                            {canEdit && (
+                                <>
+                                    <DropdownMenuItem onClick={() => setSelectedProductorForEmployees(productor)}>
+                                        <Users className="h-4 w-4 mr-2 text-emerald-600" />
+                                        {__('Colaboradores')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setSelectedProductorForVehicles(productor)}>
+                                        <Car className="h-4 w-4 mr-2 text-indigo-600" />
+                                        {__('Vehículos')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleToggleStatus(productor)}>
+                                        <ToggleRight className="h-4 w-4 mr-2 text-amber-600" />
+                                        {isActive ? __('Suspender') : __('Activar')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenEditModal(productor)}>
+                                        <Pencil className="h-4 w-4 mr-2 text-slate-600" />
+                                        {__('Editar Productor')}
+                                    </DropdownMenuItem>
+                                </>
+                            )}
                             <DropdownMenuItem onClick={() => router.get(`/admin/productores/${productor.id}/carnet`)}>
                                 <QrCode className="h-4 w-4 mr-2 text-blue-600" />
                                 {__('Gafete Azul / Carnet')}
                             </DropdownMenuItem>
-                            {productor.telefono && (
+                            {productor.telefono && canSendCarnet && (
                                 <DropdownMenuItem onClick={() => handleSendCarnetWhatsApp(productor)}>
                                     <Send className="h-4 w-4 mr-2 text-emerald-600" />
                                     {__('Enviar Gafete por WhatsApp')}
                                 </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem
-                                onClick={() => {
-                                    setDeletingProductor(productor);
-                                    setIsDeleteModalOpen(true);
-                                }}
-                                className="text-red-600 focus:text-red-600"
-                            >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                {__('Eliminar')}
-                            </DropdownMenuItem>
+                            {canDelete && (
+                                <DropdownMenuItem
+                                    onClick={() => {
+                                        setDeletingProductor(productor);
+                                        setIsDeleteModalOpen(true);
+                                    }}
+                                    className="text-red-600 focus:text-red-600"
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    {__('Eliminar')}
+                                </DropdownMenuItem>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 );
@@ -557,25 +572,27 @@ export default function Index({
                     colorClassName="bg-[#071EA3]"
                 >
                     <div className="flex items-center gap-2">
-                        <Button
-                            type="button"
-                            onClick={() => {
-                                preRegistroForm.reset();
-                                setIsPreRegistroModalOpen(true);
-                            }}
-                            variant="outline"
-                            className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
-                        >
-                            <Send className="h-4 w-4" />
-                            {__('Pre-registro')}
-                        </Button>
-                        <Button
-                            onClick={handleOpenCreateModal}
-                            className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
-                        >
-                            <Plus className="h-4 w-4" />
-                            {__('New Producer')}
-                        </Button>
+                        <Can permission="productores.create">
+                            <Button
+                                type="button"
+                                onClick={() => {
+                                    preRegistroForm.reset();
+                                    setIsPreRegistroModalOpen(true);
+                                }}
+                                variant="outline"
+                                className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
+                            >
+                                <Send className="h-4 w-4" />
+                                {__('Pre-registro')}
+                            </Button>
+                            <Button
+                                onClick={handleOpenCreateModal}
+                                className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
+                            >
+                                <Plus className="h-4 w-4" />
+                                {__('New Producer')}
+                            </Button>
+                        </Can>
                     </div>
                 </ModuleHeader>
 
@@ -765,7 +782,7 @@ export default function Index({
                                                     paises={paises}
                                                     selectedPaisId={data.pais_telefono_id ? String(data.pais_telefono_id) : ''}
                                                     phoneValue={data.telefono || ''}
-                                                    onPaisChange={(id) => setData('pais_telefono_id', id)}
+                                                    onPaisChange={(id) => setData('pais_telefono_id', String(id))}
                                                     onPhoneChange={(phone) => setData('telefono', phone)}
                                                     className="w-full"
                                                 />

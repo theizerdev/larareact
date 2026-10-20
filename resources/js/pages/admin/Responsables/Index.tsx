@@ -58,6 +58,8 @@ import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -176,6 +178,10 @@ export default function ResponsablesIndexPage({
     filters,
 }: ResponsablesPageProps) {
     const { __ } = useTranslate();
+    const { can } = usePermission();
+    const canCreate = can('responsables.create');
+    const canEdit = can('responsables.edit');
+    const canDelete = can('responsables.delete');
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -239,12 +245,12 @@ export default function ResponsablesIndexPage({
         reset();
 
         if (auth.user?.empresa_id) {
-            setData(prev => ({
-                ...prev,
-                empresa_id: auth.user.empresa_id,
-                sucursal_id: auth.user.sucursal_id || '',
+            setData({
+                ...initialForm,
+                empresa_id: (auth.user.empresa_id as string | number),
+                sucursal_id: ((auth.user.sucursal_id as string | number) || ''),
                 user_id: auth.user.id,
-            }));
+            });
         }
 
         setIsModalOpen(true);
@@ -406,8 +412,9 @@ return;
             cell: (resp) => (
                 <div className="flex items-center space-x-2">
                     <Switch
+                        disabled={!canEdit}
                         checked={resp.status === 1}
-                        onCheckedChange={() => handleToggleStatus(resp)}
+                        onCheckedChange={() => canEdit && handleToggleStatus(resp)}
                     />
                     <span className={cn(
                         'text-xs font-medium px-2 py-0.5 rounded-full border',
@@ -425,32 +432,43 @@ return;
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
-            cell: (resp) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(resp)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {__('Edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(resp)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
-                            {resp.status === 1 ? __('Deactivate') : __('Activate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setDeletingResponsable(resp)}
-                            className="text-red-600 focus:text-red-600 dark:text-red-400"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {__('Delete')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
+            cell: (resp) => {
+                const hasAnyAction = canEdit || canDelete;
+                if (!hasAnyAction) return null;
+
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {canEdit && (
+                                <DropdownMenuItem onClick={() => handleEditClick(resp)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    {__('Edit')}
+                                </DropdownMenuItem>
+                            )}
+                            {canEdit && (
+                                <DropdownMenuItem onClick={() => handleToggleStatus(resp)}>
+                                    <ToggleRight className="mr-2 h-4 w-4" />
+                                    {resp.status === 1 ? __('Deactivate') : __('Activate')}
+                                </DropdownMenuItem>
+                            )}
+                            {canDelete && (
+                                <DropdownMenuItem
+                                    onClick={() => setDeletingResponsable(resp)}
+                                    className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {__('Delete')}
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
         },
     ];
 
@@ -469,10 +487,12 @@ return;
                     description={__('Manage responsibles, their departments, positions, contact info and system user.')}
                     colorClassName="bg-teal-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Responsible')}
-                    </Button>
+                    <Can permission="responsables.create">
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Responsible')}
+                        </Button>
+                    </Can>
                 </ModuleHeader>
 
                 {/* Stat Cards */}
@@ -557,14 +577,16 @@ return;
                         data={responsables}
                         columns={columns}
                         isLoading={isTableLoading}
-                        onRowClick={(resp) => handleEditClick(resp)}
+                        onRowClick={(resp) => {
+                            if (canEdit) handleEditClick(resp);
+                        }}
                         emptyState={{
                             title: 'No responsibles found',
                             description: searchTerm || statusFilter || departamentoFilter
                                 ? 'Try clearing your search filters or changing your query.'
                                 : 'You have not registered any responsibles yet.',
-                            ctaLabel: 'New Responsible',
-                            onCtaClick: handleCreateClick,
+                            ctaLabel: canCreate ? 'New Responsible' : undefined,
+                            onCtaClick: canCreate ? handleCreateClick : undefined,
                         }}
                     />
                 </div>

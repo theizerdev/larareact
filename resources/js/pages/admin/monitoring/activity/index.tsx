@@ -354,7 +354,7 @@ export default function ActivityMonitoring({
                             variant="outline"
                             size="sm"
                             className="gap-2 border-slate-200 hover:bg-slate-50"
-                            onClick={() => router.reload({ preserveScroll: true })}
+                            onClick={() => router.reload({ preserveScroll: true } as any)}
                         >
                             <RefreshCw className="h-4 w-4" />
                             {__('Refresh')}

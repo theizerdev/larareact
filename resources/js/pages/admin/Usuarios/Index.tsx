@@ -53,16 +53,18 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
 import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -152,6 +154,10 @@ export default function UsersIndexPage({
     auth, users, stats, soxPolicies, roles, empresas, sucursales, paises, filters,
 }: UsersPageProps) {
     const { __ } = useTranslate();
+    const { can } = usePermission();
+    const canCreate = can('users.create');
+    const canEdit = can('users.edit');
+    const canDelete = can('users.delete');
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -391,8 +397,9 @@ return;
                 <div className="flex flex-col gap-1 items-start">
                     <div className="flex items-center space-x-2">
                         <Switch
+                            disabled={!canEdit}
                             checked={user.status === 'activo'}
-                            onCheckedChange={() => handleToggleStatus(user)}
+                            onCheckedChange={() => canEdit && handleToggleStatus(user)}
                         />
                         <span className={cn(
                             'text-xs font-medium px-2 py-0.5 rounded-full border capitalize',
@@ -423,42 +430,55 @@ return;
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
-            cell: (user) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        {user.is_locked && (
-                            <DropdownMenuItem onClick={() => handleUnlockUser(user)} className="text-red-600 font-semibold focus:text-red-700">
-                                <Unlock className="mr-2 h-4 w-4" />
-                                Desbloquear (SOX)
-                            </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => handleEditClick(user)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {__('Edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicateClick(user)}>
-                            <Copy className="mr-2 h-4 w-4" />
-                            {__('Duplicate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
-                            {user.status === 'activo' ? __('Deactivate') : __('Activate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setDeletingUser(user)}
-                            className="text-red-600 focus:text-red-600 dark:text-red-400"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {__('Delete')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
+            cell: (user) => {
+                const hasAnyAction = canEdit || canDelete || canCreate;
+                if (!hasAnyAction) return null;
+
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {canEdit && user.is_locked && (
+                                <DropdownMenuItem onClick={() => handleUnlockUser(user)} className="text-red-600 font-semibold focus:text-red-700">
+                                    <Unlock className="mr-2 h-4 w-4" />
+                                    Desbloquear (SOX)
+                                </DropdownMenuItem>
+                            )}
+                            {canEdit && (
+                                <DropdownMenuItem onClick={() => handleEditClick(user)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    {__('Edit')}
+                                </DropdownMenuItem>
+                            )}
+                            {canCreate && (
+                                <DropdownMenuItem onClick={() => handleDuplicateClick(user)}>
+                                    <Copy className="mr-2 h-4 w-4" />
+                                    {__('Duplicate')}
+                                </DropdownMenuItem>
+                            )}
+                            {canEdit && (
+                                <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
+                                    <ToggleRight className="mr-2 h-4 w-4" />
+                                    {user.status === 'activo' ? __('Deactivate') : __('Activate')}
+                                </DropdownMenuItem>
+                            )}
+                            {canDelete && (
+                                <DropdownMenuItem
+                                    onClick={() => setDeletingUser(user)}
+                                    className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {__('Delete')}
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
         },
     ];
 
@@ -484,10 +504,12 @@ return;
                             <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
                             Cumplimiento SOX
                         </Button>
-                        <Button onClick={handleCreateClick}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            {__('New User')}
-                        </Button>
+                        <Can permission="users.create">
+                            <Button onClick={handleCreateClick}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                {__('New User')}
+                            </Button>
+                        </Can>
                     </div>
                 </ModuleHeader>
 
@@ -589,14 +611,16 @@ return;
                         data={users}
                         columns={columns}
                         isLoading={isTableLoading}
-                        onRowClick={(user) => handleEditClick(user)}
+                        onRowClick={(user) => {
+                            if (canEdit) handleEditClick(user);
+                        }}
                         emptyState={{
                             title: __('No users found'),
                             description: searchTerm || statusFilter || roleFilter || empresaFilter
                                 ? __('Try clearing your search filters or changing your query.')
                                 : __('You have not registered any users yet.'),
-                            ctaLabel: __('New User'),
-                            onCtaClick: handleCreateClick,
+                            ctaLabel: canCreate ? __('New User') : undefined,
+                            onCtaClick: canCreate ? handleCreateClick : undefined,
                         }}
                     />
                 </div>

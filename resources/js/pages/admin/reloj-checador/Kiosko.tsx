@@ -88,6 +88,7 @@ interface EmpleadoFound {
     cargo?: string;
     turno?: string;
     minutos_descanso?: number;
+    ultimo_marcaje_tipo?: string | null;
 }
 
 export default function RelojChecadorKiosko({ configuracion, zona_horaria, opciones_comida = [] }: Props) {
@@ -1019,7 +1020,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
 
                                 {/* BOTÓN DE ESCÁNER QR POR CÁMARA */}
                                 <Button
-                                    onClick={startQrCamera}
+                                    onClick={() => startQrCamera()}
                                     type="button"
                                     variant="outline"
                                     className="w-full h-12 border-indigo-500/40 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-200 font-bold rounded-xl flex items-center justify-center gap-2 border"

@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn, cleanParams } from '@/lib/utils';
@@ -47,8 +48,9 @@ import type { Paginated } from '@/types/app';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import PhoneInputGroup from './Partials/PhoneInputGroup';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 
 const EmpresaMapComponent = lazy(() => {
     return import('./Partials/MapComponent').then((mod) => ({ default: mod.default }));
@@ -125,6 +127,9 @@ const initialForm = {
 
 export default function EmpresasIndexPage({ auth, empresas, stats, paises, filters }: EmpresasPageProps) {
     const { __ } = useTranslate();
+    const { can } = usePermission();
+    const canCreate = can('empresas.create');
+    const canEdit = can('empresas.edit');
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -399,8 +404,9 @@ formData.append('logo_mini', logoMiniFile);
             cell: (empresa) => (
                 <div className="flex items-center space-x-2">
                     <Switch
+                        disabled={!canEdit}
                         checked={empresa.status}
-                        onCheckedChange={() => handleToggleStatus(empresa)}
+                        onCheckedChange={() => canEdit && handleToggleStatus(empresa)}
                     />
                     <span className={cn(
                         'text-xs font-medium px-2 py-0.5 rounded-full border',
@@ -418,25 +424,29 @@ formData.append('logo_mini', logoMiniFile);
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
-            cell: (empresa) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(empresa)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {__('Edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(empresa)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
-                            {empresa.status ? __('Deactivate') : __('Activate')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
+            cell: (empresa) => {
+                if (!canEdit) return null;
+
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditClick(empresa)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {__('Edit')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleStatus(empresa)}>
+                                <ToggleRight className="mr-2 h-4 w-4" />
+                                {empresa.status ? __('Deactivate') : __('Activate')}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
         },
     ];
 
@@ -455,10 +465,12 @@ formData.append('logo_mini', logoMiniFile);
                     description={__('Manage companies, their locations and contact information.')}
                     colorClassName="bg-indigo-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Company')}
-                    </Button>
+                    <Can permission="empresas.create">
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Company')}
+                        </Button>
+                    </Can>
                 </ModuleHeader>
 
                 {/* Stat Cards */}
@@ -528,14 +540,16 @@ formData.append('logo_mini', logoMiniFile);
                         data={empresas}
                         columns={columns}
                         isLoading={isTableLoading}
-                        onRowClick={(empresa) => handleEditClick(empresa)}
+                        onRowClick={(empresa) => {
+                            if (canEdit) handleEditClick(empresa);
+                        }}
                         emptyState={{
                             title: 'No companies found',
                             description: searchTerm || statusFilter
                                 ? 'Try clearing your search filters or changing your query.'
                                 : 'You have not registered any companies in the database yet.',
-                            ctaLabel: 'New Company',
-                            onCtaClick: handleCreateClick,
+                            ctaLabel: canCreate ? 'New Company' : undefined,
+                            onCtaClick: canCreate ? handleCreateClick : undefined,
                         }}
                     />
                 </div>
@@ -764,7 +778,7 @@ formData.append('logo_mini', logoMiniFile);
                                     <Textarea
                                         id="direccion"
                                         value={data.direccion || ''}
-                                        onChange={(e) => setData('direccion', e.target.value)}
+                                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('direccion', e.target.value)}
                                         placeholder={__('The address will be auto-filled when you click on the map...')}
                                         rows={2}
                                     />

@@ -57,6 +57,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 
 const SucursalMapComponent = lazy(() => {
     return import('../Empresas/Partials/MapComponent').then((mod) => ({ default: mod.default }));
@@ -139,6 +141,11 @@ export default function SucursalesIndexPage({
         { title: __('Dashboard'), href: '/admin/dashboard' },
         { title: __('Branches'), href: '/admin/sucursales' },
     ];
+
+    const { can } = usePermission();
+    const canCreate = can('sucursales.create');
+    const canEdit = can('sucursales.edit');
+    const canDelete = can('sucursales.delete');
 
     // ── Estados ────────────────────────────────────────────────────────────────
     const [isModalOpen, setIsModalOpen]           = useState(false);
@@ -396,8 +403,9 @@ return;
             cell: (sucursal) => (
                 <div className="flex items-center space-x-2">
                     <Switch
+                        disabled={!canEdit}
                         checked={sucursal.status}
-                        onCheckedChange={() => handleToggleStatus(sucursal)}
+                        onCheckedChange={() => canEdit && handleToggleStatus(sucursal)}
                     />
                     <span className={cn(
                         'text-xs font-medium px-2 py-0.5 rounded-full border',
@@ -415,32 +423,42 @@ return;
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
-            cell: (sucursal) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(sucursal)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {__('Edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(sucursal)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
-                            {sucursal.status ? __('Deactivate') : __('Activate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setDeletingSucursal(sucursal)}
-                            className="text-red-600 focus:text-red-600 dark:text-red-400"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {__('Delete')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
+            cell: (sucursal) => {
+                if (!canEdit && !canDelete) return null;
+
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {canEdit && (
+                                <>
+                                    <DropdownMenuItem onClick={() => handleEditClick(sucursal)}>
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        {__('Edit')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleToggleStatus(sucursal)}>
+                                        <ToggleRight className="mr-2 h-4 w-4" />
+                                        {sucursal.status ? __('Deactivate') : __('Activate')}
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                            {canDelete && (
+                                <DropdownMenuItem
+                                    onClick={() => setDeletingSucursal(sucursal)}
+                                    className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {__('Delete')}
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
         },
     ];
 
@@ -459,10 +477,12 @@ return;
                     description={__('Manage company branches, their locations and contact information.')}
                     colorClassName="bg-violet-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Branch')}
-                    </Button>
+                    <Can permission="sucursales.create">
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Branch')}
+                        </Button>
+                    </Can>
                 </ModuleHeader>
 
                 {/* Stat Cards */}
@@ -547,14 +567,14 @@ return;
                         data={sucursales}
                         columns={columns}
                         isLoading={isTableLoading}
-                        onRowClick={(sucursal) => handleEditClick(sucursal)}
+                        onRowClick={canEdit ? (sucursal) => handleEditClick(sucursal) : undefined}
                         emptyState={{
                             title: 'No branches found',
                             description: searchTerm || statusFilter || empresaFilter
                                 ? 'Try clearing your search filters or changing your query.'
                                 : 'You have not registered any branches yet.',
-                            ctaLabel: 'New Branch',
-                            onCtaClick: handleCreateClick,
+                            ctaLabel: canCreate ? 'New Branch' : undefined,
+                            onCtaClick: canCreate ? handleCreateClick : undefined,
                         }}
                     />
                 </div>
