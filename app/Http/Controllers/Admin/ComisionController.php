@@ -187,4 +187,31 @@ class ComisionController extends Controller
         $ticketData = $this->commissionService->getTicketData($comisionPago);
         return response()->json($ticketData);
     }
+
+    /**
+     * Sincronizar comisiones de taller retroactivas y asociar técnicos a empleados.
+     */
+    public function syncTaller(Request $request)
+    {
+        $user = auth()->user();
+        $isSuperAdmin = $user?->id === 1 || $user?->hasRole('Super Administrador') || $user?->hasRole('super-admin');
+
+        $empresaId = null;
+        if (! $isSuperAdmin) {
+            $empresaId = $user?->empresa_id;
+        } elseif ($request->filled('empresa_id') && $request->input('empresa_id') !== 'all') {
+            $empresaId = (int) $request->input('empresa_id');
+        }
+
+        $result = $this->commissionService->syncRepairCommissions($empresaId);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __("Comisiones de taller sincronizadas: :linked órdenes vinculadas a empleados y :calculated comisiones calculadas.", [
+                'linked' => $result['linked'],
+                'calculated' => $result['calculated'],
+            ]),
+        ]);
+    }
 }
+

@@ -86,6 +86,69 @@ class CommissionService
     }
 
     /**
+     * Sincroniza las órdenes de taller con sus respectivos empleados y calcula comisiones retroactivas.
+     *
+     * @param int|null $empresaId
+     * @return array{total: int, linked: int, calculated: int}
+     */
+    public function syncRepairCommissions(?int $empresaId = null): array
+    {
+        $query = OrdenReparacion::withoutGlobalScope('multitenancy')
+            ->whereNotNull('tecnico_id');
+
+        if ($empresaId) {
+            $query->where('empresa_id', $empresaId);
+        }
+
+        $reparaciones = $query->get();
+        $linked = 0;
+        $calculated = 0;
+
+        // Cache de empleados por user_id
+        $empleadosPorUser = Empleado::withoutGlobalScope('multitenancy')->get()->groupBy('user_id');
+
+        foreach ($reparaciones as $rep) {
+            $empleados = $empleadosPorUser->get($rep->tecnico_id);
+            $empleado = $empleados ? ($empleados->firstWhere('empresa_id', $rep->empresa_id) ?? $empleados->first()) : null;
+
+            $updated = false;
+
+            if ($empleado && (int) $rep->empleado_id !== (int) $empleado->id) {
+                $rep->empleado_id = $empleado->id;
+                $updated = true;
+                $linked++;
+            }
+
+            // Estados que generan comisión si el equipo fue reparado/entregado con éxito
+            $isReparado = in_array($rep->estado_orden, ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado', 'entregado_reparado'], true);
+
+            if ($isReparado && (float) $rep->comision_monto <= 0 && $empleado && (float) $empleado->porcentaje_comision_reparacion > 0) {
+                $calc = $this->calculateRepairCommission($rep, $empleado);
+                if ($calc['monto'] > 0) {
+                    $rep->comision_monto = $calc['monto'];
+                    $rep->comision_tecnico_pct = $calc['porcentaje'];
+                    if ($rep->comision_estado !== 'pagada') {
+                        $rep->comision_estado = 'pendiente';
+                    }
+                    $updated = true;
+                    $calculated++;
+                }
+            }
+
+            if ($updated) {
+                $rep->save();
+            }
+        }
+
+        return [
+            'total' => $reparaciones->count(),
+            'linked' => $linked,
+            'calculated' => $calculated,
+        ];
+    }
+
+
+    /**
      * Obtener resumen general y listados para el módulo de comisiones (Ventas + Reparaciones de Taller).
      */
     public function getCommissionsDashboard(array $filters, int $empresaId, ?int $sucursalId = null): array

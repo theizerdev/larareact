@@ -308,7 +308,16 @@ export default function ComisionesIndex({
 
     // Modal de Hoja de Corte de Taller (Estilo Google Sheets Imagen 2)
     const [isPrintSheetOpen, setIsPrintSheetOpen] = useState(false);
+    const [isSyncingTaller, setIsSyncingTaller] = useState(false);
     const selectedEmpleado = empleados_list.find((e) => String(e.id) === String(selectedEmpleadoId));
+
+    const handleSyncTallerCommissions = () => {
+        setIsSyncingTaller(true);
+        router.post('/admin/comisiones/sync-taller', {}, {
+            preserveScroll: true,
+            onFinish: () => setIsSyncingTaller(false),
+        });
+    };
 
     // Presets rápidos de corte
     const handleQuickFilterSemana = () => {
@@ -1080,17 +1089,32 @@ export default function ComisionesIndex({
                                         </div>
                                     </div>
 
-                                    {/* Botón Imprimir Hoja de Corte */}
-                                    <Button
-                                        onClick={() => setIsPrintSheetOpen(true)}
-                                        className="w-full sm:w-auto gap-2 bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-md h-12 px-4"
-                                    >
-                                        <Printer className="h-4 w-4 text-indigo-600" />
-                                        <span>{__('Imprimir Hoja de Corte')}</span>
-                                    </Button>
+                                    <div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:w-auto">
+                                        {/* Botón Sincronizar Comisiones */}
+                                        <Button
+                                            onClick={handleSyncTallerCommissions}
+                                            disabled={isSyncingTaller}
+                                            variant="outline"
+                                            className="w-full sm:w-auto gap-2 bg-indigo-600/40 hover:bg-indigo-600/60 text-white font-bold shadow-md h-12 px-4 border border-indigo-400/30"
+                                            title={__('Vincula las órdenes con su técnico y recalcula comisiones pendientes')}
+                                        >
+                                            <RefreshCw className={`h-4 w-4 ${isSyncingTaller ? 'animate-spin' : ''}`} />
+                                            <span>{isSyncingTaller ? __('Sincronizando...') : __('Sincronizar Comisiones')}</span>
+                                        </Button>
+
+                                        {/* Botón Imprimir Hoja de Corte */}
+                                        <Button
+                                            onClick={() => setIsPrintSheetOpen(true)}
+                                            className="w-full sm:w-auto gap-2 bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-md h-12 px-4"
+                                        >
+                                            <Printer className="h-4 w-4 text-indigo-600" />
+                                            <span>{__('Imprimir Hoja de Corte')}</span>
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
 
                         {/* TABLA PRINCIPAL DE TALLER */}
                         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -1101,6 +1125,7 @@ export default function ComisionesIndex({
                                             <th className="px-4 py-3.5">{__('Fecha')}</th>
                                             <th className="px-4 py-3.5 font-mono">{__('# Folio')}</th>
                                             <th className="px-4 py-3.5">{__('Cliente')}</th>
+                                            <th className="px-4 py-3.5">{__('Técnico')}</th>
                                             <th className="px-4 py-3.5">{__('Modelo')}</th>
                                             <th className="px-4 py-3.5">{__('Reparación / Falla')}</th>
                                             <th className="px-4 py-3.5 text-center">{__('Status')}</th>
@@ -1113,7 +1138,7 @@ export default function ComisionesIndex({
                                     <tbody className="divide-y divide-border">
                                         {!reparaciones || reparaciones.data.length === 0 ? (
                                             <tr>
-                                                <td colSpan={10} className="text-center py-12 text-muted-foreground">
+                                                <td colSpan={11} className="text-center py-12 text-muted-foreground">
                                                     <Wrench className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
                                                     {__('No se encontraron órdenes de reparación para los filtros aplicados.')}
                                                 </td>
@@ -1137,6 +1162,35 @@ export default function ComisionesIndex({
                                                             <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-200">
                                                                 {r.cliente_nombre || __('Cliente General')}
                                                             </span>
+                                                        </td>
+
+                                                        <td className="px-4 py-3">
+                                                            {r.empleado ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="h-7 w-7 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-bold flex items-center justify-center text-[10px] shrink-0 border border-indigo-200 dark:border-indigo-800">
+                                                                        {(r.empleado.nombre_completo || 'T')[0].toUpperCase()}
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <div className="font-semibold text-xs text-foreground truncate max-w-[140px]" title={r.empleado.nombre_completo}>
+                                                                            {r.empleado.nombre_completo}
+                                                                        </div>
+                                                                        <div className="text-[10px] text-muted-foreground truncate">
+                                                                            {r.empleado.cargo || __('Técnico')}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ) : r.tecnico ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="h-7 w-7 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-bold flex items-center justify-center text-[10px] shrink-0 border border-slate-200">
+                                                                        {(r.tecnico.name || 'T')[0].toUpperCase()}
+                                                                    </div>
+                                                                    <div className="font-semibold text-xs text-foreground truncate max-w-[140px]" title={r.tecnico.name}>
+                                                                        {r.tecnico.name}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs text-muted-foreground italic">{__('Sin asignar')}</span>
+                                                            )}
                                                         </td>
 
                                                         <td className="px-4 py-3 font-semibold text-foreground">
@@ -1831,6 +1885,7 @@ export default function ComisionesIndex({
                                             <th className="p-2 border-r border-slate-200">{__('Fecha')}</th>
                                             <th className="p-2 border-r border-slate-200 font-mono">{__('Folio')}</th>
                                             <th className="p-2 border-r border-slate-200">{__('Cliente')}</th>
+                                            <th className="p-2 border-r border-slate-200">{__('Técnico')}</th>
                                             <th className="p-2 border-r border-slate-200">{__('Modelo')}</th>
                                             <th className="p-2 border-r border-slate-200">{__('Reparación / Falla')}</th>
                                             <th className="p-2 border-r border-slate-200 text-center">{__('Status')}</th>
@@ -1842,7 +1897,7 @@ export default function ComisionesIndex({
                                     <tbody className="divide-y divide-slate-200">
                                         {!reparaciones || reparaciones.data.length === 0 ? (
                                             <tr>
-                                                <td colSpan={9} className="text-center py-8 text-slate-400">
+                                                <td colSpan={10} className="text-center py-8 text-slate-400">
                                                     {__('No hay órdenes registradas en este período.')}
                                                 </td>
                                             </tr>
@@ -1861,6 +1916,9 @@ export default function ComisionesIndex({
                                                         </td>
                                                         <td className="p-2 border-r border-slate-200 font-medium">
                                                             {r.cliente_nombre || __('Cliente General')}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200 text-slate-700 font-medium whitespace-nowrap">
+                                                            {r.empleado?.nombre_completo || r.tecnico?.name || __('Sin asignar')}
                                                         </td>
                                                         <td className="p-2 border-r border-slate-200">
                                                             {r.marca_nombre} {r.modelo_nombre}
@@ -1899,7 +1957,7 @@ export default function ComisionesIndex({
                                     </tbody>
                                     <tfoot className="bg-slate-100 font-bold border-t border-slate-300">
                                         <tr>
-                                            <td colSpan={7} className="p-2 text-right text-slate-700 uppercase">
+                                            <td colSpan={8} className="p-2 text-right text-slate-700 uppercase">
                                                 {__('TOTALES CORTE:')}
                                             </td>
                                             <td className="p-2 text-right font-mono text-slate-900 border-r border-slate-200">
