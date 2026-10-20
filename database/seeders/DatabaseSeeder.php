@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             TipoServicioSeeder::class,
             SmurfitWestrockSeeder::class,
             ComedorMexicoSeeder::class,
+            GroupSeeder::class,
         ]);
     }
 }
