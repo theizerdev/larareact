@@ -46,6 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { useTranslate } from '@/hooks/use-translate';
+import { cn } from '@/lib/utils';
 
 interface EmpleadoResumen {
     id: number;
