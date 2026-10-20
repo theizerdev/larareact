@@ -11,6 +11,7 @@ export type User = {
     telefono?: string | null;
     permissions?: string[];
     roles?: string[];
+    groups?: string[];
     is_super_admin?: boolean;
     [key: string]: unknown;
 };

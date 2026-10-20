@@ -861,6 +861,12 @@ export default function AdminSaasLayout({
                                     key: 'security.users',
                                 },
                                 {
+                                    title: 'Grupos',
+                                    href: '/admin/grupos',
+                                    permission: 'roles.view',
+                                    key: 'security.groups',
+                                },
+                                {
                                     title: 'Roles',
                                     href: rolesIndex.url(),
                                     permission: 'roles.view',

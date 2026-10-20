@@ -24,9 +24,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Bypass global para Super Administrador en cualquier verificación de Gate/can
+        // Bypass global para Super Administrador y herencia por Grupos de Roles
         Gate::before(function ($user, $ability) {
-            return method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin() ? true : null;
+            if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
+                return true;
+            }
+            if (method_exists($user, 'hasEffectivePermission') && $user->hasEffectivePermission($ability)) {
+                return true;
+            }
+            return null;
         });
 
         $this->configureDefaults();
