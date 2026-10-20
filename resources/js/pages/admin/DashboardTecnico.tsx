@@ -412,12 +412,15 @@ export default function DashboardTecnico({ tecnico, counts, misEquiposPendientes
             case 'listo_sin_solucion':
             case 'cancelado':
                 return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-300 font-bold text-xs">❌ 7-LISTO PARA ENTREGAR SIN SOLUCION</Badge>;
+            case 'entregado_reparado':
             case 'entregado_finalizado':
             case 'entregado':
-                return <Badge className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold text-xs">✅ 8-ENTREGADO FINALIZADO</Badge>;
+                return <Badge className="bg-emerald-600 text-white font-bold text-xs">✅ 8-ENTREGADO REPARADO</Badge>;
+            case 'entregado_no_reparado':
+                return <Badge className="bg-rose-600 text-white font-bold text-xs">⚠️ 9-ENTREGADO NO REPARADO</Badge>;
             case 'reincidencia_garantia':
             case 'reincidencia':
-                return <Badge className="bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-300 font-bold text-xs">🔄 8-REINCIDENCIA/GARANTIA</Badge>;
+                return <Badge className="bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-300 font-bold text-xs">🔄 10-REINCIDENCIA/GARANTIA</Badge>;
             default:
                 return <Badge variant="outline">{st?.replace(/_/g, ' ').toUpperCase()}</Badge>;
         }

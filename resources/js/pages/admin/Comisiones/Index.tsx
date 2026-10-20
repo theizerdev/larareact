@@ -97,6 +97,8 @@ interface ReparacionItem {
     cliente_nombre: string;
     marca_nombre: string;
     modelo_nombre: string;
+    descripcion_falla?: string;
+    observaciones_fisicas?: string;
     costo_mano_obra: number;
     costo_total: number;
     costo_estimado: number;
@@ -207,6 +209,15 @@ interface Props {
         comisiones_ventas?: number;
         comisiones_reparaciones?: number;
         cantidad_reparaciones?: number;
+        taller_semaforo?: {
+            reparados: number;
+            no_reparados: number;
+            en_proceso: number;
+            total: number;
+            total_generado: number;
+            total_comisiones: number;
+            pct_efectivo: number;
+        };
     };
     empleados_resumen: EmpleadoResumen[];
     ventas: {
@@ -294,6 +305,54 @@ export default function ComisionesIndex({
     // Modal de Ticket Térmico Imprimible
     const [ticketData, setTicketData] = useState<TicketData | null>(null);
     const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+
+    // Modal de Hoja de Corte de Taller (Estilo Google Sheets Imagen 2)
+    const [isPrintSheetOpen, setIsPrintSheetOpen] = useState(false);
+    const selectedEmpleado = empleados_list.find((e) => String(e.id) === String(selectedEmpleadoId));
+
+    // Presets rápidos de corte
+    const handleQuickFilterSemana = () => {
+        const now = new Date();
+        const currentDay = now.getDay(); // 0: Sun, 1: Mon, ..., 6: Sat
+        const diffToSaturday = 6 - currentDay;
+        const sat = new Date(now);
+        sat.setDate(now.getDate() + diffToSaturday);
+
+        const sun = new Date(sat);
+        sun.setDate(sat.getDate() - 6);
+
+        const fromStr = sun.toISOString().split('T')[0];
+        const toStr = sat.toISOString().split('T')[0];
+
+        setDateFrom(fromStr);
+        setDateTo(toStr);
+        handleApplyFilters({ from: fromStr, to: toStr });
+    };
+
+    const handleQuickFilterMesAnterior = () => {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+
+        const fromStr = firstDay.toISOString().split('T')[0];
+        const toStr = lastDay.toISOString().split('T')[0];
+
+        setDateFrom(fromStr);
+        setDateTo(toStr);
+        handleApplyFilters({ from: fromStr, to: toStr });
+    };
+
+    const handleQuickFilterMesActual = () => {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const fromStr = firstDay.toISOString().split('T')[0];
+        const toStr = now.toISOString().split('T')[0];
+
+        setDateFrom(fromStr);
+        setDateTo(toStr);
+        handleApplyFilters({ from: fromStr, to: toStr });
+    };
 
     // Escuchar si el backend devolvió un comision_pago en la notificación flash
     useEffect(() => {
@@ -600,6 +659,41 @@ export default function ComisionesIndex({
                                 onChange={(e) => setDateTo(e.target.value)}
                             />
                         </div>
+                    </div>
+
+                    {/* Presets Rápidos de Corte */}
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+                        <span className="text-xs font-semibold text-muted-foreground mr-1">⚡ {__('Cortes Rápidos:')}</span>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            className="h-7 text-xs gap-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800"
+                            onClick={handleQuickFilterSemana}
+                        >
+                            <Calendar className="h-3.5 w-3.5 text-indigo-600" />
+                            {__('Corte Semanal Taller (Sábado)')}
+                        </Button>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            className="h-7 text-xs gap-1.5 bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800"
+                            onClick={handleQuickFilterMesAnterior}
+                        >
+                            <Calendar className="h-3.5 w-3.5 text-purple-600" />
+                            {__('Mes Anterior (Recepción / Ventas)')}
+                        </Button>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            className="h-7 text-xs gap-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                            onClick={handleQuickFilterMesActual}
+                        >
+                            <Calendar className="h-3.5 w-3.5" />
+                            {__('Mes Actual')}
+                        </Button>
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1 border-t">
@@ -912,88 +1006,202 @@ export default function ComisionesIndex({
                         </div>
                     </TabsContent>
 
-                    {/* ── TAB 3: DETALLE DE TALLER & REPARACIONES ───────────────────────── */}
+                    {/* ── TAB 3: DETALLE DE TALLER & REPARACIONES (HOJA DE CORTE SEMANAL) ───────────────────────── */}
                     <TabsContent value="reparaciones" className="space-y-4 m-0">
+                        {/* BANNER ESTILO HOJA DE CÁLCULO (IMAGEN 2) */}
+                        <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-5 shadow-xl border border-indigo-900/50">
+                            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                                {/* Datos Financieros: Total Generado vs Comisiones y % */}
+                                <div className="space-y-2">
+                                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
+                                        <Wrench className="h-3.5 w-3.5 text-indigo-400" />
+                                        <span>{__('Hoja de Corte de Taller y Rendimiento Técnico')}</span>
+                                    </div>
+                                    <div className="flex flex-wrap items-baseline gap-6 pt-1">
+                                        <div>
+                                            <div className="text-xs uppercase font-bold text-slate-400 tracking-wider">
+                                                {__('Total Generado al Negocio')}
+                                            </div>
+                                            <div className="text-3xl lg:text-4xl font-mono font-black text-white">
+                                                {currencySymbol}{Number(stats.taller_semaforo?.total_generado ?? stats.total_reparaciones_monto ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                        <div className="border-l border-slate-700 pl-6">
+                                            <div className="text-xs uppercase font-bold text-emerald-400 tracking-wider">
+                                                {__('Total Comisiones Técnico')}
+                                            </div>
+                                            <div className="text-3xl lg:text-4xl font-mono font-black text-emerald-400">
+                                                {currencySymbol}{Number(stats.taller_semaforo?.total_comisiones ?? stats.comisiones_reparaciones ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                        <div className="border-l border-slate-700 pl-6">
+                                            <div className="text-xs uppercase font-bold text-indigo-300 tracking-wider">
+                                                {__('% Efectivo Comisión')}
+                                            </div>
+                                            <div className="text-2xl lg:text-3xl font-mono font-black text-indigo-200 flex items-center gap-1">
+                                                <span>{Number(stats.taller_semaforo?.pct_efectivo ?? 0).toFixed(2)}%</span>
+                                                <span className="text-[10px] font-normal text-slate-400">({__('de lo facturado')})</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Semáforo de Equipos (Idéntico a las casillas de la Imagen 2) */}
+                                <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                                    <div className="grid grid-cols-3 sm:flex items-center gap-2 w-full sm:w-auto">
+                                        {/* VERDE: Reparados */}
+                                        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-emerald-600/90 text-white min-w-[85px] shadow-lg border border-emerald-400/40">
+                                            <div className="text-2xl font-mono font-black leading-none">
+                                                {stats.taller_semaforo?.reparados ?? 0}
+                                            </div>
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-100 mt-1 text-center">
+                                                {__('Reparados')}
+                                            </div>
+                                        </div>
+
+                                        {/* ROJO: No Reparados */}
+                                        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-rose-600/90 text-white min-w-[85px] shadow-lg border border-rose-400/40">
+                                            <div className="text-2xl font-mono font-black leading-none">
+                                                {stats.taller_semaforo?.no_reparados ?? 0}
+                                            </div>
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-rose-100 mt-1 text-center">
+                                                {__('No Reparados')}
+                                            </div>
+                                        </div>
+
+                                        {/* AMARILLO: En Proceso */}
+                                        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-amber-500/90 text-white min-w-[85px] shadow-lg border border-amber-300/40">
+                                            <div className="text-2xl font-mono font-black leading-none">
+                                                {stats.taller_semaforo?.en_proceso ?? 0}
+                                            </div>
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-amber-100 mt-1 text-center">
+                                                {__('En Proceso')}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Botón Imprimir Hoja de Corte */}
+                                    <Button
+                                        onClick={() => setIsPrintSheetOpen(true)}
+                                        className="w-full sm:w-auto gap-2 bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-md h-12 px-4"
+                                    >
+                                        <Printer className="h-4 w-4 text-indigo-600" />
+                                        <span>{__('Imprimir Hoja de Corte')}</span>
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* TABLA PRINCIPAL DE TALLER */}
                         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-muted/50 text-xs uppercase font-semibold text-muted-foreground border-b">
                                         <tr>
-                                            <th className="px-5 py-3.5">{__('Folio / Orden')}</th>
-                                            <th className="px-5 py-3.5">{__('Fecha')}</th>
-                                            <th className="px-5 py-3.5">{__('Técnico / Responsable')}</th>
-                                            <th className="px-5 py-3.5">{__('Dispositivo / Equipo')}</th>
-                                            <th className="px-5 py-3.5 text-right">{__('Mano de Obra')}</th>
-                                            <th className="px-5 py-3.5 text-right">{__('Total Orden')}</th>
-                                            <th className="px-5 py-3.5 text-right">{__('Comisión')}</th>
-                                            <th className="px-5 py-3.5 text-center">{__('Estado')}</th>
+                                            <th className="px-4 py-3.5">{__('Fecha')}</th>
+                                            <th className="px-4 py-3.5 font-mono">{__('# Folio')}</th>
+                                            <th className="px-4 py-3.5">{__('Cliente')}</th>
+                                            <th className="px-4 py-3.5">{__('Modelo')}</th>
+                                            <th className="px-4 py-3.5">{__('Reparación / Falla')}</th>
+                                            <th className="px-4 py-3.5 text-center">{__('Status')}</th>
+                                            <th className="px-4 py-3.5">{__('Observación')}</th>
+                                            <th className="px-4 py-3.5 text-right">{__('Total Orden')}</th>
+                                            <th className="px-4 py-3.5 text-right">{__('Comisión')}</th>
+                                            <th className="px-4 py-3.5 text-center">{__('Estado')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {!reparaciones || reparaciones.data.length === 0 ? (
                                             <tr>
-                                                <td colSpan={8} className="text-center py-10 text-muted-foreground">
+                                                <td colSpan={10} className="text-center py-12 text-muted-foreground">
+                                                    <Wrench className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
                                                     {__('No se encontraron órdenes de reparación para los filtros aplicados.')}
                                                 </td>
                                             </tr>
                                         ) : (
-                                            reparaciones.data.map((r) => (
-                                                <tr key={r.id} className="hover:bg-muted/30 transition-colors">
-                                                    <td className="px-5 py-3.5 font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                                                        {r.numero_orden}
-                                                    </td>
+                                            reparaciones.data.map((r) => {
+                                                const isExito = ['entregado_reparado', 'entregado_finalizado', 'listo_reparado', 'reparado'].includes(r.estado_orden);
+                                                const isSinSolucion = ['entregado_no_reparado', 'listo_sin_solucion', 'cancelado'].includes(r.estado_orden);
 
-                                                    <td className="px-5 py-3.5 text-xs text-muted-foreground">
-                                                        {new Date(r.created_at).toLocaleDateString()}
-                                                    </td>
+                                                return (
+                                                    <tr key={r.id} className="hover:bg-muted/30 transition-colors">
+                                                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                                                            {new Date(r.created_at).toLocaleDateString()}
+                                                        </td>
 
-                                                    <td className="px-5 py-3.5 font-medium text-foreground">
-                                                        {r.empleado?.nombre_completo || r.tecnico?.name || __('Sin Asignar')}
-                                                    </td>
+                                                        <td className="px-4 py-3 font-mono font-black text-indigo-600 dark:text-indigo-400">
+                                                            {r.numero_orden}
+                                                        </td>
 
-                                                    <td className="px-5 py-3.5 text-foreground font-semibold">
-                                                        {r.marca_nombre} {r.modelo_nombre}
-                                                        <div className="text-[11px] font-normal text-muted-foreground">{r.cliente_nombre}</div>
-                                                    </td>
+                                                        <td className="px-4 py-3">
+                                                            <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-200">
+                                                                {r.cliente_nombre || __('Cliente General')}
+                                                            </span>
+                                                        </td>
 
-                                                    <td className="px-5 py-3.5 text-right font-medium text-muted-foreground">
-                                                        {currencySymbol}{Number(r.costo_mano_obra || 0).toFixed(2)}
-                                                    </td>
+                                                        <td className="px-4 py-3 font-semibold text-foreground">
+                                                            {r.marca_nombre} {r.modelo_nombre}
+                                                        </td>
 
-                                                    <td className="px-5 py-3.5 text-right font-bold text-foreground">
-                                                        {currencySymbol}{Number(r.costo_total || r.costo_estimado || 0).toFixed(2)}
-                                                    </td>
+                                                        <td className="px-4 py-3 text-xs text-muted-foreground max-w-xs truncate" title={r.descripcion_falla || ''}>
+                                                            {r.descripcion_falla || __('Servicio Técnico')}
+                                                        </td>
 
-                                                    <td className="px-5 py-3.5 text-right font-black text-indigo-600 dark:text-indigo-400">
-                                                        +{currencySymbol}{Number(r.comision_monto || 0).toFixed(2)}
-                                                    </td>
+                                                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                                                            {isExito ? (
+                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-300">
+                                                                    🟢 {__('REPARADO')}
+                                                                </span>
+                                                            ) : isSinSolucion ? (
+                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-300">
+                                                                    🔴 {__('NO REPARADO')}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300">
+                                                                    🟡 {__('EN PROCESO')}
+                                                                </span>
+                                                            )}
+                                                        </td>
 
-                                                    <td className="px-5 py-3.5 text-center">
-                                                        {r.comision_estado === 'pagada' ? (
-                                                            <div className="inline-flex items-center gap-1">
-                                                                <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
-                                                                    <Check className="h-3 w-3 mr-1" />
-                                                                    {__('Pagada')}
+                                                        <td className="px-4 py-3 text-xs text-muted-foreground max-w-xs truncate" title={r.observaciones_fisicas || ''}>
+                                                            {r.observaciones_fisicas || '-'}
+                                                        </td>
+
+                                                        <td className="px-4 py-3 text-right font-medium text-foreground whitespace-nowrap">
+                                                            {currencySymbol}{Number(r.costo_total || r.costo_estimado || 0).toFixed(2)}
+                                                        </td>
+
+                                                        <td className="px-4 py-3 text-right font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                                                            +{currencySymbol}{Number(r.comision_monto || 0).toFixed(2)}
+                                                        </td>
+
+                                                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                                                            {r.comision_estado === 'pagada' ? (
+                                                                <div className="inline-flex items-center gap-1">
+                                                                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs">
+                                                                        <Check className="h-3 w-3 mr-1" />
+                                                                        {__('Pagada')}
+                                                                    </Badge>
+                                                                    {r.comision_pago && (
+                                                                        <button
+                                                                            onClick={() => viewTicket(r.comision_pago!.id)}
+                                                                            title={__('Ver Ticket de Liquidación: ') + r.comision_pago.codigo_recibo}
+                                                                            className="text-xs text-primary underline ml-1 cursor-pointer"
+                                                                        >
+                                                                            {r.comision_pago.codigo_recibo}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-xs">
+                                                                    <Clock className="h-3 w-3 mr-1" />
+                                                                    {__('Pendiente')}
                                                                 </Badge>
-                                                                {r.comision_pago && (
-                                                                    <button
-                                                                        onClick={() => viewTicket(r.comision_pago!.id)}
-                                                                        title={__('Ver Ticket de Liquidación: ') + r.comision_pago.codigo_recibo}
-                                                                        className="text-xs text-primary underline ml-1 cursor-pointer"
-                                                                    >
-                                                                        {r.comision_pago.codigo_recibo}
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
-                                                                <Clock className="h-3 w-3 mr-1" />
-                                                                {__('Pendiente')}
-                                                            </Badge>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>
@@ -1506,8 +1714,439 @@ export default function ComisionesIndex({
                 </DialogContent>
             </Dialog>
 
+            {/* ── MODAL DE PREVISUALIZACIÓN DE HOJA DE CORTE DE TALLER (ESTILO GOOGLE SHEETS) ────── */}
+            <Dialog open={isPrintSheetOpen} onOpenChange={setIsPrintSheetOpen}>
+                <DialogContent className="max-w-5xl max-h-[92vh] flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="p-4 border-b bg-muted/40 flex flex-row items-center justify-between space-y-0">
+                        <div>
+                            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+                                <Wrench className="h-5 w-5 text-indigo-600" />
+                                <span>{__('Hoja de Corte de Taller - Rendimiento y Liquidación')}</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                {__('Formato ejecutivo estilo hoja de cálculo para auditoría y firma de comisiones.')}
+                            </DialogDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                onClick={() => window.print()}
+                                className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-9"
+                            >
+                                <Printer className="h-4 w-4" />
+                                <span>{__('Imprimir / Guardar PDF')}</span>
+                            </Button>
+                        </div>
+                    </DialogHeader>
+
+                    {/* CONTENEDOR PREVIEW EN PANTALLA */}
+                    <div className="flex-1 overflow-y-auto p-6 bg-slate-100 dark:bg-slate-950">
+                        <div className="max-w-4xl mx-auto bg-white text-slate-900 rounded-xl shadow-lg border p-6 font-sans">
+                            {/* ENCABEZADO EMPRESA */}
+                            <div className="flex items-start justify-between border-b pb-4 mb-4">
+                                <div>
+                                    <h2 className="text-xl font-black uppercase text-indigo-900 tracking-wide">
+                                        {empresa?.razon_social || 'FixSale POS - Taller Técnico'}
+                                    </h2>
+                                    <div className="text-xs text-slate-500 font-medium space-y-0.5 mt-1">
+                                        {empresa?.documento && <div><b>ID / RFC:</b> {empresa.documento}</div>}
+                                        {empresa?.direccion && <div><b>Ubicación:</b> {empresa.direccion}</div>}
+                                        {empresa?.telefono && <div><b>Contacto:</b> {empresa.telefono}</div>}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="inline-block px-3 py-1 rounded bg-indigo-100 text-indigo-900 text-xs font-black uppercase tracking-wider mb-1">
+                                        {__('CORTE DE COMISIONES')}
+                                    </span>
+                                    <div className="text-xs text-slate-600 font-medium">
+                                        <b>{__('Período:')}</b> {dateFrom || 'Inicio'} {__('al')} {dateTo || 'Hoy'}
+                                    </div>
+                                    <div className="text-xs text-slate-600 font-medium">
+                                        <b>{__('Técnico:')}</b> {selectedEmpleado?.nombre_completo || __('Consolidado de Taller')}
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 mt-1">
+                                        {__('Fecha Emisión:')} {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* RESUMEN FINANCIERO Y SEMÁFORO (IDÉNTICO A IMAGEN 2) */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                {/* Tarjeta Totales */}
+                                <div className="bg-slate-900 text-white p-4 rounded-xl flex items-center justify-between">
+                                    <div>
+                                        <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                                            {__('Total Facturado Taller')}
+                                        </div>
+                                        <div className="text-2xl font-mono font-black">
+                                            {currencySymbol}{Number(stats.taller_semaforo?.total_generado ?? stats.total_reparaciones_monto ?? 0).toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div className="text-right border-l border-slate-700 pl-4">
+                                        <div className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
+                                            {__('Total Comisiones')}
+                                        </div>
+                                        <div className="text-2xl font-mono font-black text-emerald-400">
+                                            {currencySymbol}{Number(stats.taller_semaforo?.total_comisiones ?? stats.comisiones_reparaciones ?? 0).toFixed(2)}
+                                        </div>
+                                        <div className="text-[10px] text-indigo-300 font-semibold mt-0.5">
+                                            {Number(stats.taller_semaforo?.pct_efectivo ?? 0).toFixed(2)}% {__('Efectivo')}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Semáforo de Casillas */}
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-emerald-600 text-white text-center">
+                                        <div className="text-2xl font-black font-mono leading-none">
+                                            {stats.taller_semaforo?.reparados ?? 0}
+                                        </div>
+                                        <div className="text-[10px] font-bold uppercase mt-1">
+                                            {__('Reparados')}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-rose-600 text-white text-center">
+                                        <div className="text-2xl font-black font-mono leading-none">
+                                            {stats.taller_semaforo?.no_reparados ?? 0}
+                                        </div>
+                                        <div className="text-[10px] font-bold uppercase mt-1">
+                                            {__('No Reparados')}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-amber-500 text-white text-center">
+                                        <div className="text-2xl font-black font-mono leading-none">
+                                            {stats.taller_semaforo?.en_proceso ?? 0}
+                                        </div>
+                                        <div className="text-[10px] font-bold uppercase mt-1">
+                                            {__('En Proceso')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* TABLA ESTILO HOJA DE CÁLCULO */}
+                            <div className="border border-slate-300 rounded-lg overflow-hidden mb-6">
+                                <table className="w-full text-xs text-left border-collapse">
+                                    <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-300">
+                                        <tr>
+                                            <th className="p-2 border-r border-slate-200">{__('Fecha')}</th>
+                                            <th className="p-2 border-r border-slate-200 font-mono">{__('Folio')}</th>
+                                            <th className="p-2 border-r border-slate-200">{__('Cliente')}</th>
+                                            <th className="p-2 border-r border-slate-200">{__('Modelo')}</th>
+                                            <th className="p-2 border-r border-slate-200">{__('Reparación / Falla')}</th>
+                                            <th className="p-2 border-r border-slate-200 text-center">{__('Status')}</th>
+                                            <th className="p-2 border-r border-slate-200">{__('Observación')}</th>
+                                            <th className="p-2 border-r border-slate-200 text-right">{__('Total')}</th>
+                                            <th className="p-2 text-right">{__('Comisión')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        {!reparaciones || reparaciones.data.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={9} className="text-center py-8 text-slate-400">
+                                                    {__('No hay órdenes registradas en este período.')}
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            reparaciones.data.map((r, i) => {
+                                                const isReparado = ['entregado_reparado', 'entregado_finalizado', 'listo_reparado', 'reparado'].includes(r.estado_orden);
+                                                const isNoReparado = ['entregado_no_reparado', 'listo_sin_solucion', 'cancelado'].includes(r.estado_orden);
+
+                                                return (
+                                                    <tr key={r.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                                                        <td className="p-2 border-r border-slate-200 text-slate-600 whitespace-nowrap">
+                                                            {new Date(r.created_at).toLocaleDateString()}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200 font-mono font-bold text-indigo-700">
+                                                            {r.numero_orden}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200 font-medium">
+                                                            {r.cliente_nombre || __('Cliente General')}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200">
+                                                            {r.marca_nombre} {r.modelo_nombre}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200 text-slate-600 max-w-[180px] truncate" title={r.descripcion_falla}>
+                                                            {r.descripcion_falla || __('Servicio de taller')}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200 text-center whitespace-nowrap">
+                                                            {isReparado ? (
+                                                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                                    {__('REPARADO')}
+                                                                </span>
+                                                            ) : isNoReparado ? (
+                                                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+                                                                    {__('NO REPARADO')}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                                                                    {__('EN PROCESO')}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200 text-slate-500 max-w-[150px] truncate">
+                                                            {r.observaciones_fisicas || '-'}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200 text-right font-mono font-medium">
+                                                            {currencySymbol}{Number(r.costo_total || r.costo_estimado || 0).toFixed(2)}
+                                                        </td>
+                                                        <td className="p-2 text-right font-mono font-bold text-emerald-700">
+                                                            {currencySymbol}{Number(r.comision_monto || 0).toFixed(2)}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                    <tfoot className="bg-slate-100 font-bold border-t border-slate-300">
+                                        <tr>
+                                            <td colSpan={7} className="p-2 text-right text-slate-700 uppercase">
+                                                {__('TOTALES CORTE:')}
+                                            </td>
+                                            <td className="p-2 text-right font-mono text-slate-900 border-r border-slate-200">
+                                                {currencySymbol}{Number(stats.taller_semaforo?.total_generado ?? 0).toFixed(2)}
+                                            </td>
+                                            <td className="p-2 text-right font-mono text-emerald-700">
+                                                {currencySymbol}{Number(stats.taller_semaforo?.total_comisiones ?? 0).toFixed(2)}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            {/* FIRMAS DE CONFORMIDAD Y AUDITORÍA */}
+                            <div className="grid grid-cols-2 gap-12 pt-8 text-center text-xs">
+                                <div>
+                                    <div className="border-t-2 border-slate-400 pt-2 font-bold text-slate-800 uppercase">
+                                        {selectedEmpleado?.nombre_completo || __('Firma del Técnico Responsable')}
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 font-medium">
+                                        {__('Recibí Conforme / Comisión Liquidada')}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="border-t-2 border-slate-400 pt-2 font-bold text-slate-800 uppercase">
+                                        {empresa?.razon_social || __('Administración / Taller')}
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 font-medium">
+                                        {__('Aprobado y Pagado')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── PLANTILLA OFICIAL DE IMPRESIÓN HOJA DE CORTE DE TALLER (@media print) ────── */}
+            {isPrintSheetOpen && (
+                <div id="printable-workshop-sheet" className="hidden print:block text-black bg-white font-sans p-6 text-xs w-full max-w-[280mm] mx-auto">
+                    <style>{`
+                        @media print {
+                            body * {
+                                visibility: hidden !important;
+                            }
+                            #printable-workshop-sheet, #printable-workshop-sheet * {
+                                visibility: visible !important;
+                            }
+                            #printable-workshop-sheet {
+                                position: absolute !important;
+                                left: 0 !important;
+                                top: 0 !important;
+                                width: 100% !important;
+                                margin: 0 !important;
+                                padding: 8mm !important;
+                                background: white !important;
+                                color: black !important;
+                                font-family: Arial, Helvetica, sans-serif !important;
+                                font-size: 10px !important;
+                            }
+                            @page {
+                                size: letter landscape;
+                                margin: 8mm;
+                            }
+                        }
+                    `}</style>
+
+                    {/* ENCABEZADO EMPRESA PRINT */}
+                    <div className="flex items-start justify-between border-b-2 border-black pb-3 mb-3">
+                        <div>
+                            <h2 className="text-lg font-black uppercase text-black tracking-wide">
+                                {empresa?.razon_social || 'FixSale POS - Taller Técnico'}
+                            </h2>
+                            <div className="text-[10px] text-gray-700 font-medium space-y-0.5 mt-0.5">
+                                {empresa?.documento && <div><b>ID / RFC:</b> {empresa.documento}</div>}
+                                {empresa?.direccion && <div><b>Ubicación:</b> {empresa.direccion}</div>}
+                                {empresa?.telefono && <div><b>Contacto:</b> {empresa.telefono}</div>}
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-xs font-black uppercase border border-black px-2 py-0.5 inline-block mb-1">
+                                {__('HOJA DE CORTE DE COMISIONES')}
+                            </div>
+                            <div className="text-[10px] text-gray-800">
+                                <b>{__('Período:')}</b> {dateFrom || 'Inicio'} {__('al')} {dateTo || 'Hoy'}
+                            </div>
+                            <div className="text-[10px] text-gray-800">
+                                <b>{__('Técnico:')}</b> {selectedEmpleado?.nombre_completo || __('Consolidado de Taller')}
+                            </div>
+                            <div className="text-[9px] text-gray-500 mt-0.5">
+                                {__('Emitido:')} {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* RESUMEN FINANCIERO Y SEMÁFORO PRINT */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="border border-black p-2 flex items-center justify-between">
+                            <div>
+                                <div className="text-[9px] uppercase font-bold text-gray-600">
+                                    {__('Total Facturado Taller')}
+                                </div>
+                                <div className="text-lg font-mono font-black">
+                                    {currencySymbol}{Number(stats.taller_semaforo?.total_generado ?? stats.total_reparaciones_monto ?? 0).toFixed(2)}
+                                </div>
+                            </div>
+                            <div className="text-right border-l border-gray-400 pl-3">
+                                <div className="text-[9px] uppercase font-bold text-gray-700">
+                                    {__('Total Comisiones')}
+                                </div>
+                                <div className="text-lg font-mono font-black">
+                                    {currencySymbol}{Number(stats.taller_semaforo?.total_comisiones ?? stats.comisiones_reparaciones ?? 0).toFixed(2)}
+                                </div>
+                                <div className="text-[9px] font-bold">
+                                    {Number(stats.taller_semaforo?.pct_efectivo ?? 0).toFixed(2)}% {__('Efectivo')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1">
+                            <div className="border-2 border-black p-1 text-center bg-gray-100">
+                                <div className="text-base font-black font-mono leading-none">
+                                    {stats.taller_semaforo?.reparados ?? 0}
+                                </div>
+                                <div className="text-[8px] font-black uppercase mt-0.5">
+                                    {__('Reparados')}
+                                </div>
+                            </div>
+                            <div className="border-2 border-black p-1 text-center bg-gray-100">
+                                <div className="text-base font-black font-mono leading-none">
+                                    {stats.taller_semaforo?.no_reparados ?? 0}
+                                </div>
+                                <div className="text-[8px] font-black uppercase mt-0.5">
+                                    {__('No Reparados')}
+                                </div>
+                            </div>
+                            <div className="border-2 border-black p-1 text-center bg-gray-100">
+                                <div className="text-base font-black font-mono leading-none">
+                                    {stats.taller_semaforo?.en_proceso ?? 0}
+                                </div>
+                                <div className="text-[8px] font-black uppercase mt-0.5">
+                                    {__('En Proceso')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* TABLA PRINT */}
+                    <table className="w-full text-[10px] text-left border-collapse border border-black mb-4">
+                        <thead className="bg-gray-100 font-bold border-b border-black">
+                            <tr>
+                                <th className="p-1 border border-black">{__('Fecha')}</th>
+                                <th className="p-1 border border-black font-mono">{__('Folio')}</th>
+                                <th className="p-1 border border-black">{__('Cliente')}</th>
+                                <th className="p-1 border border-black">{__('Modelo')}</th>
+                                <th className="p-1 border border-black">{__('Reparación / Falla')}</th>
+                                <th className="p-1 border border-black text-center">{__('Status')}</th>
+                                <th className="p-1 border border-black">{__('Observación')}</th>
+                                <th className="p-1 border border-black text-right">{__('Total')}</th>
+                                <th className="p-1 border border-black text-right">{__('Comisión')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {!reparaciones || reparaciones.data.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="text-center py-4 text-gray-500 border border-black">
+                                        {__('No hay órdenes registradas en este período.')}
+                                    </td>
+                                </tr>
+                            ) : (
+                                reparaciones.data.map((r) => {
+                                    const isReparado = ['entregado_reparado', 'entregado_finalizado', 'listo_reparado', 'reparado'].includes(r.estado_orden);
+                                    const isNoReparado = ['entregado_no_reparado', 'listo_sin_solucion', 'cancelado'].includes(r.estado_orden);
+
+                                    return (
+                                        <tr key={`print-r-${r.id}`}>
+                                            <td className="p-1 border border-black whitespace-nowrap">
+                                                {new Date(r.created_at).toLocaleDateString()}
+                                            </td>
+                                            <td className="p-1 border border-black font-mono font-bold">
+                                                {r.numero_orden}
+                                            </td>
+                                            <td className="p-1 border border-black">
+                                                {r.cliente_nombre || __('Cliente General')}
+                                            </td>
+                                            <td className="p-1 border border-black">
+                                                {r.marca_nombre} {r.modelo_nombre}
+                                            </td>
+                                            <td className="p-1 border border-black">
+                                                {r.descripcion_falla || __('Servicio de taller')}
+                                            </td>
+                                            <td className="p-1 border border-black text-center font-bold">
+                                                {isReparado ? 'REPARADO' : isNoReparado ? 'NO REPARADO' : 'EN PROCESO'}
+                                            </td>
+                                            <td className="p-1 border border-black">
+                                                {r.observaciones_fisicas || '-'}
+                                            </td>
+                                            <td className="p-1 border border-black text-right font-mono">
+                                                {currencySymbol}{Number(r.costo_total || r.costo_estimado || 0).toFixed(2)}
+                                            </td>
+                                            <td className="p-1 border border-black text-right font-mono font-bold">
+                                                {currencySymbol}{Number(r.comision_monto || 0).toFixed(2)}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                        <tfoot className="font-bold border-t-2 border-black bg-gray-100">
+                            <tr>
+                                <td colSpan={7} className="p-1 text-right border border-black uppercase">
+                                    {__('TOTALES:')}
+                                </td>
+                                <td className="p-1 text-right font-mono border border-black">
+                                    {currencySymbol}{Number(stats.taller_semaforo?.total_generado ?? 0).toFixed(2)}
+                                </td>
+                                <td className="p-1 text-right font-mono border border-black">
+                                    {currencySymbol}{Number(stats.taller_semaforo?.total_comisiones ?? 0).toFixed(2)}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    {/* FIRMAS PRINT */}
+                    <div className="grid grid-cols-2 gap-12 pt-8 text-center text-xs">
+                        <div>
+                            <div className="border-t border-black pt-1 font-bold uppercase">
+                                {selectedEmpleado?.nombre_completo || __('Firma del Técnico Responsable')}
+                            </div>
+                            <div className="text-[10px] text-gray-600">
+                                {__('Recibí Conforme / Comisión Liquidada')}
+                            </div>
+                        </div>
+                        <div>
+                            <div className="border-t border-black pt-1 font-bold uppercase">
+                                {empresa?.razon_social || __('Administración / Taller')}
+                            </div>
+                            <div className="text-[10px] text-gray-600">
+                                {__('Aprobado y Pagado')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ── PLANTILLA OFICIAL DE IMPRESIÓN TÉRMICA 80MM (@media print) ────── */}
-            {ticketData && (
+            {ticketData && isTicketModalOpen && (
                 <div id="printable-commission-ticket" className="hidden print:block text-black bg-white font-mono p-4 text-xs w-[80mm] max-w-[80mm] mx-auto">
                     <style>{`
                         @media print {

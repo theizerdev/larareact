@@ -1868,9 +1868,12 @@ export default function ShowReparacion({
             case 'listo_sin_solucion':
             case 'cancelado':
                 return `📋 Hola *${clientName}*, le informamos que su equipo *${deviceName}* (Orden *${ordenData.numero_orden}*) se encuentra disponible para retiro en sucursal como *SIN SOLUCIÓN / CANCELADO*.\n\n🏢 Puede pasar a retirarlo en nuestro horario habitual.\n💰 *Saldo pendiente:* *${currSym}${saldo}*\n\n📌 Detalles de su orden: ${trackingUrl}`;
+            case 'entregado_reparado':
             case 'entregado_finalizado':
             case 'entregado':
-                return `✅ ¡Gracias por su preferencia *${clientName}*! Su orden *${ordenData.numero_orden}* (*${deviceName}*) ha sido *ENTREGADA Y FINALIZADA* con éxito.\n\n🛡️ Su servicio cuenta con *${garantia} días de garantía*.\n\n📄 Puede consultar o descargar su comprobante aquí:\n${trackingUrl}\n\n¡Gracias por confiar en *${empName}*!`;
+                return `✅ ¡Gracias por su preferencia *${clientName}*! Su orden *${ordenData.numero_orden}* (*${deviceName}*) ha sido *ENTREGADA REPARADA* con éxito.\n\n🛡️ Su servicio cuenta con *${garantia} días de garantía*.\n\n📄 Puede consultar o descargar su comprobante aquí:\n${trackingUrl}\n\n¡Gracias por confiar en *${empName}*!`;
+            case 'entregado_no_reparado':
+                return `📋 Hola *${clientName}*, le confirmamos la entrega de su equipo *${deviceName}* (Orden *${ordenData.numero_orden}*) con estatus *ENTREGADO NO REPARADO (SIN SOLUCIÓN)*.\n\nLamentamos no haber podido darle solución en esta ocasión. Agradecemos su confianza.\n\n📄 Detalles de su orden: ${trackingUrl}`;
             case 'reincidencia_garantia':
             case 'reincidencia':
                 return `🔄 Hola *${clientName}*, hemos recibido su equipo *${deviceName}* (Orden *${ordenData.numero_orden}*) por concepto de *REINCIDENCIA / APLICACIÓN DE GARANTÍA*.\n\nNuestro equipo técnico dará prioridad a la revisión de su caso para brindarle una solución oportuna.\n\n🔎 Consulte el estado en vivo: ${trackingUrl}`;
@@ -2091,12 +2094,15 @@ export default function ShowReparacion({
             case 'listo_sin_solucion':
             case 'cancelado':
                 return <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800 font-bold px-3 py-1 text-xs gap-1.5">❌ 7-LISTO PARA ENTREGAR SIN SOLUCION</Badge>;
+            case 'entregado_reparado':
             case 'entregado_finalizado':
             case 'entregado':
-                return <Badge className="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold px-3 py-1 text-xs gap-1.5">✅ 8-ENTREGADO FINALIZADO</Badge>;
+                return <Badge className="bg-emerald-600 text-white font-bold px-3 py-1 text-xs gap-1.5">✅ 8-ENTREGADO REPARADO</Badge>;
+            case 'entregado_no_reparado':
+                return <Badge className="bg-rose-600 text-white font-bold px-3 py-1 text-xs gap-1.5">⚠️ 9-ENTREGADO NO REPARADO</Badge>;
             case 'reincidencia_garantia':
             case 'reincidencia':
-                return <Badge className="bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-300 dark:border-pink-800 font-bold px-3 py-1 text-xs gap-1.5">🔄 8-REINCIDENCIA/GARANTIA</Badge>;
+                return <Badge className="bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-300 dark:border-pink-800 font-bold px-3 py-1 text-xs gap-1.5">🔄 10-REINCIDENCIA/GARANTIA</Badge>;
             default:
                 return <Badge variant="outline">{st?.replace(/_/g, ' ').toUpperCase()}</Badge>;
         }
@@ -2220,7 +2226,7 @@ export default function ShowReparacion({
                                     size="sm"
                                     className={cn(
                                         "h-10 gap-2 text-xs font-bold text-white shadow-lg transition-all",
-                                        orden.estado_orden === 'reparado' || orden.estado_orden === 'listo_reparado' || orden.estado_orden === 'entregado' || orden.estado_orden === 'entregado_finalizado'
+                                        orden.estado_orden === 'reparado' || orden.estado_orden === 'listo_reparado' || orden.estado_orden === 'entregado' || orden.estado_orden === 'entregado_finalizado' || orden.estado_orden === 'entregado_reparado'
                                             ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-950/40 ring-2 ring-emerald-400/50"
                                             : "bg-teal-600 hover:bg-teal-500 shadow-teal-950/40"
                                     )}
@@ -2261,8 +2267,9 @@ export default function ShowReparacion({
                                                     <SelectItem value="en_reparacion">🛠️ 5-EN REPARACION</SelectItem>
                                                     <SelectItem value="listo_reparado">🟢 6-LISTO PARA ENTREGAR REPARADO</SelectItem>
                                                     <SelectItem value="listo_sin_solucion">❌ 7-LISTO PARA ENTREGAR SIN SOLUCION</SelectItem>
-                                                    <SelectItem value="entregado_finalizado">✅ 8-ENTREGADO FINALIZADO</SelectItem>
-                                                    <SelectItem value="reincidencia_garantia">🔄 8-REINCIDENCIA/GARANTIA</SelectItem>
+                                                    <SelectItem value="entregado_reparado">✅ 8-ENTREGADO REPARADO</SelectItem>
+                                                    <SelectItem value="entregado_no_reparado">⚠️ 9-ENTREGADO NO REPARADO</SelectItem>
+                                                    <SelectItem value="reincidencia_garantia">🔄 10-REINCIDENCIA/GARANTIA</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -2349,8 +2356,9 @@ export default function ShowReparacion({
                                                     <SelectItem value="en_reparacion">🛠️ 5-EN REPARACION</SelectItem>
                                                     <SelectItem value="listo_reparado">🟢 6-LISTO PARA ENTREGAR REPARADO</SelectItem>
                                                     <SelectItem value="listo_sin_solucion">❌ 7-LISTO PARA ENTREGAR SIN SOLUCION</SelectItem>
-                                                    <SelectItem value="entregado_finalizado">✅ 8-ENTREGADO FINALIZADO</SelectItem>
-                                                    <SelectItem value="reincidencia_garantia">🔄 8-REINCIDENCIA/GARANTIA</SelectItem>
+                                                    <SelectItem value="entregado_reparado">✅ 8-ENTREGADO REPARADO</SelectItem>
+                                                    <SelectItem value="entregado_no_reparado">⚠️ 9-ENTREGADO NO REPARADO</SelectItem>
+                                                    <SelectItem value="reincidencia_garantia">🔄 10-REINCIDENCIA/GARANTIA</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>

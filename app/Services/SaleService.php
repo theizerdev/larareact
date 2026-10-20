@@ -283,7 +283,7 @@ class SaleService
                             $isFinalizado = false;
                             if ($nuevoSaldo <= 0) {
                                 $reparacion->sale_id = $sale->id;
-                                $reparacion->estado_orden = 'entregado_finalizado';
+                                $reparacion->estado_orden = 'entregado_reparado';
                                 if (!$reparacion->fecha_entrega) {
                                     $reparacion->fecha_entrega = now();
                                 }
@@ -312,7 +312,7 @@ class SaleService
                                 'user_id' => $userId,
                                 'estado_anterior' => $estadoAnterior,
                                 'estado_nuevo' => $reparacion->estado_orden,
-                                'comentario' => "Abono / Anticipo de {$montoPago} registrado desde el Punto de Venta (Ticket: {$codigoTicket})." . ($isFinalizado ? " Saldo cubierto en su totalidad: orden actualizada automáticamente a ENTREGADO/FINALIZADO." : ""),
+                                'comentario' => "Abono / Anticipo de {$montoPago} registrado desde el Punto de Venta (Ticket: {$codigoTicket})." . ($isFinalizado ? " Saldo cubierto en su totalidad: orden actualizada automáticamente a ENTREGADO REPARADO." : ""),
                             ]);
                         } else {
                             // Liquidación final / Cobro total de orden de reparación
@@ -325,7 +325,7 @@ class SaleService
                             $reparacion->sale_id = $sale->id;
                             $reparacion->anticipo = $nuevoAnticipo;
                             $reparacion->saldo_restante = 0.00;
-                            $reparacion->estado_orden = 'entregado_finalizado';
+                            $reparacion->estado_orden = 'entregado_reparado';
                             if (!$reparacion->fecha_entrega) {
                                 $reparacion->fecha_entrega = now();
                             }
@@ -351,8 +351,8 @@ class SaleService
                                 'orden_id' => $reparacion->id,
                                 'user_id' => $userId,
                                 'estado_anterior' => $estadoAnterior,
-                                'estado_nuevo' => 'entregado_finalizado',
-                                'comentario' => "Cobro de orden ({$montoPago}) registrado desde el Punto de Venta (Ticket: {$codigoTicket}). Estado actualizado automáticamente a ENTREGADO/FINALIZADO.",
+                                'estado_nuevo' => 'entregado_reparado',
+                                'comentario' => "Cobro de orden ({$montoPago}) registrado desde el Punto de Venta (Ticket: {$codigoTicket}). Estado actualizado automáticamente a ENTREGADO REPARADO.",
                             ]);
                         }
                     }

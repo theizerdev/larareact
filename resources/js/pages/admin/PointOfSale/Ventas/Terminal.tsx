@@ -691,9 +691,9 @@ export default function Terminal({
         }
 
         if (item.tipo === 'reparacion') {
-            const isFinalizado = item.estado_orden === 'entregado_finalizado' || item.estado_orden === 'entregado';
+            const isFinalizado = ['entregado_finalizado', 'entregado', 'entregado_reparado', 'entregado_no_reparado'].includes(item.estado_orden);
             if (isFinalizado) {
-                notifyError(`La orden ${item.codigo || ''} ya se encuentra ENTREGADA / FINALIZADA. No permite realizar ninguna acción.`);
+                notifyError(`La orden ${item.codigo || ''} ya se encuentra ENTREGADA. No permite realizar ninguna acción.`);
                 return;
             }
 
@@ -757,9 +757,9 @@ export default function Terminal({
     const handleAddReparacionAnticipo = (monto: number) => {
         if (!reparacionPagoModalItem) return;
 
-        const isFinalizado = reparacionPagoModalItem.estado_orden === 'entregado_finalizado' || reparacionPagoModalItem.estado_orden === 'entregado';
+        const isFinalizado = ['entregado_finalizado', 'entregado', 'entregado_reparado', 'entregado_no_reparado'].includes(reparacionPagoModalItem.estado_orden);
         if (isFinalizado) {
-            notifyError(__('Esta orden ya fue ENTREGADA / FINALIZADA. No permite realizar ninguna acción.'));
+            notifyError(__('Esta orden ya fue ENTREGADA. No permite realizar ninguna acción.'));
             return;
         }
 
@@ -799,9 +799,9 @@ export default function Terminal({
     const handleAddReparacionLiquidacion = () => {
         if (!reparacionPagoModalItem) return;
 
-        const isFinalizado = reparacionPagoModalItem.estado_orden === 'entregado_finalizado' || reparacionPagoModalItem.estado_orden === 'entregado';
+        const isFinalizado = ['entregado_finalizado', 'entregado', 'entregado_reparado', 'entregado_no_reparado'].includes(reparacionPagoModalItem.estado_orden);
         if (isFinalizado) {
-            notifyError(__('Esta orden ya fue ENTREGADA / FINALIZADA. No permite realizar ninguna acción.'));
+            notifyError(__('Esta orden ya fue ENTREGADA. No permite realizar ninguna acción.'));
             return;
         }
 
@@ -4121,8 +4121,9 @@ export default function Terminal({
                                              reparacionPagoModalItem.estado_orden === 'en_reparacion' ? '5-EN REPARACION' :
                                              (reparacionPagoModalItem.estado_orden === 'listo_reparado' || reparacionPagoModalItem.estado_orden === 'reparado') ? '6-LISTO REPARADO' :
                                              (reparacionPagoModalItem.estado_orden === 'listo_sin_solucion' || reparacionPagoModalItem.estado_orden === 'cancelado') ? '7-SIN SOLUCION' :
-                                             (reparacionPagoModalItem.estado_orden === 'entregado_finalizado' || reparacionPagoModalItem.estado_orden === 'entregado') ? '8-ENTREGADO FINALIZADO' :
-                                             (reparacionPagoModalItem.estado_orden === 'reincidencia_garantia' || reparacionPagoModalItem.estado_orden === 'reincidencia') ? '8-REINCIDENCIA/GARANTIA' :
+                                             (reparacionPagoModalItem.estado_orden === 'entregado_reparado' || reparacionPagoModalItem.estado_orden === 'entregado_finalizado' || reparacionPagoModalItem.estado_orden === 'entregado') ? '8-ENTREGADO REPARADO' :
+                                             reparacionPagoModalItem.estado_orden === 'entregado_no_reparado' ? '9-ENTREGADO NO REPARADO' :
+                                             (reparacionPagoModalItem.estado_orden === 'reincidencia_garantia' || reparacionPagoModalItem.estado_orden === 'reincidencia') ? '10-REINCIDENCIA/GARANTIA' :
                                              reparacionPagoModalItem.estado_orden?.replace(/_/g, ' ').toUpperCase() || __('EN TALLER')}
                                         </Badge>
                                     </div>
@@ -4143,14 +4144,14 @@ export default function Terminal({
                                     </div>
                                 </div>
 
-                                {Boolean(reparacionPagoModalItem.estado_orden === 'entregado_finalizado' || reparacionPagoModalItem.estado_orden === 'entregado') ? (
+                                {Boolean(['entregado_finalizado', 'entregado', 'entregado_reparado', 'entregado_no_reparado'].includes(reparacionPagoModalItem.estado_orden)) ? (
                                     <div className="bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-300 dark:border-amber-700 p-5 rounded-xl space-y-2.5 text-center">
                                         <div className="flex items-center justify-center gap-2 text-amber-800 dark:text-amber-200 font-extrabold text-sm">
                                             <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                                            <span>{__('Orden Entregada / Finalizada')}</span>
+                                            <span>{__('Orden Entregada')}</span>
                                         </div>
                                         <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed max-w-md mx-auto">
-                                            {__('Esta orden de servicio técnico ya se encuentra ENTREGADA y FINALIZADA. No permite realizar ninguna acción ni registrar cobros o anticipos en caja.')}
+                                            {__('Esta orden de servicio técnico ya se encuentra ENTREGADA. No permite realizar ninguna acción ni registrar cobros o anticipos en caja.')}
                                         </p>
                                     </div>
                                 ) : (

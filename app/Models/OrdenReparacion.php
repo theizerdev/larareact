@@ -20,7 +20,9 @@ class OrdenReparacion extends Model
     public const ESTADO_EN_REPARACION = 'en_reparacion';
     public const ESTADO_LISTO_REPARADO = 'listo_reparado';
     public const ESTADO_LISTO_SIN_SOLUCION = 'listo_sin_solucion';
+    public const ESTADO_ENTREGADO_REPARADO = 'entregado_reparado';
     public const ESTADO_ENTREGADO_FINALIZADO = 'entregado_finalizado';
+    public const ESTADO_ENTREGADO_NO_REPARADO = 'entregado_no_reparado';
     public const ESTADO_REINCIDENCIA_GARANTIA = 'reincidencia_garantia';
 
     public static function getEstados(): array
@@ -61,14 +63,19 @@ class OrdenReparacion extends Model
                 'label' => '7-LISTO PARA ENTREGAR SIN SOLUCION',
                 'title' => 'Listo para Entregar Sin Solución',
             ],
-            self::ESTADO_ENTREGADO_FINALIZADO => [
-                'key' => self::ESTADO_ENTREGADO_FINALIZADO,
-                'label' => '8-ENTREGADO FINALIZADO',
-                'title' => 'Entregado Finalizado',
+            self::ESTADO_ENTREGADO_REPARADO => [
+                'key' => self::ESTADO_ENTREGADO_REPARADO,
+                'label' => '8-ENTREGADO REPARADO',
+                'title' => 'Entregado Reparado',
+            ],
+            self::ESTADO_ENTREGADO_NO_REPARADO => [
+                'key' => self::ESTADO_ENTREGADO_NO_REPARADO,
+                'label' => '9-ENTREGADO NO REPARADO',
+                'title' => 'Entregado No Reparado',
             ],
             self::ESTADO_REINCIDENCIA_GARANTIA => [
                 'key' => self::ESTADO_REINCIDENCIA_GARANTIA,
-                'label' => '8-REINCIDENCIA/GARANTIA',
+                'label' => '10-REINCIDENCIA/GARANTIA',
                 'title' => 'Reincidencia / Garantía',
             ],
         ];

@@ -193,8 +193,9 @@ export default function IndexReparaciones({
         { value: 'en_reparacion', label: '5-EN REPARACION' },
         { value: 'listo_reparado', label: '6-LISTO PARA ENTREGAR REPARADO' },
         { value: 'listo_sin_solucion', label: '7-LISTO PARA ENTREGAR SIN SOLUCION' },
-        { value: 'entregado_finalizado', label: '8-ENTREGADO FINALIZADO' },
-        { value: 'reincidencia_garantia', label: '8-REINCIDENCIA/GARANTIA' },
+        { value: 'entregado_reparado', label: '8-ENTREGADO REPARADO' },
+        { value: 'entregado_no_reparado', label: '9-ENTREGADO NO REPARADO' },
+        { value: 'reincidencia_garantia', label: '10-REINCIDENCIA/GARANTIA' },
     ], [__]);
 
     const yearOptions = useMemo(() => {
@@ -577,9 +578,13 @@ export default function IndexReparaciones({
             case 'cancelado':
                 text = `📋 Hola *${clientName}*, le informamos que su equipo *${deviceName}* (Orden *${o.numero_orden}*) se encuentra disponible para retiro en sucursal como *SIN SOLUCIÓN / CANCELADO*.\n\n🏢 Puede pasar a retirarlo en nuestro horario habitual.\n💰 *Saldo pendiente:* *${currencySymbol}${saldo}*\n\n📌 Detalles de su orden: ${trackingUrl}`;
                 break;
+            case 'entregado_reparado':
             case 'entregado_finalizado':
             case 'entregado':
-                text = `✅ ¡Gracias por su preferencia *${clientName}*! Su orden *${o.numero_orden}* (*${deviceName}*) ha sido *ENTREGADA Y FINALIZADA* con éxito.\n\n🛡️ Su servicio cuenta con *${garantia} días de garantía*.\n\n📄 Puede consultar o descargar su comprobante aquí:\n${trackingUrl}\n\n¡Gracias por confiar en *${empName}*!`;
+                text = `✅ ¡Gracias por su preferencia *${clientName}*! Su orden *${o.numero_orden}* (*${deviceName}*) ha sido *ENTREGADA REPARADA* con éxito.\n\n🛡️ Su servicio cuenta con *${garantia} días de garantía*.\n\n📄 Puede consultar o descargar su comprobante aquí:\n${trackingUrl}\n\n¡Gracias por confiar en *${empName}*!`;
+                break;
+            case 'entregado_no_reparado':
+                text = `📋 Hola *${clientName}*, le confirmamos la entrega de su equipo *${deviceName}* (Orden *${o.numero_orden}*) con estatus *ENTREGADO NO REPARADO (SIN SOLUCIÓN)*.\n\nLamentamos no haber podido darle solución en esta ocasión. Agradecemos su confianza.\n\n📄 Detalles de su orden: ${trackingUrl}`;
                 break;
             case 'reincidencia_garantia':
             case 'reincidencia':
@@ -660,12 +665,20 @@ export default function IndexReparaciones({
                         7-LISTO PARA ENTREGAR SIN SOLUCION
                     </span>
                 );
+            case 'entregado_reparado':
             case 'entregado_finalizado':
             case 'entregado':
                 return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-600 dark:bg-slate-300"></span>
-                        8-ENTREGADO FINALIZADO
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400"></span>
+                        8-ENTREGADO REPARADO
+                    </span>
+                );
+            case 'entregado_no_reparado':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400"></span>
+                        9-ENTREGADO NO REPARADO
                     </span>
                 );
             case 'reincidencia_garantia':

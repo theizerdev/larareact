@@ -1101,7 +1101,7 @@ class ReparacionController extends Controller
         }
 
         $validated = $request->validate([
-            'estado_orden' => 'nullable|string|in:recibido,en_diagnostico_presupuesto,confirmacion_presupuesto,espera_refaccion,en_reparacion,listo_reparado,listo_sin_solucion,entregado_finalizado,reincidencia_garantia,en_diagnostico,presupuestado,reincidencia,esperando_repuesto,reparado,entregado,cancelado',
+            'estado_orden' => 'nullable|string|in:recibido,en_diagnostico_presupuesto,confirmacion_presupuesto,espera_refaccion,en_reparacion,listo_reparado,listo_sin_solucion,entregado_reparado,entregado_finalizado,entregado_no_reparado,reincidencia_garantia,en_diagnostico,presupuestado,reincidencia,esperando_repuesto,reparado,entregado,cancelado',
             'comentario' => 'nullable|string',
             'tecnico_id' => 'nullable',
             'observaciones_fisicas' => 'nullable|string',
@@ -1136,7 +1136,11 @@ class ReparacionController extends Controller
 
         $finalTecnicoId = $updateData['tecnico_id'] ?? $reparacion->tecnico_id;
         $finalPct = (float) ($updateData['comision_tecnico_pct'] ?? $reparacion->comision_tecnico_pct);
-        if ($finalTecnicoId && $finalPct > 0) {
+        if ($nuevoEstado === 'entregado_no_reparado' || $nuevoEstado === 'listo_sin_solucion') {
+            // Equipos sin solución no generan comisión técnica
+            $updateData['comision_monto'] = 0.00;
+            $updateData['comision_estado'] = 'no_aplica';
+        } elseif ($finalTecnicoId && $finalPct > 0) {
             $costoTotal = (float) ($reparacion->costo_estimado ?? 0);
             $manoObra = (float) ($reparacion->costo_mano_obra ?? 0);
             $base = $manoObra > 0 ? $manoObra : $costoTotal;
@@ -1177,7 +1181,7 @@ class ReparacionController extends Controller
             }
         }
 
-        if (($nuevoEstado === 'entregado' || $nuevoEstado === 'entregado_finalizado') && !$reparacion->fecha_entrega) {
+        if (in_array($nuevoEstado, ['entregado', 'entregado_finalizado', 'entregado_reparado', 'entregado_no_reparado']) && !$reparacion->fecha_entrega) {
             $updateData['fecha_entrega'] = now();
         }
 
@@ -1582,7 +1586,7 @@ class ReparacionController extends Controller
 
         if ($request->filled('estado_orden')) {
             $updateData['estado_orden'] = $request->input('estado_orden');
-        } else if ($reparacion->estado_orden !== 'entregado' && $reparacion->estado_orden !== 'entregado_finalizado') {
+        } else if (!in_array($reparacion->estado_orden, ['entregado', 'entregado_finalizado', 'entregado_reparado', 'entregado_no_reparado'])) {
             $updateData['estado_orden'] = 'listo_reparado';
         }
 

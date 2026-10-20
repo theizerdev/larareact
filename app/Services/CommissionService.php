@@ -151,7 +151,7 @@ class CommissionService
                     ->orWhereNotNull('tecnico_id');
             })
             ->where('estado_orden', '!=', 'cancelado')
-            ->whereIn('estado_orden', ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado']);
+            ->whereIn('estado_orden', ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado', 'entregado_reparado']);
 
         if (!empty($sucursalId) && $sucursalId !== 'all') {
             $reparacionesQuery->where('sucursal_id', (int) $sucursalId);
@@ -203,6 +203,37 @@ class CommissionService
         $comisionesReparacionesPagadas = (float) ((clone $repStatsClone)->where('comision_estado', 'pagada')->sum('comision_monto') ?? 0);
         $cantidadReparaciones = (clone $repStatsClone)->count();
 
+        // Conteo semáforo de taller para el período y empleado filtrado (Espejo de la hoja de cálculo)
+        $tallerBaseScope = OrdenReparacion::query()
+            ->where('empresa_id', $empresaId);
+
+        if (!empty($sucursalId) && $sucursalId !== 'all') {
+            $tallerBaseScope->where('sucursal_id', (int) $sucursalId);
+        }
+
+        if (!empty($filters['empleado_id']) && $filters['empleado_id'] !== 'all') {
+            $targetEmp = Empleado::find($filters['empleado_id']);
+            $tallerBaseScope->where(function ($q) use ($filters, $targetEmp) {
+                $q->where('empleado_id', (int) $filters['empleado_id']);
+                if ($targetEmp?->user_id) {
+                    $q->orWhere('tecnico_id', $targetEmp->user_id);
+                }
+            });
+        }
+
+        if (!empty($filters['from'])) {
+            $tallerBaseScope->whereDate('created_at', '>=', $filters['from']);
+        }
+        if (!empty($filters['to'])) {
+            $tallerBaseScope->whereDate('created_at', '<=', $filters['to']);
+        }
+
+        $countReparados = (clone $tallerBaseScope)->whereIn('estado_orden', ['entregado_reparado', 'entregado_finalizado', 'listo_reparado', 'reparado'])->count();
+        $countNoReparados = (clone $tallerBaseScope)->whereIn('estado_orden', ['entregado_no_reparado', 'listo_sin_solucion', 'cancelado'])->count();
+        $countEnProceso = (clone $tallerBaseScope)->whereIn('estado_orden', ['recibido', 'en_diagnostico_presupuesto', 'confirmacion_presupuesto', 'espera_refaccion', 'en_reparacion', 'en_diagnostico', 'presupuestado', 'esperando_repuesto'])->count();
+        $totalTallerEquipos = $countReparados + $countNoReparados + $countEnProceso;
+        $pctEfectivoComision = $totalReparacionesMonto > 0 ? round(($totalComisionesReparaciones / $totalReparacionesMonto) * 100, 2) : 0.0;
+
         // Reparaciones detalladas paginadas
         $reparaciones = $reparacionesQuery->with(['empleado', 'tecnico', 'sucursal', 'comisionPago', 'marca', 'modelo'])
             ->orderBy('created_at', 'desc')
@@ -243,7 +274,7 @@ class CommissionService
                     }
                 })
                 ->where('estado_orden', '!=', 'cancelado')
-                ->whereIn('estado_orden', ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado']);
+                ->whereIn('estado_orden', ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado', 'entregado_reparado']);
 
             if (!empty($filters['from'])) {
                 $rq->whereDate('created_at', '>=', $filters['from']);
@@ -306,6 +337,15 @@ class CommissionService
                 'total_reparaciones_monto' => round($totalReparacionesMonto, 2),
                 'comisiones_reparaciones' => round($totalComisionesReparaciones, 2),
                 'cantidad_reparaciones' => $cantidadReparaciones,
+                'taller_semaforo' => [
+                    'reparados' => $countReparados,
+                    'no_reparados' => $countNoReparados,
+                    'en_proceso' => $countEnProceso,
+                    'total' => $totalTallerEquipos,
+                    'total_generado' => round($totalReparacionesMonto, 2),
+                    'total_comisiones' => round($totalComisionesReparaciones, 2),
+                    'pct_efectivo' => $pctEfectivoComision,
+                ],
             ],
             'empleados_resumen' => $empleados,
             'ventas' => $ventas,
@@ -345,7 +385,7 @@ class CommissionService
             })
             ->where('comision_estado', 'pendiente')
             ->where('comision_monto', '>', 0)
-            ->where('estado_orden', '!=', 'cancelado')
+            ->whereNotIn('estado_orden', ['cancelado', 'listo_sin_solucion', 'entregado_no_reparado'])
             ->orderBy('created_at', 'asc')
             ->get([
                 'id',

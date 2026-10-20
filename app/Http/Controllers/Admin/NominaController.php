@@ -322,10 +322,10 @@ class NominaController extends Controller
                 'sale.creditPayments:id,sale_id,monto',
             ])
             ->whereIn('tecnico_id', $tecnicoIds)
-            ->whereIn('estado_orden', ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado'])
+            ->whereIn('estado_orden', ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado', 'entregado_reparado'])
             ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
             ->whereHas('historial', function ($q) use ($inicio, $fin) {
-                $q->whereIn('estado_nuevo', ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado'])
+                $q->whereIn('estado_nuevo', ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado', 'entregado_reparado'])
                     ->whereBetween('created_at', [$inicio, $fin]);
             })
             ->get([
