@@ -46,6 +46,10 @@ interface Sale {
     estado: 'completada' | 'anulada';
     notas: string | null;
     user?: { name: string };
+    empleado_id?: number | null;
+    empleado?: { id: number; nombre_completo: string; cargo?: string } | null;
+    comision_porcentaje?: number;
+    comision_monto?: number;
     items: SaleItem[];
     created_at: string;
 }
@@ -130,6 +134,26 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
                 <span className="font-medium text-sm">
                     {sale.cliente_nombre || 'Cliente General'}
                 </span>
+            ),
+        },
+        {
+            header: __('Vendedor'),
+            accessorKey: 'empleado.nombre_completo',
+            cell: (sale) => (
+                sale.empleado ? (
+                    <div>
+                        <span className="font-semibold text-xs text-foreground block">
+                            {sale.empleado.nombre_completo}
+                        </span>
+                        {Number(sale.comision_monto || 0) > 0 && (
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">
+                                +{currencySymbol}{Number(sale.comision_monto).toFixed(2)} ({Number(sale.comision_porcentaje).toFixed(1)}%)
+                            </span>
+                        )}
+                    </div>
+                ) : (
+                    <span className="text-xs text-muted-foreground italic">-</span>
+                )
             ),
         },
         {
@@ -355,6 +379,12 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
                                     <div className="text-right"><strong>Fecha:</strong> {new Date(selectedSale.created_at).toLocaleDateString()}</div>
                                     <div><strong>Cliente:</strong> {selectedSale.cliente_nombre || 'Cliente General'}</div>
                                     <div className="text-right"><strong>Atendido por:</strong> {selectedSale.user?.name || 'Cajero POS'}</div>
+                                    {selectedSale.empleado && (
+                                        <div className="col-span-2 pt-1 border-t border-dashed text-emerald-700 dark:text-emerald-400">
+                                            <strong>Vendedor:</strong> {selectedSale.empleado.nombre_completo}
+                                            {Number(selectedSale.comision_monto || 0) > 0 && ` (+${currencySymbol}${Number(selectedSale.comision_monto).toFixed(2)})`}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* ITEMS TABLE */}
@@ -505,6 +535,9 @@ export default function Index({ sales, currencySymbol = '$', empresa, filters }:
                         </div>
                         <div className="text-[10px]">CLIENTE: {selectedSale.cliente_nombre || 'Cliente General'}</div>
                         <div className="text-[10px]">ATENDIÓ: {selectedSale.user?.name || 'Cajero POS'}</div>
+                        {selectedSale.empleado && (
+                            <div className="text-[10px] font-bold">VENDEDOR: {selectedSale.empleado.nombre_completo}</div>
+                        )}
                         <div className="border-b border-dashed border-black my-1"></div>
 
                         {/* Encabezado Tabla */}

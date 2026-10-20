@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CashRegister;
 use App\Models\Cliente;
 use App\Models\Empresa;
+use App\Models\Empleado;
 use App\Models\InventoryMovement;
 use App\Models\OrdenReparacion;
 use App\Models\Producto;
@@ -18,10 +19,12 @@ use Illuminate\Support\Facades\DB;
 class SaleService
 {
     protected CashRegisterService $cashRegisterService;
+    protected CommissionService $commissionService;
 
-    public function __construct(CashRegisterService $cashRegisterService)
+    public function __construct(CashRegisterService $cashRegisterService, CommissionService $commissionService)
     {
         $this->cashRegisterService = $cashRegisterService;
+        $this->commissionService = $commissionService;
     }
 
     public function processSale(array $data, int $userId): Sale
@@ -147,12 +150,48 @@ class SaleService
                 }
             }
 
+            // Cálculo de comisión para el empleado vendedor (si fue asignado)
+            $empleadoId = !empty($data['empleado_id']) ? (int) $data['empleado_id'] : null;
+
+            // Si el usuario es un vendedor (no admin), asociar automáticamente a su propio empleado
+            if ($userId) {
+                $user = User::find($userId);
+                if ($user && $user->empleado && $user->empleado->estado) {
+                    $isUserAdmin = $user->id === 1
+                        || $user->hasRole('Super Administrador')
+                        || $user->hasRole('super-admin')
+                        || $user->hasRole('Super Admin')
+                        || $user->hasRole('Administrador')
+                        || $user->can('manage empleados')
+                        || $user->can('administrar empleados');
+
+                    if (!$isUserAdmin) {
+                        $empleadoId = $user->empleado->id;
+                    }
+                }
+            }
+
+            $comisionPorcentaje = 0.0;
+            $comisionMonto = 0.0;
+            $comisionEstado = 'no_aplica';
+
+            if ($empleadoId) {
+                $empleado = Empleado::find($empleadoId);
+                if ($empleado) {
+                    $calc = $this->commissionService->calculateCommission($subtotal - $descuento, $total, $empleado);
+                    $comisionPorcentaje = $calc['porcentaje'];
+                    $comisionMonto = $calc['monto'];
+                    $comisionEstado = $calc['estado'];
+                }
+            }
+
             // Create Sale record
             $sale = Sale::create([
                 'empresa_id' => $empresaId,
                 'sucursal_id' => $sucursalId,
                 'cash_register_id' => $cashRegister?->id,
                 'user_id' => $userId,
+                'empleado_id' => $empleadoId,
                 'cliente_id' => $data['cliente_id'] ?? null,
                 'codigo_ticket' => $codigoTicket,
                 'cliente_nombre' => $data['cliente_nombre'] ?? 'Cliente General',
@@ -167,6 +206,9 @@ class SaleService
                 'es_credito' => $esCredito,
                 'saldo_credito' => $saldoCredito,
                 'notas' => $data['notas'] ?? null,
+                'comision_porcentaje' => $comisionPorcentaje,
+                'comision_monto' => $comisionMonto,
+                'comision_estado' => $comisionEstado,
             ]);
 
             // Create sale payment records
@@ -245,6 +287,22 @@ class SaleService
                                 if (!$reparacion->fecha_entrega) {
                                     $reparacion->fecha_entrega = now();
                                 }
+                                if ($reparacion->tecnico_id && $reparacion->comision_monto <= 0) {
+                                    $emp = $reparacion->empleado ?? \App\Models\Empleado::where('user_id', $reparacion->tecnico_id)->first();
+                                    if ($emp) {
+                                        $reparacion->empleado_id = $emp->id;
+                                        if ($reparacion->comision_tecnico_pct <= 0 && $emp->porcentaje_comision_reparacion > 0) {
+                                            $reparacion->comision_tecnico_pct = (float) $emp->porcentaje_comision_reparacion;
+                                        }
+                                    }
+                                    if ($reparacion->comision_tecnico_pct > 0) {
+                                        $costoBase = (float) ($reparacion->costo_mano_obra > 0 ? $reparacion->costo_mano_obra : ($reparacion->costo_estimado ?? 0));
+                                        $reparacion->comision_monto = round($costoBase * ($reparacion->comision_tecnico_pct / 100), 2);
+                                    }
+                                }
+                                if ($reparacion->comision_monto > 0 && (!$reparacion->comision_estado || $reparacion->comision_estado === 'no_aplica')) {
+                                    $reparacion->comision_estado = 'pendiente';
+                                }
                                 $isFinalizado = true;
                             }
                             $reparacion->save();
@@ -270,6 +328,22 @@ class SaleService
                             $reparacion->estado_orden = 'entregado_finalizado';
                             if (!$reparacion->fecha_entrega) {
                                 $reparacion->fecha_entrega = now();
+                            }
+                            if ($reparacion->tecnico_id && $reparacion->comision_monto <= 0) {
+                                $emp = $reparacion->empleado ?? \App\Models\Empleado::where('user_id', $reparacion->tecnico_id)->first();
+                                if ($emp) {
+                                    $reparacion->empleado_id = $emp->id;
+                                    if ($reparacion->comision_tecnico_pct <= 0 && $emp->porcentaje_comision_reparacion > 0) {
+                                        $reparacion->comision_tecnico_pct = (float) $emp->porcentaje_comision_reparacion;
+                                    }
+                                }
+                                if ($reparacion->comision_tecnico_pct > 0) {
+                                    $costoBase = (float) ($reparacion->costo_mano_obra > 0 ? $reparacion->costo_mano_obra : ($reparacion->costo_estimado ?? 0));
+                                    $reparacion->comision_monto = round($costoBase * ($reparacion->comision_tecnico_pct / 100), 2);
+                                }
+                            }
+                            if ($reparacion->comision_monto > 0 && (!$reparacion->comision_estado || $reparacion->comision_estado === 'no_aplica')) {
+                                $reparacion->comision_estado = 'pendiente';
                             }
                             $reparacion->save();
 

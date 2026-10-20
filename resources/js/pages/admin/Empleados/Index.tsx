@@ -1,115 +1,62 @@
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
     Users,
+    UserCheck,
+    UserX,
+    Percent,
     Plus,
+    Search,
+    Edit2,
+    Trash2,
     CheckCircle,
     XCircle,
-    MoreVertical,
-    Pencil,
-    Trash2,
-    ToggleRight,
     Building2,
-    Tag,
-    Layers,
-    Briefcase,
-    Mail,
     Phone,
+    Mail,
+    Briefcase,
+    DollarSign,
+    MoreVertical,
     FileText,
-    Camera,
-    RefreshCw,
-    User as UserIcon,
-    ShieldAlert,
-    Eye,
-    Upload,
-    Car,
+    TrendingUp,
+    Shield,
+    Lock,
+    ShoppingCart,
+    Wrench,
 } from 'lucide-react';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
-import type { ColumnDef } from '@/components/data-table';
-import { DataTable } from '@/components/data-table';
-import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogFooter,
 } from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useTranslate } from '@/hooks/use-translate';
-import { cn, cleanParams } from '@/lib/utils';
-import type { Auth } from '@/types';
-import type { Paginated } from '@/types/app';
+import { Textarea } from '@/components/ui/textarea';
 import { notifySuccess, notifyError } from '@/utils/notifications';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-// ─── Interfaces ───────────────────────────────────────────────────────────────
-
-interface Pais {
-    id: number;
-    nombre: string;
-    codigo_iso2: string;
-    codigo_telefonico: string;
-}
-
-interface Empresa {
-    id: number;
-    razon_social: string;
-}
+import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
+import { useTranslate } from '@/hooks/use-translate';
 
 interface Sucursal {
     id: number;
     nombre: string;
-    empresa_id: number;
-}
-
-interface Departamento {
-    id: number;
-    nombre: string;
-    empresa_id: number;
-    sucursal_id: number;
-}
-
-interface Cargo {
-    id: number;
-    nombre: string;
-    departamento_id: number;
-}
-
-interface Responsable {
-    id: number;
-    nombres: string;
-    apellidos: string;
-    departamento_id: number;
-    cargo_id: number;
-    cargo?: {
-        id: number;
-        nombre: string;
-    } | null;
 }
 
 interface Usuario {
@@ -120,1741 +67,1067 @@ interface Usuario {
 
 interface Empleado {
     id: number;
+    empresa_id: number;
+    sucursal_id: number | null;
+    user_id: number | null;
     nombres: string;
     apellidos: string;
-    documento_identidad: string;
-    pais_telefono_id?: number | null;
-    telefono?: string | null;
-    correo?: string | null;
-    genero?: string | null;
-    departamento_id: number;
-    responsable_id?: number | null;
-    cargo_id?: number | null;
-    foto_empleado?: string | null;
-    foto_documento?: string | null;
-    empresa_id: number;
-    sucursal_id: number;
-    user_id: number;
-    status: boolean;
-    pais_telefono?: Pais | null;
-    departamento?: Departamento | null;
-    responsable?: Responsable | null;
-    cargo?: Cargo | null;
-    empresa?: Empresa | null;
+    nombre_completo: string;
+    documento_tipo: string;
+    documento_numero: string | null;
+    email: string | null;
+    telefono: string | null;
+    direccion: string | null;
+    cargo: string | null;
+    sueldo_base: number;
+    porcentaje_comision: number;
+    tipo_comision: 'porcentaje' | 'monto_fijo';
+    comision_aplica_a: 'subtotal' | 'total';
+    porcentaje_comision_reparacion?: number;
+    tipo_comision_reparacion?: 'porcentaje' | 'monto_fijo';
+    comision_reparacion_aplica_a?: 'mano_obra' | 'total_orden';
+    estado: boolean;
+    fecha_ingreso: string | null;
+    notas: string | null;
     sucursal?: Sucursal | null;
     user?: Usuario | null;
 }
 
-interface EmpleadosPageProps {
-    auth: Auth;
-    empleados: Paginated<Empleado>;
+interface PaginatedData<T> {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    prev_page_url: string | null;
+    next_page_url: string | null;
+}
+
+interface Props {
+    empleados: PaginatedData<Empleado>;
     stats: {
         total: number;
         activos: number;
         inactivos: number;
+        promedio_comision: number;
     };
-    empresas: Empresa[];
     sucursales: Sucursal[];
-    usuarios: Usuario[];
-    departamentos: Departamento[];
-    responsables: Responsable[];
-    cargos: Cargo[];
-    paises: Pais[];
+    roles: string[];
     filters: {
         search?: string;
-        status?: string;
-        perPage?: string;
-        departamento_id?: string;
+        estado?: string;
+        sucursal_id?: string;
+        perPage?: number;
     };
-    empresa?: {
-        id: number;
-        razon_social: string;
-    } | null;
-    sucursal?: {
-        id: number;
-        nombre: string;
-    } | null;
 }
 
-const defaultJornada = [
-    { dia: 'Lunes', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
-    { dia: 'Martes', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
-    { dia: 'Miércoles', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
-    { dia: 'Jueves', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
-    { dia: 'Viernes', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
-    { dia: 'Sábado', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' },
-    { dia: 'Domingo', activo: false, hora_ingreso: '08:00', hora_salida: '17:00' }
-];
-
-// ─── Formulario inicial vacío ─────────────────────────────────────────────────
-
-const initialForm = {
-    nombres: '',
-    apellidos: '',
-    documento_identidad: '',
-    pais_telefono_id: '' as string | number,
-    telefono: '',
-    correo: '',
-    genero: '',
-    departamento_id: '' as string | number,
-    responsable_id: '' as string | number,
-    cargo_id: '' as string | number,
-    jornada_laboral: defaultJornada as any,
-    foto_empleado: null as any,
-    foto_empleado_2: null as any,
-    foto_documento: null as any,
-    foto_documento_reverso: null as any,
-    vehiculos: [] as any[],
-    empresa_id: '' as string | number,
-    sucursal_id: '' as string | number,
-    user_id: '' as string | number,
-    status: 1 as number,
-};
-
-// ─── Componente de Captura de Cámara Integrado ───────────────────────────────
-
-interface CameraWidgetProps {
-    onCapture: (base64Data: string) => void;
-    onCancel: () => void;
-}
-
-function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
-    const { __ } = useTranslate();
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const [stream, setStream] = useState<MediaStream | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [captured, setCaptured] = useState<string | null>(null);
-
-    const startCamera = async () => {
-        setError(null);
-        setCaptured(null);
-        try {
-            const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { width: 640, height: 480, facingMode: 'user' }
-            });
-            setStream(mediaStream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = mediaStream;
-            }
-        } catch (err) {
-            console.error(err);
-            setError(__('No webcam access or camera not found'));
-        }
-    };
-
-    const stopCamera = () => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            setStream(null);
-        }
-    };
-
-    const capture = () => {
-        if (videoRef.current) {
-            const canvas = document.createElement('canvas');
-            canvas.width = videoRef.current.videoWidth || 640;
-            canvas.height = videoRef.current.videoHeight || 480;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-                const base64 = canvas.toDataURL('image/jpeg');
-                setCaptured(base64);
-                stopCamera();
-            }
-        }
-    };
-
-    useEffect(() => {
-        startCamera();
-        return () => stopCamera();
-    }, []);
-
-    return (
-        <div className="border border-slate-200 dark:border-slate-800 rounded-lg p-4 bg-slate-50 dark:bg-slate-900/40 flex flex-col items-center gap-3">
-            {error && (
-                <div className="text-red-500 flex flex-col items-center gap-2 text-center text-sm py-4">
-                    <ShieldAlert className="w-8 h-8" />
-                    <span>{error}</span>
-                </div>
-            )}
-
-            {!error && !captured && (
-                <div className="relative w-full max-w-[320px] aspect-[4/3] bg-black rounded-md overflow-hidden border">
-                    <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="w-full h-full object-cover scale-x-[-1]"
-                    />
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
-                        <Button
-                            type="button"
-                            size="sm"
-                            onClick={capture}
-                            className="bg-primary text-primary-foreground shadow-md flex items-center gap-1.5"
-                        >
-                            <Camera className="w-4 h-4" />
-                            {__('Capture Snapshot')}
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {captured && (
-                <div className="flex flex-col items-center gap-3 w-full">
-                    <div className="w-full max-w-[320px] aspect-[4/3] rounded-md overflow-hidden border">
-                        <img src={captured} alt="Captured preview" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => startCamera()}
-                            className="flex items-center gap-1"
-                        >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            {__('Retake')}
-                        </Button>
-                        <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => onCapture(captured)}
-                            className="flex items-center gap-1"
-                        >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            {__('Save')}
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            <Button type="button" variant="ghost" size="xs" onClick={onCancel} className="text-muted-foreground mt-1">
-                {__('Cancel')}
-            </Button>
-        </div>
-    );
-}
-
-// ─── Página principal ──────────────────────────────────────────────────────────
-
-export default function EmpleadosIndexPage({
-    auth,
+export default function EmpleadosIndex({
     empleados,
     stats,
-    empresas,
-    sucursales,
-    usuarios,
-    departamentos,
-    responsables,
-    cargos,
-    paises,
+    sucursales = [],
+    roles = ['Vendedor', 'Técnico', 'Administrador'],
     filters,
-    empresa: appEmpresa,
-    sucursal: appSucursal,
-}: EmpleadosPageProps) {
+}: Props) {
     const { __ } = useTranslate();
-
-    const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
-        { title: __('Employees'), href: '/admin/empleados' },
-    ];
-
-    // ── Estados ────────────────────────────────────────────────────────────────
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingEmpleado, setEditingEmpleado] = useState<Empleado | null>(null);
-    const [deletingEmpleado, setDeletingEmpleado] = useState<Empleado | null>(null);
-    const [activeTab, setActiveTab] = useState('general');
-    const [isTableLoading, setIsTableLoading] = useState(false);
-    const [activeCameraField, setActiveCameraField] = useState<'foto_empleado' | 'foto_empleado_2' | 'foto_documento' | 'foto_documento_reverso' | 'foto_frontal' | 'foto_trasera' | null>(null);
-    const [showVehicleForm, setShowVehicleForm] = useState(false);
-    const [newVehicle, setNewVehicle] = useState({
-        tipo_vehiculo: '',
-        marca: '',
-        modelo: '',
-        year: '',
-        placa: '',
-        foto_frontal: '',
-        foto_trasera: '',
-    });
-
-    const [isPreRegistroModalOpen, setIsPreRegistroModalOpen] = useState(false);
-    const preRegistroForm = useForm({
-        nombres: '',
-        apellidos: '',
-        pais_telefono_id: auth.user?.pais_telefono_id || paises[0]?.id || '',
-        telefono: '',
-        motivo_registro: '',
-        responsable_id: '',
-    });
-
-    const handlePreRegistroSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        preRegistroForm.post('/admin/empleados/pre-registro', {
-            onSuccess: () => {
-                setIsPreRegistroModalOpen(false);
-                preRegistroForm.reset();
-            },
-        });
-    };
 
     // Filtros
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
-    const [statusFilter, setStatusFilter] = useState(filters.status || '');
-    const [depFilter, setDepFilter] = useState(filters.departamento_id || '');
-    const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '10');
+    const [selectedEstado, setSelectedEstado] = useState(filters.estado || 'all');
+    const [selectedSucursal, setSelectedSucursal] = useState(filters.sucursal_id ? String(filters.sucursal_id) : 'all');
 
-    const fileInputEmpleadoRef = useRef<HTMLInputElement>(null);
-    const fileInputEmpleado2Ref = useRef<HTMLInputElement>(null);
-    const fileInputDocumentoRef = useRef<HTMLInputElement>(null);
-    const fileInputDocumentoReversoRef = useRef<HTMLInputElement>(null);
-    const fileInputVehiculoFrontalRef = useRef<HTMLInputElement>(null);
-    const fileInputVehiculoTraseraRef = useRef<HTMLInputElement>(null);
+    // Modales
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [editingEmpleado, setEditingEmpleado] = useState<Empleado | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [empleadoToDelete, setEmpleadoToDelete] = useState<Empleado | null>(null);
 
-    // ── Hooks de navegación ────────────────────────────────────────────────────
-    useEffect(() => {
-        const unbindStart = router.on('start', () => setIsTableLoading(true));
-        const unbindFinish = router.on('finish', () => setIsTableLoading(false));
+    // Formulario
+    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
+        nombres: '',
+        apellidos: '',
+        documento_tipo: 'DNI/CI',
+        documento_numero: '',
+        email: '',
+        telefono: '',
+        direccion: '',
+        cargo: 'Vendedor',
+        sueldo_base: '0.00',
+        porcentaje_comision: '5.00',
+        tipo_comision: 'porcentaje',
+        comision_aplica_a: 'subtotal',
+        porcentaje_comision_reparacion: '10.00',
+        tipo_comision_reparacion: 'porcentaje',
+        comision_reparacion_aplica_a: 'mano_obra',
+        sucursal_id: sucursales.length > 0 ? String(sucursales[0].id) : '',
+        crear_usuario: true,
+        password: '',
+        rol: 'Vendedor',
+        estado: true,
+        fecha_ingreso: new Date().toISOString().split('T')[0],
+        notas: '',
+    });
 
-        return () => {
-            unbindStart();
-            unbindFinish();
-        };
-    }, []);
-
-    // Debounce de filtros
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            router.get(
-                window.location.pathname,
-                cleanParams({
-                    search: searchTerm,
-                    status: statusFilter,
-                    departamento_id: depFilter,
-                    perPage: perPageFilter,
-                }),
-                { preserveState: true, preserveScroll: true }
-            );
-        }, 300);
-
-        return () => clearTimeout(timer);
-    }, [searchTerm, statusFilter, depFilter, perPageFilter]);
-
-    // ── Formulario Inertia ─────────────────────────────────────────────────────
-    const { data, setData, post, reset, errors, processing } = useForm(initialForm);
-
-    // ── Filtro de dependencias según selección ──────────────────────────────────
-    const filteredSucursales = sucursales.filter(s => s.empresa_id === Number(data.empresa_id));
-    const filteredDepartamentos = departamentos.filter(d => d.empresa_id === Number(data.empresa_id) && d.sucursal_id === Number(data.sucursal_id));
-    const filteredResponsables = responsables.filter(r => r.departamento_id === Number(data.departamento_id));
-    const filteredCargos = cargos.filter(c => c.departamento_id === Number(data.departamento_id));
-
-    // Obtener información del responsable seleccionado
-    const selectedResponsable = responsables.find(r => r.id === Number(data.responsable_id));
-
-    // ── Handlers ───────────────────────────────────────────────────────────────
-
-    const handleCreateClick = () => {
+    const openCreateModal = () => {
         setEditingEmpleado(null);
         reset();
-
-        // Autocompletar empresa, sucursal y usuario del autenticado
-        const companyId = auth.user?.empresa_id || appEmpresa?.id || '';
-        const branchId = auth.user?.sucursal_id || appSucursal?.id || '';
-        
-        setData(prev => ({
-            ...prev,
-            empresa_id: companyId,
-            sucursal_id: branchId,
-            user_id: auth.user?.id || '',
-            pais_telefono_id: auth.user?.pais_telefono_id || paises[0]?.id || '',
-            jornada_laboral: defaultJornada,
-            foto_empleado_2: null,
-            foto_documento_reverso: null,
-            vehiculos: [],
-        }));
-
-        setActiveTab('general');
-        setActiveCameraField(null);
-        setIsModalOpen(true);
+        clearErrors();
+        setData({
+            nombres: '',
+            apellidos: '',
+            documento_tipo: 'DNI/CI',
+            documento_numero: '',
+            email: '',
+            telefono: '',
+            direccion: '',
+            cargo: 'Vendedor',
+            sueldo_base: '0.00',
+            porcentaje_comision: '5.00',
+            tipo_comision: 'porcentaje',
+            comision_aplica_a: 'subtotal',
+            porcentaje_comision_reparacion: '10.00',
+            tipo_comision_reparacion: 'porcentaje',
+            comision_reparacion_aplica_a: 'mano_obra',
+            sucursal_id: sucursales.length > 0 ? String(sucursales[0].id) : '',
+            crear_usuario: true,
+            password: '',
+            rol: 'Vendedor',
+            estado: true,
+            fecha_ingreso: new Date().toISOString().split('T')[0],
+            notas: '',
+        });
+        setIsFormOpen(true);
     };
 
-    const handleEditClick = (emp: any) => {
+    const openEditModal = (emp: Empleado) => {
         setEditingEmpleado(emp);
+        clearErrors();
         setData({
             nombres: emp.nombres || '',
             apellidos: emp.apellidos || '',
-            documento_identidad: emp.documento_identidad || '',
-            pais_telefono_id: emp.pais_telefono_id || '',
+            documento_tipo: emp.documento_tipo || 'DNI/CI',
+            documento_numero: emp.documento_numero || '',
+            email: emp.email || '',
             telefono: emp.telefono || '',
-            correo: emp.correo || '',
-            genero: emp.genero || '',
-            departamento_id: emp.departamento_id || '',
-            responsable_id: emp.responsable_id || '',
-            cargo_id: emp.cargo_id || '',
-            jornada_laboral: emp.jornada_laboral || defaultJornada,
-            foto_empleado: emp.foto_empleado || null,
-            foto_empleado_2: emp.foto_empleado_2 || null,
-            foto_documento: emp.foto_documento || null,
-            foto_documento_reverso: emp.foto_documento_reverso || null,
-            vehiculos: emp.vehiculos || [],
-            empresa_id: emp.empresa_id || '',
-            sucursal_id: emp.sucursal_id || '',
-            user_id: emp.user_id || '',
-            status: emp.status ? 1 : 0,
+            direccion: emp.direccion || '',
+            cargo: emp.cargo || 'Vendedor',
+            sueldo_base: String(emp.sueldo_base ?? 0),
+            porcentaje_comision: String(emp.porcentaje_comision ?? 0),
+            tipo_comision: emp.tipo_comision || 'porcentaje',
+            comision_aplica_a: emp.comision_aplica_a || 'subtotal',
+            porcentaje_comision_reparacion: String(emp.porcentaje_comision_reparacion ?? 0),
+            tipo_comision_reparacion: emp.tipo_comision_reparacion || 'porcentaje',
+            comision_reparacion_aplica_a: emp.comision_reparacion_aplica_a || 'mano_obra',
+            sucursal_id: emp.sucursal_id ? String(emp.sucursal_id) : '',
+            crear_usuario: Boolean(emp.user_id),
+            password: '',
+            rol: emp.user?.roles?.[0]?.name || (roles.includes('Técnico y Vendedor') && emp.cargo?.toLowerCase().includes('técnico') && emp.cargo?.toLowerCase().includes('vendedor') ? 'Técnico y Vendedor' : (emp.cargo?.toLowerCase().includes('técnico') ? 'Técnico' : 'Vendedor')),
+            estado: Boolean(emp.estado),
+            fecha_ingreso: emp.fecha_ingreso ? String(emp.fecha_ingreso).substring(0, 10) : '',
+            notas: emp.notas || '',
         });
-        setActiveTab('general');
-        setActiveCameraField(null);
-        setIsModalOpen(true);
+        setIsFormOpen(true);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
         if (editingEmpleado) {
-            // Spoofing PUT con POST en Inertia para soportar subidas de archivos
-            router.post(`/admin/empleados/${editingEmpleado.id}`, {
-                ...data,
-                _method: 'PUT'
-            } as any, {
+            put(`/admin/empleados/${editingEmpleado.id}`, {
                 onSuccess: () => {
-                    setIsModalOpen(false);
+                    setIsFormOpen(false);
                     setEditingEmpleado(null);
-                    reset();
-                    notifySuccess(__('Employee updated successfully.'));
                 },
-                onError: () => notifyError(__('Please review the highlighted fields.')),
             });
         } else {
             post('/admin/empleados', {
                 onSuccess: () => {
-                    setIsModalOpen(false);
-                    reset();
-                    notifySuccess(__('Employee created successfully.'));
+                    setIsFormOpen(false);
                 },
-                onError: () => notifyError(__('Please review the highlighted fields.')),
             });
         }
     };
 
-    const handleToggleStatus = (emp: Empleado) => {
-        router.patch(`/admin/empleados/${emp.id}/toggle-status`, {}, { 
+    const handleFilterChange = (params: { search?: string; estado?: string; sucursal_id?: string }) => {
+        router.get('/admin/empleados', {
+            search: params.search !== undefined ? params.search : searchTerm,
+            estado: params.estado !== undefined ? params.estado : selectedEstado,
+            sucursal_id: params.sucursal_id !== undefined ? params.sucursal_id : selectedSucursal,
+        }, {
+            preserveState: true,
             preserveScroll: true,
-            onSuccess: () => notifySuccess(__('Status updated successfully.')),
         });
     };
 
-    const handleDeleteConfirm = () => {
-        if (!deletingEmpleado) return;
+    const handleToggleStatus = (emp: Empleado) => {
+        router.patch(`/admin/empleados/${emp.id}/toggle-status`, {}, {
+            preserveScroll: true,
+        });
+    };
 
-        router.delete(`/admin/empleados/${deletingEmpleado.id}`, {
+    const confirmDelete = () => {
+        if (!empleadoToDelete) return;
+        router.delete(`/admin/empleados/${empleadoToDelete.id}`, {
+            preserveScroll: true,
             onSuccess: () => {
-                setDeletingEmpleado(null);
-                notifySuccess(__('Employee deleted successfully.'));
+                setIsDeleteDialogOpen(false);
+                setEmpleadoToDelete(null);
             },
-            onError: () => notifyError(__('There was an error deleting the employee.')),
         });
     };
 
-    // Subida manual de archivos
-    const handleFileChange = (field: 'foto_empleado' | 'foto_documento' | 'foto_documento_reverso', file: File | null) => {
-        if (file) {
-            setData(field, file);
-        }
-    };
-
-    // Captura desde cámara
-    const handleCameraCapture = (field: 'foto_empleado' | 'foto_documento' | 'foto_documento_reverso', base64Data: string) => {
-        setData(field, base64Data);
-        setActiveCameraField(null);
-    };
-
-    // Resolver preview de imagen
-    const getImageSrc = (fieldVal: any) => {
-        if (!fieldVal) return null;
-        if (typeof fieldVal === 'string') return fieldVal; // Base64 o URL guardada (/storage/...)
-        if (fieldVal instanceof File) return URL.createObjectURL(fieldVal);
-        return null;
-    };
-
-    // ── Columnas de la tabla ───────────────────────────────────────────────────
-
-    const columns: ColumnDef<Empleado>[] = [
-        {
-            header: 'Employee',
-            accessorKey: 'nombres',
-            className: 'font-medium',
-            cell: (emp) => {
-                const foto = emp.foto_empleado || '/image/avatar-placeholder.png'; // fallback avatar
-                return (
-                    <div className="flex items-center gap-3">
-                        <img
-                            src={foto}
-                            alt={`${emp.nombres} ${emp.apellidos}`}
-                            className="w-10 h-10 rounded-full object-cover border border-slate-200"
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%23cccccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-                            }}
-                        />
-                        <div>
-                            <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{emp.nombres} {emp.apellidos}</p>
-                            <p className="text-xs text-muted-foreground">{__('ID')}: {emp.documento_identidad}</p>
-                        </div>
-                    </div>
-                );
-            },
-        },
-        {
-            header: 'Contact Info',
-            hideOn: 'mobile',
-            cell: (emp) => (
-                <div className="space-y-0.5 text-xs">
-                    {emp.correo && (
-                        <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                            <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span>{emp.correo}</span>
-                        </div>
-                    )}
-                    {emp.telefono && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Phone className="w-3.5 h-3.5" />
-                            <span>
-                                {emp.pais_telefono?.codigo_telefonico ? `+${emp.pais_telefono.codigo_telefonico} ` : ''}
-                                {emp.telefono}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            ),
-        },
-        {
-            header: 'Department / Position',
-            hideOn: 'mobile',
-            cell: (emp) => (
-                <div className="space-y-0.5 text-xs text-slate-700 dark:text-slate-300">
-                    <div className="flex items-center gap-1.5 font-medium">
-                        <Layers className="w-3.5 h-3.5 text-indigo-500" />
-                        <span>{emp.departamento?.nombre || '—'}</span>
-                    </div>
-                    {emp.cargo && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Briefcase className="w-3.5 h-3.5" />
-                            <span>{emp.cargo?.nombre}</span>
-                        </div>
-                    )}
-                </div>
-            ),
-        },
-        {
-            header: 'Responsible / Manager',
-            hideOn: 'mobile',
-            cell: (emp) => {
-                if (!emp.responsable) return <span className="text-xs text-muted-foreground">—</span>;
-                return (
-                    <div className="text-xs">
-                        <p className="font-medium text-slate-800 dark:text-slate-200">
-                            {emp.responsable.nombres} {emp.responsable.apellidos}
-                        </p>
-                        {emp.responsable.cargo && (
-                            <p className="text-[10px] text-muted-foreground">
-                                {emp.responsable.cargo.nombre}
-                            </p>
-                        )}
-                    </div>
-                );
-            },
-        },
-        {
-            header: 'Status',
-            stopRowClick: true,
-            cell: (emp) => (
-                <div className="flex items-center space-x-2">
-                    <Switch
-                        checked={emp.status}
-                        onCheckedChange={() => handleToggleStatus(emp)}
-                    />
-                    <span className={cn(
-                        'text-xs font-medium px-2 py-0.5 rounded-full border',
-                        emp.status
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800'
-                    )}>
-                        {emp.status ? __('Active') : __('Inactive')}
-                    </span>
-                </div>
-            ),
-        },
-        {
-            header: 'Actions',
-            className: 'text-right',
-            hideable: false,
-            stopRowClick: true,
-            cell: (emp) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(emp)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {__('Edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/carnet`)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            {__('Ver Carnet')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(emp)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
-                            {emp.status ? __('Deactivate') : __('Activate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setDeletingEmpleado(emp)}
-                            className="text-red-600 focus:text-red-600 dark:text-red-400"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {__('Delete')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
-        },
+    const breadcrumbs = [
+        { title: __('Administración'), href: '/admin/dashboard' },
+        { title: __('Empleados & Vendedores'), href: '/admin/empleados' },
     ];
 
     return (
         <>
-            <Head title={__('Employees')} />
+            <Head title={__('Gestión de Empleados & Comisiones')} />
 
             <div className="space-y-6">
+                {/* Migas de pan y Cabecera */}
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
                 <ModuleHeader
                     icon={<Users className="h-6 w-6 text-white" />}
-                    title={__('Employees')}
-                    description={__('Manage employees, their departments, responsibles, contact info and photos.')}
-                    colorClassName="bg-indigo-600"
+                    title={__('Empleados & Equipo de Ventas')}
+                    description={__('Administra el personal, sus datos personales, asignación de sucursal y porcentajes de comisiones por ventas.')}
+                    colorClassName="bg-emerald-600"
                 >
                     <div className="flex items-center gap-2">
                         <Button
-                            type="button"
-                            onClick={() => setIsPreRegistroModalOpen(true)}
-                            variant="outline"
-                            className="border-indigo-600 text-indigo-600 hover:bg-indigo-600/10 flex items-center gap-1.5"
+                            variant="secondary"
+                            onClick={() => router.get('/admin/comisiones')}
+                            className="gap-2"
                         >
-                            <Phone className="w-4 h-4" />
-                            {__('Pre-registro')}
+                            <TrendingUp className="h-4 w-4" />
+                            {__('Ver Módulo de Comisiones')}
                         </Button>
-                        <Button onClick={handleCreateClick}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            {__('New Employee')}
+                        <Button onClick={openCreateModal} className="gap-2 bg-white text-emerald-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-emerald-400 font-semibold shadow-sm">
+                            <Plus className="h-4 w-4" />
+                            {__('Nuevo Empleado')}
                         </Button>
                     </div>
                 </ModuleHeader>
 
-                {/* Tarjetas Estadísticas */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                {/* Tarjetas de Estadísticas */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
-                        icon={<Users className="h-6 w-6" />}
-                        title={__('TOTAL EMPLOYEES')}
+                        title={__('Total Empleados')}
                         value={stats.total}
-                        colorClassName="bg-indigo-100 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400"
+                        icon={<Users className="h-6 w-6" />}
+                        colorClassName="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                        description={__('Registrados en el sistema')}
                     />
                     <StatCard
-                        icon={<CheckCircle className="h-6 w-6" />}
-                        title={__('ACTIVE')}
+                        title={__('Empleados Activos')}
                         value={stats.activos}
-                        colorClassName="bg-green-100 text-green-600 dark:bg-emerald-950/20 dark:text-emerald-400"
+                        icon={<UserCheck className="h-6 w-6" />}
+                        colorClassName="bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+                        className="border-emerald-500/20"
+                        description={__('Habilitados para vender y comisionar')}
                     />
                     <StatCard
-                        icon={<XCircle className="h-6 w-6" />}
-                        title={__('INACTIVE')}
+                        title={__('Inactivos')}
                         value={stats.inactivos}
-                        colorClassName="bg-red-100 text-red-600 dark:bg-rose-950/20 dark:text-rose-400"
+                        icon={<UserX className="h-6 w-6" />}
+                        colorClassName="bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400"
+                        className="border-amber-500/20"
+                        description={__('Personal en pausa o retirado')}
+                    />
+                    <StatCard
+                        title={__('Comisión Promedio')}
+                        value={`${stats.promedio_comision}%`}
+                        icon={<Percent className="h-6 w-6" />}
+                        colorClassName="bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                        className="border-blue-500/20"
+                        description={__('Tasa promedio sobre ventas')}
                     />
                 </div>
 
-                {/* Filtros */}
-                <FilterBar>
-                    <div className="flex flex-wrap items-end gap-4">
-                        <FilterField label={__('Search')}>
-                            <Input
-                                placeholder={__('Search by name, document, email...')}
-                                className="w-full md:w-80"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </FilterField>
-                        <FilterField label={__('Department')}>
-                            <Select value={depFilter} onValueChange={setDepFilter}>
-                                <SelectTrigger className="w-full md:w-48">
-                                    <SelectValue placeholder={__('All Departments')} />
+                {/* Barra de Filtros */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-4 rounded-xl border shadow-sm">
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder={__('Buscar por nombre, documento, teléfono, cargo...')}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleFilterChange({ search: searchTerm })}
+                            className="pl-9"
+                        />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        {sucursales.length > 0 && (
+                            <Select
+                                value={selectedSucursal}
+                                onValueChange={(val) => {
+                                    setSelectedSucursal(val);
+                                    handleFilterChange({ sucursal_id: val });
+                                }}
+                            >
+                                <SelectTrigger className="w-[160px]">
+                                    <Building2 className="h-4 w-4 mr-1 text-muted-foreground" />
+                                    <SelectValue placeholder={__('Sucursal')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="none">{__('All')}</SelectItem>
-                                    {departamentos.map((dep) => (
-                                        <SelectItem key={dep.id} value={String(dep.id)}>
-                                            {dep.nombre}
+                                    <SelectItem value="all">{__('Todas las sucursales')}</SelectItem>
+                                    {sucursales.map((s) => (
+                                        <SelectItem key={s.id} value={String(s.id)}>
+                                            {s.nombre}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                        </FilterField>
-                        <FilterField label={__('Status')}>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full md:w-40">
-                                    <SelectValue placeholder={__('All')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">{__('All')}</SelectItem>
-                                    <SelectItem value="1">{__('Active')}</SelectItem>
-                                    <SelectItem value="0">{__('Inactive')}</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </FilterField>
-                        <FilterField label={__('Records per page')}>
-                            <Select value={perPageFilter} onValueChange={setPerPageFilter}>
-                                <SelectTrigger className="w-full md:w-32">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="10">10</SelectItem>
-                                    <SelectItem value="25">25</SelectItem>
-                                    <SelectItem value="50">50</SelectItem>
-                                    <SelectItem value="100">100</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </FilterField>
-                    </div>
-                </FilterBar>
+                        )}
 
-                {/* Tabla */}
-                <div className="w-full">
-                    <DataTable
-                        data={empleados}
-                        columns={columns}
-                        isLoading={isTableLoading}
-                        onRowClick={(emp) => handleEditClick(emp)}
-                        emptyState={{
-                            title: 'No employees found',
-                            description: searchTerm || statusFilter || depFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any employees yet.',
-                            ctaLabel: 'New Employee',
-                            onCtaClick: handleCreateClick,
-                        }}
-                    />
+                        <Select
+                            value={selectedEstado}
+                            onValueChange={(val) => {
+                                setSelectedEstado(val);
+                                handleFilterChange({ estado: val });
+                            }}
+                        >
+                            <SelectTrigger className="w-[130px]">
+                                <SelectValue placeholder={__('Estado')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">{__('Todos')}</SelectItem>
+                                <SelectItem value="1">{__('Activos')}</SelectItem>
+                                <SelectItem value="0">{__('Inactivos')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <Button
+                            variant="secondary"
+                            onClick={() => handleFilterChange({ search: searchTerm })}
+                            className="font-medium"
+                        >
+                            {__('Filtrar')}
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Tabla de Empleados */}
+                <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-muted/50 text-xs uppercase font-semibold text-muted-foreground border-b">
+                                <tr>
+                                    <th className="px-5 py-3.5">{__('Empleado')}</th>
+                                    <th className="px-5 py-3.5">{__('Contacto')}</th>
+                                    <th className="px-5 py-3.5">{__('Cargo / Sucursal')}</th>
+                                    <th className="px-5 py-3.5">{__('Comisión Ventas')}</th>
+                                    <th className="px-5 py-3.5">{__('Sueldo Base')}</th>
+                                    <th className="px-5 py-3.5 text-center">{__('Estado')}</th>
+                                    <th className="px-5 py-3.5 text-right">{__('Acciones')}</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {empleados.data.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                                            <Users className="mx-auto h-10 w-10 stroke-1 mb-2 opacity-50" />
+                                            <p className="font-medium">{__('No se encontraron empleados registrados.')}</p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {__('Haz clic en "Nuevo Empleado" para registrar tu primer miembro de equipo.')}
+                                            </p>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    empleados.data.map((emp) => (
+                                        <tr key={emp.id} className="hover:bg-muted/30 transition-colors">
+                                            {/* Empleado */}
+                                            <td className="px-5 py-3.5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm shrink-0">
+                                                        {(emp.nombres[0] || '').toUpperCase()}
+                                                        {(emp.apellidos[0] || '').toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-semibold text-foreground flex items-center gap-1.5">
+                                                            {emp.nombre_completo}
+                                                            {emp.user_id && (
+                                                                <span
+                                                                    title={emp.user?.email ? __('Acceso al sistema: :email', { email: emp.user.email }) : __('Usuario de acceso activado')}
+                                                                    className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded-full border border-blue-500/20"
+                                                                >
+                                                                    <Shield className="h-3 w-3" />
+                                                                    {__('Acceso')}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {emp.documento_numero && (
+                                                            <div className="text-xs text-muted-foreground font-mono">
+                                                                {emp.documento_tipo}: {emp.documento_numero}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* Contacto */}
+                                            <td className="px-5 py-3.5">
+                                                <div className="space-y-0.5 text-xs">
+                                                    {emp.telefono && (
+                                                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                                                            <Phone className="h-3.5 w-3.5 text-slate-400" />
+                                                            <span>{emp.telefono}</span>
+                                                        </div>
+                                                    )}
+                                                    {emp.email && (
+                                                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                                                            <Mail className="h-3.5 w-3.5 text-slate-400" />
+                                                            <span>{emp.email}</span>
+                                                        </div>
+                                                    )}
+                                                    {!emp.telefono && !emp.email && (
+                                                        <span className="text-muted-foreground italic">{__('Sin contacto')}</span>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            {/* Cargo / Sucursal */}
+                                            <td className="px-5 py-3.5">
+                                                <div className="font-medium text-xs text-foreground flex items-center gap-1">
+                                                    <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                                                    {emp.cargo || __('Vendedor')}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                    <Building2 className="h-3 w-3 text-muted-foreground" />
+                                                    {emp.sucursal?.nombre || __('Todas las sucursales')}
+                                                </div>
+                                            </td>
+
+                                            {/* Comisión */}
+                                            <td className="px-5 py-3.5">
+                                                <div className="flex flex-col gap-1 items-start">
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="font-bold text-[11px] bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-500/20"
+                                                        title={emp.comision_aplica_a === 'total' ? __('Ventas (Sobre Total)') : __('Ventas (Sobre Subtotal)')}
+                                                    >
+                                                        <ShoppingCart className="h-3 w-3 mr-1 text-emerald-600" />
+                                                        {Number(emp.porcentaje_comision).toFixed(1)}% {__('Ventas')}
+                                                    </Badge>
+                                                    {Number(emp.porcentaje_comision_reparacion || 0) > 0 && (
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="font-bold text-[11px] bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-500/20"
+                                                            title={emp.comision_reparacion_aplica_a === 'total_orden' ? __('Taller (Sobre Total Orden)') : __('Taller (Sobre Mano de Obra)')}
+                                                        >
+                                                            <Wrench className="h-3 w-3 mr-1 text-indigo-600" />
+                                                            {Number(emp.porcentaje_comision_reparacion).toFixed(1)}% {__('Taller')}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            {/* Sueldo Base */}
+                                            <td className="px-5 py-3.5 font-medium text-foreground">
+                                                {emp.sueldo_base > 0 ? (
+                                                    `$${Number(emp.sueldo_base).toFixed(2)}`
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs italic">{__('Solo comisión')}</span>
+                                                )}
+                                            </td>
+
+                                            {/* Estado */}
+                                            <td className="px-5 py-3.5 text-center">
+                                                <button
+                                                    onClick={() => handleToggleStatus(emp)}
+                                                    className="inline-flex cursor-pointer focus:outline-none"
+                                                    title={emp.estado ? __('Click para desactivar') : __('Click para activar')}
+                                                >
+                                                    {emp.estado ? (
+                                                        <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20">
+                                                            <CheckCircle className="h-3 w-3 mr-1" />
+                                                            {__('Activo')}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-muted-foreground border-border hover:bg-muted">
+                                                            <XCircle className="h-3 w-3 mr-1" />
+                                                            {__('Inactivo')}
+                                                        </Badge>
+                                                    )}
+                                                </button>
+                                            </td>
+
+                                            {/* Acciones */}
+                                            <td className="px-5 py-3.5 text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-48">
+                                                        <DropdownMenuLabel>{__('Acciones')}</DropdownMenuLabel>
+                                                        <DropdownMenuItem
+                                                            onClick={() => router.get(`/admin/comisiones?empleado_id=${emp.id}`)}
+                                                            className="gap-2 cursor-pointer text-emerald-600 dark:text-emerald-400 font-medium"
+                                                        >
+                                                            <TrendingUp className="h-4 w-4" />
+                                                            {__('Ver Comisiones')}
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => openEditModal(emp)}
+                                                            className="gap-2 cursor-pointer"
+                                                        >
+                                                            <Edit2 className="h-4 w-4 text-blue-500" />
+                                                            {__('Editar Datos')}
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setEmpleadoToDelete(emp);
+                                                                setIsDeleteDialogOpen(true);
+                                                            }}
+                                                            className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                            {__('Eliminar')}
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Paginación */}
+                    {empleados.last_page > 1 && (
+                        <div className="flex items-center justify-between p-4 border-t text-xs text-muted-foreground">
+                            <div>
+                                {__('Mostrando')} <span className="font-semibold">{empleados.data.length}</span> {__('de')}{' '}
+                                <span className="font-semibold">{empleados.total}</span> {__('empleados')}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={!empleados.prev_page_url}
+                                    onClick={() => empleados.prev_page_url && router.get(empleados.prev_page_url)}
+                                >
+                                    {__('Anterior')}
+                                </Button>
+                                <span className="font-medium text-foreground">
+                                    {empleados.current_page} / {empleados.last_page}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={!empleados.next_page_url}
+                                    onClick={() => empleados.next_page_url && router.get(empleados.next_page_url)}
+                                >
+                                    {__('Siguiente')}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* ── Modal Creación / Edición ────────────────────────────────────────────── */}
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-[720px] lg:max-w-[850px] max-h-[90vh] overflow-y-auto">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <DialogHeader>
-                            <DialogTitle>
-                                {editingEmpleado ? __('Edit Employee') : __('New Employee')}
-                            </DialogTitle>
-                            <DialogDescription>
-                                {__('Complete the employee details and upload or capture the requested photographs.')}
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-2">
-                            <TabsList className="grid grid-cols-4 w-full mb-6">
-                                <TabsTrigger value="general" className="flex items-center gap-2">
-                                    <UserIcon className="h-4 w-4" />
-                                    {__('General')}
-                                </TabsTrigger>
-                                <TabsTrigger value="laboral" className="flex items-center gap-2">
-                                    <Briefcase className="h-4 w-4" />
-                                    {__('Job Position')}
-                                </TabsTrigger>
-                                <TabsTrigger value="fotos" className="flex items-center gap-2">
-                                    <Camera className="h-4 w-4" />
-                                    {__('Photographs')}
-                                </TabsTrigger>
-                                <TabsTrigger value="vehiculos" className="flex items-center gap-2">
-                                    <Car className="h-4 w-4" />
-                                    {__('Vehicles')}
-                                </TabsTrigger>
-                            </TabsList>
-
-                            {/* ══ Tab 1: General ══════════════════════════════════════════════════ */}
-                            <TabsContent value="general" className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Nombres */}
+            {/* Modal de Registro / Edición de Empleado */}
+            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <DialogContent className="w-[96vw] max-w-6xl xl:max-w-7xl sm:max-w-6xl lg:max-w-6xl xl:max-w-7xl max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden rounded-2xl shadow-2xl border-border/80 bg-card">
+                    <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+                        {/* Header Fijo */}
+                        <DialogHeader className="p-6 pb-4 border-b bg-muted/20 shrink-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 shadow-xs">
+                                        <Users className="h-6 w-6" />
+                                    </div>
                                     <div>
-                                        <Label htmlFor="nombres">{__('First Name')} *</Label>
-                                        <Input
-                                            id="nombres"
-                                            value={data.nombres}
-                                            onChange={(e) => setData('nombres', e.target.value)}
-                                            placeholder="John"
-                                        />
-                                        {errors.nombres && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.nombres}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Apellidos */}
-                                    <div>
-                                        <Label htmlFor="apellidos">{__('Last Name')} *</Label>
-                                        <Input
-                                            id="apellidos"
-                                            value={data.apellidos}
-                                            onChange={(e) => setData('apellidos', e.target.value)}
-                                            placeholder="Doe"
-                                        />
-                                        {errors.apellidos && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.apellidos}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Documento de Identidad */}
-                                    <div>
-                                        <Label htmlFor="documento_identidad">{__('Document / Tax ID')} *</Label>
-                                        <Input
-                                            id="documento_identidad"
-                                            value={data.documento_identidad}
-                                            onChange={(e) => setData('documento_identidad', e.target.value)}
-                                            placeholder="V-12345678"
-                                        />
-                                        {errors.documento_identidad && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.documento_identidad}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Correo */}
-                                    <div>
-                                        <Label htmlFor="correo">{__('Email')}</Label>
-                                        <Input
-                                            id="correo"
-                                            type="email"
-                                            value={data.correo}
-                                            onChange={(e) => setData('correo', e.target.value)}
-                                            placeholder="john.doe@example.com"
-                                        />
-                                        {errors.correo && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.correo}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Género */}
-                                    <div>
-                                        <Label htmlFor="genero">{__('Gender')}</Label>
-                                        <Select
-                                            value={data.genero || ''}
-                                            onValueChange={(v) => setData('genero', v)}
-                                        >
-                                            <SelectTrigger id="genero" className="w-full">
-                                                <SelectValue placeholder={__('Select Gender')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="M">{__('Male')}</SelectItem>
-                                                <SelectItem value="F">{__('Female')}</SelectItem>
-                                                <SelectItem value="Otro">{__('Other')}</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.genero && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.genero}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Estado */}
-                                    <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50/50 dark:bg-slate-900/30">
-                                        <div>
-                                            <Label htmlFor="status" className="font-semibold block">{__('Status')}</Label>
-                                            <span className="text-xs text-muted-foreground">{__('Enable or disable employee access')}</span>
-                                        </div>
-                                        <Switch
-                                            id="status"
-                                            checked={Number(data.status) === 1}
-                                            onCheckedChange={(checked) => setData('status', checked ? 1 : 0)}
-                                        />
-                                    </div>
-
-                                    {/* Teléfono */}
-                                    <div className="md:col-span-2">
-                                        <Label htmlFor="telefono">{__('Phone')}</Label>
-                                        <PhoneInputGroup
-                                            paises={paises}
-                                            selectedPaisId={data.pais_telefono_id}
-                                            phoneValue={data.telefono}
-                                            onPaisChange={(v) => setData('pais_telefono_id', v)}
-                                            onPhoneChange={(v) => setData('telefono', v)}
-                                            placeholder="000-000000"
-                                            error={errors.telefono}
-                                        />
+                                        <DialogTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                                            <span>{editingEmpleado ? __('Editar Información del Empleado') : __('Registrar Nuevo Empleado')}</span>
+                                        </DialogTitle>
+                                        <DialogDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                                            {__('Configura los datos personales, cargo, reglas de comisiones por venta y credenciales de acceso al sistema.')}
+                                        </DialogDescription>
                                     </div>
                                 </div>
-                            </TabsContent>
-
-                            {/* ══ Tab 2: Laboral ══════════════════════════════════════════════════ */}
-                            <TabsContent value="laboral" className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Empresa (Auto-asignado u Opcional) */}
-                                    <div>
-                                        <Label htmlFor="empresa_id">{__('Company')} *</Label>
-                                        <Select
-                                            value={String(data.empresa_id)}
-                                            onValueChange={(v) => {
-                                                setData(prev => ({
-                                                    ...prev,
-                                                    empresa_id: v,
-                                                    sucursal_id: '',
-                                                    departamento_id: '',
-                                                    responsable_id: '',
-                                                    cargo_id: '',
-                                                }));
-                                            }}
-                                            disabled={!!auth.user?.empresa_id}
-                                        >
-                                            <SelectTrigger id="empresa_id" className="w-full">
-                                                <SelectValue placeholder={__('Select Company')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {empresas.map((emp) => (
-                                                    <SelectItem key={emp.id} value={String(emp.id)}>
-                                                        {emp.razon_social}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.empresa_id && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.empresa_id}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Sucursal (Auto-asignado u Opcional) */}
-                                    <div>
-                                        <Label htmlFor="sucursal_id">{__('Branch')} *</Label>
-                                        <Select
-                                            value={String(data.sucursal_id)}
-                                            onValueChange={(v) => {
-                                                setData(prev => ({
-                                                    ...prev,
-                                                    sucursal_id: v,
-                                                    departamento_id: '',
-                                                    responsable_id: '',
-                                                    cargo_id: '',
-                                                }));
-                                            }}
-                                            disabled={!!auth.user?.sucursal_id}
-                                        >
-                                            <SelectTrigger id="sucursal_id" className="w-full">
-                                                <SelectValue placeholder={__('Select Branch')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {filteredSucursales.map((suc) => (
-                                                    <SelectItem key={suc.id} value={String(suc.id)}>
-                                                        {suc.nombre}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.sucursal_id && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.sucursal_id}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Departamento */}
-                                    <div>
-                                        <Label htmlFor="departamento_id">{__('Department')} *</Label>
-                                        <Select
-                                            value={String(data.departamento_id)}
-                                            onValueChange={(v) => {
-                                                setData(prev => ({
-                                                    ...prev,
-                                                    departamento_id: v,
-                                                    responsable_id: '',
-                                                    cargo_id: '',
-                                                }));
-                                            }}
-                                        >
-                                            <SelectTrigger id="departamento_id" className="w-full">
-                                                <SelectValue placeholder={__('Select Department')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {filteredDepartamentos.map((dep) => (
-                                                    <SelectItem key={dep.id} value={String(dep.id)}>
-                                                        {dep.nombre}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.departamento_id && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.departamento_id}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Cargo del empleado */}
-                                    <div>
-                                        <Label htmlFor="cargo_id">{__('Position')}</Label>
-                                        <Select
-                                            value={String(data.cargo_id || '')}
-                                            onValueChange={(v) => setData('cargo_id', v)}
-                                            disabled={!data.departamento_id}
-                                        >
-                                            <SelectTrigger id="cargo_id" className="w-full">
-                                                <SelectValue placeholder={data.departamento_id ? __('Select Position') : __('Select Department First')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {filteredCargos.map((cargo) => (
-                                                    <SelectItem key={cargo.id} value={String(cargo.id)}>
-                                                        {cargo.nombre}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.cargo_id && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.cargo_id}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Responsable / Supervisor */}
-                                    <div>
-                                        <Label htmlFor="responsable_id">{__('Responsible')}</Label>
-                                        <Select
-                                            value={String(data.responsable_id || '')}
-                                            onValueChange={(v) => setData('responsable_id', v)}
-                                            disabled={!data.departamento_id}
-                                        >
-                                            <SelectTrigger id="responsable_id" className="w-full">
-                                                <SelectValue placeholder={data.departamento_id ? __('Select Responsible') : __('Select Department First')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {filteredResponsables.map((resp) => (
-                                                    <SelectItem key={resp.id} value={String(resp.id)}>
-                                                        {resp.nombres} {resp.apellidos}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.responsable_id && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.responsable_id}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Cargo del Responsable (Se muestra informativamente) */}
-                                    <div>
-                                        <Label>{__('Responsible Position')}</Label>
-                                        <div className="w-full h-9 rounded-md border border-input bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 text-sm flex items-center text-slate-500 select-none">
-                                            {selectedResponsable?.cargo?.nombre ? (
-                                                <span className="flex items-center gap-1.5">
-                                                    <Briefcase className="w-4 h-4 text-slate-400" />
-                                                    {selectedResponsable.cargo.nombre}
-                                                </span>
-                                            ) : (
-                                                <span className="text-slate-400 italic">
-                                                    {data.responsable_id ? __('Position not assigned') : __('Select responsible first')}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Jornada Laboral */}
-                                    <div className="md:col-span-2 border-t pt-6 mt-4 space-y-4">
-                                        <div className="flex items-center gap-2">
-                                            <Building2 className="w-5 h-5 text-indigo-500" />
-                                            <h3 className="text-sm font-semibold">{__('Working Days & Hours')}</h3>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            {__('Select working days and configure check-in / check-out times for the employee.')}
-                                        </p>
-
-                                        <div className="space-y-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                                            {((data.jornada_laboral as any[]) || []).map((jornada, idx) => (
-                                                <div key={jornada.dia} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2 border-b last:border-0 border-slate-100 dark:border-slate-800/50">
-                                                    <div className="flex items-center gap-3 w-36">
-                                                        <Switch
-                                                            checked={!!jornada.activo}
-                                                            onCheckedChange={(checked) => {
-                                                                const updated = [...(data.jornada_laboral as any[])];
-                                                                updated[idx].activo = checked;
-                                                                setData('jornada_laboral', updated);
-                                                            }}
-                                                        />
-                                                        <Label className="font-semibold text-sm cursor-pointer">{__(jornada.dia)}</Label>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-4 flex-1 max-w-md">
-                                                        <div className="flex items-center gap-2 flex-1">
-                                                            <span className="text-xs text-slate-400">{__('In:')}</span>
-                                                            <Input
-                                                                type="time"
-                                                                value={jornada.hora_ingreso || '08:00'}
-                                                                disabled={!jornada.activo}
-                                                                onChange={(e) => {
-                                                                    const updated = [...(data.jornada_laboral as any[])];
-                                                                    updated[idx].hora_ingreso = e.target.value;
-                                                                    setData('jornada_laboral', updated);
-                                                                }}
-                                                                className="h-8 py-1 px-2 text-xs"
-                                                            />
-                                                        </div>
-
-                                                        <div className="flex items-center gap-2 flex-1">
-                                                            <span className="text-xs text-slate-400">{__('Out:')}</span>
-                                                            <Input
-                                                                type="time"
-                                                                value={jornada.hora_salida || '17:00'}
-                                                                disabled={!jornada.activo}
-                                                                onChange={(e) => {
-                                                                    const updated = [...(data.jornada_laboral as any[])];
-                                                                    updated[idx].hora_salida = e.target.value;
-                                                                    setData('jornada_laboral', updated);
-                                                                }}
-                                                                className="h-8 py-1 px-2 text-xs"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </TabsContent>
-
-                            {/* ══ Tab 3: Fotos (Subida + Webcam) ══════════════════════════════════ */}
-                            <TabsContent value="fotos" className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                                    {/* Foto del Empleado */}
-                                    <div className="flex flex-col gap-2">
-                                        <Label className="font-semibold">{__('Employee Photo')}</Label>
-                                        
-                                        {activeCameraField === 'foto_empleado' ? (
-                                            <CameraWidget
-                                                onCapture={(base64) => handleCameraCapture('foto_empleado', base64)}
-                                                onCancel={() => setActiveCameraField(null)}
-                                            />
-                                        ) : (
-                                            <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] bg-slate-50/50 dark:bg-slate-900/10">
-                                                {getImageSrc(data.foto_empleado) ? (
-                                                    <div className="relative w-28 h-28 rounded-full overflow-hidden border border-slate-200 shadow-sm group">
-                                                        <img
-                                                            src={getImageSrc(data.foto_empleado)!}
-                                                            alt="Employee Preview"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                            <Button
-                                                                type="button"
-                                                                size="xs"
-                                                                variant="destructive"
-                                                                onClick={() => setData('foto_empleado', '')}
-                                                            >
-                                                                {__('Delete')}
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-2 text-center">
-                                                        <UserIcon className="w-10 h-10 text-slate-300" />
-                                                        <span className="text-xs text-muted-foreground max-w-[200px]">
-                                                            {__('Upload a photo or capture one using your camera')}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        ref={fileInputEmpleadoRef}
-                                                        className="hidden"
-                                                        onChange={(e) => handleFileChange('foto_empleado', e.target.files?.[0] || null)}
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => fileInputEmpleadoRef.current?.click()}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Upload className="w-3 h-3" />
-                                                        {__('Upload')}
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => setActiveCameraField('foto_empleado')}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Camera className="w-3 h-3" />
-                                                        {__('Take Photo')}
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {errors.foto_empleado && (
-                                            <p className="text-red-500 text-xs">{errors.foto_empleado}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Foto del Empleado 2 */}
-                                    <div className="flex flex-col gap-2">
-                                        <Label className="font-semibold">{__('Employee Photo 2')}</Label>
-                                        
-                                        {activeCameraField === 'foto_empleado_2' ? (
-                                            <CameraWidget
-                                                onCapture={(base64) => handleCameraCapture('foto_empleado_2', base64)}
-                                                onCancel={() => setActiveCameraField(null)}
-                                            />
-                                        ) : (
-                                            <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] bg-slate-50/50 dark:bg-slate-900/10">
-                                                {getImageSrc(data.foto_empleado_2) ? (
-                                                    <div className="relative w-28 h-28 rounded-full overflow-hidden border border-slate-200 shadow-sm group">
-                                                        <img
-                                                            src={getImageSrc(data.foto_empleado_2)!}
-                                                            alt="Employee Photo 2 Preview"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                            <Button
-                                                                type="button"
-                                                                size="xs"
-                                                                variant="destructive"
-                                                                onClick={() => setData('foto_empleado_2', '')}
-                                                            >
-                                                                {__('Delete')}
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-2 text-center">
-                                                        <UserIcon className="w-10 h-10 text-slate-300" />
-                                                        <span className="text-xs text-muted-foreground max-w-[200px]">
-                                                            {__('Upload a photo or capture one using your camera')}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        ref={fileInputEmpleado2Ref}
-                                                        className="hidden"
-                                                        onChange={(e) => handleFileChange('foto_empleado_2', e.target.files?.[0] || null)}
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => fileInputEmpleado2Ref.current?.click()}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Upload className="w-3 h-3" />
-                                                        {__('Upload')}
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => setActiveCameraField('foto_empleado_2')}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Camera className="w-3 h-3" />
-                                                        {__('Take Photo')}
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {errors.foto_empleado_2 && (
-                                            <p className="text-red-500 text-xs">{errors.foto_empleado_2}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Foto del Documento de Identidad */}
-                                    <div className="flex flex-col gap-2">
-                                        <Label className="font-semibold">{__('ID Document Photo')}</Label>
-                                        
-                                        {activeCameraField === 'foto_documento' ? (
-                                            <CameraWidget
-                                                onCapture={(base64) => handleCameraCapture('foto_documento', base64)}
-                                                onCancel={() => setActiveCameraField(null)}
-                                            />
-                                        ) : (
-                                            <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] bg-slate-50/50 dark:bg-slate-900/10">
-                                                {getImageSrc(data.foto_documento) ? (
-                                                    <div className="relative w-44 aspect-[3/2] rounded-md overflow-hidden border border-slate-200 shadow-sm group">
-                                                        <img
-                                                            src={getImageSrc(data.foto_documento)!}
-                                                            alt="Document Preview"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                            <Button
-                                                                type="button"
-                                                                size="xs"
-                                                                variant="destructive"
-                                                                onClick={() => setData('foto_documento', '')}
-                                                            >
-                                                                {__('Delete')}
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-2 text-center">
-                                                        <FileText className="w-10 h-10 text-slate-300" />
-                                                        <span className="text-xs text-muted-foreground max-w-[200px]">
-                                                            {__('Upload a photo or capture one using your camera')}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        ref={fileInputDocumentoRef}
-                                                        className="hidden"
-                                                        onChange={(e) => handleFileChange('foto_documento', e.target.files?.[0] || null)}
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => fileInputDocumentoRef.current?.click()}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Upload className="w-3 h-3" />
-                                                        {__('Upload')}
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => setActiveCameraField('foto_documento')}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Camera className="w-3 h-3" />
-                                                        {__('Take Photo')}
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {errors.foto_documento && (
-                                            <p className="text-red-500 text-xs">{errors.foto_documento}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Foto del Documento de Identidad (Reverso) */}
-                                    <div className="flex flex-col gap-2">
-                                        <Label className="font-semibold">{__('ID Document Photo (Reverse)')}</Label>
-                                        
-                                        {activeCameraField === 'foto_documento_reverso' ? (
-                                            <CameraWidget
-                                                onCapture={(base64) => handleCameraCapture('foto_documento_reverso', base64)}
-                                                onCancel={() => setActiveCameraField(null)}
-                                            />
-                                        ) : (
-                                            <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] bg-slate-50/50 dark:bg-slate-900/10">
-                                                {getImageSrc(data.foto_documento_reverso) ? (
-                                                    <div className="relative w-44 aspect-[3/2] rounded-md overflow-hidden border border-slate-200 shadow-sm group">
-                                                        <img
-                                                            src={getImageSrc(data.foto_documento_reverso)!}
-                                                            alt="Document Reverse Preview"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                            <Button
-                                                                type="button"
-                                                                size="xs"
-                                                                variant="destructive"
-                                                                onClick={() => setData('foto_documento_reverso', '')}
-                                                            >
-                                                                {__('Delete')}
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-2 text-center">
-                                                        <FileText className="w-10 h-10 text-slate-300" />
-                                                        <span className="text-xs text-muted-foreground max-w-[200px]">
-                                                            {__('Upload a photo or capture one using your camera')}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        ref={fileInputDocumentoReversoRef}
-                                                        className="hidden"
-                                                        onChange={(e) => handleFileChange('foto_documento_reverso', e.target.files?.[0] || null)}
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => fileInputDocumentoReversoRef.current?.click()}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Upload className="w-3 h-3" />
-                                                        {__('Upload')}
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => setActiveCameraField('foto_documento_reverso')}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Camera className="w-3 h-3" />
-                                                        {__('Take Photo')}
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {errors.foto_documento_reverso && (
-                                            <p className="text-red-500 text-xs">{errors.foto_documento_reverso}</p>
-                                        )}
-                                    </div>
-
-                                </div>
-                            </TabsContent>
-
-                            {/* ══ Tab 4: Vehículos ══════════════════════════════════════════════════ */}
-                            <TabsContent value="vehiculos" className="space-y-6">
-                                <div className="border-b pb-4 flex justify-between items-center">
-                                    <h2 className="text-lg font-bold">{__('Vehicles')}</h2>
-                                    {!showVehicleForm && (
-                                        <Button type="button" size="sm" onClick={() => setShowVehicleForm(true)}>
-                                            <Plus className="w-4 h-4 mr-1" /> {__('Add Vehicle')}
-                                        </Button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {editingEmpleado ? (
+                                        <Badge variant="outline" className="px-3 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 text-xs font-semibold">
+                                            {__('ID Empleado: #')}{editingEmpleado.id}
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 text-xs font-semibold">
+                                            {__('Nuevo Colaborador')}
+                                        </Badge>
                                     )}
                                 </div>
+                            </div>
+                        </DialogHeader>
 
-                                {showVehicleForm && (
-                                    <div className="p-5 border bg-slate-50/50 dark:bg-slate-900/55 rounded-2xl space-y-4">
+                        {/* Body con Scroll Independiente y 2 Columnas Grandes en Desktop */}
+                        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                                {/* COLUMNA IZQUIERDA */}
+                                <div className="space-y-6">
+                                    {/* SECCIÓN 1: DATOS PERSONALES Y CONTACTO */}
+                                    <div className="border rounded-2xl p-5 sm:p-6 bg-card shadow-xs space-y-4">
+                                        <div className="flex items-center justify-between border-b pb-3">
+                                            <div className="font-bold text-sm tracking-wide text-foreground flex items-center gap-2.5">
+                                                <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                                                    <UserCheck className="h-4 w-4" />
+                                                </div>
+                                                <span>{__('Datos Personales & Contacto')}</span>
+                                            </div>
+                                            <span className="text-[11px] text-muted-foreground">
+                                                {__('Identificación del colaborador')}
+                                            </span>
+                                        </div>
+
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-1.5">
-                                                <Label>{__('Vehicle Type *')}</Label>
+                                                <Label htmlFor="nombres" className="font-semibold">{__('Nombres')} *</Label>
+                                                <Input
+                                                    id="nombres"
+                                                    required
+                                                    placeholder={__('Ej. Carlos Alberto')}
+                                                    value={data.nombres}
+                                                    onChange={(e) => setData('nombres', e.target.value)}
+                                                    className="h-10"
+                                                />
+                                                {errors.nombres && <p className="text-xs text-destructive">{errors.nombres}</p>}
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="apellidos" className="font-semibold">{__('Apellidos')} *</Label>
+                                                <Input
+                                                    id="apellidos"
+                                                    required
+                                                    placeholder={__('Ej. Martínez Silva')}
+                                                    value={data.apellidos}
+                                                    onChange={(e) => setData('apellidos', e.target.value)}
+                                                    className="h-10"
+                                                />
+                                                {errors.apellidos && <p className="text-xs text-destructive">{errors.apellidos}</p>}
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="documento_tipo">{__('Tipo de Documento')}</Label>
                                                 <Select
-                                                    value={newVehicle.tipo_vehiculo}
-                                                    onValueChange={(val) => setNewVehicle(prev => ({ ...prev, tipo_vehiculo: val }))}
+                                                    value={data.documento_tipo}
+                                                    onValueChange={(val) => setData('documento_tipo', val)}
                                                 >
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder={__('Select')} />
+                                                    <SelectTrigger id="documento_tipo" className="h-10">
+                                                        <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="Automóvil">{__('Car')}</SelectItem>
-                                                        <SelectItem value="Camioneta">{__('Pickup')}</SelectItem>
-                                                        <SelectItem value="Camión">{__('Truck')}</SelectItem>
-                                                        <SelectItem value="Motocicleta">{__('Motorcycle')}</SelectItem>
-                                                        <SelectItem value="Otro">{__('Other')}</SelectItem>
+                                                        <SelectItem value="DNI/CI">DNI / Cédula</SelectItem>
+                                                        <SelectItem value="RUT/RFC">RUT / RFC</SelectItem>
+                                                        <SelectItem value="Pasaporte">{__('Pasaporte')}</SelectItem>
+                                                        <SelectItem value="Otro">{__('Otro')}</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
+
                                             <div className="space-y-1.5">
-                                                <Label>{__('Make *')}</Label>
+                                                <Label htmlFor="documento_numero">{__('Número de Documento')}</Label>
                                                 <Input
-                                                    value={newVehicle.marca}
-                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, marca: e.target.value }))}
-                                                    placeholder="Ej: Chevrolet, Toyota"
+                                                    id="documento_numero"
+                                                    placeholder={__('Ej. 12345678')}
+                                                    value={data.documento_numero}
+                                                    onChange={(e) => setData('documento_numero', e.target.value)}
+                                                    className="h-10"
                                                 />
+                                                {errors.documento_numero && <p className="text-xs text-destructive">{errors.documento_numero}</p>}
                                             </div>
+
                                             <div className="space-y-1.5">
-                                                <Label>{__('Model *')}</Label>
-                                                <Input
-                                                    value={newVehicle.modelo}
-                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, modelo: e.target.value }))}
-                                                    placeholder="Ej: Hilux, Aveo"
-                                                />
+                                                <Label htmlFor="telefono">{__('Teléfono / WhatsApp')}</Label>
+                                                <div className="relative">
+                                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                    <Input
+                                                        id="telefono"
+                                                        className="pl-9 h-10"
+                                                        placeholder={__('+58 412 1234567')}
+                                                        value={data.telefono}
+                                                        onChange={(e) => setData('telefono', e.target.value)}
+                                                    />
+                                                </div>
+                                                {errors.telefono && <p className="text-xs text-destructive">{errors.telefono}</p>}
                                             </div>
+
                                             <div className="space-y-1.5">
-                                                <Label>{__('Year *')}</Label>
-                                                <Input
-                                                    type="number"
-                                                    value={newVehicle.year}
-                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, year: e.target.value }))}
-                                                    placeholder="Ej: 2020"
-                                                />
+                                                <Label htmlFor="email">{__('Correo Electrónico')}</Label>
+                                                <div className="relative">
+                                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                    <Input
+                                                        id="email"
+                                                        type="email"
+                                                        className="pl-9 h-10"
+                                                        placeholder={__('empleado@correo.com')}
+                                                        value={data.email}
+                                                        onChange={(e) => setData('email', e.target.value)}
+                                                    />
+                                                </div>
+                                                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                                             </div>
+
                                             <div className="space-y-1.5 sm:col-span-2">
-                                                <Label>{__('License Plate *')}</Label>
+                                                <Label htmlFor="direccion">{__('Dirección de Residencia')}</Label>
                                                 <Input
-                                                    value={newVehicle.placa}
-                                                    onChange={(e) => setNewVehicle(prev => ({ ...prev, placa: e.target.value }))}
-                                                    placeholder="Ej: ABC-1234"
+                                                    id="direccion"
+                                                    placeholder={__('Calle, sector, edificio o ciudad de residencia...')}
+                                                    value={data.direccion}
+                                                    onChange={(e) => setData('direccion', e.target.value)}
+                                                    className="h-10"
                                                 />
+                                                {errors.direccion && <p className="text-xs text-destructive">{errors.direccion}</p>}
                                             </div>
-
-                                            {/* Foto frontal */}
-                                            <div className="flex flex-col gap-2">
-                                                <Label className="text-xs font-semibold">{__('Front Photo')}</Label>
-                                                {activeCameraField === 'foto_frontal' ? (
-                                                    <CameraWidget
-                                                        onCapture={(base64) => {
-                                                            setNewVehicle(prev => ({ ...prev, foto_frontal: base64 }));
-                                                            setActiveCameraField(null);
-                                                        }}
-                                                        onCancel={() => setActiveCameraField(null)}
-                                                    />
-                                                ) : (
-                                                    <div className="border border-dashed rounded-lg p-2 flex flex-col items-center justify-center gap-2 min-h-[120px] bg-white dark:bg-slate-900/10">
-                                                        {newVehicle.foto_frontal ? (
-                                                            <div className="relative w-24 h-16 rounded overflow-hidden border">
-                                                                <img src={newVehicle.foto_frontal} className="w-full h-full object-cover" />
-                                                                <Button type="button" size="xs" variant="destructive" className="absolute top-0 right-0 h-4 w-4 p-0 rounded-none animate-none" onClick={() => setNewVehicle(prev => ({ ...prev, foto_frontal: '' }))}>X</Button>
-                                                            </div>
-                                                        ) : <span className="text-xs text-muted-foreground">{__('No photo')}</span>}
-                                                        <div className="flex gap-1.5">
-                                                            <Button type="button" variant="outline" size="xs" onClick={() => fileInputVehiculoFrontalRef.current?.click()}>{__('Upload')}</Button>
-                                                            <Button type="button" variant="outline" size="xs" onClick={() => setActiveCameraField('foto_frontal')}>{__('Camera')}</Button>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                <input type="file" accept="image/*" ref={fileInputVehiculoFrontalRef} className="hidden" onChange={(e) => {
-                                                    const file = e.target.files?.[0];
-                                                    if (file) {
-                                                        const reader = new FileReader();
-                                                        reader.readAsDataURL(file);
-                                                        reader.onload = () => setNewVehicle(prev => ({ ...prev, foto_frontal: reader.result as string }));
-                                                    }
-                                                }} />
-                                            </div>
-
-                                            {/* Foto trasera */}
-                                            <div className="flex flex-col gap-2">
-                                                <Label className="text-xs font-semibold">{__('Rear Photo')}</Label>
-                                                {activeCameraField === 'foto_trasera' ? (
-                                                    <CameraWidget
-                                                        onCapture={(base64) => {
-                                                            setNewVehicle(prev => ({ ...prev, foto_trasera: base64 }));
-                                                            setActiveCameraField(null);
-                                                        }}
-                                                        onCancel={() => setActiveCameraField(null)}
-                                                    />
-                                                ) : (
-                                                    <div className="border border-dashed rounded-lg p-2 flex flex-col items-center justify-center gap-2 min-h-[120px] bg-white dark:bg-slate-900/10">
-                                                        {newVehicle.foto_trasera ? (
-                                                            <div className="relative w-24 h-16 rounded overflow-hidden border">
-                                                                <img src={newVehicle.foto_trasera} className="w-full h-full object-cover" />
-                                                                <Button type="button" size="xs" variant="destructive" className="absolute top-0 right-0 h-4 w-4 p-0 rounded-none animate-none" onClick={() => setNewVehicle(prev => ({ ...prev, foto_trasera: '' }))}>X</Button>
-                                                            </div>
-                                                        ) : <span className="text-xs text-muted-foreground">{__('No photo')}</span>}
-                                                        <div className="flex gap-1.5">
-                                                            <Button type="button" variant="outline" size="xs" onClick={() => fileInputVehiculoTraseraRef.current?.click()}>{__('Upload')}</Button>
-                                                            <Button type="button" variant="outline" size="xs" onClick={() => setActiveCameraField('foto_trasera')}>{__('Camera')}</Button>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                <input type="file" accept="image/*" ref={fileInputVehiculoTraseraRef} className="hidden" onChange={(e) => {
-                                                    const file = e.target.files?.[0];
-                                                    if (file) {
-                                                        const reader = new FileReader();
-                                                        reader.readAsDataURL(file);
-                                                        reader.onload = () => setNewVehicle(prev => ({ ...prev, foto_trasera: reader.result as string }));
-                                                    }
-                                                }} />
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-end gap-2 pt-2 border-t mt-2">
-                                            <Button type="button" variant="outline" size="sm" onClick={() => setShowVehicleForm(false)}>{__('Cancel')}</Button>
-                                            <Button type="button" size="sm" onClick={() => {
-                                                if (!newVehicle.tipo_vehiculo || !newVehicle.marca || !newVehicle.modelo || !newVehicle.year || !newVehicle.placa) {
-                                                    alert(__('All vehicle fields are required.'));
-                                                    return;
-                                                }
-                                                setData('vehiculos', [...(data.vehiculos || []), newVehicle]);
-                                                setNewVehicle({ tipo_vehiculo: '', marca: '', modelo: '', year: '', placa: '', foto_frontal: '', foto_trasera: '' });
-                                                setShowVehicleForm(false);
-                                            }}>{__('Save Vehicle')}</Button>
                                         </div>
                                     </div>
-                                )}
 
-                                <div className="space-y-3">
-                                    {(!data.vehiculos || data.vehiculos.length === 0) ? (
-                                        <div className="text-center py-10 border-2 border-dashed rounded-2xl text-muted-foreground bg-slate-50/20 dark:bg-slate-900/10">
-                                            <Car className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                                            <p className="text-sm font-medium">{__('No vehicles registered.')}</p>
+                                    {/* SECCIÓN 2: CUENTA DE ACCESO AL SISTEMA (USUARIO) */}
+                                    <div className="border rounded-2xl p-5 sm:p-6 bg-slate-50/80 dark:bg-slate-900/60 shadow-xs space-y-4">
+                                        <div className="flex items-center justify-between border-b pb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-9 w-9 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs">
+                                                    <Shield className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold text-sm text-foreground block">
+                                                        {__('Cuenta de Acceso al Sistema (Usuario)')}
+                                                    </span>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {__('Permite al colaborador iniciar sesión en la terminal POS y panel')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <Switch
+                                                checked={data.crear_usuario}
+                                                onCheckedChange={(checked) => setData('crear_usuario', checked)}
+                                            />
                                         </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {data.vehiculos.map((veh: any, i: number) => (
-                                                <div key={i} className="p-4 border rounded-2xl flex justify-between items-center bg-white dark:bg-slate-900 shadow-xs">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 border rounded-lg overflow-hidden shrink-0 bg-slate-50 flex items-center justify-center">
-                                                            {veh.foto_frontal ? <img src={veh.foto_frontal} className="w-full h-full object-cover" /> : <Car className="w-6 h-6 text-slate-300" />}
-                                                        </div>
+
+                                        {data.crear_usuario ? (
+                                            <div className="space-y-4 pt-1">
+                                                {editingEmpleado?.user ? (
+                                                    <div className="flex items-center gap-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 p-3.5 rounded-xl text-xs">
+                                                        <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
                                                         <div>
-                                                            <span className="font-semibold text-sm block">{veh.marca} {veh.modelo} ({veh.year})</span>
-                                                            <span className="text-xs text-slate-400 font-mono">{__('License Plate:')} {veh.placa} • {__((veh.tipo_vehiculo || '').toUpperCase()) || veh.tipo_vehiculo}</span>
+                                                            <span className="font-bold">{__('Usuario vinculado activo:')}</span>{' '}
+                                                            <span className="font-mono">{editingEmpleado.user.email}</span>
                                                         </div>
                                                     </div>
-                                                    <Button variant="ghost" size="icon" onClick={() => {
-                                                        const updated = (data.vehiculos || []).filter((_: any, idx: number) => idx !== i);
-                                                        setData('vehiculos', updated);
-                                                    }} className="text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
+                                                ) : (
+                                                    <div className="text-xs text-muted-foreground bg-blue-50/70 dark:bg-blue-950/40 p-3.5 rounded-xl border border-blue-500/20 flex items-start gap-2">
+                                                        <span className="text-base shrink-0">💡</span>
+                                                        <p>
+                                                            {__('Se generará automáticamente una cuenta de usuario vinculada con el correo ingresado en los datos personales.')}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <Label htmlFor="password">
+                                                            {editingEmpleado?.user ? __('Nueva Contraseña (Opcional)') : __('Contraseña de Acceso')}
+                                                        </Label>
+                                                        <div className="relative">
+                                                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                            <Input
+                                                                id="password"
+                                                                type="password"
+                                                                placeholder={editingEmpleado?.user ? __('Dejar en blanco para conservar') : __('Por defecto: 12345678')}
+                                                                className="pl-9 h-10"
+                                                                value={data.password}
+                                                                onChange={(e) => setData('password', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        <Label htmlFor="rol">{__('Rol de Permisos')}</Label>
+                                                        <Select
+                                                            value={data.rol}
+                                                            onValueChange={(val) => setData('rol', val)}
+                                                        >
+                                                            <SelectTrigger id="rol" className="h-10">
+                                                                <SelectValue placeholder={__('Selecciona un rol')} />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {roles.map((r) => (
+                                                                    <SelectItem key={r} value={r}>
+                                                                        {r}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        {errors.rol && <p className="text-xs text-destructive">{errors.rol}</p>}
+                                                    </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground italic py-1">
+                                                {__('Este empleado no tendrá credenciales de inicio de sesión en el sistema (solo comisionará si se selecciona en la terminal POS).')}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
-                            </TabsContent>
-                        </Tabs>
 
-                        <div className="flex justify-end gap-3 border-t pt-4">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setIsModalOpen(false)}
-                            >
-                                {__('Cancel')}
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={processing}
-                            >
-                                {processing ? __('Saving...') : __('Save Changes')}
-                            </Button>
-                        </div>
-                    </form>
-                </DialogContent>
-            </Dialog>
+                                {/* COLUMNA DERECHA */}
+                                <div className="space-y-6">
+                                    {/* SECCIÓN 3: REGLAS DE COMISIONES Y ASIGNACIÓN LABORAL */}
+                                    <div className="border rounded-2xl p-5 sm:p-6 bg-card shadow-xs space-y-4">
+                                        <div className="flex items-center justify-between border-b pb-3">
+                                            <div className="font-bold text-sm tracking-wide text-foreground flex items-center gap-2.5">
+                                                <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                                    <TrendingUp className="h-4 w-4" />
+                                                </div>
+                                                <span>{__('Comisiones por Ventas & Asignación Laboral')}</span>
+                                            </div>
+                                            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                                {__('Reglas de liquidación')}
+                                            </span>
+                                        </div>
 
-            {/* ── Modal Confirmación Eliminación ──────────────────────────────────────── */}
-            <AlertDialog open={!!deletingEmpleado} onOpenChange={(open) => !open && setDeletingEmpleado(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>{__('Are you sure?')}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {__('This action cannot be undone. This will permanently delete the employee record and their photos.')}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>{__('Cancel')}</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDeleteConfirm}
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                        >
-                            {__('Delete')}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="cargo">{__('Cargo / Puesto')}</Label>
+                                                <div className="relative">
+                                                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                    <Input
+                                                        id="cargo"
+                                                        className="pl-9 h-10"
+                                                        placeholder={__('Ej. Vendedor Senior')}
+                                                        value={data.cargo}
+                                                        onChange={(e) => setData('cargo', e.target.value)}
+                                                    />
+                                                </div>
+                                                {errors.cargo && <p className="text-xs text-destructive">{errors.cargo}</p>}
+                                            </div>
 
-            {/* ══ Modal de Pre-registro de Empleado ════════════════════ */}
-            <Dialog open={isPreRegistroModalOpen} onOpenChange={(open) => {
-                setIsPreRegistroModalOpen(open);
-                if (!open) preRegistroForm.reset();
-            }}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>{__('Pre-registro de Empleado')}</DialogTitle>
-                        <DialogDescription>
-                            {__('Ingrese los datos del colaborador, el motivo y quién autoriza para enviar una invitación de registro rápido a su WhatsApp.')}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handlePreRegistroSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <Label htmlFor="pre_nombres">{__('First Name')}</Label>
-                                <Input
-                                    id="pre_nombres"
-                                    value={preRegistroForm.data.nombres}
-                                    onChange={(e) => preRegistroForm.setData('nombres', e.target.value)}
-                                    className={cn(preRegistroForm.errors.nombres && 'border-rose-500')}
-                                    required
-                                />
-                                {preRegistroForm.errors.nombres && (
-                                    <p className="text-xs text-rose-500 mt-1">{preRegistroForm.errors.nombres}</p>
-                                )}
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="sucursal_id">{__('Sucursal Asignada')}</Label>
+                                                <Select
+                                                    value={data.sucursal_id || 'none'}
+                                                    onValueChange={(val) => setData('sucursal_id', val === 'none' ? '' : val)}
+                                                >
+                                                    <SelectTrigger id="sucursal_id" className="h-10">
+                                                        <SelectValue placeholder={__('Selecciona sucursal')} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">{__('Todas las sucursales')}</SelectItem>
+                                                        {sucursales.map((s) => (
+                                                            <SelectItem key={s.id} value={String(s.id)}>
+                                                                {s.nombre}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="space-y-1.5 sm:col-span-2 p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/20">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <Label htmlFor="porcentaje_comision" className="text-emerald-800 dark:text-emerald-200 font-bold flex items-center justify-between">
+                                                            <span>{__('% Comisión Ventas')} *</span>
+                                                            <span className="text-[10px] font-normal text-muted-foreground">{__('Tasa ganada por ticket')}</span>
+                                                        </Label>
+                                                        <div className="relative">
+                                                            <Input
+                                                                id="porcentaje_comision"
+                                                                type="number"
+                                                                step="0.01"
+                                                                min="0"
+                                                                max="100"
+                                                                required
+                                                                className="pr-9 h-11 text-lg font-black text-emerald-700 dark:text-emerald-300 bg-card border-emerald-500/30"
+                                                                value={data.porcentaje_comision}
+                                                                onChange={(e) => setData('porcentaje_comision', e.target.value)}
+                                                            />
+                                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 dark:text-emerald-400 font-black text-base">
+                                                                %
+                                                            </span>
+                                                        </div>
+                                                        {errors.porcentaje_comision && <p className="text-xs text-destructive">{errors.porcentaje_comision}</p>}
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        <Label htmlFor="comision_aplica_a" className="font-semibold text-foreground">
+                                                            {__('Base de Cálculo de Comisión')}
+                                                        </Label>
+                                                        <Select
+                                                            value={data.comision_aplica_a}
+                                                            onValueChange={(val: any) => setData('comision_aplica_a', val)}
+                                                        >
+                                                            <SelectTrigger id="comision_aplica_a" className="h-11 bg-card">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="subtotal">{__('Subtotal (Sin impuestos)')}</SelectItem>
+                                                                <SelectItem value="total">{__('Total Final (Con impuestos)')}</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                            {data.comision_aplica_a === 'subtotal' ? __('Se calcula antes de aplicar IVA/impuestos.') : __('Se calcula sobre el monto total cobrado.')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5 sm:col-span-2 p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-500/20">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <Label htmlFor="porcentaje_comision_reparacion" className="text-indigo-800 dark:text-indigo-200 font-bold flex items-center justify-between">
+                                                            <span>{__('% Comisión Taller / Reparaciones')}</span>
+                                                            <span className="text-[10px] font-normal text-muted-foreground">{__('Tasa ganada por reparación')}</span>
+                                                        </Label>
+                                                        <div className="relative">
+                                                            <Input
+                                                                id="porcentaje_comision_reparacion"
+                                                                type="number"
+                                                                step="0.01"
+                                                                min="0"
+                                                                max="100"
+                                                                className="pr-9 h-11 text-lg font-black text-indigo-700 dark:text-indigo-300 bg-card border-indigo-500/30"
+                                                                value={data.porcentaje_comision_reparacion}
+                                                                onChange={(e) => setData('porcentaje_comision_reparacion', e.target.value)}
+                                                            />
+                                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-600 dark:text-indigo-400 font-black text-base">
+                                                                %
+                                                            </span>
+                                                        </div>
+                                                        {errors.porcentaje_comision_reparacion && <p className="text-xs text-destructive">{errors.porcentaje_comision_reparacion}</p>}
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        <Label htmlFor="comision_reparacion_aplica_a" className="font-semibold text-foreground">
+                                                            {__('Base de Cálculo Taller')}
+                                                        </Label>
+                                                        <Select
+                                                            value={data.comision_reparacion_aplica_a}
+                                                            onValueChange={(val: any) => setData('comision_reparacion_aplica_a', val)}
+                                                        >
+                                                            <SelectTrigger id="comision_reparacion_aplica_a" className="h-11 bg-card">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="mano_obra">{__('Solo Mano de Obra (Recomendado)')}</SelectItem>
+                                                                <SelectItem value="total_orden">{__('Total de la Orden')}</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                            {data.comision_reparacion_aplica_a === 'mano_obra' ? __('Se calcula únicamente sobre el valor del trabajo técnico.') : __('Se calcula sobre el valor total incluyendo repuestos.')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="sueldo_base">{__('Sueldo Base Mensual ($)')}</Label>
+                                                <div className="relative">
+                                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                    <Input
+                                                        id="sueldo_base"
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        className="pl-9 h-10 font-medium"
+                                                        value={data.sueldo_base}
+                                                        onChange={(e) => setData('sueldo_base', e.target.value)}
+                                                    />
+                                                </div>
+                                                {errors.sueldo_base && <p className="text-xs text-destructive">{errors.sueldo_base}</p>}
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="fecha_ingreso">{__('Fecha de Ingreso')}</Label>
+                                                <Input
+                                                    id="fecha_ingreso"
+                                                    type="date"
+                                                    className="h-10"
+                                                    value={data.fecha_ingreso || ''}
+                                                    onChange={(e) => setData('fecha_ingreso', e.target.value)}
+                                                />
+                                                {errors.fecha_ingreso && <p className="text-xs text-destructive">{errors.fecha_ingreso}</p>}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* SECCIÓN 4: ESTADO Y OBSERVACIONES */}
+                                    <div className="border rounded-2xl p-5 sm:p-6 bg-card shadow-xs space-y-4">
+                                        <div className="flex items-center justify-between border-b pb-3">
+                                            <div>
+                                                <Label htmlFor="estado" className="font-bold text-sm cursor-pointer block text-foreground">
+                                                    {__('Estado del Empleado')}
+                                                </Label>
+                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                    {data.estado ? __('Activo: Habilitado para vender y comisionar.') : __('Inactivo: En pausa o retirado del equipo.')}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant={data.estado ? 'default' : 'secondary'} className={data.estado ? 'bg-emerald-600' : ''}>
+                                                    {data.estado ? __('Activo') : __('Inactivo')}
+                                                </Badge>
+                                                <Switch
+                                                    id="estado"
+                                                    checked={data.estado}
+                                                    onCheckedChange={(checked) => setData('estado', checked)}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="notas">{__('Notas Adicionales u Observaciones')}</Label>
+                                            <Textarea
+                                                id="notas"
+                                                rows={3}
+                                                placeholder={__('Condiciones especiales, metas acordadas, contactos de emergencia o notas internas...')}
+                                                value={data.notas}
+                                                onChange={(e) => setData('notas', e.target.value)}
+                                            />
+                                            {errors.notas && <p className="text-xs text-destructive">{errors.notas}</p>}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
 
-                            <div className="space-y-1.5">
-                                <Label htmlFor="pre_apellidos">{__('Last Name')}</Label>
-                                <Input
-                                    id="pre_apellidos"
-                                    value={preRegistroForm.data.apellidos}
-                                    onChange={(e) => preRegistroForm.setData('apellidos', e.target.value)}
-                                    className={cn(preRegistroForm.errors.apellidos && 'border-rose-500')}
-                                    required
-                                />
-                                {preRegistroForm.errors.apellidos && (
-                                    <p className="text-xs text-rose-500 mt-1">{preRegistroForm.errors.apellidos}</p>
-                                )}
+                        {/* Footer Fijo */}
+                        <DialogFooter className="p-4 sm:px-8 border-t bg-muted/20 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <span className="text-xs text-muted-foreground">
+                                {__('Los campos marcados con (*) son obligatorios.')}
+                            </span>
+                            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsFormOpen(false)}
+                                    disabled={processing}
+                                    className="px-5"
+                                >
+                                    {__('Cancelar')}
+                                </Button>
+                                <Button type="submit" disabled={processing} className="gap-2 px-7 bg-primary font-semibold shadow-xs">
+                                    {processing ? __('Guardando...') : (editingEmpleado ? __('Actualizar Empleado') : __('Guardar Empleado'))}
+                                </Button>
                             </div>
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label htmlFor="pre_telefono">{__('Phone')}</Label>
-                            <PhoneInputGroup
-                                paises={paises}
-                                selectedPaisId={preRegistroForm.data.pais_telefono_id ? Number(preRegistroForm.data.pais_telefono_id) : '' as any}
-                                phoneValue={preRegistroForm.data.telefono}
-                                onPaisChange={(v) => preRegistroForm.setData('pais_telefono_id', String(v))}
-                                onPhoneChange={(v) => preRegistroForm.setData('telefono', v)}
-                                placeholder="000-0000000"
-                                error={preRegistroForm.errors.telefono}
-                            />
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label htmlFor="pre_motivo">{__('Reason for registration')}</Label>
-                            <Input
-                                id="pre_motivo"
-                                value={preRegistroForm.data.motivo_registro}
-                                onChange={(e) => preRegistroForm.setData('motivo_registro', e.target.value)}
-                                className={cn(preRegistroForm.errors.motivo_registro && 'border-rose-500')}
-                                placeholder="Ej: Nuevo ingreso, temporal, etc."
-                                required
-                            />
-                            {preRegistroForm.errors.motivo_registro && (
-                                <p className="text-xs text-rose-500 mt-1">{preRegistroForm.errors.motivo_registro}</p>
-                            )}
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label htmlFor="pre_responsable">{__('Authorizer (Manager)')}</Label>
-                            <Select
-                                value={preRegistroForm.data.responsable_id}
-                                onValueChange={(val) => preRegistroForm.setData('responsable_id', val)}
-                            >
-                                <SelectTrigger className={cn(preRegistroForm.errors.responsable_id && 'border-rose-500')}>
-                                    <SelectValue placeholder={__('Select manager')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {responsables.map((resp) => (
-                                        <SelectItem key={resp.id} value={String(resp.id)}>
-                                            {resp.nombres} {resp.apellidos}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {preRegistroForm.errors.responsable_id && (
-                                <p className="text-xs text-rose-500 mt-1">{preRegistroForm.errors.responsable_id}</p>
-                            )}
-                        </div>
-
-                        <DialogFooter className="mt-6 gap-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setIsPreRegistroModalOpen(false)}
-                            >
-                                {__('Cancel')}
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={preRegistroForm.processing}
-                                className="bg-[#104a29] hover:bg-[#0c371e] text-white flex items-center gap-1.5"
-                            >
-                                {__('Enviar invitación')}
-                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>
+
+            {/* Confirmación de Eliminación */}
+            <DeleteConfirmationDialog
+                isOpen={isDeleteDialogOpen}
+                onClose={() => setIsDeleteDialogOpen(false)}
+                onConfirm={confirmDelete}
+                title={__('¿Eliminar empleado?')}
+                description={__('Si el empleado :nombre ya tiene ventas o comisiones registradas en el sistema, será desactivado para preservar el historial comercial.', {
+                    nombre: empleadoToDelete?.nombre_completo || '',
+                })}
+            />
         </>
     );
 }

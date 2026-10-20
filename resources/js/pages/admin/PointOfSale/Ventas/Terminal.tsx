@@ -1,7 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import {
     ShoppingCart, Search, Plus, Minus, Trash2, CheckCircle2, CreditCard, DollarSign,
-    Package, Wrench, User, AlertCircle, Building2, Smartphone, Receipt, Pause,
+    Package, Wrench, User, Users, AlertCircle, Building2, Smartphone, Receipt, Pause,
     Play, X, Wallet, Tag, Barcode, HelpCircle, Layers, FileText, ArrowRight, Eye, RefreshCw,
     Calculator, ArrowUpRight, ArrowDownLeft, Scale, Settings, Printer, Lock, Coins, Edit3, Landmark, Boxes, History,
     Loader2, ShoppingBag, ChevronDown, ChevronUp
@@ -101,12 +101,23 @@ interface ClienteRecord {
 
 interface PaymentLine { metodo_pago: string; monto: string; }
 
+interface EmpleadoRecord {
+    id: number;
+    nombre_completo: string;
+    cargo?: string | null;
+    porcentaje_comision?: number;
+    sucursal_id?: number | null;
+}
+
 interface TicketTab {
     id: number;
     name: string;
     cart: TicketItem[];
     clienteId: number | null;
     clienteNombre: string;
+    empleadoId: number | null;
+    empleadoNombre: string;
+    empleadoComision: number;
     esCredito: boolean;
     descuento: number;
 }
@@ -120,6 +131,12 @@ interface EmpresaData {
     logo?: string;
 }
 
+interface CurrentEmpleadoData {
+    id: number;
+    nombre_completo: string;
+    porcentaje_comision: number;
+}
+
 interface Props {
     catalog: CatalogItem[];
     activeRegister?: any | null;
@@ -128,6 +145,9 @@ interface Props {
     valorDolar?: number;
     heldSales: HeldSaleRecord[];
     clientes: ClienteRecord[];
+    empleados?: EmpleadoRecord[];
+    currentEmpleado?: CurrentEmpleadoData | null;
+    canChangeSeller?: boolean;
     empresa?: EmpresaData | null;
 }
 
@@ -139,6 +159,9 @@ export default function Terminal({
     valorDolar = 20.0,
     heldSales = [],
     clientes = [],
+    empleados = [],
+    currentEmpleado = null,
+    canChangeSeller = true,
     empresa,
 }: Props) {
     const { __ } = useTranslate();
@@ -427,9 +450,24 @@ export default function Terminal({
         }
     };
 
+    const initialEmpleadoId = currentEmpleado ? currentEmpleado.id : null;
+    const initialEmpleadoNombre = currentEmpleado ? currentEmpleado.nombre_completo : '';
+    const initialEmpleadoComision = currentEmpleado ? Number(currentEmpleado.porcentaje_comision || 0) : 0;
+
     // Multi-Ticket Tabs (Eleventa Style)
     const [tickets, setTickets] = useState<TicketTab[]>([
-        { id: 1, name: 'Ticket 1', cart: [], clienteId: null, clienteNombre: 'Cliente General', esCredito: false, descuento: 0 },
+        {
+            id: 1,
+            name: 'Ticket 1',
+            cart: [],
+            clienteId: null,
+            clienteNombre: 'Cliente General',
+            empleadoId: initialEmpleadoId,
+            empleadoNombre: initialEmpleadoNombre,
+            empleadoComision: initialEmpleadoComision,
+            esCredito: false,
+            descuento: 0,
+        },
     ]);
     const [activeTicketId, setActiveTicketId] = useState<number>(1);
 
@@ -590,6 +628,9 @@ export default function Terminal({
             cart: [],
             clienteId: null,
             clienteNombre: 'Cliente General',
+            empleadoId: initialEmpleadoId,
+            empleadoNombre: initialEmpleadoNombre,
+            empleadoComision: initialEmpleadoComision,
             esCredito: false,
             descuento: 0,
         };
@@ -600,7 +641,17 @@ export default function Terminal({
     const closeTicketTab = (ticketId: number, e?: React.MouseEvent) => {
         e?.stopPropagation();
         if (tickets.length <= 1) {
-            updateActiveTicket((t) => ({ ...t, cart: [], clienteId: null, clienteNombre: 'Cliente General', esCredito: false, descuento: 0 }));
+            updateActiveTicket((t) => ({
+                ...t,
+                cart: [],
+                clienteId: null,
+                clienteNombre: 'Cliente General',
+                empleadoId: initialEmpleadoId,
+                empleadoNombre: initialEmpleadoNombre,
+                empleadoComision: initialEmpleadoComision,
+                esCredito: false,
+                descuento: 0,
+            }));
             return;
         }
         const filtered = tickets.filter((t) => t.id !== ticketId);
@@ -1007,6 +1058,9 @@ export default function Terminal({
             cart: [],
             clienteId: null,
             clienteNombre: 'Cliente General',
+            empleadoId: canChangeSeller ? ticket.empleadoId : initialEmpleadoId,
+            empleadoNombre: canChangeSeller ? ticket.empleadoNombre : initialEmpleadoNombre,
+            empleadoComision: canChangeSeller ? ticket.empleadoComision : initialEmpleadoComision,
             esCredito: false,
             descuento: 0,
         }));
@@ -1182,6 +1236,7 @@ export default function Terminal({
         const payload = {
             cliente_nombre: activeTicket.clienteNombre || 'Cliente General',
             cliente_id: activeTicket.clienteId,
+            empleado_id: activeTicket.empleadoId,
             es_credito: activeTicket.esCredito,
             descuento: activeTicket.descuento,
             impuesto: 0,
@@ -1389,6 +1444,24 @@ export default function Terminal({
         const c = clientes.find((cl) => cl.id === parseInt(clienteIdStr));
         if (c) {
             updateActiveTicket((t) => ({ ...t, clienteId: c.id, clienteNombre: c.nombre }));
+        }
+    };
+
+    // Employee / Seller selection
+    const handleSelectEmpleado = (empleadoIdStr: string) => {
+        if (!canChangeSeller) return;
+        if (empleadoIdStr === '0' || !empleadoIdStr) {
+            updateActiveTicket((t) => ({ ...t, empleadoId: null, empleadoNombre: '', empleadoComision: 0 }));
+            return;
+        }
+        const emp = empleados.find((e) => e.id === parseInt(empleadoIdStr));
+        if (emp) {
+            updateActiveTicket((t) => ({
+                ...t,
+                empleadoId: emp.id,
+                empleadoNombre: emp.nombre_completo,
+                empleadoComision: Number(emp.porcentaje_comision || 0),
+            }));
         }
     };
 
@@ -1770,7 +1843,7 @@ export default function Terminal({
                             <span>{activeTicket.name} — {__('Detalle de Artículos')}</span>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                             {/* Indicador de Cliente Asignado */}
                             <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full text-xs">
                                 <User className="w-3.5 h-3.5 text-indigo-500" />
@@ -1785,6 +1858,49 @@ export default function Terminal({
                                     </button>
                                 )}
                             </div>
+
+                            {/* Indicador de Vendedor / Comisionista Asignado */}
+                            {activeTicket.empleadoId ? (
+                                <div className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-xs">
+                                    <Users className="w-3.5 h-3.5 text-emerald-500" />
+                                    <span className="font-semibold">{activeTicket.empleadoNombre}</span>
+                                    {activeTicket.empleadoComision > 0 && (
+                                        <span className="text-[10px] font-bold bg-emerald-200/60 dark:bg-emerald-800/60 px-1 rounded">
+                                            {activeTicket.empleadoComision}%
+                                        </span>
+                                    )}
+                                    {canChangeSeller && (
+                                        <button
+                                            type="button"
+                                            onClick={() => updateActiveTicket((t) => ({ ...t, empleadoId: null, empleadoNombre: '', empleadoComision: 0 }))}
+                                            className="ml-1 text-muted-foreground hover:text-rose-500"
+                                            title={__('Quitar vendedor')}
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                canChangeSeller && empleados.length > 0 && (
+                                    <Select
+                                        value={String(activeTicket.empleadoId || '0')}
+                                        onValueChange={handleSelectEmpleado}
+                                    >
+                                        <SelectTrigger className="h-6 text-xs bg-slate-100 dark:bg-slate-800 border-none px-2 rounded-full font-medium">
+                                            <Users className="w-3 h-3 mr-1 text-muted-foreground" />
+                                            <SelectValue placeholder={__('+ Vendedor')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="0">{__('Sin vendedor asignado')}</SelectItem>
+                                            {empleados.map((emp) => (
+                                                <SelectItem key={emp.id} value={String(emp.id)}>
+                                                    {emp.nombre_completo} {emp.porcentaje_comision ? `(${Number(emp.porcentaje_comision).toFixed(1)}%)` : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )
+                            )}
 
                             {activeTicket.cart.length > 0 && (
                                 <Button type="button" variant="ghost" size="sm" onClick={clearActiveCart} className="text-xs text-rose-500 hover:text-rose-700 h-6 px-2">
@@ -2454,8 +2570,8 @@ export default function Terminal({
                                 </p>
                             </div>
 
-                            {/* SELECTOR DE CLIENTE Y VENTA A CRÉDITO EN DOS COLUMNAS */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* SELECTOR DE CLIENTE, VENDEDOR Y VENTA A CRÉDITO */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 {/* Selector de Cliente */}
                                 <div className="space-y-1.5">
                                     <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">{__('Asignar Cliente')}</Label>
@@ -2472,6 +2588,45 @@ export default function Terminal({
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                </div>
+
+                                {/* Selector de Vendedor / Comisionista */}
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                            <Users className="w-3.5 h-3.5 text-emerald-600" />
+                                            {__('Vendedor / Comisión')}
+                                        </Label>
+                                        {activeTicket.empleadoId && activeTicket.empleadoComision > 0 && (
+                                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                +{activeTicket.empleadoComision}%
+                                            </span>
+                                        )}
+                                    </div>
+                                    {canChangeSeller ? (
+                                        <Select value={String(activeTicket.empleadoId || '0')} onValueChange={handleSelectEmpleado}>
+                                            <SelectTrigger className="h-11 text-sm bg-white dark:bg-slate-900 border-emerald-500/20">
+                                                <SelectValue placeholder={__('Sin vendedor')} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="0">{__('Sin vendedor asignado')}</SelectItem>
+                                                {empleados.map((e) => (
+                                                    <SelectItem key={e.id} value={String(e.id)}>
+                                                        {e.nombre_completo} {e.porcentaje_comision ? `(${Number(e.porcentaje_comision).toFixed(1)}%)` : ''}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <div className="h-11 px-3 rounded-lg border border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-950/40 flex items-center justify-between text-sm">
+                                            <span className="font-semibold text-emerald-800 dark:text-emerald-200 truncate">
+                                                {activeTicket.empleadoNombre || currentEmpleado?.nombre_completo || __('Vendedor')}
+                                            </span>
+                                            <Badge variant="outline" className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 shrink-0">
+                                                {activeTicket.empleadoComision > 0 ? `${activeTicket.empleadoComision}% com.` : __('Asignado')}
+                                            </Badge>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Venta a Crédito Toggle */}

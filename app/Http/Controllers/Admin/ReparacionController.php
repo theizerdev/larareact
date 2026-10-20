@@ -671,12 +671,35 @@ class ReparacionController extends Controller
         unset($validated['servicios_seleccionados']);
         unset($validated['evidencias_fotos']);
 
+        $tecnicoId = !empty($validated['tecnico_id']) ? (int) $validated['tecnico_id'] : null;
+        $empleado = null;
+        if ($tecnicoId) {
+            $empleado = \App\Models\Empleado::where('user_id', $tecnicoId)
+                ->where('empresa_id', $empresaId)
+                ->first();
+        }
+
+        $comisionPct = isset($validated['comision_tecnico_pct']) && $validated['comision_tecnico_pct'] !== ''
+            ? (float) $validated['comision_tecnico_pct']
+            : ($empleado ? (float) $empleado->porcentaje_comision_reparacion : 0.0);
+
+        $costoManoObra = (float) ($validated['costo_mano_obra'] ?? 0);
+        $costoRepuestos = (float) ($validated['costo_repuestos'] ?? 0);
+        $baseComision = ($empleado?->comision_reparacion_aplica_a === 'total_orden')
+            ? $costoEstimado
+            : ($costoManoObra > 0 ? $costoManoObra : max(0, $costoEstimado - $costoRepuestos));
+        $comisionMonto = round($baseComision * ($comisionPct / 100), 2);
+
         $ordenData = array_merge($validated, [
             'empresa_id' => $empresaId,
             'sucursal_id' => $sucursalId,
             'numero_orden' => $numeroOrden,
             'estado_orden' => 'recibido',
-            'comision_tecnico_pct' => (float) ($validated['comision_tecnico_pct'] ?? 0),
+            'tecnico_id' => $tecnicoId,
+            'empleado_id' => $empleado?->id,
+            'comision_tecnico_pct' => $comisionPct,
+            'comision_monto' => $comisionMonto,
+            'comision_estado' => $comisionMonto > 0 ? 'pendiente' : 'no_aplica',
             'costo_estimado' => $costoEstimado,
             'anticipo' => $anticipo,
             'saldo_restante' => $saldoRestante,
@@ -1096,7 +1119,31 @@ class ReparacionController extends Controller
         }
 
         if (array_key_exists('tecnico_id', $validated)) {
-            $updateData['tecnico_id'] = !empty($validated['tecnico_id']) ? $validated['tecnico_id'] : null;
+            $nuevoTecnicoId = !empty($validated['tecnico_id']) ? (int) $validated['tecnico_id'] : null;
+            $updateData['tecnico_id'] = $nuevoTecnicoId;
+            if ($nuevoTecnicoId) {
+                $emp = \App\Models\Empleado::where('user_id', $nuevoTecnicoId)
+                    ->where('empresa_id', $reparacion->empresa_id)
+                    ->first();
+                $updateData['empleado_id'] = $emp?->id;
+                if ($reparacion->comision_tecnico_pct <= 0 && $emp && $emp->porcentaje_comision_reparacion > 0) {
+                    $updateData['comision_tecnico_pct'] = (float) $emp->porcentaje_comision_reparacion;
+                }
+            } else {
+                $updateData['empleado_id'] = null;
+            }
+        }
+
+        $finalTecnicoId = $updateData['tecnico_id'] ?? $reparacion->tecnico_id;
+        $finalPct = (float) ($updateData['comision_tecnico_pct'] ?? $reparacion->comision_tecnico_pct);
+        if ($finalTecnicoId && $finalPct > 0) {
+            $costoTotal = (float) ($reparacion->costo_estimado ?? 0);
+            $manoObra = (float) ($reparacion->costo_mano_obra ?? 0);
+            $base = $manoObra > 0 ? $manoObra : $costoTotal;
+            $updateData['comision_monto'] = round($base * ($finalPct / 100), 2);
+            if ($reparacion->comision_estado === 'no_aplica' || !$reparacion->comision_estado) {
+                $updateData['comision_estado'] = 'pendiente';
+            }
         }
 
         if ($request->has('observaciones_fisicas')) {

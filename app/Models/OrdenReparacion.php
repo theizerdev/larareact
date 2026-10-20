@@ -96,7 +96,11 @@ class OrdenReparacion extends Model
         'inspeccion_json',
         'post_servicio_json',
         'tecnico_id',
+        'empleado_id',
         'comision_tecnico_pct',
+        'comision_monto',
+        'comision_estado',
+        'comision_pago_id',
         'estado_orden',
         'costo_mano_obra',
         'costo_repuestos',
@@ -117,6 +121,7 @@ class OrdenReparacion extends Model
         'anticipo' => 'decimal:2',
         'saldo_restante' => 'decimal:2',
         'comision_tecnico_pct' => 'decimal:2',
+        'comision_monto' => 'decimal:2',
         'fecha_recepcion' => 'datetime',
         'fecha_prometida' => 'datetime',
         'fecha_entrega' => 'datetime',
@@ -172,5 +177,15 @@ class OrdenReparacion extends Model
     public function fotos(): HasMany
     {
         return $this->hasMany(OrdenReparacionFoto::class, 'orden_id');
+    }
+
+    public function empleado(): BelongsTo
+    {
+        return $this->belongsTo(Empleado::class, 'empleado_id');
+    }
+
+    public function comisionPago(): BelongsTo
+    {
+        return $this->belongsTo(ComisionPago::class, 'comision_pago_id');
     }
 }

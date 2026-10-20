@@ -272,13 +272,29 @@ export default function AdminSaasLayout({
     const { __ } = useTranslate();
 
     const userPermissions = (auth as any)?.user?.permissions || [];
+    const userRoles: string[] = (auth as any)?.user?.roles || [];
     const isSuperAdmin = Boolean(
         (auth as any)?.user?.is_super_admin ||
-        (auth as any)?.user?.roles?.includes('Super Administrador') ||
-        (auth as any)?.user?.roles?.includes('super-admin') ||
-        (auth as any)?.user?.roles?.includes('Super Admin') ||
+        userRoles.includes('Super Administrador') ||
+        userRoles.includes('super-admin') ||
+        userRoles.includes('Super Admin') ||
         (auth as any)?.user?.id === 1
     );
+    const isAdmin = Boolean(
+        isSuperAdmin ||
+        userRoles.includes('Administrador') ||
+        userRoles.includes('Admin') ||
+        userRoles.includes('admin')
+    );
+    const isVendedor = Boolean(
+        !isAdmin &&
+        (userRoles.includes('Vendedor') || userRoles.includes('vendedor') || userRoles.includes('Seller'))
+    );
+    const isTecnico = Boolean(
+        !isAdmin &&
+        (userRoles.includes('Técnico') || userRoles.includes('tecnico') || userRoles.includes('Tecnico'))
+    );
+    const isHybrid = Boolean(!isAdmin && isVendedor && isTecnico);
     const userEmpresaId = (auth as any)?.user?.empresa_id;
     const subData = (page.props as any)?.subscription;
     const isEmpresaExempt = Boolean(
@@ -405,21 +421,19 @@ export default function AdminSaasLayout({
                                 >
                                     {__('Platform')}
                                 </p>
-                                {mainNavItems
-                                    .filter(item => {
-                                        if (item.title === 'Dashboard') {
-                                            return hasPermission('dashboard.view');
-                                        }
-                                        return true;
-                                    })
-                                    .map((item) => (
+                                {(() => {
+                                    const dashboardHref = (isVendedor || isTecnico) ? '/admin/vendedor/dashboard' : dashboard();
+                                    return (
                                         <NavItem
-                                            key={item.title}
-                                            item={item}
+                                            item={{
+                                                title: 'Dashboard',
+                                                href: dashboardHref,
+                                                icon: LayoutDashboard,
+                                            }}
                                             collapsed={collapsed}
                                         />
-                                    ))
-                                }
+                                    );
+                                })()}
                                 {/* Punto de Venta Group */}
                                 {(() => {
                                     const posItems = [
@@ -433,17 +447,17 @@ export default function AdminSaasLayout({
                                             href: '/admin/ventas',
                                             permission: 'ventas.view',
                                         },
-                                        {
+                                        ...(!isVendedor ? [{
                                             title: 'Flujo de Caja',
                                             href: '/admin/cajas',
                                             permission: 'cajas.view',
-                                        },
+                                        }] : []),
                                         {
                                             title: 'Clientes',
                                             href: '/admin/clientes',
                                             permission: 'clientes.view',
                                         },
-                                    ].filter(item => hasPermission(item.permission));
+                                    ].filter(item => hasPermission(item.permission) || (isVendedor && ['/admin/ventas/terminal', '/admin/ventas', '/admin/clientes'].includes(item.href)));
 
                                     if (posItems.length === 0) return null;
 
@@ -472,17 +486,19 @@ export default function AdminSaasLayout({
                                             href: '/admin/stock-alerts',
                                             permission: 'productos.view',
                                         },
-                                        {
-                                            title: 'Ajustes de Stock',
-                                            href: '/admin/inventario/ajustes',
-                                            permission: 'inventario.view',
-                                        },
-                                        {
-                                            title: 'Kardex de Movimientos',
-                                            href: '/admin/inventario/kardex',
-                                            permission: 'inventario.view',
-                                        },
-                                    ].filter(item => hasPermission(item.permission) || (item.title === 'Alertas de Stock' && (hasPermission('ventas.view') || hasPermission('inventario.view'))));
+                                        ...(!isVendedor ? [
+                                            {
+                                                title: 'Ajustes de Stock',
+                                                href: '/admin/inventario/ajustes',
+                                                permission: 'inventario.view',
+                                            },
+                                            {
+                                                title: 'Kardex de Movimientos',
+                                                href: '/admin/inventario/kardex',
+                                                permission: 'inventario.view',
+                                            },
+                                        ] : []),
+                                    ].filter(item => hasPermission(item.permission) || (item.title === 'Alertas de Stock' && (hasPermission('ventas.view') || hasPermission('inventario.view'))) || (isVendedor && ['/admin/productos', '/admin/stock-alerts'].includes(item.href)));
 
                                     if (productosItems.length === 0) return null;
 
@@ -516,18 +532,19 @@ export default function AdminSaasLayout({
                                             href: '/admin/servicios',
                                             permission: 'servicios.view',
                                         },
-                                        {
-                                            title: 'Preservicio / Inspección',
-                                            href: '/admin/reparaciones/preservicio-config',
-                                            permission: 'reparaciones.view',
-                                        },
-                                        {
-                                            title: 'Post reparación',
-                                            href: '/admin/reparaciones/post-reparacion',
-                                            permission: 'reparaciones.view',
-                                        },
-                                    ].filter(item => hasPermission(item.permission));
-
+                                        ...((!isVendedor || isTecnico) ? [
+                                            {
+                                                title: 'Preservicio / Inspección',
+                                                href: '/admin/reparaciones/preservicio-config',
+                                                permission: 'reparaciones.view',
+                                            },
+                                            {
+                                                title: 'Post reparación',
+                                                href: '/admin/reparaciones/post-reparacion',
+                                                permission: 'reparaciones.view',
+                                            },
+                                        ] : []),
+                                    ].filter(item => hasPermission(item.permission) || ((isVendedor || isTecnico) && ['/admin/reparaciones', '/admin/reparaciones/create', '/admin/servicios', '/admin/reparaciones/preservicio-config', '/admin/reparaciones/post-reparacion'].includes(item.href)));
 
                                     if (servicioTecnicoItems.length === 0) return null;
 
@@ -543,8 +560,10 @@ export default function AdminSaasLayout({
                                     );
                                 })()}
 
-                                {/* Equipos Group */}
+                                {/* Equipos Group - Oculto solo para Vendedor puro */}
                                 {(() => {
+                                    if (isVendedor && !isTecnico) return null;
+
                                     const equiposItems = [
                                         {
                                             title: 'Categorías',
@@ -566,7 +585,7 @@ export default function AdminSaasLayout({
                                             href: '/admin/modelos',
                                             permission: 'modelos.view',
                                         },
-                                    ].filter(item => hasPermission(item.permission));
+                                    ].filter(item => hasPermission(item.permission) || isTecnico);
 
                                     if (equiposItems.length === 0) return null;
 
@@ -584,7 +603,35 @@ export default function AdminSaasLayout({
 
                                 {/* Administración Group */}
                                 {(() => {
+                                    if (isVendedor || isTecnico) {
+                                        return (
+                                            <div className="pt-2">
+                                                <CollapsibleNavItem
+                                                    title="Administración"
+                                                    icon={Briefcase}
+                                                    collapsed={collapsed}
+                                                    items={[
+                                                        {
+                                                            title: isHybrid ? 'Comisiones (Ventas & Taller)' : (isTecnico ? 'Comisiones de Taller' : 'Comisiones de Ventas'),
+                                                            href: '/admin/comisiones',
+                                                        },
+                                                    ]}
+                                                />
+                                            </div>
+                                        );
+                                    }
+
                                     const adminItems = [
+                                        {
+                                            title: 'Empleados',
+                                            href: '/admin/empleados',
+                                            permission: 'empleados.view',
+                                        },
+                                        {
+                                            title: 'Comisiones por Ventas',
+                                            href: '/admin/comisiones',
+                                            permission: 'comisiones.view',
+                                        },
                                         {
                                             title: 'Metas de Ventas',
                                             href: '/admin/pos/metas',
@@ -636,9 +683,9 @@ export default function AdminSaasLayout({
                                     );
                                 })()}
 
-                                {/* Contabilidad Group */}
+                                {/* Contabilidad Group - Oculto para Vendedor */}
                                 {(() => {
-                                    if (!isSuperAdmin) return null;
+                                    if (isVendedor || !isSuperAdmin) return null;
 
                                     const contabilidadItems = [
                                         {
@@ -687,7 +734,10 @@ export default function AdminSaasLayout({
                                     );
                                 })()}
 
+                                {/* Settings Group - Oculto para Vendedor */}
                                 {(() => {
+                                    if (isVendedor) return null;
+
                                     const settingsItems = [
                                         {
                                             title: 'Companies',
@@ -751,8 +801,10 @@ export default function AdminSaasLayout({
                                     );
                                 })()}
 
-                                {/* Integrations Group */}
+                                {/* Integrations Group - Oculto para Vendedor */}
                                 {(() => {
+                                    if (isVendedor) return null;
+
                                     const integrationsItems = [
                                         {
                                             title: 'Catalog',
@@ -775,8 +827,10 @@ export default function AdminSaasLayout({
                                     );
                                 })()}
 
-                                {/* Security Group */}
+                                {/* Security Group - Oculto para Vendedor */}
                                 {(() => {
+                                    if (isVendedor) return null;
+
                                     const securityItems = [
                                         {
                                             title: 'Users',
@@ -809,8 +863,10 @@ export default function AdminSaasLayout({
                                     );
                                 })()}
 
-                                {/* Monitoring Group */}
+                                {/* Monitoring Group - Oculto para Vendedor */}
                                 {(() => {
+                                    if (isVendedor) return null;
+
                                     const monitoringItems = [
                                         ...(isSuperAdmin ? [
                                             {

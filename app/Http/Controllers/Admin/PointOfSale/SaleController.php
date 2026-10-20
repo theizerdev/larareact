@@ -15,6 +15,7 @@ use App\Models\Sale;
 use App\Models\Servicio;
 use App\Models\OrdenReparacion;
 use App\Services\CashRegisterService;
+use App\Services\EmployeeService;
 use App\Services\SaleService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -39,7 +40,7 @@ class SaleController extends Controller
         return '$';
     }
 
-    public function terminal(CashRegisterService $cashService)
+    public function terminal(CashRegisterService $cashService, EmployeeService $employeeService)
     {
         $activeRegister = CashRegister::getActiveRegister();
 
@@ -155,8 +156,31 @@ class SaleController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        $empresa = auth()->user()?->empresa;
+        $user = auth()->user();
+        $empresa = $user?->empresa;
         $valorDolar = (float) ($empresa?->valor_dolar ?? 20.0);
+        $empleados = $employeeService->getActiveEmployees($user?->empresa_id, $user?->sucursal_id);
+
+        $userEmpleado = $user?->empleado;
+        $currentEmpleado = null;
+        if ($userEmpleado && $userEmpleado->estado) {
+            $currentEmpleado = [
+                'id' => $userEmpleado->id,
+                'nombre_completo' => $userEmpleado->nombre_completo,
+                'porcentaje_comision' => (float) $userEmpleado->porcentaje_comision,
+            ];
+        }
+
+        $canChangeSeller = $user && (
+            $user->id === 1
+            || $user->hasRole('Super Administrador')
+            || $user->hasRole('super-admin')
+            || $user->hasRole('Super Admin')
+            || $user->hasRole('Administrador')
+            || $user->can('manage empleados')
+            || $user->can('administrar empleados')
+            || !$currentEmpleado
+        );
 
         return inertia('admin/PointOfSale/Ventas/Terminal', [
             'catalog' => $catalog,
@@ -166,6 +190,9 @@ class SaleController extends Controller
             'valorDolar' => $valorDolar,
             'heldSales' => $heldSales,
             'clientes' => $clientes,
+            'empleados' => $empleados,
+            'currentEmpleado' => $currentEmpleado,
+            'canChangeSeller' => (bool) $canChangeSeller,
             'empresa' => $empresa ? [
                 'razon_social' => $empresa->razon_social ?? $empresa->nombre ?? $empresa->nombre_comercial,
                 'documento' => $empresa->documento,
@@ -206,7 +233,7 @@ class SaleController extends Controller
         return back()->with('notification', [
             'type' => 'success',
             'message' => __("Venta :ticket completada exitosamente.", ['ticket' => $sale->codigo_ticket]),
-            'sale' => new SaleResource($sale->load('items', 'payments')),
+            'sale' => new SaleResource($sale->load('items', 'payments', 'empleado')),
         ]);
     }
 
@@ -217,8 +244,13 @@ class SaleController extends Controller
         $perPage = $request->input('perPage', 10);
         $scope = $request->input('scope'); // 'shift', 'today', 'all'
         $cashRegisterId = $request->input('cash_register_id');
+        $empleadoId = $request->input('empleado_id');
 
-        $query = Sale::with(['user', 'items', 'payments']);
+        $query = Sale::with(['user', 'items', 'payments', 'empleado']);
+
+        if ($empleadoId && $empleadoId !== 'all') {
+            $query->where('empleado_id', $empleadoId);
+        }
 
         if ($search) {
             $query->where(function ($q) use ($search) {

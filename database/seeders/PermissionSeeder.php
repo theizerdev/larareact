@@ -55,6 +55,10 @@ class PermissionSeeder extends Seeder
                 // Módulo: Integraciones
                 'integrations.view' => 'Ver Integraciones',
                 'integrations.edit' => 'Editar Integraciones',
+                'whatsapp.view' => 'Ver WhatsApp',
+                'whatsapp.manage' => 'Gestionar WhatsApp',
+                'jaak.view' => 'Ver Validaciones JAAK',
+                'jaak.manage' => 'Gestionar Validaciones JAAK',
 
                 // Módulo: Configuración de Créditos
                 'credit_config.view' => 'Ver Configuración de Créditos',
@@ -204,6 +208,8 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'empresas.') => 'empresas',
                     str_starts_with($permission, 'sucursales.') => 'sucursales',
                     str_starts_with($permission, 'integrations.') => 'integraciones',
+                    str_starts_with($permission, 'whatsapp.') => 'integraciones',
+                    str_starts_with($permission, 'jaak.') => 'integraciones',
                     str_starts_with($permission, 'credit_config.') => 'configuracion_credito',
                     str_starts_with($permission, 'subscriptions.') => 'suscripciones',
                     str_starts_with($permission, 'monitoreo.') => 'monitoreo',

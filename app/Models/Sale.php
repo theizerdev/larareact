@@ -20,6 +20,7 @@ class Sale extends Model
         'sucursal_id',
         'cash_register_id',
         'user_id',
+        'empleado_id',
         'cliente_id',
         'codigo_ticket',
         'cliente_nombre',
@@ -34,6 +35,10 @@ class Sale extends Model
         'es_credito',
         'saldo_credito',
         'notas',
+        'comision_porcentaje',
+        'comision_monto',
+        'comision_estado',
+        'comision_pago_id',
     ];
 
     protected $casts = [
@@ -45,6 +50,8 @@ class Sale extends Model
         'cambio' => 'float',
         'saldo_credito' => 'float',
         'es_credito' => 'boolean',
+        'comision_porcentaje' => 'float',
+        'comision_monto' => 'float',
     ];
 
     public function items(): HasMany
@@ -65,6 +72,16 @@ class Sale extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function empleado(): BelongsTo
+    {
+        return $this->belongsTo(Empleado::class, 'empleado_id');
+    }
+
+    public function comisionPago(): BelongsTo
+    {
+        return $this->belongsTo(ComisionPago::class, 'comision_pago_id');
     }
 
     public function cliente(): BelongsTo

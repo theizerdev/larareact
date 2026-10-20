@@ -12,11 +12,11 @@ import { cn } from '@/lib/utils';
  * @property {string} [className] - Clases CSS adicionales para personalizar el contenedor de la tarjeta.
  */
 interface StatCardProps {
-    icon: React.ReactNode;
+    icon: React.ReactNode | React.ElementType;
     title: string;
     value: string | number;
     description?: React.ReactNode;
-    colorClassName: string;
+    colorClassName?: string;
     className?: string;
 }
 
@@ -28,13 +28,23 @@ interface StatCardProps {
  * @returns {JSX.Element} El componente de la tarjeta de estadística renderizado.
  */
 export function StatCard({ icon, title, value, description, colorClassName, className }: StatCardProps) {
+    const renderIcon = () => {
+        if (!icon) return null;
+        if (React.isValidElement(icon)) return icon;
+        if (typeof icon === 'function' || (typeof icon === 'object' && icon !== null && '$$typeof' in (icon as any))) {
+            const IconComp = icon as React.ComponentType<{ className?: string }>;
+            return <IconComp className="h-6 w-6" />;
+        }
+        return icon as React.ReactNode;
+    };
+
     return (
         // Contenedor principal de la tarjeta
         <Card className={cn('p-4', className)}>
             <div className='flex items-center space-x-4'>
                 {/* Contenedor del ícono con color de fondo personalizable */}
-                <div className={cn('rounded-lg p-3', colorClassName)}>
-                    {icon}
+                <div className={cn('rounded-lg p-3', colorClassName || 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300')}>
+                    {renderIcon()}
                 </div>
                 {/* Contenedor para el título y el valor */}
                 <div className='flex flex-col'>

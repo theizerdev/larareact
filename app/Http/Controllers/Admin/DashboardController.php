@@ -27,12 +27,14 @@ class DashboardController extends Controller
             return redirect('/superadministrador/dashboard0');
         }
 
-        // Si el usuario tiene rol de Técnico (y no es Admin), renderizar el Dashboard exclusivo de Taller
         $isTecnico = $user && ($user->hasRole('Técnico') || $user->hasRole('tecnico') || $user->hasRole('Tecnico'));
+        $isVendedor = $user && ($user->hasRole('Vendedor') || $user->hasRole('vendedor') || $user->hasRole('Seller'));
         $isAdmin = $user && ($user->hasRole('Administrador') || $user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Admin'));
 
-        if ($isTecnico && !$isAdmin) {
-            return $this->dashboardTecnico($user);
+        // Si el usuario es Híbrido (Técnico y Vendedor), Vendedor o Técnico (y no es Admin), dirigir al Dashboard Híbrido con Selector de Vista
+        if (($isVendedor || $isTecnico) && !$isAdmin) {
+            $defaultView = ($isTecnico && !$isVendedor) ? 'taller' : 'hibrido';
+            return redirect()->route('admin.vendedor.dashboard', ['view' => $defaultView]);
         }
 
         $empresa = $user?->empresa;

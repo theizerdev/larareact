@@ -32,11 +32,20 @@ class SaleResource extends JsonResource
             'cash_register_id' => $this->cash_register_id,
             'empresa_id' => $this->empresa_id,
             'sucursal_id' => $this->sucursal_id,
+            'empleado_id' => $this->empleado_id,
+            'comision_porcentaje' => (float) $this->comision_porcentaje,
+            'comision_monto' => (float) $this->comision_monto,
+            'comision_estado' => $this->comision_estado,
             'created_at' => $this->created_at?->toIso8601String(),
             'user' => $this->whenLoaded('user', fn () => [
                 'id' => $this->user->id,
                 'name' => $this->user->name,
             ]),
+            'empleado' => $this->whenLoaded('empleado', fn () => $this->empleado ? [
+                'id' => $this->empleado->id,
+                'nombre_completo' => $this->empleado->nombre_completo,
+                'cargo' => $this->empleado->cargo,
+            ] : null),
             'items' => $this->whenLoaded('items', fn () => $this->items->map(fn ($item) => [
                 'id' => $item->id,
                 'concepto_tipo' => $item->concepto_tipo,

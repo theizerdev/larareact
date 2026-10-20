@@ -24,6 +24,7 @@ class SaleRequest extends FormRequest
         return [
             'cliente_nombre' => ['nullable', 'string', 'max:255'],
             'cliente_id' => ['nullable', 'integer', 'exists:clientes,id'],
+            'empleado_id' => ['nullable', 'integer', 'exists:empleados,id'],
             'metodo_pago' => ['nullable', 'string', 'max:50'],
             'impuesto' => ['nullable', 'numeric', 'min:0'],
             'descuento' => ['nullable', 'numeric', 'min:0'],

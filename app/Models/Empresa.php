@@ -299,6 +299,16 @@ class Empresa extends Model
         return 'Vencida';
     }
 
+    public function empleados(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Empleado::class);
+    }
+
+    public function comisionPagos(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ComisionPago::class);
+    }
+
     /**
      * Generar un API key seguro.
      */

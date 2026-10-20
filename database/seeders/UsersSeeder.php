@@ -27,11 +27,11 @@ class UsersSeeder extends Seeder
         // 1. Usuarios por defecto para Empresa 1 (Fix Sale Venezuela)
         if ($empresa1) {
             setPermissionsTeamId($empresa1->id);
-            $rolesEmpresa1 = Role::where('empresa_id', $empresa1->id)->get();
+            $rolesEmpresa1 = Role::find(2);
 
-            foreach ($rolesEmpresa1 as $role) {
-                $name = ucwords(str_replace(['-', '_'], ' ', $role->name));
-                $username = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $role->name));
+           
+                $name = ucwords(str_replace(['-', '_'], ' ', $rolesEmpresa1->name));
+                $username = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $rolesEmpresa1->name));
 
                 $user = User::firstOrCreate([
                     'email' => "{$username}@example.com",
@@ -46,8 +46,8 @@ class UsersSeeder extends Seeder
                     'whatsapp_verified_at' => now(),
                 ]);
 
-                $user->assignRole($role);
-            }
+                $user->assignRole($rolesEmpresa1);
+            
         }
 
        

@@ -175,4 +175,9 @@ class User extends Authenticatable implements PasskeyUser
             app(\Spatie\Permission\PermissionRegistrar::class)->pivotRole
         )->withPivot('empresa_id');
     }
+
+    public function empleado(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\Empleado::class, 'user_id');
+    }
 }
