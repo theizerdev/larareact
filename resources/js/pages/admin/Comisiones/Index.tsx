@@ -217,6 +217,7 @@ interface Props {
             total_generado: number;
             total_comisiones: number;
             pct_efectivo: number;
+            estados?: Record<string, number>;
         };
     };
     empleados_resumen: EmpleadoResumen[];
@@ -254,6 +255,7 @@ interface Props {
     filters: {
         empleado_id?: string;
         estado?: string;
+        estado_orden?: string;
         from?: string;
         to?: string;
         search?: string;
@@ -261,6 +263,19 @@ interface Props {
         perPage?: number;
     };
 }
+
+export const WORKSHOP_DETAILED_STATES = [
+    { key: 'recibido', label: '1-Recibido', shortLabel: 'Recibido', step: '1', active: 'bg-blue-600 text-white border-blue-400' },
+    { key: 'en_diagnostico_presupuesto', label: '2-Diagnóstico y Presupuesto', shortLabel: 'Diagnóstico', step: '2', active: 'bg-indigo-600 text-white border-indigo-400' },
+    { key: 'confirmacion_presupuesto', label: '3-Confirmación Presupuesto', shortLabel: 'Conf. Presup.', step: '3', active: 'bg-purple-600 text-white border-purple-400' },
+    { key: 'espera_refaccion', label: '4-Espera de Refacción', shortLabel: 'Espera Refac.', step: '4', active: 'bg-orange-600 text-white border-orange-400' },
+    { key: 'en_reparacion', label: '5-En Reparación', shortLabel: 'En Reparación', step: '5', active: 'bg-amber-600 text-white border-amber-400' },
+    { key: 'listo_reparado', label: '6-Listo Reparado', shortLabel: 'Listo Reparado', step: '6', active: 'bg-emerald-600 text-white border-emerald-400' },
+    { key: 'listo_sin_solucion', label: '7-Listo Sin Solución', shortLabel: 'Sin Solución', step: '7', active: 'bg-rose-600 text-white border-rose-400' },
+    { key: 'entregado_reparado', label: '8-Entregado Reparado', shortLabel: 'Entregado Rep.', step: '8', active: 'bg-teal-600 text-white border-teal-400' },
+    { key: 'entregado_no_reparado', label: '9-Entregado No Reparado', shortLabel: 'No Reparado', step: '9', active: 'bg-red-600 text-white border-red-400' },
+    { key: 'reincidencia_garantia', label: '10-Garantía / Reincidencia', shortLabel: 'Garantía', step: '10', active: 'bg-yellow-600 text-white border-yellow-400' },
+];
 
 export default function ComisionesIndex({
     stats,
@@ -284,6 +299,7 @@ export default function ComisionesIndex({
     // Filtros
     const [selectedEmpleadoId, setSelectedEmpleadoId] = useState(filters.empleado_id || 'all');
     const [selectedEstado, setSelectedEstado] = useState(filters.estado || 'all');
+    const [selectedEstadoOrden, setSelectedEstadoOrden] = useState(filters.estado_orden || 'all');
     const [selectedSucursal, setSelectedSucursal] = useState(filters.sucursal_id || 'all');
     const [dateFrom, setDateFrom] = useState(filters.from || '');
     const [dateTo, setDateTo] = useState(filters.to || '');
@@ -376,6 +392,7 @@ export default function ComisionesIndex({
         router.get('/admin/comisiones', {
             empleado_id: selectedEmpleadoId !== 'all' ? selectedEmpleadoId : undefined,
             estado: selectedEstado !== 'all' ? selectedEstado : undefined,
+            estado_orden: selectedEstadoOrden !== 'all' ? selectedEstadoOrden : undefined,
             sucursal_id: selectedSucursal !== 'all' ? selectedSucursal : undefined,
             from: dateFrom || undefined,
             to: dateTo || undefined,
@@ -387,9 +404,15 @@ export default function ComisionesIndex({
         });
     };
 
+    const handleFilterByEstadoOrden = (key: string) => {
+        setSelectedEstadoOrden(key);
+        handleApplyFilters({ estado_orden: key !== 'all' ? key : undefined });
+    };
+
     const handleResetFilters = () => {
         setSelectedEmpleadoId('all');
         setSelectedEstado('all');
+        setSelectedEstadoOrden('all');
         setSelectedSucursal('all');
         setDateFrom('');
         setDateTo('');
@@ -1111,6 +1134,67 @@ export default function ComisionesIndex({
                                             <span>{__('Imprimir Hoja de Corte')}</span>
                                         </Button>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* DESGLOSE DETALLADO DE TODOS LOS DEMÁS ESTADOS DE TALLER */}
+                            <div className="mt-5 pt-4 border-t border-indigo-900/50">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <Wrench className="h-4 w-4 text-indigo-400" />
+                                        <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                                            {__('Conteo Detallado de Estados')}
+                                        </span>
+                                        <span className="text-[11px] text-slate-400">
+                                            • {__('Haz clic en un estado para filtrar el listado')}
+                                        </span>
+                                    </div>
+
+                                    {selectedEstadoOrden !== 'all' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleFilterByEstadoOrden('all')}
+                                            className="text-xs font-bold text-amber-300 hover:text-white flex items-center gap-1 transition-colors bg-amber-500/20 px-2.5 py-1 rounded-md border border-amber-400/40"
+                                        >
+                                            <X className="h-3 w-3" />
+                                            <span>{__('Ver todos los estados')}</span>
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Grilla con los 10 Estados de Taller */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-2">
+                                    {WORKSHOP_DETAILED_STATES.map((st) => {
+                                        const count = stats.taller_semaforo?.estados?.[st.key] ?? 0;
+                                        const isSelected = selectedEstadoOrden === st.key;
+
+                                        return (
+                                            <button
+                                                key={st.key}
+                                                type="button"
+                                                onClick={() => handleFilterByEstadoOrden(isSelected ? 'all' : st.key)}
+                                                className={cn(
+                                                    "flex flex-col items-center justify-center p-2 rounded-xl text-center transition-all cursor-pointer border relative overflow-hidden group",
+                                                    isSelected
+                                                        ? "ring-2 ring-white scale-[1.03] shadow-lg " + st.active
+                                                        : count > 0
+                                                            ? "bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700/80 hover:border-indigo-400/60 shadow-sm"
+                                                            : "bg-slate-900/40 text-slate-500 border-slate-800/40 opacity-60 hover:opacity-100"
+                                                )}
+                                                title={`${st.label}: ${count} órdenes`}
+                                            >
+                                                <div className="text-xl font-mono font-black leading-none text-white">
+                                                    {count}
+                                                </div>
+                                                <div className="text-[10px] font-bold uppercase tracking-tight mt-1.5 text-slate-300 truncate w-full px-1">
+                                                    {st.shortLabel}
+                                                </div>
+                                                <div className="text-[9px] font-mono text-slate-400 mt-0.5">
+                                                    #{st.step}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -1874,6 +1958,25 @@ export default function ComisionesIndex({
                                             {__('En Proceso')}
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Desglose de Todos los Estados en Hoja de Impresión */}
+                            <div className="mb-4 bg-slate-50 border border-slate-300 rounded-lg p-2.5">
+                                <div className="text-[10px] font-bold text-slate-700 uppercase mb-1.5 flex items-center justify-between">
+                                    <span>{__('Desglose de Estados de Taller:')}</span>
+                                    <span className="font-mono text-slate-500 font-normal">{__('Total Equipos:')} {stats.taller_semaforo?.total ?? 0}</span>
+                                </div>
+                                <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 text-center">
+                                    {WORKSHOP_DETAILED_STATES.map((st) => {
+                                        const count = stats.taller_semaforo?.estados?.[st.key] ?? 0;
+                                        return (
+                                            <div key={st.key} className="border border-slate-200 bg-white rounded p-1">
+                                                <div className="font-mono font-bold text-xs text-slate-800">{count}</div>
+                                                <div className="text-[9px] text-slate-500 font-medium truncate" title={st.label}>{st.shortLabel}</div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
 

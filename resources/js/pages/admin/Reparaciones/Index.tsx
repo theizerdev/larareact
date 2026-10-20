@@ -13,6 +13,9 @@ import {
     Camera,
     Loader2,
     Tag,
+    Search,
+    X,
+    Filter,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -20,6 +23,7 @@ import EtiquetaTermicaModal from '@/components/reparaciones/EtiquetaTermicaModal
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { FilterBar, FilterField } from '@/components/filter-bar';
+import { Badge } from '@/components/ui/badge';
 import { ModuleHeader } from '@/components/module-header';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -120,8 +124,10 @@ interface Orden {
     marca?: { nombre: string };
     modelo?: { nombre_comercial: string; codigo_modelo?: string };
     items?: Array<{ id: number; descripcion?: string; precio: number; cantidad: number; servicio?: { nombre: string }; producto?: { nombre: string } }>;
+    empresa_id?: number;
     empresa?: any;
     sucursal?: any;
+    garantia_dias?: number;
 }
 
 interface Props {
@@ -143,6 +149,8 @@ interface Props {
         month?: string;
         perPage?: string;
         sucursal_id?: string;
+        from?: string;
+        to?: string;
     };
     isTecnicoOnly?: boolean;
     empresa?: any;
@@ -177,6 +185,77 @@ export default function IndexReparaciones({
         filters.sucursal_id ? String(filters.sucursal_id) : (currentSucursalId ? String(currentSucursalId) : 'all')
     );
     const [perPage, setPerPage] = useState(filters.perPage ? String(filters.perPage) : '10');
+    const [from, setFrom] = useState(filters.from || '');
+    const [to, setTo] = useState(filters.to || '');
+
+    const formatDateStr = (d: Date): string => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+
+    const getInitialDatePreset = (): string | null => {
+        if (!filters.from || !filters.to) return null;
+        const now = new Date();
+        const todayStr = formatDateStr(now);
+        if (filters.from === todayStr && filters.to === todayStr) return 'today';
+        return null;
+    };
+
+    const [activeDatePreset, setActiveDatePreset] = useState<string | null>(getInitialDatePreset);
+
+    const applyDatePreset = (preset: 'today' | 'week' | 'month' | 'last_month' | 'year' | 'clear') => {
+        const now = new Date();
+        if (preset === 'today') {
+            const todayStr = formatDateStr(now);
+            setFrom(todayStr);
+            setTo(todayStr);
+            setActiveDatePreset('today');
+            setYear('all');
+            setMonth('all');
+        } else if (preset === 'week') {
+            const day = now.getDay();
+            const diffToMonday = (day === 0 ? -6 : 1) - day;
+            const monday = new Date(now);
+            monday.setDate(now.getDate() + diffToMonday);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            setFrom(formatDateStr(monday));
+            setTo(formatDateStr(sunday));
+            setActiveDatePreset('week');
+            setYear('all');
+            setMonth('all');
+        } else if (preset === 'month') {
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            setFrom(formatDateStr(firstDay));
+            setTo(formatDateStr(lastDay));
+            setActiveDatePreset('month');
+            setYear('all');
+            setMonth('all');
+        } else if (preset === 'last_month') {
+            const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+            setFrom(formatDateStr(firstDay));
+            setTo(formatDateStr(lastDay));
+            setActiveDatePreset('last_month');
+            setYear('all');
+            setMonth('all');
+        } else if (preset === 'year') {
+            const firstDay = new Date(now.getFullYear(), 0, 1);
+            const lastDay = new Date(now.getFullYear(), 11, 31);
+            setFrom(formatDateStr(firstDay));
+            setTo(formatDateStr(lastDay));
+            setActiveDatePreset('year');
+            setYear('all');
+            setMonth('all');
+        } else if (preset === 'clear') {
+            setFrom('');
+            setTo('');
+            setActiveDatePreset(null);
+        }
+    };
 
     // Quick Print Ticket State
     const [printOrden, setPrintOrden] = useState<Orden | null>(null);
@@ -186,17 +265,17 @@ export default function IndexReparaciones({
     // Select2 Options (memoized)
     const statusOptions = useMemo(() => [
         { value: 'all', label: __('Todos los estados') },
-        { value: 'recibido', label: '1-RECIBIDO' },
-        { value: 'en_diagnostico_presupuesto', label: '2-EN DIAGNOSTICO Y PRESUPUESTO' },
-        { value: 'confirmacion_presupuesto', label: '3-CONFIRMACION DE PRESUPUESTO' },
-        { value: 'espera_refaccion', label: '4-ESPERA DE REFACCION' },
-        { value: 'en_reparacion', label: '5-EN REPARACION' },
-        { value: 'listo_reparado', label: '6-LISTO PARA ENTREGAR REPARADO' },
-        { value: 'listo_sin_solucion', label: '7-LISTO PARA ENTREGAR SIN SOLUCION' },
-        { value: 'entregado_reparado', label: '8-ENTREGADO REPARADO' },
-        { value: 'entregado_no_reparado', label: '9-ENTREGADO NO REPARADO' },
-        { value: 'reincidencia_garantia', label: '10-REINCIDENCIA/GARANTIA' },
-    ], [__]);
+        { value: 'recibido', label: `1-RECIBIDO (${counts?.['recibido'] ?? 0})` },
+        { value: 'en_diagnostico_presupuesto', label: `2-EN DIAGNOSTICO Y PRESUPUESTO (${counts?.['en_diagnostico_presupuesto'] ?? 0})` },
+        { value: 'confirmacion_presupuesto', label: `3-CONFIRMACION DE PRESUPUESTO (${counts?.['confirmacion_presupuesto'] ?? 0})` },
+        { value: 'espera_refaccion', label: `4-ESPERA DE REFACCION (${counts?.['espera_refaccion'] ?? 0})` },
+        { value: 'en_reparacion', label: `5-EN REPARACION (${counts?.['en_reparacion'] ?? 0})` },
+        { value: 'listo_reparado', label: `6-LISTO PARA ENTREGAR REPARADO (${counts?.['listo_reparado'] ?? 0})` },
+        { value: 'listo_sin_solucion', label: `7-LISTO PARA ENTREGAR SIN SOLUCION (${counts?.['listo_sin_solucion'] ?? 0})` },
+        { value: 'entregado_reparado', label: `8-ENTREGADO REPARADO (${counts?.['entregado_reparado'] ?? 0})` },
+        { value: 'entregado_no_reparado', label: `9-ENTREGADO NO REPARADO (${counts?.['entregado_no_reparado'] ?? 0})` },
+        { value: 'reincidencia_garantia', label: `10-REINCIDENCIA/GARANTIA (${counts?.['reincidencia_garantia'] ?? 0})` },
+    ], [counts, __]);
 
     const yearOptions = useMemo(() => {
         const currentY = String(new Date().getFullYear());
@@ -303,18 +382,20 @@ export default function IndexReparaciones({
                 cleanParams({
                     search: search || undefined,
                     status: status === 'all' ? undefined : status,
-                    year: year === 'all' ? undefined : year,
-                    month: month === 'all' ? undefined : month,
+                    year: (!from && !to && year !== 'all') ? year : undefined,
+                    month: (!from && !to && month !== 'all') ? month : undefined,
                     tecnico_id: tecnicoId === 'all' ? undefined : tecnicoId,
                     sucursal_id: sucursalId === 'all' ? undefined : sucursalId,
                     perPage: perPage === '10' ? undefined : perPage,
+                    from: from || undefined,
+                    to: to || undefined,
                 }),
                 { preserveState: true, preserveScroll: true }
             );
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [search, status, year, month, tecnicoId, sucursalId, perPage]);
+    }, [search, status, year, month, tecnicoId, sucursalId, perPage, from, to]);
 
     // QR Code Camera Scanner States
     const [isScanModalOpen, setIsScanModalOpen] = useState(false);
@@ -521,6 +602,21 @@ export default function IndexReparaciones({
         notifySuccess(__('Folio copiado al portapapeles.'));
     };
 
+    const activeFilterCount = useMemo(() => {
+        let count = 0;
+        if (search.trim()) count++;
+        if (status && status !== 'all') count++;
+        if (tecnicoId && tecnicoId !== 'all') count++;
+        if (sucursalId && sucursalId !== 'all') count++;
+        if (from) count++;
+        if (to) count++;
+        if (!from && !to && year && year !== 'all') count++;
+        if (!from && !to && month && month !== 'all') count++;
+        return count;
+    }, [search, status, tecnicoId, sucursalId, from, to, year, month]);
+
+    const hasActiveFilters = activeFilterCount > 0 || perPage !== '10';
+
     const handleResetFilters = () => {
         setSearch('');
         setStatus('all');
@@ -529,6 +625,9 @@ export default function IndexReparaciones({
         setTecnicoId('all');
         setSucursalId('all');
         setPerPage('10');
+        setFrom('');
+        setTo('');
+        setActiveDatePreset(null);
         router.get('/admin/reparaciones', {}, { preserveState: true, preserveScroll: true });
     };
 
@@ -899,106 +998,330 @@ export default function IndexReparaciones({
                     </Link>
                 </ModuleHeader>
 
-                {/* BARRA DE FILTROS ESTÁNDAR CON SELECT2 (SHADCN/UI) */}
-                <FilterBar>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 items-end w-full">
-                        {/* BUSCAR */}
-                        <FilterField label={__('Buscar')}>
-                            <Input
-                                placeholder={__('Folio, Cliente, IMEI...')}
-                                value={search}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    const normalized = val.replace(/REP['´`]/gi, 'REP-');
-                                    setSearch(normalized);
-                                }}
-                                className="h-9 text-xs"
-                            />
-                        </FilterField>
-
-                        {/* SUCURSAL */}
-                        {sucursales && sucursales.length > 0 && (
-                            <FilterField label={__('Sucursal')}>
-                                <SearchableSelect
-                                    options={sucursalOptions}
-                                    value={sucursalId}
-                                    onChange={setSucursalId}
-                                    placeholder={__('Todas las sucursales')}
-                                    searchPlaceholder={__('Buscar sucursal...')}
-                                />
-                            </FilterField>
+                {/* TABS / CHIPS RÁPIDOS CON CONTEOS POR ESTADO DE TALLER */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                    <button
+                        type="button"
+                        onClick={() => setStatus('all')}
+                        className={cn(
+                            "px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 border shrink-0",
+                            status === 'all'
+                                ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                                : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border"
                         )}
+                    >
+                        <span>{__('Todos')}</span>
+                        <span className={cn(
+                            "px-1.5 py-0.5 rounded-full text-[10px] font-mono",
+                            status === 'all' ? "bg-purple-700/80 text-white" : "bg-muted text-foreground"
+                        )}>
+                            {Object.values(counts || {}).reduce((a, b) => a + b, 0)}
+                        </span>
+                    </button>
 
-                        {/* ESTADO */}
-                        <FilterField label={__('Estado')}>
-                            <SearchableSelect
-                                options={statusOptions}
-                                value={status}
-                                onChange={setStatus}
-                                placeholder={__('Todos los estados')}
-                                searchPlaceholder={__('Buscar estado...')}
-                            />
-                        </FilterField>
-
-                        {/* AÑO */}
-                        <FilterField label={__('Año')}>
-                            <SearchableSelect
-                                options={yearOptions}
-                                value={year}
-                                onChange={setYear}
-                                placeholder={__('Todos los años')}
-                                searchPlaceholder={__('Buscar año...')}
-                            />
-                        </FilterField>
-
-                        {/* MES */}
-                        <FilterField label={__('Mes')}>
-                            <SearchableSelect
-                                options={monthOptions}
-                                value={month}
-                                onChange={setMonth}
-                                placeholder={__('Todos los meses')}
-                                searchPlaceholder={__('Buscar mes...')}
-                            />
-                        </FilterField>
-
-                        {/* TÉCNICO ASIGNADO */}
-                        <FilterField label={__('Técnico Asignado')}>
-                            <SearchableSelect
-                                options={tecnicoOptions}
-                                value={tecnicoId}
-                                onChange={setTecnicoId}
-                                placeholder={__('Todos los técnicos')}
-                                searchPlaceholder={__('Buscar técnico...')}
-                                disabled={isTecnicoOnly}
-                            />
-                        </FilterField>
-
-                        {/* REGISTROS POR PÁGINA */}
-                        <FilterField label={__('Mostrar')}>
-                            <SearchableSelect
-                                options={perPageOptions}
-                                value={perPage}
-                                onChange={setPerPage}
-                                placeholder={__('10')}
-                                searchPlaceholder={__('Registros...')}
-                            />
-                        </FilterField>
-                    </div>
-
-                    {(search || status !== 'all' || year !== 'all' || month !== 'all' || tecnicoId !== 'all' || sucursalId !== 'all' || perPage !== '10') && (
-                        <div className="flex justify-end mt-2.5">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleResetFilters}
-                                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-xs font-semibold"
+                    {statusOptions.filter(o => o.value !== 'all').map((opt) => {
+                        const count = counts?.[opt.value] ?? 0;
+                        const isSelected = status === opt.value;
+                        const labelText = opt.label.replace(/^\d+-/, '').replace(/\s*\(\d+\)$/, '');
+                        return (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setStatus(isSelected ? 'all' : opt.value)}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 border shrink-0",
+                                    isSelected
+                                        ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                                        : count > 0
+                                            ? "bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border"
+                                            : "bg-muted/30 text-muted-foreground/50 border-border/40 opacity-70"
+                                )}
                             >
-                                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                                {__('Limpiar Filtros')}
-                            </Button>
+                                <span>{labelText}</span>
+                                <span className={cn(
+                                    "px-1.5 py-0.5 rounded-full text-[10px] font-mono",
+                                    isSelected
+                                        ? "bg-purple-700/80 text-white"
+                                        : count > 0
+                                            ? "bg-muted text-foreground"
+                                            : "bg-muted/40 text-muted-foreground/40"
+                                )}>
+                                    {count}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* BARRA DE FILTROS PROFESIONAL CON RANGO DE FECHAS Y DISTRIBUCIÓN RESPONSIVA */}
+                <FilterBar className="bg-card text-card-foreground shadow-sm rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+                    <div className="w-full space-y-4">
+                        {/* FILA 1: BÚSQUEDA Y CAMPOS PRINCIPALES DE CLASIFICACIÓN */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+                            {/* BUSCAR */}
+                            <div className={sucursales && sucursales.length > 0 ? "col-span-1 sm:col-span-2 lg:col-span-4" : "col-span-1 sm:col-span-2 lg:col-span-5"}>
+                                <FilterField label={__('Buscar')}>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                                        <Input
+                                            placeholder={__('Folio (ej. REP-0001), Cliente, IMEI, Modelo...')}
+                                            value={search}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                const normalized = val.replace(/REP['´`]/gi, 'REP-');
+                                                setSearch(normalized);
+                                            }}
+                                            className="pl-9 pr-8 h-9 text-xs"
+                                        />
+                                        {search && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearch('')}
+                                                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                                title={__('Borrar búsqueda')}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </FilterField>
+                            </div>
+
+                            {/* SUCURSAL */}
+                            {sucursales && sucursales.length > 0 && (
+                                <div className="col-span-1 sm:col-span-1 lg:col-span-2">
+                                    <FilterField label={__('Sucursal')}>
+                                        <SearchableSelect
+                                            options={sucursalOptions}
+                                            value={sucursalId}
+                                            onChange={setSucursalId}
+                                            placeholder={__('Todas')}
+                                            searchPlaceholder={__('Buscar sucursal...')}
+                                        />
+                                    </FilterField>
+                                </div>
+                            )}
+
+                            {/* ESTADO */}
+                            <div className="col-span-1 sm:col-span-1 lg:col-span-3">
+                                <FilterField label={__('Estado')}>
+                                    <SearchableSelect
+                                        options={statusOptions}
+                                        value={status}
+                                        onChange={setStatus}
+                                        placeholder={__('Todos los estados')}
+                                        searchPlaceholder={__('Buscar estado...')}
+                                    />
+                                </FilterField>
+                            </div>
+
+                            {/* TÉCNICO ASIGNADO */}
+                            <div className={sucursales && sucursales.length > 0 ? "col-span-1 sm:col-span-2 lg:col-span-3" : "col-span-1 sm:col-span-2 lg:col-span-4"}>
+                                <FilterField label={__('Técnico Asignado')}>
+                                    <SearchableSelect
+                                        options={tecnicoOptions}
+                                        value={tecnicoId}
+                                        onChange={setTecnicoId}
+                                        placeholder={__('Todos los técnicos')}
+                                        searchPlaceholder={__('Buscar técnico...')}
+                                        disabled={isTecnicoOnly}
+                                    />
+                                </FilterField>
+                            </div>
                         </div>
-                    )}
+
+                        {/* FILA 2: RANGO DE FECHAS, PRESETS RÁPIDOS, PAGINACIÓN Y ACCIONES */}
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col xl:flex-row xl:items-end justify-between gap-3">
+                            {/* LADO IZQUIERDO: RANGO DE FECHAS (Desde / Hasta) + PRESETS */}
+                            <div className="flex flex-wrap items-end gap-3">
+                                {/* Rango Desde */}
+                                <div className="w-full sm:w-auto">
+                                    <FilterField label={__('Fecha Desde')}>
+                                        <div className="relative">
+                                            <Input
+                                                type="date"
+                                                value={from}
+                                                onChange={(e) => {
+                                                    setFrom(e.target.value);
+                                                    setActiveDatePreset(null);
+                                                    if (year !== 'all') setYear('all');
+                                                    if (month !== 'all') setMonth('all');
+                                                }}
+                                                className="h-9 text-xs w-full sm:w-36 font-medium"
+                                            />
+                                        </div>
+                                    </FilterField>
+                                </div>
+
+                                {/* Rango Hasta */}
+                                <div className="w-full sm:w-auto">
+                                    <FilterField label={__('Fecha Hasta')}>
+                                        <div className="relative">
+                                            <Input
+                                                type="date"
+                                                value={to}
+                                                onChange={(e) => {
+                                                    setTo(e.target.value);
+                                                    setActiveDatePreset(null);
+                                                    if (year !== 'all') setYear('all');
+                                                    if (month !== 'all') setMonth('all');
+                                                }}
+                                                className="h-9 text-xs w-full sm:w-36 font-medium"
+                                            />
+                                        </div>
+                                    </FilterField>
+                                </div>
+
+                                {/* PRESETS RÁPIDOS DE FECHAS */}
+                                <div className="flex flex-wrap items-center gap-1.5 pb-0.5">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mr-1">
+                                        {__('Rápido:')}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => applyDatePreset('today')}
+                                        className={cn(
+                                            "px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all",
+                                            activeDatePreset === 'today'
+                                                ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                                                : "bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                                        )}
+                                    >
+                                        {__('Hoy')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => applyDatePreset('week')}
+                                        className={cn(
+                                            "px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all",
+                                            activeDatePreset === 'week'
+                                                ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                                                : "bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                                        )}
+                                    >
+                                        {__('Esta Semana')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => applyDatePreset('month')}
+                                        className={cn(
+                                            "px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all",
+                                            activeDatePreset === 'month'
+                                                ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                                                : "bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                                        )}
+                                    >
+                                        {__('Este Mes')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => applyDatePreset('last_month')}
+                                        className={cn(
+                                            "px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all",
+                                            activeDatePreset === 'last_month'
+                                                ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                                                : "bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                                        )}
+                                    >
+                                        {__('Mes Anterior')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => applyDatePreset('year')}
+                                        className={cn(
+                                            "px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all",
+                                            activeDatePreset === 'year'
+                                                ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                                                : "bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                                        )}
+                                    >
+                                        {__('Este Año')}
+                                    </button>
+                                    {(from || to) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => applyDatePreset('clear')}
+                                            className="px-2 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:underline transition-colors"
+                                            title={__('Quitar filtro de fechas')}
+                                        >
+                                            <X className="h-3.5 w-3.5 inline mr-0.5" />
+                                            {__('Quitar')}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* SELECTORES DE AÑO Y MES (HISTÓRICOS) */}
+                                <div className="flex items-center gap-2 pt-1 sm:pt-0 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 sm:pl-3">
+                                    <div className="w-28">
+                                        <FilterField label={__('Año')}>
+                                            <SearchableSelect
+                                                options={yearOptions}
+                                                value={year}
+                                                onChange={(val) => {
+                                                    setYear(val);
+                                                    setFrom('');
+                                                    setTo('');
+                                                    setActiveDatePreset(null);
+                                                }}
+                                                placeholder={__('Todos')}
+                                                searchPlaceholder={__('Año...')}
+                                            />
+                                        </FilterField>
+                                    </div>
+                                    <div className="w-32">
+                                        <FilterField label={__('Mes')}>
+                                            <SearchableSelect
+                                                options={monthOptions}
+                                                value={month}
+                                                onChange={(val) => {
+                                                    setMonth(val);
+                                                    setFrom('');
+                                                    setTo('');
+                                                    setActiveDatePreset(null);
+                                                }}
+                                                placeholder={__('Todos')}
+                                                searchPlaceholder={__('Mes...')}
+                                            />
+                                        </FilterField>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* LADO DERECHO: REGISTROS POR PÁGINA + BOTÓN LIMPIAR */}
+                            <div className="flex items-end justify-between sm:justify-end gap-3 shrink-0 pt-2 xl:pt-0">
+                                <div className="w-24">
+                                    <FilterField label={__('Mostrar')}>
+                                        <SearchableSelect
+                                            options={perPageOptions}
+                                            value={perPage}
+                                            onChange={setPerPage}
+                                            placeholder="10"
+                                            searchPlaceholder={__('Cantidad...')}
+                                        />
+                                    </FilterField>
+                                </div>
+
+                                {hasActiveFilters && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleResetFilters}
+                                        className="h-9 px-3 gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/60 rounded-lg transition-colors"
+                                        title={__('Restablecer todos los filtros')}
+                                    >
+                                        <RefreshCw className="h-3.5 w-3.5" />
+                                        <span>{__('Limpiar Filtros')}</span>
+                                        {activeFilterCount > 0 && (
+                                            <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200 font-bold ml-0.5">
+                                                {activeFilterCount}
+                                            </Badge>
+                                        )}
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </FilterBar>
 
                 {/* TABLA DE DATOS ESTÁNDAR DATA-TABLE */}

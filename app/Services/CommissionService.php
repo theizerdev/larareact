@@ -234,6 +234,10 @@ class CommissionService
             $reparacionesQuery->where('comision_estado', $filters['estado']);
         }
 
+        if (!empty($filters['estado_orden']) && $filters['estado_orden'] !== 'all') {
+            $reparacionesQuery->where('estado_orden', $filters['estado_orden']);
+        }
+
         if (!empty($filters['from'])) {
             $reparacionesQuery->whereDate('created_at', '>=', $filters['from']);
         }
@@ -296,6 +300,26 @@ class CommissionService
         $countEnProceso = (clone $tallerBaseScope)->whereIn('estado_orden', ['recibido', 'en_diagnostico_presupuesto', 'confirmacion_presupuesto', 'espera_refaccion', 'en_reparacion', 'en_diagnostico', 'presupuestado', 'esperando_repuesto'])->count();
         $totalTallerEquipos = $countReparados + $countNoReparados + $countEnProceso;
         $pctEfectivoComision = $totalReparacionesMonto > 0 ? round(($totalComisionesReparaciones / $totalReparacionesMonto) * 100, 2) : 0.0;
+
+        $estadoCounts = (clone $tallerBaseScope)
+            ->select('estado_orden', DB::raw('count(*) as count'))
+            ->groupBy('estado_orden')
+            ->pluck('count', 'estado_orden')
+            ->toArray();
+
+        $estadosDetallados = [
+            'recibido' => $estadoCounts['recibido'] ?? 0,
+            'en_diagnostico_presupuesto' => $estadoCounts['en_diagnostico_presupuesto'] ?? 0,
+            'confirmacion_presupuesto' => $estadoCounts['confirmacion_presupuesto'] ?? 0,
+            'espera_refaccion' => $estadoCounts['espera_refaccion'] ?? 0,
+            'en_reparacion' => $estadoCounts['en_reparacion'] ?? 0,
+            'listo_reparado' => $estadoCounts['listo_reparado'] ?? 0,
+            'listo_sin_solucion' => $estadoCounts['listo_sin_solucion'] ?? 0,
+            'entregado_reparado' => $estadoCounts['entregado_reparado'] ?? 0,
+            'entregado_no_reparado' => $estadoCounts['entregado_no_reparado'] ?? 0,
+            'reincidencia_garantia' => $estadoCounts['reincidencia_garantia'] ?? 0,
+            'cancelado' => $estadoCounts['cancelado'] ?? 0,
+        ];
 
         // Reparaciones detalladas paginadas
         $reparaciones = $reparacionesQuery->with(['empleado', 'tecnico', 'sucursal', 'comisionPago', 'marca', 'modelo'])
@@ -408,6 +432,7 @@ class CommissionService
                     'total_generado' => round($totalReparacionesMonto, 2),
                     'total_comisiones' => round($totalComisionesReparaciones, 2),
                     'pct_efectivo' => $pctEfectivoComision,
+                    'estados' => $estadosDetallados,
                 ],
             ],
             'empleados_resumen' => $empleados,

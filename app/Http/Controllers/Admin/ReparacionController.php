@@ -55,6 +55,8 @@ class ReparacionController extends Controller
         $marcaId = $request->input('marca_id');
         $modeloId = $request->input('modelo_id');
         $categoriaId = $request->input('categoria_id');
+        $from = $request->input('from') ?: $request->input('date_from');
+        $to = $request->input('to') ?: $request->input('date_to');
 
         $empresa = $user->empresa ?? \App\Models\Empresa::find($empresaId);
 
@@ -104,24 +106,48 @@ class ReparacionController extends Controller
             }
         }
 
-        if ($year && $year !== 'all') {
-            $query->where(function ($q) use ($year) {
-                $q->whereYear('fecha_recepcion', $year)
-                  ->orWhere(function ($sub) use ($year) {
+        // Filtro por rango de fechas (Desde - Hasta)
+        if ($from) {
+            $query->where(function ($q) use ($from) {
+                $q->whereDate('fecha_recepcion', '>=', $from)
+                  ->orWhere(function ($sub) use ($from) {
                       $sub->whereNull('fecha_recepcion')
-                          ->whereYear('created_at', $year);
+                          ->whereDate('created_at', '>=', $from);
                   });
             });
         }
 
-        if ($month && $month !== 'all') {
-            $query->where(function ($q) use ($month) {
-                $q->whereMonth('fecha_recepcion', $month)
-                  ->orWhere(function ($sub) use ($month) {
+        if ($to) {
+            $query->where(function ($q) use ($to) {
+                $q->whereDate('fecha_recepcion', '<=', $to)
+                  ->orWhere(function ($sub) use ($to) {
                       $sub->whereNull('fecha_recepcion')
-                          ->whereMonth('created_at', $month);
+                          ->whereDate('created_at', '<=', $to);
                   });
             });
+        }
+
+        // Filtros alternativos por Año y Mes (si no se indicó rango específico)
+        if (!$from && !$to) {
+            if ($year && $year !== 'all') {
+                $query->where(function ($q) use ($year) {
+                    $q->whereYear('fecha_recepcion', $year)
+                      ->orWhere(function ($sub) use ($year) {
+                          $sub->whereNull('fecha_recepcion')
+                              ->whereYear('created_at', $year);
+                      });
+                });
+            }
+
+            if ($month && $month !== 'all') {
+                $query->where(function ($q) use ($month) {
+                    $q->whereMonth('fecha_recepcion', $month)
+                      ->orWhere(function ($sub) use ($month) {
+                          $sub->whereNull('fecha_recepcion')
+                              ->whereMonth('created_at', $month);
+                      });
+                });
+            }
         }
 
         if ($search) {
@@ -279,6 +305,8 @@ class ReparacionController extends Controller
                 [
                     'perPage' => (string) $perPage,
                     'sucursal_id' => $sucursalId !== null ? (string)$sucursalId : '',
+                    'from' => $from ?: '',
+                    'to' => $to ?: '',
                 ]
             ),
             'isTecnicoOnly' => $isTecnicoOnly && !$isAdmin,

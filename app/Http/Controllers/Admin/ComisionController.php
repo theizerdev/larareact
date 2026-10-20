@@ -60,6 +60,7 @@ class ComisionController extends Controller
         $filters = [
             'empleado_id' => $empleadoIdFilter,
             'estado' => $request->input('estado'),
+            'estado_orden' => $request->input('estado_orden'),
             'from' => $request->input('from'),
             'to' => $request->input('to'),
             'search' => $request->input('search'),
