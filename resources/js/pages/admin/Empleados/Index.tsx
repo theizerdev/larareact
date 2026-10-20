@@ -22,6 +22,7 @@ import {
     Lock,
     ShoppingCart,
     Wrench,
+    RefreshCw,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -140,6 +141,15 @@ export default function EmpleadosIndex({
     const [editingEmpleado, setEditingEmpleado] = useState<Empleado | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [empleadoToDelete, setEmpleadoToDelete] = useState<Empleado | null>(null);
+    const [isSyncingUsers, setIsSyncingUsers] = useState(false);
+
+    const handleSyncUsers = () => {
+        setIsSyncingUsers(true);
+        router.post('/admin/empleados/sync-users', {}, {
+            preserveScroll: true,
+            onFinish: () => setIsSyncingUsers(false),
+        });
+    };
 
     // Formulario
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
@@ -294,6 +304,16 @@ export default function EmpleadosIndex({
                     colorClassName="bg-emerald-600"
                 >
                     <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={handleSyncUsers}
+                            disabled={isSyncingUsers}
+                            className="gap-2 bg-emerald-700/60 text-white hover:bg-emerald-700/80 border-white/20 font-medium"
+                            title={__('Importa y vincula automáticamente las cuentas de usuario con el módulo de empleados')}
+                        >
+                            <RefreshCw className={`h-4 w-4 ${isSyncingUsers ? 'animate-spin' : ''}`} />
+                            {isSyncingUsers ? __('Sincronizando...') : __('Sincronizar Usuarios')}
+                        </Button>
                         <Button
                             variant="secondary"
                             onClick={() => router.get('/admin/comisiones')}

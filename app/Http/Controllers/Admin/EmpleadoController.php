@@ -179,4 +179,32 @@ class EmpleadoController extends Controller
             ]),
         ]);
     }
+
+    /**
+     * Sincronizar los usuarios registrados con el módulo de empleados.
+     */
+    public function syncUsers(Request $request)
+    {
+        $user = auth()->user();
+        $isSuperAdmin = $user?->id === 1 || $user?->hasRole('Super Administrador') || $user?->hasRole('super-admin');
+
+        $empresaId = null;
+        if (! $isSuperAdmin) {
+            $empresaId = $user?->empresa_id;
+        } elseif ($request->filled('empresa_id') && $request->input('empresa_id') !== 'all') {
+            $empresaId = (int) $request->input('empresa_id');
+        }
+
+        $result = $this->employeeService->syncUsersToEmployees($empresaId);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __("Sincronización completada: :created empleados creados, :updated actualizados de :total usuarios analizados.", [
+                'created' => $result['created'],
+                'updated' => $result['updated'],
+                'total' => $result['total'],
+            ]),
+        ]);
+    }
 }
+

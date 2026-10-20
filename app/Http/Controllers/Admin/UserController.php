@@ -190,6 +190,13 @@ class UserController extends Controller
                 $this->syncUserRoles($user, $validated['roles']);
             }
 
+            // Asegurar sincronización de roles y cargo en el módulo de empleados
+            try {
+                app(\App\Services\EmployeeService::class)->syncUserToEmployee($user->fresh(['roles']));
+            } catch (\Throwable $e) {
+                Log::warning("Error sincronizando empleado tras crear usuario {$user->id}: " . $e->getMessage());
+            }
+
             $whatsappSent = false;
 
             if ($sendWelcome && ! empty($user->telefono)) {
@@ -291,6 +298,13 @@ class UserController extends Controller
 
             if (isset($validated['roles'])) {
                 $this->syncUserRoles($user, $validated['roles']);
+            }
+
+            // Asegurar sincronización de roles y datos en el módulo de empleados
+            try {
+                app(\App\Services\EmployeeService::class)->syncUserToEmployee($user->fresh(['roles']));
+            } catch (\Throwable $e) {
+                Log::warning("Error sincronizando empleado tras actualizar usuario {$user->id}: " . $e->getMessage());
             }
 
             return back()->with('notification', [

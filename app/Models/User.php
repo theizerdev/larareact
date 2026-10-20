@@ -180,4 +180,34 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->hasOne(\App\Models\Empleado::class, 'user_id');
     }
+
+    /**
+     * El modelo de usuario sincroniza automáticamente los cambios con el módulo de empleados.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function ($user) {
+            if (\Illuminate\Support\Facades\Schema::hasTable('empleados')) {
+                try {
+                    app(\App\Services\EmployeeService::class)->syncUserToEmployee($user);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Error sincronizando usuario a empleado (User #{$user->id}): " . $e->getMessage());
+                }
+            }
+        });
+
+        static::deleted(function ($user) {
+            if (\Illuminate\Support\Facades\Schema::hasTable('empleados')) {
+                try {
+                    $empleado = \App\Models\Empleado::withoutGlobalScope('multitenancy')->where('user_id', $user->id)->first();
+                    if ($empleado) {
+                        app(\App\Services\EmployeeService::class)->delete($empleado);
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Error eliminando empleado asociado al usuario (User #{$user->id}): " . $e->getMessage());
+                }
+            }
+        });
+    }
 }
+
