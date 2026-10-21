@@ -204,7 +204,7 @@ class BioTimeEmpleadoPusher
                 'foto_exportada' => $empleado->foto_empleado,
                 'foto_exportada_at' => now(),
             ]);
-
+            
             if ($fotoB64) {
                 $rFoto = $cliente->uploadBioPhoto($codigo, $fotoB64);
                 if ($rFoto['success']) {
