@@ -169,18 +169,13 @@ class SaleController extends Controller
                 'nombre_completo' => $userEmpleado->nombre_completo,
                 'porcentaje_comision' => (float) $userEmpleado->porcentaje_comision,
             ];
+
+            if (!$empleados->contains('id', $userEmpleado->id)) {
+                $empleados->prepend($userEmpleado);
+            }
         }
 
-        $canChangeSeller = $user && (
-            $user->id === 1
-            || $user->hasRole('Super Administrador')
-            || $user->hasRole('super-admin')
-            || $user->hasRole('Super Admin')
-            || $user->hasRole('Administrador')
-            || $user->can('manage empleados')
-            || $user->can('administrar empleados')
-            || !$currentEmpleado
-        );
+        $canChangeSeller = true;
 
         return inertia('admin/PointOfSale/Ventas/Terminal', [
             'catalog' => $catalog,

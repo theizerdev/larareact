@@ -150,24 +150,14 @@ class SaleService
                 }
             }
 
-            // Cálculo de comisión para el empleado vendedor (si fue asignado)
+            // Asignación de empleado vendedor para la venta y sus comisiones
             $empleadoId = !empty($data['empleado_id']) ? (int) $data['empleado_id'] : null;
 
-            // Si el usuario es un vendedor (no admin), asociar automáticamente a su propio empleado
-            if ($userId) {
+            // Si no se asignó un empleado explícitamente, asociar por defecto al empleado del usuario autenticado
+            if (!$empleadoId && !array_key_exists('empleado_id', $data) && $userId) {
                 $user = User::find($userId);
                 if ($user && $user->empleado && $user->empleado->estado) {
-                    $isUserAdmin = $user->id === 1
-                        || $user->hasRole('Super Administrador')
-                        || $user->hasRole('super-admin')
-                        || $user->hasRole('Super Admin')
-                        || $user->hasRole('Administrador')
-                        || $user->can('manage empleados')
-                        || $user->can('administrar empleados');
-
-                    if (!$isUserAdmin) {
-                        $empleadoId = $user->empleado->id;
-                    }
+                    $empleadoId = $user->empleado->id;
                 }
             }
 

@@ -1058,9 +1058,9 @@ export default function Terminal({
             cart: [],
             clienteId: null,
             clienteNombre: 'Cliente General',
-            empleadoId: canChangeSeller ? ticket.empleadoId : initialEmpleadoId,
-            empleadoNombre: canChangeSeller ? ticket.empleadoNombre : initialEmpleadoNombre,
-            empleadoComision: canChangeSeller ? ticket.empleadoComision : initialEmpleadoComision,
+            empleadoId: ticket.empleadoId ?? initialEmpleadoId,
+            empleadoNombre: ticket.empleadoNombre || initialEmpleadoNombre,
+            empleadoComision: ticket.empleadoComision || initialEmpleadoComision,
             esCredito: false,
             descuento: 0,
         }));
@@ -1449,7 +1449,6 @@ export default function Terminal({
 
     // Employee / Seller selection
     const handleSelectEmpleado = (empleadoIdStr: string) => {
-        if (!canChangeSeller) return;
         if (empleadoIdStr === '0' || !empleadoIdStr) {
             updateActiveTicket((t) => ({ ...t, empleadoId: null, empleadoNombre: '', empleadoComision: 0 }));
             return;
@@ -1859,21 +1858,43 @@ export default function Terminal({
                                 )}
                             </div>
 
-                            {/* Indicador de Vendedor / Comisionista Asignado */}
-                            {activeTicket.empleadoId ? (
-                                <div className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-xs">
-                                    <Users className="w-3.5 h-3.5 text-emerald-500" />
-                                    <span className="font-semibold">{activeTicket.empleadoNombre}</span>
-                                    {activeTicket.empleadoComision > 0 && (
-                                        <span className="text-[10px] font-bold bg-emerald-200/60 dark:bg-emerald-800/60 px-1 rounded">
-                                            {activeTicket.empleadoComision}%
-                                        </span>
-                                    )}
-                                    {canChangeSeller && (
+                            {/* Selector Interactivo de Vendedor / Comisionista Asignado */}
+                            {empleados.length > 0 ? (
+                                <div className="flex items-center gap-1">
+                                    <Select
+                                        value={String(activeTicket.empleadoId || '0')}
+                                        onValueChange={handleSelectEmpleado}
+                                    >
+                                        <SelectTrigger className="h-7 text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 px-2.5 rounded-full font-medium shadow-none hover:bg-emerald-100/70 dark:hover:bg-emerald-900/60 transition-colors max-w-[210px]">
+                                            <Users className="w-3.5 h-3.5 mr-1 text-emerald-500 shrink-0" />
+                                            <span className="truncate">
+                                                {activeTicket.empleadoNombre || __('Seleccionar vendedor')}
+                                            </span>
+                                            {activeTicket.empleadoComision > 0 && (
+                                                <span className="ml-1 text-[10px] font-bold bg-emerald-200/60 dark:bg-emerald-800/60 px-1 rounded shrink-0">
+                                                    {activeTicket.empleadoComision}%
+                                                </span>
+                                            )}
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="0">{__('Sin vendedor asignado')}</SelectItem>
+                                            {empleados.map((emp) => {
+                                                const isCurrent = currentEmpleado && currentEmpleado.id === emp.id;
+                                                return (
+                                                    <SelectItem key={emp.id} value={String(emp.id)}>
+                                                        <span className="font-medium">{emp.nombre_completo}</span>
+                                                        {isCurrent ? <span className="ml-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-bold">({__('Tú')})</span> : null}
+                                                        {emp.porcentaje_comision ? ` · ${Number(emp.porcentaje_comision).toFixed(1)}%` : ''}
+                                                    </SelectItem>
+                                                );
+                                            })}
+                                        </SelectContent>
+                                    </Select>
+                                    {activeTicket.empleadoId && (
                                         <button
                                             type="button"
                                             onClick={() => updateActiveTicket((t) => ({ ...t, empleadoId: null, empleadoNombre: '', empleadoComision: 0 }))}
-                                            className="ml-1 text-muted-foreground hover:text-rose-500"
+                                            className="text-muted-foreground hover:text-rose-500 p-0.5 rounded transition-colors"
                                             title={__('Quitar vendedor')}
                                         >
                                             <X className="w-3 h-3" />
@@ -1881,24 +1902,11 @@ export default function Terminal({
                                     )}
                                 </div>
                             ) : (
-                                canChangeSeller && empleados.length > 0 && (
-                                    <Select
-                                        value={String(activeTicket.empleadoId || '0')}
-                                        onValueChange={handleSelectEmpleado}
-                                    >
-                                        <SelectTrigger className="h-6 text-xs bg-slate-100 dark:bg-slate-800 border-none px-2 rounded-full font-medium">
-                                            <Users className="w-3 h-3 mr-1 text-muted-foreground" />
-                                            <SelectValue placeholder={__('+ Vendedor')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="0">{__('Sin vendedor asignado')}</SelectItem>
-                                            {empleados.map((emp) => (
-                                                <SelectItem key={emp.id} value={String(emp.id)}>
-                                                    {emp.nombre_completo} {emp.porcentaje_comision ? `(${Number(emp.porcentaje_comision).toFixed(1)}%)` : ''}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                activeTicket.empleadoNombre && (
+                                    <div className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-xs">
+                                        <Users className="w-3.5 h-3.5 text-emerald-500" />
+                                        <span className="font-semibold">{activeTicket.empleadoNombre}</span>
+                                    </div>
                                 )
                             )}
 
@@ -2603,30 +2611,24 @@ export default function Terminal({
                                             </span>
                                         )}
                                     </div>
-                                    {canChangeSeller ? (
-                                        <Select value={String(activeTicket.empleadoId || '0')} onValueChange={handleSelectEmpleado}>
-                                            <SelectTrigger className="h-11 text-sm bg-white dark:bg-slate-900 border-emerald-500/20">
-                                                <SelectValue placeholder={__('Sin vendedor')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="0">{__('Sin vendedor asignado')}</SelectItem>
-                                                {empleados.map((e) => (
+                                    <Select value={String(activeTicket.empleadoId || '0')} onValueChange={handleSelectEmpleado}>
+                                        <SelectTrigger className="h-11 text-sm bg-white dark:bg-slate-900 border-emerald-500/20">
+                                            <SelectValue placeholder={__('Sin vendedor')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="0">{__('Sin vendedor asignado')}</SelectItem>
+                                            {empleados.map((e) => {
+                                                const isCurrent = currentEmpleado && currentEmpleado.id === e.id;
+                                                return (
                                                     <SelectItem key={e.id} value={String(e.id)}>
-                                                        {e.nombre_completo} {e.porcentaje_comision ? `(${Number(e.porcentaje_comision).toFixed(1)}%)` : ''}
+                                                        <span className="font-medium">{e.nombre_completo}</span>
+                                                        {isCurrent ? <span className="ml-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-bold">({__('Tú')})</span> : null}
+                                                        {e.porcentaje_comision ? ` (${Number(e.porcentaje_comision).toFixed(1)}%)` : ''}
                                                     </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    ) : (
-                                        <div className="h-11 px-3 rounded-lg border border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-950/40 flex items-center justify-between text-sm">
-                                            <span className="font-semibold text-emerald-800 dark:text-emerald-200 truncate">
-                                                {activeTicket.empleadoNombre || currentEmpleado?.nombre_completo || __('Vendedor')}
-                                            </span>
-                                            <Badge variant="outline" className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 shrink-0">
-                                                {activeTicket.empleadoComision > 0 ? `${activeTicket.empleadoComision}% com.` : __('Asignado')}
-                                            </Badge>
-                                        </div>
-                                    )}
+                                                );
+                                            })}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 {/* Venta a Crédito Toggle */}
