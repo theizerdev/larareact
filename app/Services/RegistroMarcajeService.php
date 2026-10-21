@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AsistenciaMarcaje;
 use App\Models\Empleado;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -21,6 +22,79 @@ class RegistroMarcajeService
 
     /** Tamaño máximo de la foto del marcaje ya decodificada. */
     public const FOTO_MAX_BYTES = 5 * 1024 * 1024;
+
+    /**
+     * Un marcaje que la app guardó sin conexión conserva la hora del teléfono
+     * sólo si llega dentro de este plazo. Más tarde se registra con la hora de
+     * recepción y queda anotado: el reloj del teléfono lo controla el
+     * trabajador, así que no se acepta cualquier hora.
+     */
+    public const MAX_ANTIGUEDAD_COLA_HORAS = 24;
+
+    /** Margen para teléfonos con el reloj ligeramente adelantado. */
+    public const TOLERANCIA_RELOJ_FUTURO_SEGUNDOS = 120;
+
+    /** `ubicacion_estado` que manda la app; la etiqueta es null cuando sí hubo ubicación. */
+    public const ESTADOS_UBICACION = [
+        'ok' => null,
+        'gpsApagado' => 'GPS apagado',
+        'permisoDenegado' => 'permiso de ubicación negado',
+        'permisoDenegadoSiempre' => 'permiso de ubicación bloqueado',
+        'sinSenal' => 'sin señal de GPS',
+    ];
+
+    /** Marcaje ya registrado con el mismo identificador de la app (reenvío). */
+    public function porUuidCliente(Empleado $empleado, ?string $uuid): ?AsistenciaMarcaje
+    {
+        if (blank($uuid)) {
+            return null;
+        }
+
+        return AsistenciaMarcaje::where('empleado_id', $empleado->id)
+            ->where('uuid_cliente', $uuid)
+            ->first();
+    }
+
+    /**
+     * Hora con que se registra un marcaje de la app y, si no se pudo respetar
+     * la del teléfono, la nota que lo explica.
+     *
+     * En línea manda el servidor. Desde la cola sin conexión se usa la hora en
+     * que la persona marcó, si es creíble (ni futura ni más vieja que
+     * MAX_ANTIGUEDAD_COLA_HORAS).
+     *
+     * @return array{0: Carbon, 1: ?string}
+     */
+    public function horaDeMarcaje(?string $fechaHoraDispositivo, bool $desdeCola): array
+    {
+        $ahora = Carbon::now();
+
+        if (! $desdeCola || blank($fechaHoraDispositivo)) {
+            return [$ahora, null];
+        }
+
+        $dispositivo = Carbon::parse($fechaHoraDispositivo)->setTimezone($ahora->getTimezone());
+        $limiteFuturo = $ahora->copy()->addSeconds(self::TOLERANCIA_RELOJ_FUTURO_SEGUNDOS);
+        $limitePasado = $ahora->copy()->subHours(self::MAX_ANTIGUEDAD_COLA_HORAS);
+
+        if ($dispositivo->greaterThan($limiteFuturo) || $dispositivo->lessThan($limitePasado)) {
+            return [$ahora, 'Enviado sin conexión: la hora del teléfono ('.$dispositivo->format('d/m/Y H:i')
+                .') está fuera de rango; se usó la hora de recepción.'];
+        }
+
+        return [$dispositivo, null];
+    }
+
+    /**
+     * Agrega notas de revisión a las observaciones sin pasar del límite de la
+     * columna (255).
+     */
+    public function anotarObservaciones(?string $observaciones, array $notas): ?string
+    {
+        $partes = array_values(array_filter([$observaciones, ...$notas], fn ($p) => filled($p)));
+
+        return $partes ? mb_substr(implode(' - ', $partes), 0, 255) : null;
+    }
 
     /**
      * Busca un empleado activo por código de acceso, documento, CURP, teléfono

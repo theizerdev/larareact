@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Console\ServeCommand;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -15,7 +16,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // `php artisan serve` sólo hereda las variables de esta lista. En Windows, sin TMP/TEMP
+        // el PHP del servidor cae a C:\Windows como carpeta temporal, no puede escribir y
+        // descarta los POST grandes (p. ej. las fotos del enrolamiento) con "POST data can't be buffered".
+        ServeCommand::$passthroughVariables = [...ServeCommand::$passthroughVariables, 'TMP', 'TEMP'];
     }
 
     /**

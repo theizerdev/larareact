@@ -36,6 +36,8 @@ class BiotimeEmpleado extends Model
         'enable_att',
         'photo_path',
         'photo_synced_at',
+        'foto_exportada',
+        'foto_exportada_at',
         'empleado_id',
         'link_status',
         'raw',
@@ -49,6 +51,7 @@ class BiotimeEmpleado extends Model
             'hire_date' => 'date',
             'birthday' => 'date',
             'photo_synced_at' => 'datetime',
+            'foto_exportada_at' => 'datetime',
             'enable_att' => 'boolean',
         ];
     }

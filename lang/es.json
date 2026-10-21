@@ -1998,5 +1998,20 @@
   "Adjust the filters or run a sync to pull leaves from BioTime.": "Ajusta los filtros o sincroniza para traer los permisos de BioTime.",
   "From": "Desde",
   "To": "Hasta",
-  "Total": "Total"
+  "Total": "Total",
+  "Send employee changes to BioTime": "Enviar a BioTime los cambios de Colaboradores",
+  "Employees created or edited in Organization are registered or updated in BioTime and reach the clocks of the chosen area. Nothing is deleted in BioTime.": "Los colaboradores que se crean o editan en Organización se dan de alta o se actualizan en BioTime y llegan a los relojes del área elegida. En BioTime no se borra nada.",
+  "BioTime area for new employees": "Área de BioTime para colaboradores nuevos",
+  "Select an area": "Selecciona un área",
+  "Run a sync first so the BioTime areas appear here.": "Sincroniza primero para que aparezcan aquí las áreas de BioTime.",
+  "Stored encrypted. Leave blank to keep the saved one.": "Almacenada encriptada. Dejar en blanco para mantener la guardada.",
+  "Export bio-photos": "Exportar bio-photos",
+  "JPG files of up to 25 KB named with the employee number, for BioTime › Device › Data › Bio-Photo › Import Bio-Photo.": "Archivos JPG de hasta 25 KB nombrados con el número de empleado, para BioTime › Dispositivo › Datos › Bio-Photo › Importar Bio-Photo.",
+  "Only photos that are new or changed since the last ZIP. JPG files of up to 25 KB named with the employee number, for BioTime › Device › Data › Bio-Photo › Import Bio-Photo.": "Sólo las fotos nuevas o cambiadas desde el último ZIP. Archivos JPG de hasta 25 KB nombrados con el número de empleado, para BioTime › Dispositivo › Datos › Bio-Photo › Importar Bio-Photo.",
+  "Export pending photos": "Exportar fotos pendientes",
+  "Export all": "Exportar todas",
+  "All photos of linked employees, including those already exported.": "Todas las fotos de los colaboradores vinculados, incluidas las ya exportadas.",
+  "Photos pending for BioTime": "Fotos pendientes para BioTime",
+  "Photo pending": "Foto pendiente",
+  "The photo has not been exported to BioTime yet.": "La foto aún no se ha exportado a BioTime."
 }

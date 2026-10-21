@@ -30,6 +30,8 @@ use Illuminate\Support\Str;
  *   y un correo para definir su contraseña. Nadie conoce la inicial.
  *
  * No borra ni desactiva a nadie y no toca fotos (la API no las expone).
+ *
+ * El sentido contrario (de Colaboradores hacia BioTime) es BioTimeEmpleadoPusher.
  */
 class BioTimeEmpleadoProvisioner
 {
@@ -41,6 +43,7 @@ class BioTimeEmpleadoProvisioner
         'telefono' => 'mobile',
         'correo' => 'email',
         'genero' => 'gender',
+        'fecha_nacimiento' => 'birthday',
         'fecha_ingreso' => 'hire_date',
         'departamento_id' => 'dept_code',
         'cargo_id' => 'position_code',
@@ -60,7 +63,13 @@ class BioTimeEmpleadoProvisioner
         ?Sucursal $sucursal = null,
         ?User $usuario = null,
     ): array {
-        $res = ['creados' => 0, 'actualizados' => 0, 'cuentas' => 0, 'omitidos' => [], 'sin_cuenta' => [], 'nuevos' => []];
+        // Lo que se escribe aquí ya viene de BioTime: no se devuelve allá.
+        return BioTimeEmpleadoPusher::sinEnviar(fn () => $this->sincronizarDesdeBioTime($empresa, $cambios, $dryRun, $sucursal, $usuario));
+    }
+
+    private function sincronizarDesdeBioTime(Empresa $empresa, array $cambios, bool $dryRun, ?Sucursal $sucursal, ?User $usuario): array
+    {
+        $res =['creados' => 0, 'actualizados' => 0, 'cuentas' => 0, 'omitidos' => [], 'sin_cuenta' => [], 'nuevos' => []];
 
         $bios = BiotimeEmpleado::query()
             ->where('empresa_id', $empresa->id)
@@ -211,6 +220,7 @@ class BioTimeEmpleadoProvisioner
             'telefono' => $bio->mobile,
             'correo' => $bio->email,
             'genero' => $this->genero($bio->gender),
+            'fecha_nacimiento' => $bio->birthday?->toDateString(),
             'fecha_ingreso' => $bio->hire_date?->toDateString(),
             'departamento_id' => $departamento?->id,
             'cargo_id' => $this->cargo($cargos[$bio->position_code] ?? null, $departamento, $empresa, $sucursal, $usuario)?->id,
@@ -249,6 +259,7 @@ class BioTimeEmpleadoProvisioner
         foreach (self::CAMPOS as $columna => $origen) {
             $valor = match ($columna) {
                 'genero' => $this->genero($bio->gender),
+                'fecha_nacimiento' => $bio->birthday?->toDateString(),
                 'fecha_ingreso' => $bio->hire_date?->toDateString(),
                 'departamento_id' => $departamento?->id,
                 'cargo_id' => $puedeCatalogar && $departamentoCargo ? $this->cargo($cargos[$bio->position_code] ?? null, $departamentoCargo, $empresa, $sucursal, $usuario)?->id : null,

@@ -22,6 +22,10 @@ class Empleado extends Model
                 $empleado->codigo_acceso = \App\Services\AccessCodeService::generate('empleado', $empleado->sucursal_id);
             }
         });
+
+        // Los cambios hechos aquí llegan a BioTime en las empresas que lo activaron.
+        static::created(fn ($empleado) => \App\Services\BioTimeEmpleadoPusher::programar($empleado, nuevo: true));
+        static::updated(fn ($empleado) => \App\Services\BioTimeEmpleadoPusher::programar($empleado));
     }
 
     public function getActivitylogOptions(): LogOptions
@@ -38,6 +42,7 @@ class Empleado extends Model
                 'telefono',
                 'correo',
                 'genero',
+                'fecha_nacimiento',
                 'departamento_id',
                 'responsable_id',
                 'jornada_laboral',
@@ -49,6 +54,7 @@ class Empleado extends Model
                 'status',
                 'permite_app_movil',
                 'intervalo_geolocalizacion_minutos',
+                'enrolado_en',
             ])
             ->logOnlyDirty()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
@@ -67,6 +73,7 @@ class Empleado extends Model
         'telefono',
         'correo',
         'genero',
+        'fecha_nacimiento',
         'departamento_id',
         'responsable_id',
         'cargo_id',
@@ -87,6 +94,7 @@ class Empleado extends Model
         'intervalo_geolocalizacion_minutos',
         'kyc_estatus',
         'kyc_validado_en',
+        'enrolado_en',
     ];
 
     protected function casts(): array
@@ -97,6 +105,8 @@ class Empleado extends Model
             'intervalo_geolocalizacion_minutos' => 'integer',
             'jornada_laboral' => 'array',
             'fecha_ingreso' => 'date:Y-m-d',
+            'fecha_nacimiento' => 'date:Y-m-d',
+            'enrolado_en' => 'datetime',
             'salario_diario' => 'decimal:2',
             'kyc_validado_en' => 'datetime',
         ];

@@ -28,9 +28,11 @@ import {
     Smartphone,
     MapPin,
     Clock,
+    ScanFace,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { CameraWidget } from '@/components/admin/empleados/CameraWidget';
 import { ImportWizardModal } from '@/components/admin/empleados/ImportWizardModal';
 import { validarCurp } from '@/utils/curpValidator';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
@@ -112,8 +114,8 @@ interface Responsable {
     id: number;
     nombres: string;
     apellidos: string;
-    departamento_id: number;
-    cargo_id: number;
+    departamento_id: number | null;
+    cargo_id: number | null;
     cargo?: {
         id: number;
         nombre: string;
@@ -141,6 +143,8 @@ interface Empleado {
     correo?: string | null;
     genero?: string | null;
     fecha_ingreso?: string | null;
+    fecha_nacimiento?: string | null;
+    enrolado_en?: string | null;
     departamento_id: number;
     responsable_id?: number | null;
     cargo_id?: number | null;
@@ -220,6 +224,7 @@ const initialForm = {
     correo: '',
     genero: '',
     fecha_ingreso: '',
+    fecha_nacimiento: '',
     departamento_id: '' as string | number,
     responsable_id: '' as string | number,
     cargo_id: '' as string | number,
@@ -237,131 +242,8 @@ const initialForm = {
     intervalo_geolocalizacion_minutos: 15,
 };
 
-// ─── Componente de Captura de Cámara Integrado ───────────────────────────────
-
-interface CameraWidgetProps {
-    onCapture: (base64Data: string) => void;
-    onCancel: () => void;
-}
-
-function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
-    const { __ } = useTranslate();
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const [stream, setStream] = useState<MediaStream | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [captured, setCaptured] = useState<string | null>(null);
-
-    const startCamera = async () => {
-        setError(null);
-        setCaptured(null);
-        try {
-            const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { width: 640, height: 480, facingMode: 'user' }
-            });
-            setStream(mediaStream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = mediaStream;
-            }
-        } catch (err) {
-            console.error(err);
-            setError(__('No webcam access or camera not found'));
-        }
-    };
-
-    const stopCamera = () => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            setStream(null);
-        }
-    };
-
-    const capture = () => {
-        if (videoRef.current) {
-            const canvas = document.createElement('canvas');
-            canvas.width = videoRef.current.videoWidth || 640;
-            canvas.height = videoRef.current.videoHeight || 480;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-                const base64 = canvas.toDataURL('image/jpeg');
-                setCaptured(base64);
-                stopCamera();
-            }
-        }
-    };
-
-    useEffect(() => {
-        startCamera();
-        return () => stopCamera();
-    }, []);
-
-    return (
-        <div className="border border-slate-200 dark:border-slate-800 rounded-lg p-4 bg-slate-50 dark:bg-slate-900/40 flex flex-col items-center gap-3">
-            {error && (
-                <div className="text-red-500 flex flex-col items-center gap-2 text-center text-sm py-4">
-                    <ShieldAlert className="w-8 h-8" />
-                    <span>{error}</span>
-                </div>
-            )}
-
-            {!error && !captured && (
-                <div className="relative w-full max-w-[320px] aspect-[4/3] bg-black rounded-md overflow-hidden border">
-                    <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="w-full h-full object-cover scale-x-[-1]"
-                    />
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
-                        <Button
-                            type="button"
-                            size="sm"
-                            onClick={capture}
-                            className="bg-primary text-primary-foreground shadow-md flex items-center gap-1.5"
-                        >
-                            <Camera className="w-4 h-4" />
-                            {__('Capture Snapshot')}
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {captured && (
-                <div className="flex flex-col items-center gap-3 w-full">
-                    <div className="w-full max-w-[320px] aspect-[4/3] rounded-md overflow-hidden border">
-                        <img src={captured} alt="Captured preview" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => startCamera()}
-                            className="flex items-center gap-1"
-                        >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            {__('Retake')}
-                        </Button>
-                        <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => onCapture(captured)}
-                            className="flex items-center gap-1"
-                        >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            {__('Save')}
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            <Button type="button" variant="ghost" size="xs" onClick={onCancel} className="text-muted-foreground mt-1">
-                {__('Cancel')}
-            </Button>
-        </div>
-    );
-}
+/** Botones Importar Excel, Pre-registro y Nuevo empleado: ocultos mientras las altas vengan de BioTime. */
+const MOSTRAR_ALTA_MANUAL = false;
 
 // ─── Página principal ──────────────────────────────────────────────────────────
 
@@ -474,7 +356,8 @@ export default function EmpleadosIndexPage({
     // ── Filtro de dependencias según selección ──────────────────────────────────
     const filteredSucursales = sucursales.filter(s => s.empresa_id === Number(data.empresa_id));
     const filteredDepartamentos = departamentos.filter(d => d.empresa_id === Number(data.empresa_id) && d.sucursal_id === Number(data.sucursal_id));
-    const filteredResponsables = responsables.filter(r => r.departamento_id === Number(data.departamento_id));
+    // Un responsable sin departamento es general: se ofrece en cualquier departamento.
+    const filteredResponsables = responsables.filter(r => r.departamento_id == null || r.departamento_id === Number(data.departamento_id));
     const filteredCargos = cargos.filter(c => c.departamento_id === Number(data.departamento_id));
 
     // Obtener información del responsable seleccionado
@@ -570,6 +453,7 @@ export default function EmpleadosIndexPage({
             correo: emp.correo || '',
             genero: emp.genero || '',
             fecha_ingreso: emp.fecha_ingreso || '',
+            fecha_nacimiento: emp.fecha_nacimiento || '',
             departamento_id: emp.departamento_id || '',
             responsable_id: emp.responsable_id || '',
             cargo_id: emp.cargo_id || '',
@@ -703,6 +587,15 @@ export default function EmpleadosIndexPage({
                                 </span>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs tracking-wider border border-indigo-500/20" title="Código de Empleado 6 Dígitos">
                                     N° EMP: {emp.documento_identidad || 'N/A'}
+                                </span>
+                                <span className={cn(
+                                    'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border',
+                                    emp.enrolado_en
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900'
+                                        : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900'
+                                )}>
+                                    <ScanFace className="w-3 h-3" />
+                                    {emp.enrolado_en ? __('Enrolado') : __('Sin enrolar')}
                                 </span>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px] border border-slate-200 dark:border-slate-700" title="Tarjetas de Acceso">
                                     T1: {emp.tarjeta_acceso_1 || '0'} | T2: {emp.tarjeta_acceso_2 || '0'} | T3: {emp.tarjeta_acceso_3 || '0'}
@@ -845,6 +738,10 @@ export default function EmpleadosIndexPage({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/enrolamiento`)}>
+                            <ScanFace className="mr-2 h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                            {emp.enrolado_en ? __('Repetir enrolamiento') : __('Enrolar')}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEditClick(emp)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             {__('Edit')}
@@ -891,6 +788,8 @@ export default function EmpleadosIndexPage({
                     description={__('Manage employees, their departments, responsibles, contact info and photos.')}
                     colorClassName="bg-indigo-600"
                 >
+                    {/* Las altas llegan de BioTime; el enrolamiento se hace por colaborador (menú de cada fila). */}
+                    {MOSTRAR_ALTA_MANUAL && (
                     <div className="flex items-center gap-2">
                         <Button
                             type="button"
@@ -915,6 +814,7 @@ export default function EmpleadosIndexPage({
                             {__('New Employee')}
                         </Button>
                     </div>
+                    )}
                 </ModuleHeader>
 
                 {/* Tarjetas Estadísticas */}
@@ -1210,6 +1110,20 @@ export default function EmpleadosIndexPage({
                                         </Select>
                                         {errors.genero && (
                                             <p className="text-red-500 text-xs mt-1">{errors.genero}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Fecha de nacimiento */}
+                                    <div>
+                                        <Label htmlFor="fecha_nacimiento">{__('Fecha de nacimiento')}</Label>
+                                        <Input
+                                            id="fecha_nacimiento"
+                                            type="date"
+                                            value={data.fecha_nacimiento || ''}
+                                            onChange={(e) => setData('fecha_nacimiento', e.target.value)}
+                                        />
+                                        {errors.fecha_nacimiento && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.fecha_nacimiento}</p>
                                         )}
                                     </div>
 

@@ -9,16 +9,17 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Cliente HTTP de SOLO LECTURA contra la API REST de BioTime Cloud
- * (ZKTeco; misma API REST que BioTime 8.x).
+ * Cliente HTTP contra la API REST de BioTime Cloud (ZKTeco; misma API REST
+ * que BioTime 8.x).
  *
  * - Autenticación: POST /jwt-api-token-auth/ -> {token}. BioTime local pide
  *   {username,password}; BioTime Cloud pide {company,email,password}.
  *   y luego header `Authorization: JWT <token>` en cada petición.
  * - Todos los listados devuelven el sobre {count,next,previous,msg,code,data:[...]}
  *   y aceptan ?page=&limit=.
- * - Este servicio NO implementa ningún método de escritura (create/update/
- *   delete/command). Solo GET + el POST de login.
+ * - La única escritura es alta y edición de empleados (POST / PATCH en
+ *   /personnel/api/employees/), que usa BioTimeEmpleadoPusher sólo en las
+ *   empresas con biotime_push. No borra empleados ni manda comandos al reloj.
  *
  * Modelado sobre App\Services\ControlAccesoService.
  */
@@ -417,6 +418,109 @@ class BioTimeService
         }
 
         return ['success' => false, 'body' => null, 'content_type' => null];
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Escritura de empleados                                             */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Empleado por emp_code exacto. El filtro de BioTime puede traer
+     * coincidencias parciales, por eso se compara aquí.
+     *
+     * @return array{success: bool, data: array<string,mixed>|null, error: string|null, status: int|null}
+     */
+    public function findEmployeeByCode(string $empCode): array
+    {
+        $res = $this->get('/personnel/api/employees/', ['emp_code' => $empCode, 'page' => 1]);
+
+        if (! $res['success']) {
+            return ['success' => false, 'data' => null, 'error' => $res['error'], 'status' => $res['status']];
+        }
+
+        $rows = $res['data']['data'] ?? $res['data']['results'] ?? [];
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            if ((string) ($row['emp_code'] ?? '') === $empCode) {
+                return ['success' => true, 'data' => $row, 'error' => null, 'status' => $res['status']];
+            }
+        }
+
+        return ['success' => true, 'data' => null, 'error' => null, 'status' => $res['status']];
+    }
+
+    /**
+     * Alta. BioTime exige emp_code, department (id) y area (lista de ids).
+     *
+     * @return array{success: bool, data: mixed, error: string|null, status: int|null}
+     */
+    public function createEmployee(array $payload): array
+    {
+        return $this->send('post', '/personnel/api/employees/', $payload);
+    }
+
+    /**
+     * Edición parcial: sólo cambia los campos enviados.
+     *
+     * @return array{success: bool, data: mixed, error: string|null, status: int|null}
+     */
+    public function updateEmployee(string $biotimeId, array $payload): array
+    {
+        return $this->send('patch', '/personnel/api/employees/'.rawurlencode($biotimeId).'/', $payload);
+    }
+
+    /**
+     * POST / PATCH JSON con el mismo manejo de errores que get(). Un 400 trae
+     * en el cuerpo el motivo por campo ({"emp_code": ["..."]}); se devuelve
+     * tal cual para que quien lo vea sepa qué corregir.
+     *
+     * @return array{success: bool, data: mixed, error: string|null, status: int|null}
+     */
+    private function send(string $method, string $path, array $payload, bool $retriedAfterAuth = false): array
+    {
+        try {
+            $token = $this->authenticate();
+
+            $response = $this->baseClient()
+                ->asJson()
+                ->withHeaders(['Authorization' => 'JWT '.$token, 'Accept' => 'application/json'])
+                ->{$method}($this->url($path), $payload);
+
+            if ($response->status() === 401 && ! $retriedAfterAuth) {
+                $this->authenticate(force: true);
+
+                return $this->send($method, $path, $payload, retriedAfterAuth: true);
+            }
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json(), 'error' => null, 'status' => $response->status()];
+            }
+
+            Log::channel('biotime')->warning('BioTime escritura rechazada', [
+                'company_id' => $this->companyId,
+                'method' => strtoupper($method),
+                'path' => $path,
+                'status' => $response->status(),
+                'body' => mb_substr($response->body(), 0, 1000),
+            ]);
+
+            $detalle = mb_substr(trim($response->body()), 0, 300);
+
+            return [
+                'success' => false,
+                'data' => $response->json(),
+                'error' => 'BioTime rechazó el cambio (HTTP '.$response->status().')'.($detalle !== '' ? ': '.$detalle : '.'),
+                'status' => $response->status(),
+            ];
+        } catch (ConnectionException $e) {
+            Log::channel('biotime')->error('BioTime inalcanzable: '.$e->getMessage(), [
+                'company_id' => $this->companyId,
+                'path' => $path,
+            ]);
+
+            return ['success' => false, 'data' => null, 'error' => 'No se pudo contactar a BioTime. Revisa la URL o la red.', 'status' => null];
+        } catch (\RuntimeException $e) {
+            return ['success' => false, 'data' => null, 'error' => $e->getMessage(), 'status' => null];
+        }
     }
 
     /* ------------------------------------------------------------------ */

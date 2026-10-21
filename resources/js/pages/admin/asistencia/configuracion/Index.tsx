@@ -41,7 +41,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { notifySuccess } from '@/utils/notifications';
+import { notifyError, notifySuccess } from '@/utils/notifications';
 
 interface ConfiguracionAsistencia {
     id: number;
@@ -52,6 +52,7 @@ interface ConfiguracionAsistencia {
     horas_extra_requieren_aprobacion: boolean;
     porcentaje_prima_dominical: string;
     requiere_foto_marcaje: boolean;
+    requiere_ubicacion_marcaje?: boolean;
     redondeo_marcaje_minutos: number;
     ley_silla_intervalo_horas?: string | number;
     ley_silla_descanso_minutos?: number;
@@ -167,6 +168,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
         horas_extra_requieren_aprobacion: configuracion?.horas_extra_requieren_aprobacion ?? true,
         porcentaje_prima_dominical: configuracion?.porcentaje_prima_dominical ?? '25.00',
         requiere_foto_marcaje: configuracion?.requiere_foto_marcaje ?? false,
+        requiere_ubicacion_marcaje: configuracion?.requiere_ubicacion_marcaje ?? false,
         redondeo_marcaje_minutos: configuracion?.redondeo_marcaje_minutos ?? 0,
         ley_silla_intervalo_horas: configuracion?.ley_silla_intervalo_horas ?? '2.00',
         ley_silla_descanso_minutos: configuracion?.ley_silla_descanso_minutos ?? 5,
@@ -221,6 +223,8 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
         configForm.put('/admin/asistencia/configuracion', {
             preserveScroll: true,
             onSuccess: () => notifySuccess('Configuración guardada correctamente.'),
+            // Algunos errores (p. ej. de la lista de comidas) no tienen campo visible: se avisan aquí para que el guardado no falle en silencio.
+            onError: (errors) => notifyError(Object.values(errors)[0] ?? 'No se pudo guardar la configuración.'),
         });
     };
 
@@ -490,6 +494,17 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                             <Switch
                                                 checked={configForm.data.requiere_foto_marcaje}
                                                 onCheckedChange={(checked) => configForm.setData('requiere_foto_marcaje', checked)}
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-2 border-t">
+                                            <div className="space-y-0.5">
+                                                <Label>Requiere Ubicación en la App</Label>
+                                                <p className="text-xs text-muted-foreground">No permite marcar desde la app móvil sin GPS. Si está apagado, se permite y el marcaje queda señalado.</p>
+                                            </div>
+                                            <Switch
+                                                checked={configForm.data.requiere_ubicacion_marcaje}
+                                                onCheckedChange={(checked) => configForm.setData('requiere_ubicacion_marcaje', checked)}
                                             />
                                         </div>
                                     </CardContent>

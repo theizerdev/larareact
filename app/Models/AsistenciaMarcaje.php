@@ -50,6 +50,14 @@ class AsistenciaMarcaje extends Model
         'comida_costo',
         'geolocalizacion',
         'tipo_entrada',
+        // Evidencia de la app móvil
+        'uuid_cliente',
+        'fecha_hora_dispositivo',
+        'enviado_desde_cola',
+        'precision_metros',
+        'ubicacion_simulada',
+        'ubicacion_estado',
+        'ubicacion_fecha_hora',
     ];
 
     protected $appends = [
@@ -96,8 +104,13 @@ class AsistenciaMarcaje extends Model
     {
         return [
             'fecha_hora' => 'datetime',
+            'fecha_hora_dispositivo' => 'datetime',
+            'enviado_desde_cola' => 'boolean',
             'latitud' => 'decimal:7',
             'longitud' => 'decimal:7',
+            'precision_metros' => 'decimal:1',
+            'ubicacion_simulada' => 'boolean',
+            'ubicacion_fecha_hora' => 'datetime',
             'comida_costo' => 'decimal:2',
         ];
     }

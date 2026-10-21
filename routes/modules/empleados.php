@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\EmpleadoController;
+use App\Http\Controllers\Admin\EmpleadoEnrolamientoController;
 
 Route::middleware(['permission:empleados.view'])->group(function () {
     Route::get('/empleados', [EmpleadoController::class, 'index'])->name('empleados.index');
@@ -25,6 +26,8 @@ Route::middleware(['permission:empleados.edit'])->group(function () {
     Route::put('/empleados/{empleado}', [EmpleadoController::class, 'update'])->name('empleados.update');
     Route::patch('/empleados/{empleado}/toggle-status', [EmpleadoController::class, 'toggleStatus'])->name('empleados.toggle-status');
     Route::patch('/empleados/{empleado}/toggle-app-movil', [EmpleadoController::class, 'toggleAppMovil'])->name('empleados.toggle-app-movil');
+    Route::get('/empleados/{empleado}/enrolamiento', [EmpleadoEnrolamientoController::class, 'show'])->name('empleados.enrolamiento');
+    Route::post('/empleados/{empleado}/enrolamiento', [EmpleadoEnrolamientoController::class, 'store'])->name('empleados.enrolamiento.store');
 });
 
 Route::middleware(['permission:empleados.delete'])->group(function () {

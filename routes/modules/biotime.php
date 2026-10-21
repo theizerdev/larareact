@@ -19,5 +19,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/biotime/sync', [BioTimeController::class, 'syncNow'])->name('biotime.sync');
         Route::post('/biotime/empleados/auto-vincular', [BioTimeController::class, 'autoVincular'])->name('biotime.empleados.auto-vincular');
         Route::put('/biotime/empleados/{biotimeEmpleado}/vincular', [BioTimeController::class, 'vincular'])->name('biotime.empleados.vincular');
+        Route::get('/biotime/fotos/exportar', [BioTimeController::class, 'exportarFotos'])->name('biotime.fotos.exportar');
     });
 });

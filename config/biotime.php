@@ -3,16 +3,28 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | BioTime Cloud (ZKTeco) — integración de solo lectura
+    | BioTime Cloud (ZKTeco)
     |--------------------------------------------------------------------------
     |
     | La URL, usuario y contraseña de cada instancia se guardan por empresa
     | (columnas biotime_* en la tabla empresas). Aquí sólo viven los
     | parámetros de comportamiento del cliente HTTP y del sincronizador.
     |
-    | El cliente NUNCA escribe en BioTime: sólo hace GET a la API REST y el
-    | POST de login (/jwt-api-token-auth/).
+    | El sync es de lectura. La única escritura es el alta / edición de
+    | empleados desde Colaboradores, y sólo en empresas con biotime_push.
     */
+
+    // Números de empleado que se aceptan como emp_code al dar de alta en
+    // BioTime. Muchos relojes ZKTeco sólo aceptan IDs numéricos de hasta 9
+    // dígitos; súbelo sólo si todos los relojes de la empresa aceptan más.
+    'emp_code_pattern' => env('BIOTIME_EMP_CODE_PATTERN', '/^\d{1,9}$/'),
+
+    // Bio-photo para los relojes de rostro con luz visible: BioTime sólo
+    // importa JPG de hasta 25 KB nombrados con el número de empleado.
+    'foto_max_kb' => (int) env('BIOTIME_FOTO_MAX_KB', 25),
+
+    // Lado mayor (px) con el que se intenta primero; se reduce si no cabe en foto_max_kb.
+    'foto_max_lado' => (int) env('BIOTIME_FOTO_MAX_LADO', 640),
 
     // Segundos de espera por request contra la API de BioTime.
     'timeout' => (int) env('BIOTIME_TIMEOUT', 20),

@@ -29,6 +29,7 @@ class AsistenciaConfiguracionController extends Controller
                 'horas_extra_requieren_aprobacion' => true,
                 'porcentaje_prima_dominical' => 25.00,
                 'requiere_foto_marcaje' => false,
+                'requiere_ubicacion_marcaje' => false,
                 'redondeo_marcaje_minutos' => 0,
             ]
         );
@@ -67,6 +68,7 @@ class AsistenciaConfiguracionController extends Controller
             'horas_extra_requieren_aprobacion' => 'required|boolean',
             'porcentaje_prima_dominical' => 'required|numeric|min:0|max:100',
             'requiere_foto_marcaje' => 'required|boolean',
+            'requiere_ubicacion_marcaje' => 'nullable|boolean',
             'redondeo_marcaje_minutos' => 'required|integer|in:0,5,10,15',
             'ley_silla_intervalo_horas' => 'nullable|numeric|min:0.5|max:12',
             'ley_silla_descanso_minutos' => 'nullable|integer|min:1|max:60',
@@ -94,7 +96,8 @@ class AsistenciaConfiguracionController extends Controller
             'notif_dg_email' => 'nullable|email|max:150',
             'notif_dg_enabled' => 'nullable|boolean',
             // Tipos de comida del kiosko (INICIO COMIDA)
-            'opciones_comida' => 'nullable|array|size:3',
+            // La pantalla envía las opciones del catálogo de comedor, que puede tener cualquier cantidad.
+            'opciones_comida' => 'nullable|array|min:1|max:20',
             'opciones_comida.*.nombre' => 'required|string|max:60',
             'opciones_comida.*.costo' => 'required|numeric|min:0|max:99999',
         ], [], [

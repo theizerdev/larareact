@@ -11,6 +11,7 @@ use App\Models\BiotimeMarcaje;
 use App\Models\BiotimePermiso;
 use App\Models\BiotimeTurno;
 use App\Models\Empleado;
+use App\Services\BioTimeFotoService;
 use App\Services\BioTimeService;
 use App\Services\BioTimeSyncService;
 use Illuminate\Http\RedirectResponse;
@@ -19,8 +20,10 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Pantallas de solo lectura del espejo de BioTime Cloud.
@@ -59,12 +62,12 @@ class BioTimeController extends Controller
     /*  Empleados de BioTime + vínculo con empleados de Hoshō              */
     /* ------------------------------------------------------------------ */
 
-    public function empleados(Request $request)
+    public function empleados(Request $request, BioTimeFotoService $fotos)
     {
         $empresaId = $this->empresaId($request);
 
         $empleados = BiotimeEmpleado::query()
-            ->with('empleado:id,nombres,apellidos,documento_identidad')
+            ->with('empleado:id,nombres,apellidos,documento_identidad,foto_empleado')
             ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
             ->when($request->search, function ($q, $search) {
                 $q->where(function ($sub) use ($search) {
@@ -83,6 +86,8 @@ class BioTimeController extends Controller
             'total' => BiotimeEmpleado::when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))->count(),
             'vinculados' => BiotimeEmpleado::when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))->whereNotNull('empleado_id')->count(),
             'sin_vincular' => BiotimeEmpleado::when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))->whereNull('empleado_id')->count(),
+            // El ZIP se arma con la empresa del usuario; sin empresa no hay qué contar.
+            'fotos_pendientes' => $request->user()?->empresa ? $fotos->pendientes($request->user()->empresa) : 0,
         ];
 
         return Inertia::render('admin/biotime/Empleados', [
@@ -382,6 +387,26 @@ class BioTimeController extends Controller
     }
 
     /* ------------------------------------------------------------------ */
+
+    /**
+     * ZIP de bio-photos (123.jpg, ≤ 25 KB) para BioTime › Dispositivo › Datos
+     * › Bio-Photo › Importar Bio-Photo. Por defecto sólo las fotos nuevas o
+     * cambiadas desde el último ZIP; ?todas=1 vuelve a sacar todas.
+     */
+    public function exportarFotos(Request $request, BioTimeFotoService $fotos): BinaryFileResponse|RedirectResponse
+    {
+        $empresa = $request->user()?->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', ['type' => 'error', 'message' => __('No active company associated with your user.')]);
+        }
+
+        // En storage y no con tempnam(): en Windows cae al temp del sistema con un aviso que Laravel vuelve excepción.
+        $destino = storage_path('app/biotime-fotos-'.Str::random(16).'.zip');
+        $fotos->exportarZip($empresa, $destino, soloPendientes: ! $request->boolean('todas'));
+
+        return response()->download($destino, 'biotime-bio-photos.zip', ['Content-Type' => 'application/zip'])->deleteFileAfterSend();
+    }
 
     private function authorizeEmpresa(Request $request, ?int $empresaId): void
     {

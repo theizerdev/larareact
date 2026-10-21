@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { 
     ShieldCheck, 
     UserCheck, 
@@ -14,8 +14,10 @@ import {
     Clock,
     CheckCircle2, 
     AlertCircle, 
-    Camera, 
-    Delete, 
+    Camera,
+    CameraOff,
+    Keyboard,
+    Delete,
     ArrowLeft,
     QrCode,
     Scan,
@@ -33,6 +35,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import ClientLogo from '@/components/client-logo';
+import { TemplateSettingsProvider } from '@/hooks/use-template-settings';
 
 interface Configuracion {
     requiere_foto_marcaje?: boolean;
@@ -68,9 +71,10 @@ interface EmpleadoFound {
     departamento?: string;
     cargo?: string;
     turno?: string;
+    ultimo_marcaje_tipo?: string | null;
 }
 
-export default function RelojChecadorKiosko({ configuracion, zona_horaria, opciones_comida = [] }: Props) {
+function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: Props) {
     // Reloj digital en tiempo real (usa la zona horaria de la empresa/sucursal o America/Mexico_City por defecto)
     const tz = zona_horaria || 'America/Mexico_City';
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -145,17 +149,27 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
         );
     }, []);
 
-    // Cámara de evidencia de marcaje
-    const videoRef = useRef<HTMLVideoElement | null>(null);
+    // Modo de identificación: por defecto el colaborador ingresa su número de empleado en el numpad;
+    // el escáner de gafete QR con la cámara es la segunda opción.
+    const [modoEntrada, setModoEntrada] = useState<'camara' | 'manual'>('manual');
+    const [facingMode, setFacingMode] = useState<'environment' | 'user'>('user');
     const [cameraActive, setCameraActive] = useState(false);
+    const [cameraError, setCameraError] = useState<string | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
 
-    // Estado y refs para Escáner QR de Gafete por Cámara
-    const [qrModalOpen, setQrModalOpen] = useState(false);
-    const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
-    const qrVideoRef = useRef<HTMLVideoElement | null>(null);
-    const qrStreamRef = useRef<MediaStream | null>(null);
-    const [qrScanning, setQrScanning] = useState(false);
-    const [qrDetectedNotice, setQrDetectedNotice] = useState<string | null>(null);
+    // Un solo stream de cámara sirve para escanear y para la foto de evidencia. El <video> se muestra
+    // grande (escáner) o pequeño (evidencia en modo manual); al cambiar de lugar se reconecta al stream.
+    const attachVideo = useCallback((el: HTMLVideoElement | null) => {
+        videoRef.current = el;
+        if (el && streamRef.current && el.srcObject !== streamRef.current) {
+            el.srcObject = streamRef.current;
+            el.play().catch(() => {});
+        }
+    }, []);
+
+    // Último código leído, para no repetir la búsqueda mientras el mismo gafete sigue frente a la cámara.
+    const ultimoCodigoRef = useRef<{ codigo: string; at: number } | null>(null);
 
     // Modales para Descansos e Incidentes
     const [isDescansoModalOpen, setIsDescansoModalOpen] = useState(false);
@@ -184,43 +198,66 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
         }
     };
 
-    useEffect(() => {
-        let streamTrack: MediaStream | null = null;
-        if (configuracion?.requiere_foto_marcaje) {
-            if (!navigator?.mediaDevices?.getUserMedia) {
-                console.warn('Cámara de evidencia: navigator.mediaDevices no disponible (requiere HTTPS o no hay cámara detectada).');
-                setCameraActive(false);
-                return;
-            }
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then((stream) => {
-                    streamTrack = stream;
-                    if (videoRef.current) {
-                        videoRef.current.srcObject = stream;
-                        setCameraActive(true);
-                    }
-                })
-                .catch(() => setCameraActive(false));
-        }
-        return () => {
-            if (streamTrack) {
-                streamTrack.getTracks().forEach(t => t.stop());
-            }
-        };
-    }, [configuracion]);
+    const necesitaCamara = modoEntrada === 'camara' || Boolean(configuracion?.requiere_foto_marcaje);
 
-    // Listener para Lectores Físicos (Pistolas USB/Bluetooth) con tecla Enter
+    useEffect(() => {
+        if (!necesitaCamara) return;
+        if (!navigator?.mediaDevices?.getUserMedia) {
+            setCameraActive(false);
+            setCameraError(
+                typeof window !== 'undefined' && !window.isSecureContext
+                    ? 'La cámara requiere una conexión segura (HTTPS). Configure HTTPS o acceda desde localhost.'
+                    : 'No se detectó una cámara en este dispositivo o navegador.'
+            );
+            return;
+        }
+
+        let cancelado = false;
+        setCameraError(null);
+        navigator.mediaDevices.getUserMedia({ video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } } })
+            .then((stream) => {
+                if (cancelado) {
+                    stream.getTracks().forEach(t => t.stop());
+                    return;
+                }
+                streamRef.current = stream;
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    videoRef.current.play().catch(() => {});
+                }
+                setCameraActive(true);
+            })
+            .catch(() => {
+                if (!cancelado) {
+                    setCameraActive(false);
+                    setCameraError('No se pudo acceder a la cámara. Revise los permisos del navegador.');
+                }
+            });
+
+        return () => {
+            cancelado = true;
+            streamRef.current?.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+            setCameraActive(false);
+        };
+    }, [necesitaCamara, facingMode]);
+
+    const toggleCameraFacing = () => {
+        setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
+    };
+
+    // Lector físico (pistola USB/Bluetooth) o teclado: Enter busca lo capturado. Solo aplica mientras
+    // no hay un colaborador en pantalla, para no relanzar la búsqueda desde los modales.
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Enter' && !qrModalOpen) {
-                if (documentInput.trim()) {
-                    handleSearch();
-                }
+            if (e.key === 'Enter' && !empleado && !loadingSearch && documentInput.trim()) {
+                e.preventDefault();
+                performSearch(documentInput);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [documentInput, qrModalOpen]);
+    }, [documentInput, empleado, loadingSearch]);
 
     // Cargar jsQR dinámicamente si el navegador no tiene BarcodeDetector nativo (idéntico a Garita Control)
     useEffect(() => {
@@ -239,143 +276,84 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
             const parts = clean.split('/pase-digital/');
             clean = parts[parts.length - 1];
         }
-        stopQrCamera();
         setDocumentInput(clean);
         performSearch(clean);
     };
 
-    const startQrCamera = (mode: 'environment' | 'user' = facingMode) => {
-        if (!navigator?.mediaDevices?.getUserMedia) {
-            const isNonSecure = typeof window !== 'undefined' && !window.isSecureContext;
-            setErrorMessage(
-                isNonSecure
-                    ? 'La cámara requiere una conexión segura (HTTPS). Para usar la cámara en quiosco o red local, configure HTTPS o acceda desde localhost.'
-                    : 'No se detectó soporte de cámara en este dispositivo o navegador.'
-            );
-            return;
-        }
-        setFacingMode(mode);
-        setQrModalOpen(true);
-    };
+    // Escaneo continuo: mientras la cámara está en modo escáner y no hay un colaborador en pantalla,
+    // se buscan códigos QR en los cuadros del video (BarcodeDetector nativo o jsQR como respaldo).
+    const escaneando = modoEntrada === 'camara' && cameraActive && !empleado && !successMessage && !loadingSearch;
 
-    const toggleCameraFacing = () => {
-        const nextMode = facingMode === 'environment' ? 'user' : 'environment';
-        setFacingMode(nextMode);
-    };
-
-    const stopQrCamera = () => {
-        setQrModalOpen(false);
-    };
-
-    // Efecto de cámara en vivo (Escaneo Omnidireccional 360° con BarcodeDetector + jsQR)
     useEffect(() => {
-        let animationFrameId: number;
-        let active = true;
+        if (!escaneando) return;
 
-        if (qrModalOpen) {
-            setErrorMessage(null);
+        let activo = true;
+        let frameId = 0;
+        let ultimoAnalisis = 0;
 
-            if (!navigator?.mediaDevices?.getUserMedia) {
-                const isNonSecure = typeof window !== 'undefined' && !window.isSecureContext;
-                setErrorMessage(
-                    isNonSecure
-                        ? 'La cámara requiere una conexión segura (HTTPS). Para usar la cámara en quiosco o red local, configure HTTPS o acceda desde localhost.'
-                        : 'No se detectó soporte de cámara en este dispositivo o navegador.'
-                );
-                setQrModalOpen(false);
-                return;
+        let detector: any = null;
+        if ('BarcodeDetector' in window) {
+            try {
+                detector = new (window as any).BarcodeDetector({ formats: ['qr_code', 'code_128', 'code_39', 'data_matrix', 'ean_13'] });
+            } catch (e) {
+                detector = null;
             }
-
-            navigator.mediaDevices.getUserMedia({
-                video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
-            })
-                .then((stream) => {
-                    if (!active) {
-                        stream.getTracks().forEach(t => t.stop());
-                        return;
-                    }
-                    qrStreamRef.current = stream;
-                    if (qrVideoRef.current) {
-                        qrVideoRef.current.srcObject = stream;
-                        qrVideoRef.current.setAttribute('playsinline', 'true');
-                        qrVideoRef.current.play().catch(() => {});
-                    }
-
-                    const hasBarcodeDetector = 'BarcodeDetector' in window;
-                    let detector: any = null;
-                    if (hasBarcodeDetector) {
-                        try {
-                            detector = new (window as any).BarcodeDetector({ formats: ['qr_code', 'code_128', 'code_39', 'data_matrix', 'ean_13'] });
-                        } catch (e) {
-                            detector = null;
-                        }
-                    }
-
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-                    const scanFrame = async () => {
-                        if (!active || !qrVideoRef.current) return;
-                        const video = qrVideoRef.current;
-
-                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                            // 1. Detección por BarcodeDetector (si disponible) en todo el campo visual
-                            if (detector) {
-                                try {
-                                    const barcodes = await detector.detect(video);
-                                    if (barcodes && barcodes.length > 0) {
-                                        const detectedRaw = barcodes[0].rawValue;
-                                        if (detectedRaw) {
-                                            playBeepSound();
-                                            handleProcessScannedCode(detectedRaw);
-                                            return;
-                                        }
-                                    }
-                                } catch (err) {}
-                            }
-
-                            // 2. Detección por jsQR en 100% del cuadro de imagen (Escaneo omnidireccional 360°)
-                            const jsQR = (window as any).jsQR;
-                            if (jsQR && video.videoWidth > 0 && video.videoHeight > 0) {
-                                canvas.width = video.videoWidth;
-                                canvas.height = video.videoHeight;
-                                if (ctx) {
-                                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                                        inversionAttempts: 'dontInvert',
-                                    });
-                                    if (code && code.data) {
-                                        playBeepSound();
-                                        handleProcessScannedCode(code.data);
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (active) {
-                            animationFrameId = requestAnimationFrame(scanFrame);
-                        }
-                    };
-
-                    animationFrameId = requestAnimationFrame(scanFrame);
-                })
-                .catch((err) => {
-                    setErrorMessage('No se pudo acceder a la cámara para escanear el gafete QR.');
-                    setQrModalOpen(false);
-                });
         }
 
-        return () => {
-            active = false;
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            if (qrStreamRef.current) {
-                qrStreamRef.current.getTracks().forEach(t => t.stop());
-                qrStreamRef.current = null;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        const procesar = (raw: string): boolean => {
+            const ultimo = ultimoCodigoRef.current;
+            if (ultimo && ultimo.codigo === raw && Date.now() - ultimo.at < 5000) {
+                // El mismo gafete sigue frente a la cámara: se ignora hasta que se retire unos segundos.
+                ultimo.at = Date.now();
+                return false;
             }
+            ultimoCodigoRef.current = { codigo: raw, at: Date.now() };
+            playBeepSound();
+            handleProcessScannedCode(raw);
+            return true;
         };
-    }, [qrModalOpen, facingMode]);
+
+        const scanFrame = async (ts: number) => {
+            if (!activo) return;
+            const video = videoRef.current;
+
+            // Se analiza cada ~150 ms para no saturar el CPU del equipo del kiosko.
+            if (video && video.readyState === video.HAVE_ENOUGH_DATA && ts - ultimoAnalisis > 150) {
+                ultimoAnalisis = ts;
+                let raw: string | null = null;
+
+                if (detector) {
+                    try {
+                        const barcodes = await detector.detect(video);
+                        raw = barcodes?.[0]?.rawValue || null;
+                    } catch (err) {}
+                }
+
+                const jsQR = (window as any).jsQR;
+                if (!raw && jsQR && ctx && video.videoWidth > 0 && video.videoHeight > 0) {
+                    const escala = Math.min(1, 960 / video.videoWidth);
+                    canvas.width = Math.round(video.videoWidth * escala);
+                    canvas.height = Math.round(video.videoHeight * escala);
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    raw = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' })?.data || null;
+                }
+
+                if (activo && raw && procesar(raw)) return;
+            }
+
+            if (activo) frameId = requestAnimationFrame(scanFrame);
+        };
+
+        frameId = requestAnimationFrame(scanFrame);
+        return () => {
+            activo = false;
+            cancelAnimationFrame(frameId);
+        };
+    }, [escaneando]);
 
     const handleNumpadPress = (val: string) => {
         if (documentInput.length < 20) {
@@ -393,6 +371,13 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
         setUltimoMarcaje(null);
         setErrorMessage(null);
         if (inputRef.current) inputRef.current.focus();
+    };
+
+    // Cancelar desde la tarjeta del colaborador: el mismo gafete no se relee mientras siga frente a la
+    // cámara (debe retirarse unos segundos); un gafete distinto se lee de inmediato.
+    const handleCancelar = () => {
+        if (ultimoCodigoRef.current) ultimoCodigoRef.current.at = Date.now();
+        handleNumpadClear();
     };
 
     const getCsrfToken = () => {
@@ -529,6 +514,8 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                 setIsDescansoModalOpen(false);
                 setIsIncidenteModalOpen(false);
                 setTimeout(() => {
+                    // Si el colaborador sigue con el gafete frente a la cámara, no se vuelve a leer al instante.
+                    if (ultimoCodigoRef.current) ultimoCodigoRef.current.at = Date.now();
                     handleNumpadClear();
                     setSuccessMessage(null);
                 }, 4000);
@@ -562,393 +549,476 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
         });
     };
 
+    // Mismo logo que el sidebar del panel: el de la empresa del usuario o, por defecto, el isotipo de Smurfit Westrock.
+    const empresaAuth = (usePage().props.auth as any)?.user?.empresa;
+
+    // Clases compartidas para homologar el kiosko con el resto del panel (tokens del tema + color primario de la marca).
+    const teclaDigito = 'h-14 rounded-xl bg-card text-foreground text-2xl font-semibold border border-border shadow-sm transition-all active:scale-95 hover:bg-primary hover:text-primary-foreground hover:border-primary flex items-center justify-center';
+    const accionNeutra = 'bg-card hover:bg-muted text-foreground border border-border shadow-sm';
+    const accionBase = 'h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all';
+
     return (
-        <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-4 md:p-8 font-sans select-none">
+        <div className="min-h-screen bg-slate-50 dark:bg-background text-foreground flex flex-col font-sans select-none">
             <Head title="Kiosko Checador" />
 
-            {/* BARRA SUPERIOR */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div className="flex items-center gap-4">
-                    <ClientLogo
-                        onDarkBackground
-                        className="h-10 md:h-12 w-auto object-contain"
-                        textClassName="text-lg font-bold text-white"
-                    />
-                    <div className="h-10 w-px bg-slate-800" />
-                    <div>
-                        <h1 className="text-xl font-bold text-white tracking-wide">KIOSKO CHECADOR</h1>
-                        <p className="text-xs text-slate-400">Control de Asistencia por Numpad, QR Gafete & Pistola Lector</p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <div className="text-right hidden sm:block">
-                        <div className="text-2xl font-black text-emerald-400 font-mono tracking-wider">{formatTime(currentTime)}</div>
-                        <div className="text-xs text-slate-400 capitalize">{formatDate(currentTime)} • {tz}</div>
+            {/* BARRA SUPERIOR (mismo tono que el sidebar del panel, con la marca del cliente) */}
+            <header className="bg-neutral-950 text-white shadow-sm border-b border-neutral-800">
+                <div className="h-1 bg-primary" />
+                <div className="flex items-center justify-between gap-4 px-4 md:px-8 py-3">
+                    <div className="flex items-center gap-4 min-w-0">
+                        <ClientLogo
+                            onDarkBackground
+                            className="h-10 md:h-12 w-auto object-contain"
+                            textClassName="text-lg font-bold text-white"
+                        />
+                        <div className="h-10 w-px bg-neutral-800 hidden sm:block" />
+                        <div className="hidden sm:block min-w-0">
+                            <h1 className="text-lg md:text-xl font-bold tracking-wide">Kiosko Checador</h1>
+                            <p className="text-xs text-neutral-400 truncate">Control de Asistencia por Numpad, QR Gafete & Pistola Lector</p>
+                        </div>
                     </div>
 
-                    <Link href="/dashboard">
-                        <Button variant="outline" className="border-slate-800 bg-slate-900 text-slate-300 hover:text-white">
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Panel Admin
-                        </Button>
-                    </Link>
+                    <div className="flex items-center gap-4">
+                        <div className="text-right hidden sm:block">
+                            <div className="text-2xl font-bold font-mono tabular-nums tracking-wider text-white">{formatTime(currentTime)}</div>
+                            <div className="text-xs text-neutral-400 capitalize">{formatDate(currentTime)} • {tz}</div>
+                        </div>
+
+                        <Link href="/dashboard">
+                            <Button variant="outline" className="border-neutral-700 bg-transparent text-neutral-200 hover:bg-neutral-800 hover:text-white">
+                                <ArrowLeft className="w-4 h-4 mr-2" />
+                                Panel Admin
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
-            </div>
+            </header>
 
             {/* CONTENIDO CENTRAL */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 my-auto py-4 items-center">
-                {/* COLUMNA IZQUIERDA: INPUT, QR SCANNER Y NUMPAD */}
-                <div className="lg:col-span-6 space-y-6">
-                    <Card className="bg-slate-900/80 border-slate-800 shadow-2xl backdrop-blur-xl">
-                        <CardContent className="p-6 space-y-6">
-                            <div className="text-center space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <Label className="text-slate-300 text-xs font-semibold uppercase tracking-wider block">
-                                        N° de Empleado, Documento o QR Gafete
-                                    </Label>
-                                    <Badge variant="outline" className="text-[10px] bg-indigo-950/60 text-indigo-300 border-indigo-800 flex items-center gap-1">
-                                        <Scan className="w-3 h-3" /> Lector USB listo
-                                    </Badge>
-                                </div>
-
-                                <div className="relative">
-                                    <input
-                                        ref={inputRef}
-                                        type="text"
-                                        value={documentInput}
-                                        onChange={(e) => setDocumentInput(e.target.value)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-                                        placeholder="Ingrese número o escanee código de barras/QR..."
-                                        className="w-full text-center text-2xl sm:text-3xl font-mono font-bold tracking-widest bg-slate-950 border-2 border-emerald-500/40 rounded-xl py-4 text-emerald-400 placeholder:text-slate-700 shadow-inner focus:outline-none focus:border-emerald-500"
-                                        autoFocus
-                                    />
-                                </div>
-
-                                {/* BOTÓN DE ESCÁNER QR POR CÁMARA */}
-                                <Button
-                                    onClick={startQrCamera}
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full h-12 border-indigo-500/40 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-200 font-bold rounded-xl flex items-center justify-center gap-2 border"
-                                >
-                                    <QrCode className="w-5 h-5 text-indigo-400 animate-pulse" />
-                                    <span>ESCANEAR GAFETE QR (CÁMARA)</span>
-                                </Button>
-                            </div>
-
-                            {/* TECLADO TÁCTIL (NUMPAD) */}
-                            <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
-                                {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
-                                    <button
-                                        key={num}
-                                        type="button"
-                                        onClick={() => handleNumpadPress(num)}
-                                        className="h-14 rounded-xl bg-slate-800/80 hover:bg-emerald-600 text-2xl font-bold text-white border border-slate-700 hover:border-emerald-500 transition-all active:scale-95 shadow-md flex items-center justify-center"
-                                    >
-                                        {num}
-                                    </button>
-                                ))}
-                                <button
-                                    type="button"
-                                    onClick={handleNumpadClear}
-                                    className="h-14 rounded-xl bg-rose-950/60 hover:bg-rose-600 text-rose-300 hover:text-white text-xs font-bold border border-rose-900 transition-all active:scale-95 flex items-center justify-center"
-                                >
-                                    LIMPIAR
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleNumpadPress('0')}
-                                    className="h-14 rounded-xl bg-slate-800/80 hover:bg-emerald-600 text-2xl font-bold text-white border border-slate-700 hover:border-emerald-500 transition-all active:scale-95 shadow-md flex items-center justify-center"
-                                >
-                                    0
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleNumpadDelete}
-                                    className="h-14 rounded-xl bg-amber-950/60 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-900 transition-all active:scale-95 flex items-center justify-center"
-                                >
-                                    <Delete className="w-6 h-6" />
-                                </button>
-                            </div>
-
-                            <Button
-                                onClick={() => handleSearch()}
-                                disabled={!documentInput.trim() || loadingSearch}
-                                className="w-full h-14 text-lg font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-950/50"
-                            >
-                                {loadingSearch ? 'VERIFICANDO...' : 'VERIFICAR EMPLEADO'}
-                            </Button>
-                        </CardContent>
-                    </Card>
-
-                    {errorMessage && (
-                        <div className="p-4 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-200 text-sm flex items-center gap-3 animate-shake">
-                            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
-                            <span>{errorMessage}</span>
-                        </div>
-                    )}
+            <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 flex flex-col">
+                <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <h2 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
+                            <img
+                                src={empresaAuth?.logo_mini || empresaAuth?.logo || '/image/logo/smurfit/icon.png'}
+                                alt={empresaAuth?.razon_social || 'Smurfit Westrock'}
+                                className="h-9 w-auto object-contain"
+                            />
+                            Registro de Asistencia
+                        </h2>
+                        <p className="text-muted-foreground mt-1">
+                            Ingrese su número de empleado, escanee su gafete QR o use la pistola lectora.
+                        </p>
+                    </div>
+                    {/* En pantallas pequeñas el reloj no cabe en la barra superior */}
+                    <div className="sm:hidden text-2xl font-bold font-mono tabular-nums text-primary">{formatTime(currentTime)}</div>
                 </div>
 
-                {/* COLUMNA DERECHA: CONFIRMACIÓN Y BOTONES DE MARCAJE */}
-                <div className="lg:col-span-6 space-y-6">
-                    {successMessage ? (
-                        <Card className="bg-emerald-950/90 border-2 border-emerald-500 p-8 text-center space-y-4 shadow-2xl animate-bounce-short">
-                            <CheckCircle2 className="w-20 h-20 text-emerald-400 mx-auto animate-pulse" />
-                            <h2 className="text-2xl font-black text-white">{successMessage}</h2>
-                            <p className="text-emerald-200 text-sm">El sistema ha registrado el evento de asistencia y notificado por WhatsApp al empleado.</p>
-                        </Card>
-                    ) : empleado ? (
-                        <Card className="bg-slate-900/90 border-2 border-emerald-500/40 shadow-2xl backdrop-blur-xl space-y-6 p-6">
-                            <div className="flex items-center gap-4 border-b border-slate-800 pb-4">
-                                <div className="w-20 h-20 rounded-2xl bg-slate-950 border border-slate-700 overflow-hidden flex items-center justify-center text-slate-500 font-bold text-xl">
-                                    {empleado.foto_empleado && !fotoFallida ? (
-                                        <img
-                                            src={empleado.foto_empleado}
-                                            alt={empleado.nombre_completo}
-                                            className="w-full h-full object-cover"
-                                            onError={() => setFotoFallida(true)}
-                                        />
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* COLUMNA IZQUIERDA: NUMPAD (principal) O ESCÁNER QR CON CÁMARA (segunda opción) */}
+                    <div className="lg:col-span-6 space-y-4">
+                        <Card className="shadow-sm border-t-4 border-t-primary">
+                            <CardContent className="space-y-5">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                                            {modoEntrada === 'camara' ? <QrCode className="h-5 w-5" /> : <UserCheck className="h-5 w-5" />}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold leading-tight">
+                                                {modoEntrada === 'camara' ? 'Escanee su gafete QR' : 'Identificación del colaborador'}
+                                            </h3>
+                                            <Label className="text-xs text-muted-foreground font-normal">
+                                                {modoEntrada === 'camara' ? 'Acerque el código QR de su gafete a la cámara' : 'N° de empleado, documento o QR gafete'}
+                                            </Label>
+                                        </div>
+                                    </div>
+                                    {modoEntrada === 'camara' ? (
+                                        <Badge
+                                            variant="outline"
+                                            className={`text-[10px] flex items-center gap-1 shrink-0 ${
+                                                cameraActive
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900'
+                                                    : 'bg-muted text-muted-foreground'
+                                            }`}
+                                        >
+                                            <span className={`w-1.5 h-1.5 rounded-full ${cameraActive ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/50'}`} />
+                                            {cameraActive ? 'Cámara activa' : 'Cámara inactiva'}
+                                        </Badge>
                                     ) : (
-                                        <span>{empleado.nombre_completo.substring(0, 2).toUpperCase()}</span>
+                                        <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900 flex items-center gap-1 shrink-0">
+                                            <Scan className="w-3 h-3" /> Lector USB listo
+                                        </Badge>
                                     )}
                                 </div>
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs">
-                                            Empleado Verificado
-                                        </Badge>
-                                        {ultimoMarcaje && (
-                                            <Badge variant="outline" className="text-[11px] bg-slate-950/80 text-amber-300 border-amber-500/40 flex items-center gap-1 font-mono">
-                                                <Clock className="w-3 h-3 text-amber-400" />
-                                                <span>Último: {getNombreMarcaje(ultimoMarcaje.tipo)} ({ultimoMarcaje.hora.slice(0, 5)} hrs)</span>
-                                            </Badge>
+
+                                {modoEntrada === 'camara' ? (
+                                    <>
+                                        <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-neutral-950 border">
+                                            <video
+                                                ref={attachVideo}
+                                                autoPlay
+                                                playsInline
+                                                muted
+                                                className={`w-full h-full object-cover ${facingMode === 'user' ? '-scale-x-100' : ''}`}
+                                            />
+
+                                            {cameraError ? (
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-neutral-200">
+                                                    <CameraOff className="w-10 h-10 text-neutral-400" />
+                                                    <p className="text-sm max-w-sm">{cameraError}</p>
+                                                </div>
+                                            ) : (
+                                                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                                    {/* Marco guía del escáner */}
+                                                    <div className="relative h-[70%] aspect-square">
+                                                        <div className="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-emerald-400 rounded-tl-xl" />
+                                                        <div className="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl" />
+                                                        <div className="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl" />
+                                                        <div className="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-emerald-400 rounded-br-xl" />
+                                                        {escaneando && (
+                                                            <div className="absolute inset-x-3 top-1/2 h-0.5 bg-emerald-400 shadow-[0_0_12px_#34d399] animate-pulse" />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {configuracion?.requiere_foto_marcaje && cameraActive && (
+                                                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 text-[11px] font-medium text-white">
+                                                    <Camera className="w-3.5 h-3.5" />
+                                                    Foto de evidencia al marcar
+                                                </div>
+                                            )}
+
+                                            <button
+                                                type="button"
+                                                onClick={toggleCameraFacing}
+                                                title={facingMode === 'user' ? 'Usar cámara trasera' : 'Usar cámara frontal'}
+                                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors"
+                                            >
+                                                <SwitchCamera className="w-4 h-4" />
+                                            </button>
+
+                                            {!cameraError && (
+                                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/70 backdrop-blur-sm text-xs font-semibold text-white flex items-center gap-2 whitespace-nowrap">
+                                                    {loadingSearch ? (
+                                                        <>
+                                                            <Clock className="w-4 h-4 text-emerald-400 animate-spin" />
+                                                            Verificando gafete...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Scan className="w-4 h-4 text-emerald-400" />
+                                                            Acerque su gafete QR al recuadro
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Captura invisible para la pistola lectora USB (inputMode none: sin teclado en pantalla táctil) */}
+                                        <input
+                                            ref={inputRef}
+                                            type="text"
+                                            inputMode="none"
+                                            aria-label="Lector de código de barras"
+                                            value={documentInput}
+                                            onChange={(e) => setDocumentInput(e.target.value)}
+                                            className="sr-only"
+                                            autoFocus
+                                        />
+
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setModoEntrada('manual')}
+                                            className="w-full h-12 rounded-xl font-semibold gap-2"
+                                        >
+                                            <Keyboard className="w-5 h-5" />
+                                            <span>VOLVER A INGRESAR N° DE EMPLEADO</span>
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <input
+                                            ref={inputRef}
+                                            type="text"
+                                            value={documentInput}
+                                            onChange={(e) => setDocumentInput(e.target.value)}
+                                            placeholder="Ingrese número o escanee código de barras/QR..."
+                                            className="w-full text-center text-2xl sm:text-3xl font-mono font-bold tracking-widest bg-background border-2 border-input rounded-xl py-4 text-foreground placeholder:text-base placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition"
+                                            autoFocus
+                                        />
+
+                                        {/* VOLVER AL ESCÁNER QR POR CÁMARA */}
+                                        <Button
+                                            onClick={() => setModoEntrada('camara')}
+                                            type="button"
+                                            variant="outline"
+                                            className="w-full h-12 rounded-xl font-semibold gap-2 border-primary/30 text-primary hover:bg-primary/5 hover:text-primary"
+                                        >
+                                            <QrCode className="w-5 h-5" />
+                                            <span>ESCANEAR GAFETE QR (CÁMARA)</span>
+                                        </Button>
+
+                                        {/* TECLADO TÁCTIL (NUMPAD) */}
+                                        <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
+                                            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
+                                                <button key={num} type="button" onClick={() => handleNumpadPress(num)} className={teclaDigito}>
+                                                    {num}
+                                                </button>
+                                            ))}
+                                            <button
+                                                type="button"
+                                                onClick={handleNumpadClear}
+                                                className="h-14 rounded-xl text-xs font-bold border shadow-sm transition-all active:scale-95 flex items-center justify-center bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-600 hover:text-white hover:border-rose-600 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900"
+                                            >
+                                                LIMPIAR
+                                            </button>
+                                            <button type="button" onClick={() => handleNumpadPress('0')} className={teclaDigito}>
+                                                0
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleNumpadDelete}
+                                                className="h-14 rounded-xl border shadow-sm transition-all active:scale-95 flex items-center justify-center bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-500 hover:text-white hover:border-amber-500 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900"
+                                            >
+                                                <Delete className="w-6 h-6" />
+                                            </button>
+                                        </div>
+
+                                        <Button
+                                            onClick={() => handleSearch()}
+                                            disabled={!documentInput.trim() || loadingSearch}
+                                            className="w-full h-14 text-lg font-bold rounded-xl shadow-sm"
+                                        >
+                                            {loadingSearch ? 'VERIFICANDO...' : 'VERIFICAR EMPLEADO'}
+                                        </Button>
+                                    </>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {errorMessage && (
+                            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 dark:bg-rose-950/30 dark:border-rose-900 dark:text-rose-300 text-sm flex items-center gap-3 animate-shake">
+                                <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
+                                <span>{errorMessage}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* COLUMNA DERECHA: CONFIRMACIÓN Y BOTONES DE MARCAJE */}
+                    <div className="lg:col-span-6 space-y-4">
+                        {successMessage ? (
+                            <Card className="border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 p-8 text-center space-y-4 shadow-sm animate-bounce-short">
+                                <CheckCircle2 className="w-20 h-20 text-emerald-600 dark:text-emerald-400 mx-auto animate-pulse" />
+                                <h2 className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{successMessage}</h2>
+                                <p className="text-emerald-700 dark:text-emerald-300 text-sm">El sistema ha registrado el evento de asistencia y notificado por WhatsApp al empleado.</p>
+                            </Card>
+                        ) : empleado ? (
+                            <Card className="shadow-sm border-t-4 border-t-emerald-500 space-y-6 p-6">
+                                <div className="flex items-center gap-4 border-b pb-4">
+                                    <div className="w-20 h-20 shrink-0 rounded-2xl bg-muted border overflow-hidden flex items-center justify-center text-muted-foreground font-bold text-xl">
+                                        {empleado.foto_empleado && !fotoFallida ? (
+                                            <img
+                                                src={empleado.foto_empleado}
+                                                alt={empleado.nombre_completo}
+                                                className="w-full h-full object-cover"
+                                                onError={() => setFotoFallida(true)}
+                                            />
+                                        ) : (
+                                            <span>{empleado.nombre_completo.substring(0, 2).toUpperCase()}</span>
                                         )}
                                     </div>
-                                    <h2 className="text-xl font-bold text-white">{empleado.nombre_completo}</h2>
-                                    <p className="text-xs text-slate-400">{empleado.cargo || 'Sin cargo'} • {empleado.departamento || 'Sin departamento'}</p>
-                                    <p className="text-xs text-emerald-400 font-medium">Turno: {empleado.turno}</p>
+                                    <div className="space-y-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900 text-xs">
+                                                Empleado Verificado
+                                            </Badge>
+                                            {ultimoMarcaje && (
+                                                <Badge variant="outline" className="text-[11px] bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900 flex items-center gap-1 font-mono">
+                                                    <Clock className="w-3 h-3" />
+                                                    <span>Último: {getNombreMarcaje(ultimoMarcaje.tipo)} ({ultimoMarcaje.hora.slice(0, 5)} hrs)</span>
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <h2 className="text-xl font-bold text-foreground">{empleado.nombre_completo}</h2>
+                                        <p className="text-xs text-muted-foreground">{empleado.cargo || 'Sin cargo'} • {empleado.departamento || 'Sin departamento'}</p>
+                                        <p className="text-xs text-primary font-medium">Turno: {empleado.turno}</p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleCancelar}
+                                        disabled={loadingSearch}
+                                        className="ml-auto self-start shrink-0 gap-1 text-muted-foreground"
+                                    >
+                                        <X className="w-4 h-4" />
+                                        Cancelar
+                                    </Button>
                                 </div>
-                            </div>
 
-                            <div className="space-y-3">
-                                <Label className="text-slate-300 text-xs font-semibold uppercase tracking-wider block">
-                                    SELECCIONE LA ACCIÓN A REGISTRAR:
-                                </Label>
+                                <div className="space-y-3">
+                                    <Label className="text-muted-foreground text-xs font-semibold uppercase tracking-wider block">
+                                        SELECCIONE LA ACCIÓN A REGISTRAR:
+                                    </Label>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    {(() => {
-                                        const esDescansoActivo = sugerenciaMarcaje === 'descanso_fin' || empleado?.ultimo_marcaje_tipo === 'descanso_inicio';
-                                        const esIncidenteActivo = sugerenciaMarcaje === 'incidente_fin' || empleado?.ultimo_marcaje_tipo === 'incidente_inicio';
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {(() => {
+                                            const esDescansoActivo = sugerenciaMarcaje === 'descanso_fin' || empleado?.ultimo_marcaje_tipo === 'descanso_inicio';
+                                            const esIncidenteActivo = sugerenciaMarcaje === 'incidente_fin' || empleado?.ultimo_marcaje_tipo === 'incidente_inicio';
 
-                                        return (
-                                            <>
-                                                <Button
-                                                    onClick={() => handleRegisterMarcaje('entrada', { tipo_entrada: 'normal' })}
-                                                    disabled={loadingSearch}
-                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
-                                                        sugerenciaMarcaje === 'entrada'
-                                                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg'
-                                                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                                    }`}
-                                                >
-                                                    <LogIn className="w-5 h-5 text-emerald-400" />
-                                                    <span>INICIO JORNADA</span>
-                                                </Button>
+                                            return (
+                                                <>
+                                                    <Button
+                                                        onClick={() => handleRegisterMarcaje('entrada', { tipo_entrada: 'normal' })}
+                                                        disabled={loadingSearch}
+                                                        className={`${accionBase} ${
+                                                            sugerenciaMarcaje === 'entrada'
+                                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/30 shadow-md'
+                                                                : accionNeutra
+                                                        }`}
+                                                    >
+                                                        <LogIn className={`w-5 h-5 ${sugerenciaMarcaje === 'entrada' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                                                        <span>INICIO JORNADA</span>
+                                                    </Button>
 
-                                                <Button
-                                                    onClick={() => {
-                                                        if (esDescansoActivo) {
-                                                            handleRegisterMarcaje('descanso_fin');
-                                                        } else {
-                                                            setIsDescansoModalOpen(true);
-                                                        }
-                                                    }}
-                                                    disabled={loadingSearch}
-                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
-                                                        esDescansoActivo
-                                                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg animate-pulse'
-                                                            : 'bg-teal-900/80 hover:bg-teal-800 text-teal-200 border border-teal-700/60 shadow-lg'
-                                                    }`}
-                                                >
-                                                    <Coffee className="w-5 h-5 text-teal-400" />
-                                                    <span>{esDescansoActivo ? 'FIN DESCANSO' : 'DESCANSO'}</span>
-                                                </Button>
+                                                    <Button
+                                                        onClick={() => {
+                                                            if (esDescansoActivo) {
+                                                                handleRegisterMarcaje('descanso_fin');
+                                                            } else {
+                                                                setIsDescansoModalOpen(true);
+                                                            }
+                                                        }}
+                                                        disabled={loadingSearch}
+                                                        className={`${accionBase} ${
+                                                            esDescansoActivo
+                                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/30 shadow-md animate-pulse'
+                                                                : 'bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 shadow-sm dark:bg-teal-950/30 dark:hover:bg-teal-950/50 dark:text-teal-300 dark:border-teal-900'
+                                                        }`}
+                                                    >
+                                                        <Coffee className={`w-5 h-5 ${esDescansoActivo ? 'text-white' : 'text-teal-600 dark:text-teal-400'}`} />
+                                                        <span>{esDescansoActivo ? 'FIN DESCANSO' : 'DESCANSO'}</span>
+                                                    </Button>
 
-                                                <Button
-                                                    onClick={() => handleRegisterMarcaje('entrada_extraordinaria', { tipo_entrada: 'extraordinaria_doble' })}
-                                                    disabled={loadingSearch}
-                                                    className="h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl bg-purple-900/80 hover:bg-purple-800 text-purple-200 border border-purple-700/60 shadow-lg transition-all"
-                                                >
-                                                    <Sparkles className="w-5 h-5 text-purple-400" />
-                                                    <span>TIEMPO EXTRA</span>
-                                                </Button>
+                                                    <Button
+                                                        onClick={() => handleRegisterMarcaje('entrada_extraordinaria', { tipo_entrada: 'extraordinaria_doble' })}
+                                                        disabled={loadingSearch}
+                                                        className={`${accionBase} bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 shadow-sm dark:bg-purple-950/30 dark:hover:bg-purple-950/50 dark:text-purple-300 dark:border-purple-900`}
+                                                    >
+                                                        <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                                                        <span>TIEMPO EXTRA</span>
+                                                    </Button>
 
-                                                <Button
-                                                    onClick={() => setIsComidaModalOpen(true)}
-                                                    disabled={loadingSearch}
-                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all ${
-                                                        sugerenciaMarcaje === 'salida_comida'
-                                                            ? 'bg-amber-600 hover:bg-amber-500 text-white ring-4 ring-amber-500/40 shadow-lg'
-                                                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                                    }`}
-                                                >
-                                                    <Utensils className="w-5 h-5 text-amber-400" />
-                                                    <span>INICIO COMIDA</span>
-                                                    <span className="text-[10px] text-amber-200/80 font-normal">Salida a Comer</span>
-                                                </Button>
+                                                    <Button
+                                                        onClick={() => setIsComidaModalOpen(true)}
+                                                        disabled={loadingSearch}
+                                                        className={`${accionBase} gap-0.5 ${
+                                                            sugerenciaMarcaje === 'salida_comida'
+                                                                ? 'bg-amber-500 hover:bg-amber-400 text-white ring-4 ring-amber-500/30 shadow-md'
+                                                                : accionNeutra
+                                                        }`}
+                                                    >
+                                                        <Utensils className={`w-5 h-5 ${sugerenciaMarcaje === 'salida_comida' ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
+                                                        <span>INICIO COMIDA</span>
+                                                        <span className="text-[10px] opacity-75 font-normal">Salida a Comer</span>
+                                                    </Button>
 
-                                                <Button
-                                                    onClick={() => handleRegisterMarcaje('entrada_comida')}
-                                                    disabled={loadingSearch}
-                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all ${
-                                                        sugerenciaMarcaje === 'entrada_comida'
-                                                            ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-4 ring-indigo-500/40 shadow-lg'
-                                                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                                    }`}
-                                                >
-                                                    <LogIn className="w-5 h-5 text-indigo-400" />
-                                                    <span>FIN COMIDA</span>
-                                                    <span className="text-[10px] text-indigo-200/80 font-normal">Regreso de Comer</span>
-                                                </Button>
+                                                    <Button
+                                                        onClick={() => handleRegisterMarcaje('entrada_comida')}
+                                                        disabled={loadingSearch}
+                                                        className={`${accionBase} gap-0.5 ${
+                                                            sugerenciaMarcaje === 'entrada_comida'
+                                                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-4 ring-indigo-500/30 shadow-md'
+                                                                : accionNeutra
+                                                        }`}
+                                                    >
+                                                        <LogIn className={`w-5 h-5 ${sugerenciaMarcaje === 'entrada_comida' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                                                        <span>FIN COMIDA</span>
+                                                        <span className="text-[10px] opacity-75 font-normal">Regreso de Comer</span>
+                                                    </Button>
 
-                                                <Button
-                                                    onClick={() => {
-                                                        if (esIncidenteActivo) {
-                                                            handleRegisterMarcaje('incidente_fin');
-                                                        } else {
-                                                            setIsIncidenteModalOpen(true);
-                                                        }
-                                                    }}
-                                                    disabled={loadingSearch}
-                                                    className={`h-20 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 rounded-xl transition-all ${
-                                                        esIncidenteActivo
-                                                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/40 shadow-lg animate-pulse'
-                                                            : 'bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-800/60 shadow-lg'
-                                                    }`}
-                                                >
-                                                    <AlertTriangle className="w-5 h-5 text-amber-400" />
-                                                    <span>{esIncidenteActivo ? 'FIN INCIDENTE' : 'INCIDENTE'}</span>
-                                                </Button>
+                                                    <Button
+                                                        onClick={() => {
+                                                            if (esIncidenteActivo) {
+                                                                handleRegisterMarcaje('incidente_fin');
+                                                            } else {
+                                                                setIsIncidenteModalOpen(true);
+                                                            }
+                                                        }}
+                                                        disabled={loadingSearch}
+                                                        className={`${accionBase} ${
+                                                            esIncidenteActivo
+                                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/30 shadow-md animate-pulse'
+                                                                : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 shadow-sm dark:bg-amber-950/30 dark:hover:bg-amber-950/50 dark:text-amber-300 dark:border-amber-900'
+                                                        }`}
+                                                    >
+                                                        <AlertTriangle className={`w-5 h-5 ${esIncidenteActivo ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
+                                                        <span>{esIncidenteActivo ? 'FIN INCIDENTE' : 'INCIDENTE'}</span>
+                                                    </Button>
 
-                                                <Button
-                                                    onClick={() => handleRegisterMarcaje('salida')}
-                                                    disabled={loadingSearch}
-                                                    className={`col-span-2 sm:col-span-3 h-16 text-base font-bold flex items-center justify-center gap-2 rounded-xl transition-all ${
-                                                        sugerenciaMarcaje === 'salida'
-                                                            ? 'bg-rose-600 hover:bg-rose-500 text-white ring-4 ring-rose-500/40 shadow-lg'
-                                                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                                    }`}
-                                                >
-                                                    <LogOut className="w-6 h-6 text-rose-400" />
-                                                    <span>SALIDA JORNADA</span>
-                                                </Button>
-                                            </>
-                                        );
-                                    })()}
+                                                    <Button
+                                                        onClick={() => handleRegisterMarcaje('salida')}
+                                                        disabled={loadingSearch}
+                                                        className={`col-span-2 sm:col-span-3 h-16 text-base font-bold flex items-center justify-center gap-2 rounded-xl transition-all ${
+                                                            sugerenciaMarcaje === 'salida'
+                                                                ? 'bg-rose-600 hover:bg-rose-500 text-white ring-4 ring-rose-500/30 shadow-md'
+                                                                : accionNeutra
+                                                        }`}
+                                                    >
+                                                        <LogOut className={`w-6 h-6 ${sugerenciaMarcaje === 'salida' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
+                                                        <span>SALIDA JORNADA</span>
+                                                    </Button>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
-                    ) : (
-                        <Card className="bg-slate-900/40 border-slate-800/80 p-8 text-center space-y-4">
-                            <UserCheck className="w-16 h-16 text-slate-700 mx-auto" />
-                            <h3 className="text-slate-400 font-medium">En espera de ingreso de documento o lectura de QR...</h3>
-                            <p className="text-xs text-slate-600">Al ingresar el número de empleado o acercar el QR del gafete a la cámara/lector, aparecerá el perfil con las opciones de marcaje.</p>
-                        </Card>
-                    )}
-
-                    {/* VISTA DE CÁMARA DE EVIDENCIA SI ESTÁ ACTIVADA */}
-                    {configuracion?.requiere_foto_marcaje && (
-                        <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-xs text-slate-300">
-                                <Camera className="w-4 h-4 text-emerald-400" />
-                                <span>Cámara de Evidencia Activa</span>
-                            </div>
-                            <div className="w-16 h-12 rounded bg-slate-950 border border-slate-800 overflow-hidden">
-                                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Modal de Escáner QR con Cámara en Vivo (idéntico al de Garita Control) */}
-            {qrModalOpen && (
-                <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
-                    <div className="relative max-w-xl w-full bg-slate-900 border border-emerald-500/40 rounded-3xl overflow-hidden shadow-2xl space-y-4 p-5 text-center">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <Camera className="w-5 h-5 text-emerald-400 animate-pulse" />
-                                <h3 className="text-sm font-extrabold text-white">
-                                    Escáner QR de Cámara en Vivo
+                            </Card>
+                        ) : (
+                            <Card className="border-2 border-dashed shadow-none p-10 text-center space-y-4">
+                                <div className="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                                    <UserCheck className="w-10 h-10" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-foreground">
+                                    {modoEntrada === 'camara' ? 'En espera de lectura del gafete QR...' : 'En espera de ingreso de documento o lectura de QR...'}
                                 </h3>
-                            </div>
+                                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                                    {modoEntrada === 'camara'
+                                        ? 'Acerque el QR de su gafete a la cámara: al leerlo aparecerá su perfil con las opciones de marcaje.'
+                                        : 'Al ingresar el número de empleado o acercar el QR del gafete a la cámara/lector, aparecerá el perfil con las opciones de marcaje.'}
+                                </p>
+                            </Card>
+                        )}
 
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={toggleCameraFacing}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-xl border-slate-700 gap-1.5"
-                                >
-                                    <SwitchCamera className="w-4 h-4 text-emerald-400" />
-                                    {facingMode === 'environment' ? 'Cámara Trasera' : 'Cámara Frontal'}
-                                </Button>
-
-                                <button
-                                    type="button"
-                                    onClick={stopQrCamera}
-                                    className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-full transition-colors"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="relative aspect-[4/3] w-full max-w-xl mx-auto bg-black rounded-2xl overflow-hidden border-2 border-emerald-500/50 shadow-inner group">
-                            <video
-                                ref={qrVideoRef}
-                                className="w-full h-full object-cover"
-                                playsInline
-                                muted
-                                autoPlay
-                            />
-
-                            {/* Escáner Láser Omnidireccional en Toda la Pantalla */}
-                            <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
-                                <div className="flex justify-between">
-                                    <div className="w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-xl" />
-                                    <div className="w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl" />
+                        {/* VISTA DE CÁMARA DE EVIDENCIA (en modo escáner la cámara ya se ve grande a la izquierda) */}
+                        {configuracion?.requiere_foto_marcaje && modoEntrada === 'manual' && (
+                            <div className="p-3 bg-card rounded-xl border shadow-sm flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-sm text-foreground">
+                                    <span className={`w-2 h-2 rounded-full ${cameraActive ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/40'}`} />
+                                    <Camera className="w-4 h-4 text-primary" />
+                                    <span>Cámara de Evidencia Activa</span>
                                 </div>
-
-                                {/* Línea Láser Verde Animada en Toda la Pantalla */}
-                                <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_12px_#34d399] animate-pulse" />
-
-                                <div className="flex justify-between">
-                                    <div className="w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl" />
-                                    <div className="w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-xl" />
+                                <div className="w-16 h-12 rounded-lg bg-black border overflow-hidden">
+                                    <video ref={attachVideo} autoPlay playsInline muted className="w-full h-full object-cover" />
                                 </div>
                             </div>
-
-                            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-4 py-2 rounded-full border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center gap-2 shadow-lg w-11/12 justify-center text-center">
-                                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 animate-spin" />
-                                <span>Escaneo 360° Activo: Acerque el QR a cualquier lugar de la pantalla</span>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
-            )}
+            </main>
 
             {/* MODAL SELECCIÓN DE MINUTOS DE DESCANSO */}
             <Dialog open={isDescansoModalOpen} onOpenChange={setIsDescansoModalOpen}>
-                <DialogContent className="max-w-md bg-slate-900 border border-teal-500/40 text-white">
+                <DialogContent className="max-w-md border-t-4 border-t-teal-500">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-teal-400">
-                            <Coffee className="w-5 h-5 text-teal-400" />
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-teal-700 dark:text-teal-400">
+                            <Coffee className="w-5 h-5" />
                             Seleccionar Duración del Descanso
                         </DialogTitle>
-                        <DialogDescription className="text-xs text-slate-400">
+                        <DialogDescription className="text-xs">
                             Elija los minutos asignados para su pausa o descanso de jornada.
                         </DialogDescription>
                     </DialogHeader>
@@ -962,8 +1032,8 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                     onClick={() => setSelectedMinutosDescanso(min)}
                                     className={`p-4 rounded-xl text-center border font-bold text-sm transition-all ${
                                         selectedMinutosDescanso === min
-                                            ? 'bg-teal-600 border-teal-400 text-white shadow-lg ring-2 ring-teal-500/40'
-                                            : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                                            ? 'bg-teal-600 border-teal-600 text-white shadow-md ring-2 ring-teal-500/30'
+                                            : 'bg-card border-border text-foreground hover:bg-muted'
                                     }`}
                                 >
                                     {min} min
@@ -972,12 +1042,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                         </div>
 
                         <div className="pt-2 flex justify-end gap-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setIsDescansoModalOpen(false)}
-                                className="border-slate-700 bg-slate-800 text-slate-300"
-                            >
+                            <Button type="button" variant="outline" onClick={() => setIsDescansoModalOpen(false)}>
                                 Cancelar
                             </Button>
                             <Button
@@ -995,7 +1060,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
 
             {/* MODAL SELECCIÓN DE TIPO DE COMIDA (INICIO COMIDA) - EXTRA GRANDE Y LEGIBLE */}
             <Dialog open={isComidaModalOpen} onOpenChange={setIsComidaModalOpen}>
-                <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[95vw] md:max-w-[92vw] lg:max-w-6xl xl:max-w-7xl max-h-[92vh] overflow-y-auto bg-slate-900/98 backdrop-blur-2xl border-2 border-amber-500/60 text-white p-6 sm:p-8 md:p-10 rounded-3xl shadow-2xl">
+                <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[95vw] md:max-w-[92vw] lg:max-w-6xl xl:max-w-7xl max-h-[92vh] overflow-y-auto border-t-4 border-t-amber-500 p-6 sm:p-8 md:p-10 rounded-2xl shadow-2xl">
                     {(() => {
                         const estaDisponibleAhora = (opcion: OpcionComida) => {
                             if (opcion.disponible_ahora !== undefined) {
@@ -1045,33 +1110,33 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
 
                         return (
                             <>
-                                <DialogHeader className="pb-4 border-b border-slate-800">
+                                <DialogHeader className="pb-4 border-b">
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/30 to-amber-600/10 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/10">
+                                            <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-400 flex items-center justify-center shrink-0">
                                                 <Utensils className="w-7 h-7" />
                                             </div>
-                                            <div className="space-y-1">
-                                                <DialogTitle className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-                                                    <span>Seleccione su Alimento / Comida</span>
+                                            <div className="space-y-1 text-left">
+                                                <DialogTitle className="text-2xl sm:text-3xl font-bold tracking-tight">
+                                                    Seleccione su Alimento / Comida
                                                 </DialogTitle>
-                                                <DialogDescription className="text-sm sm:text-base text-slate-300">
-                                                    Toque el platillo deseado para confirmar el marcaje de <strong className="text-amber-400">INICIO COMIDA</strong>.
+                                                <DialogDescription className="text-sm sm:text-base">
+                                                    Toque el platillo deseado para confirmar el marcaje de <strong className="text-amber-600 dark:text-amber-400">INICIO COMIDA</strong>.
                                                 </DialogDescription>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-slate-800/90 border border-slate-700/80 text-slate-200 font-mono text-sm sm:text-base shrink-0 shadow-inner">
-                                            <Clock className="w-5 h-5 text-amber-400 animate-pulse" />
-                                            <span>Hora en Planta: <strong className="text-amber-400 font-black text-lg sm:text-xl">{horaPlanta}</strong></span>
+                                        <div className="flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-muted border text-foreground font-mono text-sm sm:text-base shrink-0">
+                                            <Clock className="w-5 h-5 text-amber-500 animate-pulse" />
+                                            <span>Hora en Planta: <strong className="text-amber-600 dark:text-amber-400 font-bold text-lg sm:text-xl">{horaPlanta}</strong></span>
                                         </div>
                                     </div>
                                 </DialogHeader>
 
                                 {/* SUB-CABECERA: INDICADOR DE DISPONIBILIDAD Y OPCIÓN RÁPIDA DE NO CONSUMO */}
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-                                    <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-sm">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                                    <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-400 font-bold text-sm">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                                         <span>Alimentos Disponibles en este Horario ({opcionesDisponibles.length})</span>
                                     </div>
 
@@ -1082,25 +1147,25 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                             setIsComidaModalOpen(false);
                                             handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
                                         }}
-                                        className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-amber-400 flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
+                                        className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-card hover:bg-muted text-foreground border hover:border-amber-400 flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
                                     >
-                                        <UtensilsCrossed className="w-4 h-4 text-amber-400" />
+                                        <UtensilsCrossed className="w-4 h-4 text-amber-500" />
                                         <span>No Adquirir Ningún Alimento (Sin Consumo)</span>
                                     </button>
                                 </div>
 
                                 {/* LISTADO DE PLATILLOS DISPONIBLES O MENSAJE DE ESPERA */}
                                 {opcionesDisponibles.length === 0 ? (
-                                    <div className="py-14 px-6 rounded-3xl bg-slate-800/60 border border-slate-700/80 text-center space-y-5 my-6 w-full">
-                                        <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg">
+                                    <div className="py-14 px-6 rounded-2xl bg-muted/50 border text-center space-y-5 my-6 w-full">
+                                        <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-400 flex items-center justify-center mx-auto">
                                             <Clock className="w-8 h-8" />
                                         </div>
                                         <div className="space-y-2">
-                                            <h3 className="text-xl sm:text-2xl font-bold text-white">No hay opciones de comida disponibles en este horario</h3>
-                                            <p className="text-sm text-slate-300 max-w-md mx-auto">
+                                            <h3 className="text-xl sm:text-2xl font-bold text-foreground">No hay opciones de comida disponibles en este horario</h3>
+                                            <p className="text-sm text-muted-foreground max-w-md mx-auto">
                                                 El servicio de comedor se activa automáticamente en los horarios configurados para cada turno (Desayuno, Almuerzo, Cena o Refrigerio).
                                             </p>
-                                            <div className="text-xs sm:text-sm font-mono text-amber-300 bg-amber-500/15 py-1.5 px-4 rounded-xl inline-block border border-amber-500/30">
+                                            <div className="text-xs sm:text-sm font-mono text-amber-700 bg-amber-50 border border-amber-200 dark:text-amber-300 dark:bg-amber-950/30 dark:border-amber-900 py-1.5 px-4 rounded-xl inline-block">
                                                 Hora actual en planta: {horaPlanta}
                                             </div>
                                         </div>
@@ -1113,7 +1178,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                     setIsComidaModalOpen(false);
                                                     handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
                                                 }}
-                                                className="px-6 py-3.5 rounded-2xl text-base font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-xl flex items-center gap-3 mx-auto transition-all active:scale-95"
+                                                className="px-6 py-3.5 rounded-2xl text-base font-bold bg-amber-500 hover:bg-amber-400 text-white shadow-md flex items-center gap-3 mx-auto transition-all active:scale-95"
                                             >
                                                 <UtensilsCrossed className="w-5 h-5" />
                                                 <span>Registrar Inicio de Comida (Sin adquirir platillo del comedor)</span>
@@ -1123,7 +1188,7 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                 ) : (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-3">
                                         {opcionesDisponibles.map((opcion) => {
-                                            const iconProps = { className: "w-8 h-8 sm:w-9 sm:h-9 text-amber-400" };
+                                            const iconProps = { className: "w-8 h-8 sm:w-9 sm:h-9 text-amber-600 dark:text-amber-400" };
                                             const renderIcon = () => {
                                                 switch (opcion.icono) {
                                                     case 'coffee': return <Coffee {...iconProps} />;
@@ -1150,34 +1215,34 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                         setIsComidaModalOpen(false);
                                                         handleRegisterMarcaje('salida_comida', { comida_opcion: opcion.id ?? opcion._idx });
                                                     }}
-                                                    className="p-6 rounded-2xl border-2 border-amber-500/60 bg-gradient-to-b from-slate-800/95 via-slate-800/80 to-slate-900/95 hover:border-amber-400 hover:from-slate-750 hover:shadow-2xl hover:shadow-amber-500/25 active:scale-[0.98] ring-1 ring-amber-500/30 text-center transition-all flex flex-col items-center justify-between gap-4 shadow-xl min-h-[320px] group cursor-pointer"
+                                                    className="p-6 rounded-2xl border-2 border-amber-200 dark:border-amber-900 bg-card hover:border-amber-400 hover:shadow-lg hover:shadow-amber-500/10 active:scale-[0.98] text-center transition-all flex flex-col items-center justify-between gap-4 shadow-sm min-h-[320px] group cursor-pointer"
                                                 >
                                                     {/* Cabecera de la tarjeta: Badge de tipo y disponibilidad */}
                                                     <div className="flex items-center justify-between w-full gap-2">
                                                         {tipoLabel ? (
-                                                            <span className="text-xs font-black tracking-wider uppercase px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                                            <span className="text-xs font-bold tracking-wider uppercase px-3 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900">
                                                                 {tipoLabel}
                                                             </span>
                                                         ) : <span />}
 
-                                                        <span className="text-xs font-black tracking-wider uppercase px-2.5 py-1 rounded-lg bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 flex items-center gap-1.5 shadow-sm">
-                                                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                                        <span className="text-xs font-bold tracking-wider uppercase px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900 flex items-center gap-1.5">
+                                                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                                             Disponible
                                                         </span>
                                                     </div>
 
                                                     {/* Contenido principal: Ícono, Nombre y Descripción */}
                                                     <div className="flex flex-col items-center gap-2.5 w-full my-1">
-                                                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-amber-500/20 border border-amber-500/40 shadow-inner">
+                                                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-900">
                                                             {renderIcon()}
                                                         </div>
 
-                                                        <h3 className="font-black text-lg sm:text-xl text-white tracking-normal leading-tight text-center px-1">
+                                                        <h3 className="font-bold text-lg sm:text-xl text-foreground leading-tight text-center px-1">
                                                             {opcion.nombre}
                                                         </h3>
 
                                                         {opcion.descripcion && (
-                                                            <p className="text-xs sm:text-sm text-slate-300 text-center line-clamp-3 leading-relaxed px-2">
+                                                            <p className="text-xs sm:text-sm text-muted-foreground text-center line-clamp-3 leading-relaxed px-2">
                                                                 {opcion.descripcion}
                                                             </p>
                                                         )}
@@ -1185,23 +1250,23 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
 
                                                     {/* Horario estipulado: Bien espaciado y en una sola línea */}
                                                     {opcion.hora_inicio && opcion.hora_fin ? (
-                                                        <div className="w-full flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-slate-200 bg-slate-950/80 px-4 py-2.5 rounded-xl border border-slate-800 shadow-inner whitespace-nowrap">
-                                                            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
-                                                            <span className="text-slate-300">Servicio:</span>
-                                                            <strong className="text-amber-300 font-mono tracking-wide">
+                                                        <div className="w-full flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold bg-muted px-4 py-2.5 rounded-xl border whitespace-nowrap">
+                                                            <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                                                            <span className="text-muted-foreground">Servicio:</span>
+                                                            <strong className="text-amber-700 dark:text-amber-300 font-mono tracking-wide">
                                                                 {opcion.hora_inicio.slice(0, 5)} - {opcion.hora_fin.slice(0, 5)} hrs
                                                             </strong>
                                                         </div>
                                                     ) : (
-                                                        <div className="w-full text-center text-xs text-slate-400 italic py-2">
+                                                        <div className="w-full text-center text-xs text-muted-foreground italic py-2">
                                                             Disponible todo el día
                                                         </div>
                                                     )}
 
                                                     {/* Pie: Solo el Costo en Pesos Mexicanos (Sin etiqueta "Costo Colaborador") */}
                                                     {Number(opcion.costo) > 0 && (
-                                                        <div className="pt-3 border-t border-slate-700/80 w-full flex items-center justify-center">
-                                                            <span className="font-mono text-2xl font-black text-amber-400 tracking-wide">
+                                                        <div className="pt-3 border-t w-full flex items-center justify-center">
+                                                            <span className="font-mono text-2xl font-bold text-amber-600 dark:text-amber-400 tracking-wide">
                                                                 ${Number(opcion.costo).toFixed(2)} MXN
                                                             </span>
                                                         </div>
@@ -1218,38 +1283,38 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                                 setIsComidaModalOpen(false);
                                                 handleRegisterMarcaje('salida_comida', { comida_opcion: 'sin_consumo', no_adquirio_alimento: true });
                                             }}
-                                            className="p-6 rounded-2xl border-2 border-dashed border-slate-700 hover:border-amber-400 bg-slate-900/90 hover:bg-slate-800/90 text-center transition-all flex flex-col items-center justify-between gap-4 shadow-xl min-h-[320px] group cursor-pointer active:scale-[0.98]"
+                                            className="p-6 rounded-2xl border-2 border-dashed border-border hover:border-amber-400 bg-card hover:bg-muted/50 text-center transition-all flex flex-col items-center justify-between gap-4 shadow-sm min-h-[320px] group cursor-pointer active:scale-[0.98]"
                                         >
                                             <div className="flex items-center justify-between w-full gap-2">
-                                                <span className="text-xs font-black tracking-wider uppercase px-3 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">
+                                                <span className="text-xs font-bold tracking-wider uppercase px-3 py-1 rounded-lg bg-muted text-muted-foreground border">
                                                     OPCIÓN
                                                 </span>
-                                                <span className="text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700">
+                                                <span className="text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-lg bg-muted text-muted-foreground border">
                                                     Sin Consumo
                                                 </span>
                                             </div>
 
                                             <div className="flex flex-col items-center gap-2.5 w-full my-1">
-                                                <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-slate-800 border border-slate-700 shadow-inner text-slate-400 group-hover:text-amber-400">
+                                                <div className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 bg-muted border text-muted-foreground group-hover:text-amber-500">
                                                     <UtensilsCrossed className="w-8 h-8" />
                                                 </div>
 
-                                                <h3 className="font-black text-lg sm:text-xl text-white tracking-normal leading-tight text-center px-1">
+                                                <h3 className="font-bold text-lg sm:text-xl text-foreground leading-tight text-center px-1">
                                                     No Adquirir Alimento
                                                 </h3>
 
-                                                <p className="text-xs sm:text-sm text-slate-400 text-center line-clamp-3 leading-relaxed px-2">
+                                                <p className="text-xs sm:text-sm text-muted-foreground text-center line-clamp-3 leading-relaxed px-2">
                                                     Trae comida propia de casa, ayuno o no desea consumir platillos del comedor en este turno.
                                                 </p>
                                             </div>
 
-                                            <div className="w-full flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-slate-300 bg-slate-950/80 px-4 py-2.5 rounded-xl border border-slate-800 shadow-inner whitespace-nowrap">
-                                                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                            <div className="w-full flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold text-foreground bg-muted px-4 py-2.5 rounded-xl border whitespace-nowrap">
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                                                 <span>Disponible en cualquier turno</span>
                                             </div>
 
-                                            <div className="pt-3 border-t border-slate-800 w-full flex items-center justify-center">
-                                                <span className="font-mono text-2xl font-black text-slate-300 tracking-wide">
+                                            <div className="pt-3 border-t w-full flex items-center justify-center">
+                                                <span className="font-mono text-2xl font-bold text-muted-foreground tracking-wide">
                                                     $0.00 MXN
                                                 </span>
                                             </div>
@@ -1257,16 +1322,16 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                                     </div>
                                 )}
 
-                                <div className="pt-5 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-                                    <p className="text-xs sm:text-sm text-slate-400 flex items-center gap-1.5">
-                                        <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                                <div className="pt-5 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5">
+                                        <Clock className="w-4 h-4 text-amber-500 shrink-0" />
                                         <span>Los alimentos estipulados por horario se validan automáticamente con el reloj de la planta.</span>
                                     </p>
                                     <Button
                                         type="button"
                                         variant="outline"
                                         onClick={() => setIsComidaModalOpen(false)}
-                                        className="h-12 px-8 rounded-xl text-base font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 hover:text-white border-slate-700 w-full sm:w-auto shadow-md"
+                                        className="h-12 px-8 rounded-xl text-base font-bold w-full sm:w-auto"
                                     >
                                         Cerrar / Cancelar
                                     </Button>
@@ -1279,27 +1344,31 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
 
             {/* MODAL REGISTRO DE INCIDENTES EN JORNADA */}
             <Dialog open={isIncidenteModalOpen} onOpenChange={setIsIncidenteModalOpen}>
-                <DialogContent className="max-w-md bg-slate-900 border border-amber-500/40 text-white">
+                <DialogContent className="max-w-md border-t-4 border-t-amber-500">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-amber-400">
-                            <AlertTriangle className="w-5 h-5 text-amber-400" />
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-amber-700 dark:text-amber-400">
+                            <AlertTriangle className="w-5 h-5" />
                             Registro de Incidente en Jornada
                         </DialogTitle>
-                        <DialogDescription className="text-xs text-slate-400">
+                        <DialogDescription className="text-xs">
                             Seleccione o describa la causa del incidente que interrumpe la actividad.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 pt-2">
                         <div className="space-y-2">
-                            <Label className="text-xs text-slate-300">Causas Frecuentes:</Label>
+                            <Label className="text-xs text-muted-foreground">Causas Frecuentes:</Label>
                             <div className="flex flex-wrap gap-2">
                                 {['Falla Eléctrica / Maquinaria', 'Falta de Insumos', 'Cita / Atención Médica', 'Trámite Administrativo', 'Capacitación'].map((causa) => (
                                     <button
                                         key={causa}
                                         type="button"
                                         onClick={() => setIncidenteCausaInput(causa)}
-                                        className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-900/50 border border-slate-700 text-amber-200 transition-colors"
+                                        className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                                            incidenteCausaInput === causa
+                                                ? 'bg-amber-500 border-amber-500 text-white'
+                                                : 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:hover:bg-amber-950/50 dark:border-amber-900 dark:text-amber-300'
+                                        }`}
                                     >
                                         {causa}
                                     </button>
@@ -1308,29 +1377,24 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-slate-300">Causa o Detalle del Incidente:</Label>
+                            <Label className="text-xs text-muted-foreground">Causa o Detalle del Incidente:</Label>
                             <Input
                                 value={incidenteCausaInput}
                                 onChange={(e) => setIncidenteCausaInput(e.target.value)}
                                 placeholder="Ej. Suspensión de energía en línea de empaque"
-                                className="bg-slate-950 border-slate-700 text-white text-xs"
+                                className="text-xs"
                             />
                         </div>
 
                         <div className="pt-2 flex justify-end gap-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setIsIncidenteModalOpen(false)}
-                                className="border-slate-700 bg-slate-800 text-slate-300"
-                            >
+                            <Button type="button" variant="outline" onClick={() => setIsIncidenteModalOpen(false)}>
                                 Cancelar
                             </Button>
                             <Button
                                 type="button"
                                 onClick={() => handleRegisterMarcaje('incidente_inicio', { incidente_causa: incidenteCausaInput || 'Incidente General' })}
                                 disabled={loadingSearch || !incidenteCausaInput.trim()}
-                                className="bg-amber-600 hover:bg-amber-500 text-white font-bold"
+                                className="bg-amber-500 hover:bg-amber-400 text-white font-bold"
                             >
                                 Registrar Incidente
                             </Button>
@@ -1340,27 +1404,37 @@ export default function RelojChecadorKiosko({ configuracion, zona_horaria, opcio
             </Dialog>
 
             {/* PIE DE PÁGINA */}
-            <div className="border-t border-slate-900 pt-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-                <div className="flex items-center gap-3">
+            <footer className="border-t bg-card px-4 md:px-8 py-3 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-2">
+                <div className="flex items-center gap-3 flex-wrap justify-center">
                     <span>Sistema Kiosko Checador • Soporte para Teclado, Pistola USB y QR Gafete</span>
                     {gpsStatus === 'activo' && gpsPosition && (
-                        <Badge variant="outline" className="text-[10px] bg-emerald-950/40 text-emerald-400 border-emerald-800 flex items-center gap-1 font-mono">
-                            <MapPin className="w-3 h-3 text-emerald-400" />
+                        <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900 flex items-center gap-1 font-mono">
+                            <MapPin className="w-3 h-3" />
                             GPS: {gpsPosition.lat.toFixed(4)}, {gpsPosition.lng.toFixed(4)}
                         </Badge>
                     )}
                     {gpsStatus === 'obteniendo' && (
-                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-amber-400 animate-pulse" />
+                        <span className="text-[10px] flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-amber-500 animate-pulse" />
                             Sincronizando GPS...
                         </span>
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    <ShieldCheck className="w-4 h-4 text-primary" />
                     <span>Control de Asistencia & Horarios</span>
                 </div>
-            </div>
+            </footer>
         </div>
+    );
+}
+
+// El kiosko se abre fuera del layout del panel: se envuelve en el proveedor de
+// plantilla para heredar el color primario y el modo claro/oscuro del usuario.
+export default function RelojChecadorKiosko(props: Props) {
+    return (
+        <TemplateSettingsProvider>
+            <KioskoChecador {...props} />
+        </TemplateSettingsProvider>
     );
 }

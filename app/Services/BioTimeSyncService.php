@@ -209,29 +209,7 @@ class BioTimeSyncService
         $cambios = [];
 
         foreach ($res['data'] as $e) {
-            $bio = BiotimeEmpleado::updateOrCreate(
-                ['empresa_id' => $empresa->id, 'emp_code' => (string) ($e['emp_code'] ?? $e['id'])],
-                [
-                    'biotime_id' => $e['id'],
-                    'first_name' => $e['first_name'] ?? null,
-                    'last_name' => $e['last_name'] ?? null,
-                    'nickname' => $e['nickname'] ?? null,
-                    'card_no' => $e['card_no'] ?? null,
-                    'dept_code' => $this->code($e['department'] ?? null, 'dept_code'),
-                    'position_code' => $this->code($e['position'] ?? null, 'position_code'),
-                    'area_names' => $this->areaNames($e['area'] ?? null),
-                    'hire_date' => $this->toDate($e['hire_date'] ?? null),
-                    'gender' => $e['gender'] ?? null,
-                    'birthday' => $this->toDate($e['birthday'] ?? null),
-                    'mobile' => $e['mobile'] ?? null,
-                    'email' => $e['email'] ?? null,
-                    'national' => $e['national'] ?? null,
-                    'internal_emp_num' => $e['internal_emp_num'] ?? null,
-                    'payroll_num' => $e['payroll_num'] ?? null,
-                    'enable_att' => $e['enable_att'] ?? null,
-                    'raw' => $e,
-                ],
-            );
+            $bio = $this->espejarEmpleado($empresa, $e);
 
             if (! $bio->wasRecentlyCreated && $bio->wasChanged()) {
                 $cambios[$bio->id] = array_keys($bio->getChanges());
@@ -253,6 +231,39 @@ class BioTimeSyncService
         }
 
         return $resultado;
+    }
+
+    /**
+     * Guarda en el espejo un empleado tal como lo devuelve el listado de
+     * BioTime (con department / position como objeto).
+     *
+     * @param  array<string,mixed>  $e
+     */
+    public function espejarEmpleado(Empresa $empresa, array $e, array $extra = []): BiotimeEmpleado
+    {
+        return BiotimeEmpleado::updateOrCreate(
+            ['empresa_id' => $empresa->id, 'emp_code' => (string) ($e['emp_code'] ?? $e['id'])],
+            $extra + [
+                'biotime_id' => $e['id'],
+                'first_name' => $e['first_name'] ?? null,
+                'last_name' => $e['last_name'] ?? null,
+                'nickname' => $e['nickname'] ?? null,
+                'card_no' => $e['card_no'] ?? null,
+                'dept_code' => $this->code($e['department'] ?? null, 'dept_code'),
+                'position_code' => $this->code($e['position'] ?? null, 'position_code'),
+                'area_names' => $this->areaNames($e['area'] ?? null),
+                'hire_date' => $this->toDate($e['hire_date'] ?? null),
+                'gender' => $e['gender'] ?? null,
+                'birthday' => $this->toDate($e['birthday'] ?? null),
+                'mobile' => $e['mobile'] ?? null,
+                'email' => $e['email'] ?? null,
+                'national' => $e['national'] ?? null,
+                'internal_emp_num' => $e['internal_emp_num'] ?? null,
+                'payroll_num' => $e['payroll_num'] ?? null,
+                'enable_att' => $e['enable_att'] ?? null,
+                'raw' => $e,
+            ],
+        );
     }
 
     /**

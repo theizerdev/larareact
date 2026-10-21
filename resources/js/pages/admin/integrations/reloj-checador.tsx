@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useTranslate } from '@/hooks/use-translate';
 
@@ -17,6 +18,9 @@ interface PageProps {
     biotime_password_set: boolean;
     biotime_active: boolean;
     biotime_auto_alta: boolean;
+    biotime_push: boolean;
+    biotime_push_area_id: number | null;
+    biotime_areas: { biotime_id: number; area_code: string | null; area_name: string | null }[];
     biotime_last_sync_at: string | null;
 }
 
@@ -27,6 +31,9 @@ export default function RelojChecadorIntegration({
     biotime_password_set,
     biotime_active,
     biotime_auto_alta,
+    biotime_push,
+    biotime_push_area_id,
+    biotime_areas,
     biotime_last_sync_at,
 }: PageProps) {
     const { __ } = useTranslate();
@@ -39,10 +46,16 @@ export default function RelojChecadorIntegration({
         biotime_password: '',
         biotime_active: biotime_active,
         biotime_auto_alta: biotime_auto_alta,
+        biotime_push: biotime_push,
+        biotime_push_area_id: biotime_push_area_id ? String(biotime_push_area_id) : '',
     });
 
     const handleSaveBioTime = (e: React.FormEvent) => {
         e.preventDefault();
+        biotimeForm.transform((data) => ({
+            ...data,
+            biotime_push_area_id: data.biotime_push_area_id === '' ? null : Number(data.biotime_push_area_id),
+        }));
         biotimeForm.put('/admin/integrations/biotime', {
             preserveScroll: true,
             onSuccess: () => {
@@ -135,6 +148,48 @@ export default function RelojChecadorIntegration({
                                     />
                                 </div>
 
+                                <div className="space-y-3 rounded-lg border p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5 pr-4">
+                                            <Label className="text-sm font-medium">{__('Send employee changes to BioTime')}</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                {__('Employees created or edited in Organization are registered or updated in BioTime and reach the clocks of the chosen area. Nothing is deleted in BioTime.')}
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={biotimeForm.data.biotime_push}
+                                            onCheckedChange={(checked) => biotimeForm.setData('biotime_push', checked)}
+                                            disabled={!biotimeForm.data.biotime_active}
+                                        />
+                                    </div>
+                                    {biotimeForm.data.biotime_push && (
+                                        <div className="space-y-2">
+                                            <Label>{__('BioTime area for new employees')}</Label>
+                                            <Select
+                                                value={biotimeForm.data.biotime_push_area_id}
+                                                onValueChange={(v) => biotimeForm.setData('biotime_push_area_id', v)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder={__('Select an area')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {biotime_areas.map((a) => (
+                                                        <SelectItem key={a.biotime_id} value={String(a.biotime_id)}>
+                                                            {a.area_name || a.area_code || a.biotime_id}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {biotime_areas.length === 0 && (
+                                                <p className="text-xs text-amber-600">{__('Run a sync first so the BioTime areas appear here.')}</p>
+                                            )}
+                                            {biotimeForm.errors.biotime_push_area_id && (
+                                                <p className="text-xs text-destructive">{biotimeForm.errors.biotime_push_area_id}</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="space-y-2">
                                     <Label htmlFor="biotime_base_url">{__('Server URL')}</Label>
                                     <Input
@@ -189,7 +244,7 @@ export default function RelojChecadorIntegration({
                                         className="font-mono text-sm"
                                         autoComplete="new-password"
                                     />
-                                    <p className="text-xs text-muted-foreground">{__('Stored encrypted. Leave blank to keep the saved one. Read-only: only GET requests are sent to BioTime.')}</p>
+                                    <p className="text-xs text-muted-foreground">{__('Stored encrypted. Leave blank to keep the saved one.')}</p>
                                 </div>
 
                                 {biotime_last_sync_at && (

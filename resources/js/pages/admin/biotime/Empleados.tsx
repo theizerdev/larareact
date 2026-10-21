@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { Fingerprint, RefreshCw, Link2, Users, UserCheck, UserX, Loader2 } from 'lucide-react';
+import { Fingerprint, RefreshCw, Link2, Users, UserCheck, UserX, Loader2, ImageDown, ImageUp } from 'lucide-react';
 import React from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
@@ -26,12 +26,13 @@ interface BiotimeEmpleado {
     mobile: string | null;
     link_status: 'auto' | 'manual' | 'unmatched';
     empleado_id: number | null;
-    empleado?: { id: number; nombres: string; apellidos: string; documento_identidad: string } | null;
+    foto_exportada: string | null;
+    empleado?: { id: number; nombres: string; apellidos: string; documento_identidad: string; foto_empleado: string | null } | null;
 }
 
 interface PageProps {
     empleados: Paginated<BiotimeEmpleado>;
-    stats: { total: number; vinculados: number; sin_vincular: number };
+    stats: { total: number; vinculados: number; sin_vincular: number; fotos_pendientes: number };
     filters: { search?: string; link_status?: string; perPage?: string };
     empleados_hosho: { id: number; label: string }[];
 }
@@ -94,7 +95,19 @@ export default function BioTimeEmpleados({ empleados, stats, filters, empleados_
         { header: __('Dept.'), accessorKey: 'dept_code', hideOn: 'mobile' },
         {
             header: __('Link status'),
-            cell: (r) => <LinkBadge status={r.link_status} />,
+            cell: (r) => (
+                <div className="flex flex-wrap items-center gap-1">
+                    <LinkBadge status={r.link_status} />
+                    {r.empleado?.foto_empleado && r.empleado.foto_empleado !== r.foto_exportada && (
+                        <span
+                            className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                            title={__('The photo has not been exported to BioTime yet.')}
+                        >
+                            {__('Photo pending')}
+                        </span>
+                    )}
+                </div>
+            ),
         },
         {
             header: __('Hoshō employee'),
@@ -137,13 +150,26 @@ export default function BioTimeEmpleados({ empleados, stats, filters, empleados_
                             <RefreshCw className="h-4 w-4" />
                             {__('Sync now')}
                         </Button>
+                        {/* Recarga al volver del ZIP para que el conteo de pendientes baje. */}
+                        <Button asChild variant="secondary" className="gap-2" title={__('Only photos that are new or changed since the last ZIP. JPG files of up to 25 KB named with the employee number, for BioTime › Device › Data › Bio-Photo › Import Bio-Photo.')}>
+                            <a href="/admin/biotime/fotos/exportar" onClick={() => setTimeout(() => router.reload({ only: ['empleados', 'stats'] }), 2500)}>
+                                <ImageDown className="h-4 w-4" />
+                                {__('Export pending photos')} ({stats.fotos_pendientes})
+                            </a>
+                        </Button>
+                        <Button asChild variant="ghost" className="gap-2" title={__('All photos of linked employees, including those already exported.')}>
+                            <a href="/admin/biotime/fotos/exportar?todas=1" onClick={() => setTimeout(() => router.reload({ only: ['empleados', 'stats'] }), 2500)}>
+                                {__('Export all')}
+                            </a>
+                        </Button>
                     </div>
                 </ModuleHeader>
 
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard icon={<Users className="h-5 w-5 text-white" />} title={__('Total')} value={stats.total} colorClassName="bg-rose-500" />
                     <StatCard icon={<UserCheck className="h-5 w-5 text-white" />} title={__('Linked')} value={stats.vinculados} colorClassName="bg-emerald-500" />
                     <StatCard icon={<UserX className="h-5 w-5 text-white" />} title={__('Unlinked')} value={stats.sin_vincular} colorClassName="bg-amber-500" />
+                    <StatCard icon={<ImageUp className="h-5 w-5 text-white" />} title={__('Photos pending for BioTime')} value={stats.fotos_pendientes} colorClassName="bg-sky-500" />
                 </div>
 
                 <FilterBar>

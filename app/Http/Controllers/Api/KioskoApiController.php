@@ -11,7 +11,9 @@ use App\Models\Sucursal;
 use App\Services\CalculoAsistenciaLftService;
 use App\Services\RegistroMarcajeService;
 use Carbon\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class KioskoApiController extends Controller
 {
@@ -211,6 +213,14 @@ class KioskoApiController extends Controller
             'incidente_causa' => 'nullable|string|max:255',
             'duracion_descanso_minutos' => 'nullable|integer|min:1|max:120',
             'tipo_entrada' => 'nullable|string|in:normal,extraordinaria_doble,extraordinaria_triple',
+            // Evidencia de la app (ver RegistroMarcajeService).
+            'uuid_cliente' => 'nullable|uuid',
+            'fecha_hora_dispositivo' => 'nullable|date',
+            'enviado_desde_cola' => 'nullable|boolean',
+            'precision_metros' => 'nullable|numeric|min:0|max:9999999',
+            'ubicacion_simulada' => 'nullable|boolean',
+            'ubicacion_estado' => 'nullable|string|in:'.implode(',', array_keys(RegistroMarcajeService::ESTADOS_UBICACION)),
+            'ubicacion_fecha_hora' => 'nullable|date',
         ]);
 
         // Autoservicio: una cuenta vinculada a un empleado solo registra SUS
@@ -255,69 +265,117 @@ class KioskoApiController extends Controller
             }
         }
 
-        // Doble toque / reintento de la app: se responde con el marcaje ya
-        // registrado, sin duplicarlo ni recalcular ni reenviar el WhatsApp.
-        $duplicado = $registro->duplicadoReciente($empleado, $validated['tipo_marcaje']);
+        // Reenvío del mismo marcaje (la app no recibió la respuesta y lo mandó
+        // otra vez, quizá horas después desde su cola sin conexión), o doble
+        // toque: se responde con el ya registrado, sin duplicarlo ni recalcular
+        // ni reenviar el WhatsApp.
+        $uuid = $validated['uuid_cliente'] ?? null;
+        $duplicado = $registro->porUuidCliente($empleado, $uuid)
+            ?? $registro->duplicadoReciente($empleado, $validated['tipo_marcaje']);
 
         if ($duplicado) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Marcaje registrado con éxito.',
-                'empleado_nombre' => $empleado->nombre_completo,
-                'marcaje' => [
-                    'tipo_marcaje' => $duplicado->tipo_marcaje,
-                    'hora' => $duplicado->fecha_hora->format('H:i:s'),
-                    'fecha' => $duplicado->fecha_hora->format('d/m/Y'),
-                ],
-            ]);
+            return $this->respuestaMarcaje($empleado, $duplicado);
         }
 
-        $now = Carbon::now();
+        $config = ConfiguracionAsistencia::where('empresa_id', $empleado->empresa_id)->first();
+        $desdeCola = (bool) ($validated['enviado_desde_cola'] ?? false);
+
+        $lat = $validated['latitud'] ?? null;
+        $lon = $validated['longitud'] ?? null;
+
+        // Lo capturado sin conexión se acepta aunque la regla haya cambiado
+        // después: el marcaje ya ocurrió y rechazarlo sólo lo perdería.
+        if ($config?->requiere_ubicacion_marcaje && ($lat === null || $lon === null) && ! $desdeCola) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tu empresa exige la ubicación para registrar el marcaje. Activa el GPS e inténtalo de nuevo.',
+            ], 422);
+        }
+
+        [$fechaHora, $notaHora] = $registro->horaDeMarcaje($validated['fecha_hora_dispositivo'] ?? null, $desdeCola);
 
         // Aplicar redondeo si está configurado en ConfiguracionAsistencia
-        $config = ConfiguracionAsistencia::where('empresa_id', $empleado->empresa_id)->first();
         if ($config && $config->redondeo_marcaje_minutos > 0) {
             $minutos = $config->redondeo_marcaje_minutos;
-            $remainder = $now->minute % $minutos;
+            $remainder = $fechaHora->minute % $minutos;
 
             if ($remainder >= ($minutos / 2)) {
-                $now->addMinutes($minutos - $remainder)->second(0);
+                $fechaHora->addMinutes($minutos - $remainder)->second(0);
             } else {
-                $now->subMinutes($remainder)->second(0);
+                $fechaHora->subMinutes($remainder)->second(0);
             }
         }
 
         // Flutter puede mandarla como data URI; sólo se guarda si es una imagen real.
         $fotoPath = $registro->guardarFoto($validated['fotografia_base64'] ?? null, $empleado->id);
 
-        $lat = $validated['latitud'] ?? null;
-        $lon = $validated['longitud'] ?? null;
         $geoloc = ($lat && $lon) ? "{$lat}, {$lon}" : null;
 
-        $marcaje = AsistenciaMarcaje::create([
-            'empresa_id' => $empleado->empresa_id,
-            'sucursal_id' => $empleado->sucursal_id,
-            'empleado_id' => $empleado->id,
-            'tipo_marcaje' => $validated['tipo_marcaje'],
-            'fecha_hora' => $now,
-            'origen' => 'app',
-            'fotografia_path' => $fotoPath,
-            'latitud' => $lat,
-            'longitud' => $lon,
-            'geolocalizacion' => $geoloc,
-            'observaciones' => $validated['observaciones'] ?? null,
-            'incidente_causa' => $validated['incidente_causa'] ?? null,
-            'duracion_descanso_minutos' => $validated['duracion_descanso_minutos'] ?? null,
-            'tipo_entrada' => $validated['tipo_entrada'] ?? 'normal',
-            'registrado_por_user_id' => $request->user()?->id,
+        // Lo que RH debe revisar queda en observaciones, que la bitácora ya muestra.
+        $estadoUbicacion = $validated['ubicacion_estado'] ?? null;
+        $sinUbicacion = RegistroMarcajeService::ESTADOS_UBICACION[$estadoUbicacion] ?? null;
+        $observaciones = $registro->anotarObservaciones($validated['observaciones'] ?? null, [
+            $notaHora,
+            ! empty($validated['ubicacion_simulada']) ? 'Ubicación simulada (GPS falso) detectada por la app.' : null,
+            $sinUbicacion && $lat === null ? "Sin ubicación: {$sinUbicacion}." : null,
         ]);
 
-        // Recalcular asistencia del día automáticamente
-        $calculoService->calcularHorasDiarias($empleado, $now->toDateString());
+        $tz = $fechaHora->getTimezone();
+
+        try {
+            $marcaje = AsistenciaMarcaje::create([
+                'empresa_id' => $empleado->empresa_id,
+                'sucursal_id' => $empleado->sucursal_id,
+                'empleado_id' => $empleado->id,
+                'tipo_marcaje' => $validated['tipo_marcaje'],
+                'fecha_hora' => $fechaHora,
+                'origen' => 'app',
+                'fotografia_path' => $fotoPath,
+                'latitud' => $lat,
+                'longitud' => $lon,
+                'geolocalizacion' => $geoloc,
+                'observaciones' => $observaciones,
+                'incidente_causa' => $validated['incidente_causa'] ?? null,
+                'duracion_descanso_minutos' => $validated['duracion_descanso_minutos'] ?? null,
+                'tipo_entrada' => $validated['tipo_entrada'] ?? 'normal',
+                'registrado_por_user_id' => $request->user()?->id,
+                'uuid_cliente' => $uuid,
+                'fecha_hora_dispositivo' => isset($validated['fecha_hora_dispositivo'])
+                    ? Carbon::parse($validated['fecha_hora_dispositivo'])->setTimezone($tz)
+                    : null,
+                'enviado_desde_cola' => $desdeCola,
+                'precision_metros' => $validated['precision_metros'] ?? null,
+                'ubicacion_simulada' => $validated['ubicacion_simulada'] ?? null,
+                'ubicacion_estado' => $estadoUbicacion,
+                'ubicacion_fecha_hora' => isset($validated['ubicacion_fecha_hora'])
+                    ? Carbon::parse($validated['ubicacion_fecha_hora'])->setTimezone($tz)
+                    : null,
+            ]);
+        } catch (UniqueConstraintViolationException $e) {
+            // Dos envíos simultáneos del mismo uuid: ganó el otro.
+            if ($fotoPath) {
+                Storage::disk('public')->delete($fotoPath);
+            }
+            $existente = $registro->porUuidCliente($empleado, $uuid);
+            if (! $existente) {
+                throw $e;
+            }
+
+            return $this->respuestaMarcaje($empleado, $existente);
+        }
+
+        // Recalcular la asistencia del día del marcaje (puede ser de ayer si
+        // llegó tarde desde la cola sin conexión).
+        $calculoService->calcularHorasDiarias($empleado, $fechaHora->toDateString());
 
         // WhatsApp al empleado, fuera de la petición (ver RegistroMarcajeService).
         $registro->notificarEnCola($empleado, $marcaje);
 
+        return $this->respuestaMarcaje($empleado, $marcaje);
+    }
+
+    private function respuestaMarcaje(Empleado $empleado, AsistenciaMarcaje $marcaje)
+    {
         return response()->json([
             'success' => true,
             'message' => 'Marcaje registrado con éxito.',

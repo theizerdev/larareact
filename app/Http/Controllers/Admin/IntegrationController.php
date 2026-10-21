@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BiotimeArea;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Services\BioTimeService;
@@ -13,6 +14,7 @@ use App\Services\WhatsAppService;
 use App\Services\ZapSignService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Validation\Rule;
 
 class IntegrationController extends Controller
 {
@@ -252,6 +254,12 @@ class IntegrationController extends Controller
             'biotime_password' => 'nullable|string|max:255',
             'biotime_active' => 'required|boolean',
             'biotime_auto_alta' => 'sometimes|boolean',
+            'biotime_push' => 'sometimes|boolean',
+            // Sin área no se puede dar de alta en BioTime: es la que decide a qué relojes llega la persona.
+            'biotime_push_area_id' => [
+                'nullable', 'integer', 'required_if_accepted:biotime_push',
+                Rule::exists('biotime_areas', 'biotime_id')->where('empresa_id', $empresa->id),
+            ],
         ]);
 
         $payload = [
@@ -260,6 +268,8 @@ class IntegrationController extends Controller
             'biotime_username' => $validated['biotime_username'] ?? null,
             'biotime_active' => $validated['biotime_active'],
             'biotime_auto_alta' => $validated['biotime_auto_alta'] ?? (bool) $empresa->biotime_auto_alta,
+            'biotime_push' => $validated['biotime_push'] ?? (bool) $empresa->biotime_push,
+            'biotime_push_area_id' => array_key_exists('biotime_push_area_id', $validated) ? $validated['biotime_push_area_id'] : $empresa->biotime_push_area_id,
         ];
 
         if (! empty($validated['biotime_password'])) {
@@ -670,6 +680,12 @@ class IntegrationController extends Controller
             'biotime_password_set' => ! empty($empresa->biotime_password),
             'biotime_active' => (bool) $empresa->biotime_active,
             'biotime_auto_alta' => (bool) $empresa->biotime_auto_alta,
+            'biotime_push' => (bool) $empresa->biotime_push,
+            'biotime_push_area_id' => $empresa->biotime_push_area_id,
+            'biotime_areas' => BiotimeArea::query()
+                ->where('empresa_id', $empresa->id)
+                ->orderBy('area_name')
+                ->get(['biotime_id', 'area_code', 'area_name']),
             'biotime_last_sync_at' => $empresa->biotime_last_sync_at?->toIso8601String(),
         ]);
     }

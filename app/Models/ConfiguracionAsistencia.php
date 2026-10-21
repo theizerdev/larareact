@@ -26,6 +26,7 @@ class ConfiguracionAsistencia extends Model
                 'horas_extra_requieren_aprobacion',
                 'porcentaje_prima_dominical',
                 'requiere_foto_marcaje',
+                'requiere_ubicacion_marcaje',
                 'redondeo_marcaje_minutos',
             ])
             ->logOnlyDirty()
@@ -54,6 +55,7 @@ class ConfiguracionAsistencia extends Model
         'horas_extra_requieren_aprobacion',
         'porcentaje_prima_dominical',
         'requiere_foto_marcaje',
+        'requiere_ubicacion_marcaje',
         'redondeo_marcaje_minutos',
         'ley_silla_intervalo_horas',
         'ley_silla_descanso_minutos',
@@ -92,6 +94,7 @@ class ConfiguracionAsistencia extends Model
             'descanso_es_tiempo_efectivo' => 'boolean',
             'horas_extra_requieren_aprobacion' => 'boolean',
             'requiere_foto_marcaje' => 'boolean',
+            'requiere_ubicacion_marcaje' => 'boolean',
             'whatsapp_recordatorio_descanso' => 'boolean',
             'opciones_descanso_minutos' => 'array',
             'opciones_comida' => 'array',
