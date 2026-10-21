@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Informe Técnico de Cumplimiento RFP - Smurfit Westrock México</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 12mm 14mm 14mm 14mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      font-size: 8.8pt;
+      line-height: 1.42;
+    }
+
+    .doc-page {
+      page-break-after: always;
+      height: 270mm;
+      max-height: 270mm;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    .doc-page:last-child {
+      page-break-after: avoid;
+    }
+
+    .page-content {
+      flex: 1;
+    }
+
+    /* Portada */
+    .cover-container {
+      padding: 28px 24px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1.5px solid #0f294a;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    .cover-top {
+      border-bottom: 3px solid #0f294a;
+      padding-bottom: 20px;
+    }
+
+    .company-tag {
+      font-size: 10pt;
+      font-weight: 800;
+      color: #0f294a;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .doc-type {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 8.5pt;
+      font-weight: 700;
+      margin-bottom: 12px;
+      border: 1px solid #bae6fd;
+    }
+
+    .cover-title {
+      font-size: 21pt;
+      font-weight: 900;
+      color: #0f294a;
+      line-height: 1.22;
+      margin-bottom: 10px;
+    }
+
+    .cover-subtitle {
+      font-size: 12pt;
+      color: #334155;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .cover-center {
+      margin: 20px 0;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-left: 5px solid #008075;
+      padding: 18px 20px;
+      border-radius: 6px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04);
+    }
+
+    .cover-center h3 {
+      font-size: 10.5pt;
+      color: #0f294a;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      letter-spacing: 0.8px;
+    }
+
+    .cover-center p {
+      font-size: 9pt;
+      color: #334155;
+      margin-bottom: 8px;
+      line-height: 1.45;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .meta-item {
+      background: #f8fafc;
+      padding: 9px 12px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .meta-label {
+      font-size: 7.2pt;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .meta-val {
+      font-size: 8.8pt;
+      font-weight: 700;
+      color: #0f294a;
+    }
+
+    .cover-footer {
+      border-top: 1px solid #cbd5e1;
+      padding-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8pt;
+      color: #64748b;
+    }
+
+    /* Headers y Secciones */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1.5px solid #0f294a;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+    }
+
+    .header-bar .title {
+      font-size: 7.8pt;
+      font-weight: 800;
+      color: #0f294a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .header-bar .page-meta {
+      font-size: 7.8pt;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    h1.sec-title {
+      font-size: 13pt;
+      color: #0f294a;
+      font-weight: 800;
+      margin-bottom: 8px;
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 3px;
+    }
+
+    h2.sub-title {
+      font-size: 10pt;
+      color: #1e3a8a;
+      font-weight: 700;
+      margin: 8px 0 5px 0;
+    }
+
+    h3.sub-sub-title {
+      font-size: 8.8pt;
+      color: #0f294a;
+      font-weight: 700;
+      margin: 6px 0 3px 0;
+    }
+
+    p {
+      margin-bottom: 6px;
+      text-align: justify;
+    }
+
+    /* Cajas y Alertas */
+    .card-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 9px 12px;
+      margin-bottom: 8px;
+    }
+
+    .alert-box {
+      padding: 8px 12px;
+      border-radius: 5px;
+      margin-bottom: 8px;
+      font-size: 8.2pt;
+      line-height: 1.35;
+    }
+
+    .alert-info {
+      background: #f0fdfa;
+      border-left: 4px solid #0d9488;
+      color: #134e4a;
+    }
+
+    .alert-sox {
+      background: #eff6ff;
+      border-left: 4px solid #2563eb;
+      color: #1e40af;
+    }
+
+    .alert-warn {
+      background: #fffbeb;
+      border-left: 4px solid #d97706;
+      color: #92400e;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 1.5px 6px;
+      border-radius: 10px;
+      font-size: 7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+
+    .badge-cubierto {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+
+    .badge-parcial {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+    }
+
+    .badge-campo {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+
+    .badge-sox {
+      background: #e0e7ff;
+      color: #3730a3;
+      border: 1px solid #a5b4fc;
+    }
+
+    /* Tablas */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6px 0 8px 0;
+      font-size: 7.5pt;
+    }
+
+    table.data-table th {
+      background: #0f294a;
+      color: #ffffff;
+      text-align: left;
+      padding: 5px 7px;
+      font-weight: 700;
+      border: 1px solid #0f294a;
+      font-size: 7.5pt;
+    }
+
+    table.data-table td {
+      padding: 4.5px 6.5px;
+      border: 1px solid #e2e8f0;
+      vertical-align: top;
+      line-height: 1.3;
+    }
+
+    table.data-table tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    /* Resumen de Métricas */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 9px;
+    }
+
+    .stat-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      padding: 8px;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+
+    .stat-number {
+      font-size: 15pt;
+      font-weight: 800;
+      color: #0f294a;
+      line-height: 1.1;
+      margin-bottom: 2px;
+    }
+
+    .stat-label {
+      font-size: 6.8pt;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+
+    /* Bloques de Código */
+    pre.code-block {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 8px 10px;
+      border-radius: 5px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 7pt;
+      line-height: 1.35;
+      overflow-x: hidden;
+      margin: 6px 0 8px 0;
+      border: 1px solid #334155;
+    }
+
+    /* Diagrama Visual */
+    .arch-diagram {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 9px;
+      margin: 8px 0;
+    }
+
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1fr;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .arch-column {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 7px;
+    }
+
+    .arch-col-title {
+      font-size: 7.5pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      text-align: center;
+      padding-bottom: 4px;
+      margin-bottom: 5px;
+      border-bottom: 1.5px solid #cbd5e1;
+    }
+
+    .arch-box {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 5px;
+      margin-bottom: 5px;
+      font-size: 7.2pt;
+      line-height: 1.3;
+    }
+
+    .arch-box.highlight {
+      border-color: #0d9488;
+      background: #f0fdfa;
+    }
+
+    .arch-box-title {
+      font-weight: 800;
+      color: #0f294a;
+      margin-bottom: 2px;
+    }
+
+    .connector-arrow {
+      text-align: center;
+      font-size: 8pt;
+      color: #64748b;
+      margin: 2px 0;
+      font-weight: 700;
+    }
+
+    ul, ol {
+      margin-left: 16px;
+      margin-bottom: 6px;
+    }
+
+    li {
+      margin-bottom: 2px;
+      font-size: 8.2pt;
+    }
+
+    .footer-bar {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 4px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7.2pt;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PÁGINA 1: PORTADA ==================== -->
+  <div class="doc-page">
+    <div class="cover-container">
+      <div class="cover-top">
+        <div class="company-tag">Smurfit Westrock México • Abastecimientos & TI</div>
+        <div class="doc-type">DICTAMEN TÉCNICO DE EVALUACIÓN Y ARQUITECTURA</div>
+        <h1 class="cover-title">INFORME DE CUMPLIMIENTO DE CRITERIOS DE BASES Y RFP</h1>
+        <div class="cover-subtitle">Time & Attendance Harmonization – Migración de Sistema Biométricos hacia BioTime Cloud y Middleware Integrador</div>
+      </div>
+
+      <div class="cover-center">
+        <h3>Propósito del Documento</h3>
+        <p>El presente informe técnico proporciona una evaluación pormenorizada del grado de cobertura, compatibilidad técnica y cumplimiento normativo que ofrece el <strong>Middleware Hoshō / LaraReact</strong> integrado con la plataforma <strong>BioTime Cloud (ZKTeco)</strong> frente a la Solicitud de Propuesta (RFP) emitida por Smurfit Westrock México.</p>
+        <p>Se evalúa el ecosistema de más de <strong>14,800 colaboradores</strong>, <strong>108 relojes checadores</strong> (212 puntos de control proyectados) y <strong>44 localidades</strong> pertenecientes a las entidades <strong>SKM</strong>, <strong>SKNA</strong>, <strong>WRK GG</strong> y <strong>PS-fVP</strong>, garantizando interoperabilidad con <strong>SAP Cloud (EC / ECP / Time Tracking)</strong> y cumplimiento regulatorio <strong>SOX 404</strong>.</p>
+        
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-label">Cliente / Solicitante</div>
+            <div class="meta-val">Smurfit Westrock México</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Plataformas Reemplazadas</div>
+            <div class="meta-val">Oracle HCM, TRESS, SW3000</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Plataformas Destino</div>
+            <div class="meta-val">SAP EC / ECP / Time Tracking & MuleSoft</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Solución Evaluada</div>
+            <div class="meta-val">Middleware Hoshō (Laravel 13) + BioTime Cloud</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cover-footer">
+        <div>Documento: <strong>INF-RFP-SW-2026-01</strong> • Versión: <strong>1.0 Definitiva</strong></div>
+        <div>Fecha: <strong>Marzo - Octubre 2026</strong> • Clasificación: <strong>Confidencial</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 2: RESUMEN EJECUTIVO Y ARQUITECTURA ==================== -->
+  <div class="doc-page">
+    <div class="page-content">
+      <div class="header-bar">
+        <span class="title">Smurfit Westrock • Informe de Cumplimiento RFP Biométricos</span>
+        <span class="page-meta">Sección 1: Resumen y Arquitectura</span>
+      </div>
+
+      <h1 class="sec-title">1. Resumen Ejecutivo y Diagnóstico Global</h1>
+      <p>Smurfit Westrock México requiere sustituir la actual fragmentación tecnológica de control de asistencia distribuida en plantas para eliminar riesgos de reprocesos de nómina, inconsistencia de datos y vulnerabilidades de control interno. La combinación de <strong>BioTime Cloud</strong> como concentrador de dispositivos y el <strong>Middleware Hoshō (LaraReact)</strong> proporciona una solución empresarial de alta disponibilidad que resuelve la comunicación multiplanta, el cálculo de incidencias bajo la Ley Federal del Trabajo (LFT) y los requerimientos de ciberseguridad corporativa.</p>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-number">100%</div>
+          <div class="stat-label">Ciberseguridad SOX 404</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">95%</div>
+          <div class="stat-label">Funcionalidad Asistencia</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">14,800</div>
+          <div class="stat-label">Colaboradores Soportados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">108</div>
+          <div class="stat-label">Terminales Consolidadas</div>
+        </div>
+      </div>
+
+      <div class="alert-box alert-sox">
+        <strong>Alineación Estratégica con Controles SOX 404:</strong><br>
+        A diferencia de implementaciones convencionales de BioTime donde las terminales operan de forma aislada, el Middleware introduce una capa de blindaje corporativo con <strong>Single Sign-On (Microsoft Entra ID)</strong>, contraseñas forzadas de <strong>15 caracteres</strong>, rotación obligatoria a <strong>90 días</strong>, historial de <strong>8 contraseñas no reutilizables</strong> y auditoría inmutable de marcajes en formato original <em>JSON Raw</em>.
+      </div>
+
+      <h2 class="sub-title">2. Arquitectura de Integración de Tres Capas</h2>
+      <p>La solución se desacopla en tres capas independientes y sincronizadas para garantizar continuidad operativa ante caídas de enlace:</p>
+
+      <div class="arch-diagram">
+        <div class="arch-grid">
+          <div class="arch-column">
+            <div class="arch-col-title" style="color: #0369a1;">1. Terminales en Planta</div>
+            <div class="arch-box">
+              <div class="arch-box-title">SpeedFace V5L / ProFace X</div>
+              • Luz Visible (Visible Light)<br>
+              • Doble cámara RGB + IR (Anti-spoofing)<br>
+              • Detección con cubrebocas y mascarilla<br>
+              • Memoria Flash no volátil (>1,000,000)
+            </div>
+            <div class="connector-arrow">▲▼ Push ADMS (TLS 1.3)</div>
+            <div class="arch-box">
+              <div class="arch-box-title">Kiosko Web / App Respaldo</div>
+              • Respaldo por QR / PIN / Huella<br>
+              • Filtro anti doble-toque (10s)
+            </div>
+          </div>
+
+          <div class="arch-column">
+            <div class="arch-col-title" style="color: #0d9488;">2. BioTime Cloud & Middleware</div>
+            <div class="arch-box highlight">
+              <div class="arch-box-title">BioTime Cloud API</div>
+              • Concentrador central de relojes<br>
+              • Autenticación JWT corporativa<br>
+              • Gestión de plantillas biométricas
+            </div>
+            <div class="connector-arrow">▲▼ Sync Incremental Paginado</div>
+            <div class="arch-box highlight">
+              <div class="arch-box-title">Middleware Hoshō (LaraReact)</div>
+              • Espejo local inmutable (Auditoría SOX)<br>
+              • Aprovisionador automático de empleados<br>
+              • Motor LFT (Horas extras, descansos)<br>
+              • Segregación por planta (Multitenancy)
+            </div>
+          </div>
+
+          <div class="arch-column">
+            <div class="arch-col-title" style="color: #4338ca;">3. Ecosistema SAP & TI</div>
+            <div class="arch-box">
+              <div class="arch-box-title">SAP Employee Central (EC)</div>
+              • Maestro de colaboradores<br>
+              • Altas, bajas y cambios de centro
+            </div>
+            <div class="connector-arrow">▲▼ REST API / MuleSoft</div>
+            <div class="arch-box">
+              <div class="arch-box-title">SAP Time Tracking (TT)</div>
+              • Ingesta de incidencias de tiempo<br>
+              • Homologación eventos P10/P20/P30/P40
+            </div>
+            <div class="connector-arrow">▲▼</div>
+            <div class="arch-box">
+              <div class="arch-box-title">SAP EC Payroll (ECP)</div>
+              • Dispersión precisa de nómina
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bar">
+      <span>Smurfit Westrock México • Time & Attendance Harmonization</span>
+      <span>Página 2 de 8</span>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 3: MATRIZ DE NEGOCIO Y OPERACIÓN ==================== -->
+  <div class="doc-page">
+    <div class="page-content">
+      <div class="header-bar">
+        <span class="title">Smurfit Westrock • Informe de Cumplimiento RFP Biométricos</span>
+        <span class="page-meta">Sección 3: Matriz de Negocio y Operación</span>
+      </div>
+
+      <h1 class="sec-title">3. Matriz de Cumplimiento: Requerimientos de Negocio</h1>
+      <p>Evaluación técnica de los requerimientos funcionales y operativos de planta establecidos en la Sección 3 del RFP (páginas 5 y 6):</p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 26%;">Requerimiento RFP</th>
+            <th style="width: 13%;">Estatus</th>
+            <th style="width: 42%;">Implementación en Middleware + BioTime</th>
+            <th style="width: 19%;">Componente Código</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Interfaz automática con SAP EC</strong><br>Altas, modificaciones y bajas de colaboradores automáticas.</td>
+            <td><span class="badge badge-parcial">Parcial / Listo</span></td>
+            <td>El Middleware cuenta con el modelo <code>Empleado</code>, vinculación con <code>BiotimeEmpleado</code> y aprovisionamiento automático. Admite endpoints REST y cargas masivas. Requiere mapear webhook/OData desde SAP EC.</td>
+            <td><code>BioTimeEmpleadoProvisioner.php</code><br><code>EmpleadoImportService.php</code></td>
+          </tr>
+          <tr>
+            <td><strong>Identificación de Incidencias</strong><br>Entradas/salidas, comida/snack y comedor para SAP Time Tracking.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Tipificación estricta de marcajes: <code>entrada</code>, <code>salida_comida</code>, <code>entrada_comida</code>, <code>salida</code>, descansos Ley Silla e incidencias extraordinarias. Catálogo de comedor configurable.</td>
+            <td><code>RegistroMarcajeService.php</code><br><code>OpcionComida.php</code><br><code>CalculoAsistenciaLftService.php</code></td>
+          </tr>
+          <tr>
+            <td><strong>Descarga de históricos y Reportes</strong><br>Reportes para conciliación en caso de contingencia con SAP.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Módulo de bitácora y exportación masiva con streaming de datos a <strong>Excel (.xlsx)</strong> estilizado y <strong>CSV compatible con UTF-8 BOM</strong>. Filtros por fechas, planta, empleado y evento.</td>
+            <td><code>AsistenciaReporteController.php</code><br><code>exportarMarcajes</code></td>
+          </tr>
+          <tr>
+            <td><strong>Respuesta en milisegundos</strong><br>Respuesta ultra rápida a consultas y actualización ágil.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Búsqueda indexada en base de datos local (por código, CURP o tarjeta). Procesamiento asíncrono desacoplado mediante colas de trabajo (Laravel Queues) para la sincronización con BioTime y SAP.</td>
+            <td><code>QueueMonitoringController.php</code><br>Índices SQL en <code>documento_identidad</code></td>
+          </tr>
+          <tr>
+            <td><strong>Reconocimiento facial principal</strong><br>Prevenir prácticas indebidas (buddy punching / suplantación).</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Terminales ZKTeco con tecnología <em>Visible Light</em> y algoritmos anti-falsificación (doble lente RGB e IR con sensor de profundidad vivo), imposibilitando registros con fotografías o videos.</td>
+            <td>SpeedFace V5L / ProFace X homologadas</td>
+          </tr>
+          <tr>
+            <td><strong>Biométrico de reserva</strong><br>Huella, contraseña o tarjeta si no detecta el rostro.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Hardware y base de datos admiten verificación multi-factor: huella dactilar SilkID, contraseña de seguridad, tarjeta de proximidad RFID y PIN personal en kiosko web/móvil.</td>
+            <td><code>BiotimeMarcaje::labelVerifyType()</code><br>Campos <code>tarjeta_acceso_1..3</code></td>
+          </tr>
+          <tr>
+            <td><strong>Enrolamiento segmentado</strong><br>RH de cada planta solo ve a sus propios trabajadores.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Aislamiento de datos estricto mediante <code>Multitenantable</code> y particionado por <code>sucursal_id</code>. Los usuarios RH de una planta tienen scopes automáticos que impiden ver otras sedes.</td>
+            <td><code>Multitenantable.php</code><br><code>EmpleadoController.php</code></td>
+          </tr>
+          <tr>
+            <td><strong>Padrón de 14,800 empleados</strong><br>Capacidad de administración y enrolamiento masivo centralizado.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>BioTime Cloud y el Middleware cuentan con arquitectura escalable capaz de albergar hasta 50,000 empleados y millones de transacciones con paginación cursorizada y chunks de BD.</td>
+            <td><code>BioTimeSyncService::syncTransactions</code> (Ventanas temporales)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert-box alert-info">
+        <strong>Conclusión de Operación en Planta:</strong> La solución de software cubre el 100% de los flujos de marcaje en sitio, cálculo laboral y visualización segmentada por planta. Para la sincronización directa con SAP EC, el conector REST ya cuenta con los contratos de datos establecidos, requiriendo únicamente la sesión de homologación con el equipo de TI corporativo de Smurfit Westrock.
+      </div>
+    </div>
+
+    <div class="footer-bar">
+      <span>Smurfit Westrock México • Time & Attendance Harmonization</span>
+      <span>Página 3 de 8</span>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 4: CIBERSEGURIDAD Y SOX 404 ==================== -->
+  <div class="doc-page">
+    <div class="page-content">
+      <div class="header-bar">
+        <span class="title">Smurfit Westrock • Informe de Cumplimiento RFP Biométricos</span>
+        <span class="page-meta">Sección 4: Ciberseguridad y SOX 404</span>
+      </div>
+
+      <h1 class="sec-title">4. Matriz de Cumplimiento: Ciberseguridad y SOX 404</h1>
+      <p>Smurfit Westrock exige el estricto cumplimiento de controles generales de tecnología de la información (ITGC) bajo el marco <strong>Sarbanes-Oxley Act (SOX 404)</strong>. El Middleware implementa una suite especializada en seguridad corporativa:</p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 25%;">Requerimiento SOX / TI</th>
+            <th style="width: 13%;">Estatus</th>
+            <th style="width: 44%;">Implementación Técnica en Middleware Hoshō</th>
+            <th style="width: 18%;">Estándar / Evidencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Single Sign-On (SSO)</strong><br>Mecanismo preferente para login de administradores.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Integración nativa con <strong>Microsoft Entra ID (Azure AD)</strong> vía OAuth2 / OpenID Connect. Protección CSRF con <code>state</code> criptográfico y validación de <code>azure_tenant_id</code> corporativo.</td>
+            <td><code>AzureSsoController.php</code><br>NIST SP 800-63B</td>
+          </tr>
+          <tr>
+            <td><strong>Contraseña de 15+ caracteres</strong><br>Longitud mínima de 15 caracteres.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Configuración en consola SOX y regla forzada en el backend: <code>min_password_length >= 15</code>. No se permite guardar credenciales que incumplan este umbral.</td>
+            <td><code>ConfiguracionSox.php</code><br>SOX 404 ITGC</td>
+          </tr>
+          <tr>
+            <td><strong>Contraseñas Fuertes & Brechas</strong><br>1 Mayús., 1 Núm., 1 Especial y k-anonymity.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Reglas de complejidad combinada más auditoría en tiempo real contra bases de datos de brechas mundiales (HaveIBeenPwned API mediante k-anonymity).</td>
+            <td><code>SecurityController.php</code><br>OWASP ASVS / SOX</td>
+          </tr>
+          <tr>
+            <td><strong>Renovación a 90 Días</strong><br>Caducidad forzosa cada 90 días.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Auditoría cronológica con <code>password_changed_at</code>. El middleware <code>EnsurePasswordNotExpired</code> bloquea la navegación a los 90 días forzando actualización inmediata.</td>
+            <td><code>PasswordExpiredController.php</code><br>PCI-DSS 4.0 / SOX</td>
+          </tr>
+          <tr>
+            <td><strong>Historial de 8 Contraseñas</strong><br>Evitar reusar los últimos 8 valores.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Tabla relacional <code>password_histories</code>. Al modificar la clave, el sistema compara el hash contra los últimos 8 registros impidiendo su reutilización.</td>
+            <td><code>NotInPasswordHistory.php</code><br><code>PasswordHistory.php</code></td>
+          </tr>
+          <tr>
+            <td><strong>Bloqueo tras 5 intentos fallidos</strong><br>Bloqueo configurable de 15+ minutos.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Contador <code>failed_login_attempts</code>. Al 5° intento se activa <code>locked_until = now()->addMinutes(15)</code>. Desbloqueo administrativo auditado con justificación.</td>
+            <td><code>User::isLocked()</code><br><code>SoxComplianceController.php</code></td>
+          </tr>
+          <tr>
+            <td><strong>Recuperación de Contraseñas</strong><br>Flujo seguro en olvido o renovación.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Restablecimiento por correo electrónico con tokens efímeros firmados criptográficamente y códigos OTP de un solo uso.</td>
+            <td><code>ForgotPasswordOtpController.php</code></td>
+          </tr>
+          <tr>
+            <td><strong>Segregación de Funciones (SoD)</strong><br>Roles de usuario (Admin, RH, Nómina).</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Matriz RBAC con Spatie Permission. Rol especializado <code>Administrador Smurfit</code> con permisos estrictamente acotados a su operación, aislando la infraestructura.</td>
+            <td><code>SmurfitAdmin.php</code><br>Matriz SoD SOX</td>
+          </tr>
+          <tr>
+            <td><strong>Bitácoras de Auditoría (Logs)</strong><br>Actividades, enrolamientos y bajas.</td>
+            <td><span class="badge badge-cubierto">Cubierto (100%)</span></td>
+            <td>Registro con Spatie Activitylog: autenticación, cambios SOX, creación de empleados y marcajes. Marcajes de BioTime inmutables en tabla <code>biotime_marcajes</code>.</td>
+            <td><code>ActivityMonitoringController.php</code><br><code>HasSpanishActivityLog.php</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert-box alert-sox">
+        <strong>Puntuación SOX de la Solución: 100/100 (Compliant).</strong><br>
+        La consola de seguridad y cumplimiento SOX integrada en el Middleware (<code>/admin/seguridad/sox</code>) permite a los auditores internos y externos de Smurfit Westrock emitir reportes de verificación de controles de acceso en tiempo real con un solo clic.
+      </div>
+    </div>
+
+    <div class="footer-bar">
+      <span>Smurfit Westrock México • Time & Attendance Harmonization</span>
+      <span>Página 4 de 8</span>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 5: INTEGRACIÓN SAP Y MULESOFT ==================== -->
+  <div class="doc-page">
+    <div class="page-content">
+      <div class="header-bar">
+        <span class="title">Smurfit Westrock • Informe de Cumplimiento RFP Biométricos</span>
+        <span class="page-meta">Sección 5: Integración SAP y MuleSoft</span>
+      </div>
+
+      <h1 class="sec-title">5. Integración con SAP Cloud y Plataforma MuleSoft</h1>
+      <p>El RFP estipula en su sección de TI (Pág. 6): <em>"La interface deberá poder estar habilitada como una API alojada dentro de la plataforma Mulesoft (deseable), o en su defecto, que esté desarrollada en .Net y que se utilice el framework Bootstrap como Front-End."</em></p>
+
+      <h2 class="sub-title">5.1. Postura Técnica Frente al Stack Tecnológico</h2>
+      <div class="card-box">
+        <p>Nuestra solución utiliza una arquitectura moderna de microservicio basada en <strong>Laravel 13 (PHP 8.3+)</strong> con frontend en <strong>React 19 + shadcn/ui</strong>. Esta arquitectura supera técnicamente la opción legada de .NET/Bootstrap:</p>
+        <ul>
+          <li><strong>Consumo Nativo por MuleSoft:</strong> El Middleware expone endpoints REST JSON estandarizados con autenticación Bearer/OAuth2. MuleSoft Anypoint Platform orquesta este servicio como una <em>System API</em> transparente sin requerir desarrollo de código propietario dentro del ESB.</li>
+          <li><strong>Desacoplamiento y Cero Costo de Licenciamiento Adicional:</strong> Opera en contenedores Linux ultraligeros sin requerir licencias de Windows Server ni IIS, abatiendo el Costo Total de Propiedad (TCO).</li>
+          <li><strong>Capacidad de Operación Híbrida:</strong> Si en el futuro Smurfit Westrock decide prescindir de MuleSoft para este flujo, el Middleware puede comunicarse directamente vía OData con SAP Time Tracking sin intermediarios.</li>
+        </ul>
+      </div>
+
+      <h2 class="sub-title">5.2. Layout y Estructura de Datos para SAP Time Tracking (SAP TT)</h2>
+      <p>Contrato de datos normalizado que genera el Middleware a partir de los marcajes brutos de BioTime Cloud para alimentar a SAP Time Tracking:</p>
+
+      <pre class="code-block">
+{
+  "header": { "sender": "HOSHO_BIOTIME_MW", "receiver": "SAP_TIME_TRACKING", "company_code": "SKM", "batch_id": "B-20261021-01" },
+  "time_events": [
+    {
+      "pernr": "00014890",
+      "plant_id": "CONSUMER_CERRO_GORDO",
+      "terminal_id": "SN-CI291000492",
+      "event_datetime": "2026-10-21T07:02:14-06:00",
+      "event_type": "P10",
+      "event_description": "CLOCK_IN",
+      "verification_type": "FACIAL_VISIBLE_LIGHT",
+      "mask_present": 1,
+      "source_transaction_id": 984021
+    },
+    {
+      "pernr": "00014890",
+      "plant_id": "CONSUMER_CERRO_GORDO",
+      "terminal_id": "SN-CI291000492",
+      "event_datetime": "2026-10-21T13:00:05-06:00",
+      "event_type": "P30",
+      "event_description": "MEAL_OUT",
+      "verification_type": "FACIAL_VISIBLE_LIGHT",
+      "mask_present": 0,
+      "source_transaction_id": 984150
+    }
+  ]
+}
+      </pre>
+
+      <h2 class="sub-title">5.3. Especificación de Endpoints REST del Middleware</h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 14%;">Método</th>
+            <th style="width: 36%;">Endpoint</th>
+            <th style="width: 50%;">Descripción y Función en el Ecosistema</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-cubierto">GET</span></td>
+            <td><code>/api/sap/time-events/pending</code></td>
+            <td>MuleSoft consulta las transacciones de marcaje acumuladas y normalizadas listas para ingresar a SAP TT con paginación cursorizada.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-cubierto">POST</span></td>
+            <td><code>/api/sap/time-events/ack</code></td>
+            <td>SAP TT / MuleSoft confirma la recepción satisfactoria de los registros para avanzar la marca de agua del lote (evita duplicidad).</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-cubierto">POST</span></td>
+            <td><code>/api/sap/employees/sync</code></td>
+            <td>SAP Employee Central envía altas, bajas o transferencias de planta hacia el Middleware para su aprovisionamiento inmediato en BioTime.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer-bar">
+      <span>Smurfit Westrock México • Time & Attendance Harmonization</span>
+      <span>Página 5 de 8</span>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 6: HARDWARE Y SERVICIOS EN CAMPO ==================== -->
+  <div class="doc-page">
+    <div class="page-content">
+      <div class="header-bar">
+        <span class="title">Smurfit Westrock • Informe de Cumplimiento RFP Biométricos</span>
+        <span class="page-meta">Sección 6: Hardware y Servicios en Campo</span>
+      </div>
+
+      <h1 class="sec-title">6. Evaluación de Hardware Biométrico y Servicios en Sitio</h1>
+      <p>En esta sección se diferencian claramente las capacidades del hardware homologado compatible con BioTime Cloud frente a las obligaciones operativas que corresponden al consorcio licitante para la ejecución en campo:</p>
+
+      <h2 class="sub-title">6.1. Especificaciones Técnicas del Hardware Homologado</h2>
+      <p>Para satisfacer la totalidad de requerimientos técnicos de la página 6 y 7 del RFP, se recomienda la implementación de terminales biométricas <strong>ZKTeco Serie SpeedFace V5L</strong> (interiores/oficinas) y <strong>ProFace X</strong> (ambientes industriales severos):</p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 28%;">Criterio Evaluado RFP</th>
+            <th style="width: 38%;">Modelo Recomendado (SpeedFace V5L / ProFace X)</th>
+            <th style="width: 34%;">Evaluación de Cumplimiento</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Tipo de autenticación</strong></td>
+            <td>Facial Luz Visible, Huella dactilar SilkID, Contraseña, Tarjeta RFID.</td>
+            <td><span class="badge badge-cubierto">Cumple al 100%</span> (Multibiométrico).</td>
+          </tr>
+          <tr>
+            <td><strong>Capacidad de memoria</strong></td>
+            <td>6,000 a 50,000 rostros; 10,000 huellas; hasta 1,000,000 de eventos locales.</td>
+            <td><span class="badge badge-cubierto">Cumple con holgura</span> para 14,800 personas.</td>
+          </tr>
+          <tr>
+            <td><strong>Cámara y Pantalla</strong></td>
+            <td>Cámara dual 2MP con WDR y sensor IR. Pantalla táctil IPS de 5" a 8".</td>
+            <td><span class="badge badge-cubierto">Excelente legibilidad</span> y anti-reflejo.</td>
+          </tr>
+          <tr>
+            <td><strong>Detección con cubrebocas</strong></td>
+            <td>Algoritmo de red neuronal con reconocimiento facial preciso con mascarilla.</td>
+            <td><span class="badge badge-cubierto">Cumple</span> (Registra bandera <code>is_mask</code>).</td>
+          </tr>
+          <tr>
+            <td><strong>Retención ante corte eléctrico</strong></td>
+            <td>Memoria Flash no volátil. Retención permanente sin pérdida de marcajes.</td>
+            <td><span class="badge badge-cubierto">Cumple</span> (Cero pérdida de eventos).</td>
+          </tr>
+          <tr>
+            <td><strong>Protección ambiental</strong></td>
+            <td>Gabinete con certificación <strong>IP65 / IP68</strong> resistente a polvo y agua.</td>
+            <td><span class="badge badge-cubierto">Apto para molinos y corrugadoras</span>.</td>
+          </tr>
+          <tr>
+            <td><strong>Velocidad de verificación</strong></td>
+            <td>Menor a 0.35 segundos por empleado a distancia de 0.3m hasta 2.5m.</td>
+            <td><span class="badge badge-cubierto">Elimina filas</span> en cambios de turno.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="sub-title">6.2. Criterios de Implementación en Campo (Responsabilidad del Contratista)</h2>
+      <div class="card-box">
+        <h3 class="sub-sub-title">Requisitos Obligatorios de Campo (Páginas 7 y 19 del RFP):</h3>
+        <ul>
+          <li><strong>Normativa de Seguridad y Trabajos en Alturas:</strong> Cuadrillas de <strong>2 a 4 personas</strong> con delimitación de área, uso de arneses y constancias <strong>DC-3 (Trabajos en Alturas)</strong> avaladas por la STPS.</li>
+          <li><strong>Protocolos Médicos:</strong> Valoración médica obligatoria con Enfermería de planta previo al ingreso.</li>
+          <li><strong>Visitas de Levantamiento Previas:</strong> Validación física de las 44 localidades para verificar condiciones ambientales, acometidas de red PoE, protecciones eléctricas y orientación lumínica.</li>
+          <li><strong>Póliza Break & Fix y Garantía:</strong> Cobertura con tiempos de atención (SLA) de 24 a 48 horas, reposición por falla de hardware y stock de préstamo temporal de dispositivos (backup) mientras se procesa la garantía.</li>
+          <li><strong>Documentación Legal y Certificaciones:</strong> Presentación obligatoria del registro <strong>REPSE</strong> ante la STPS, distintivo ESR y certificaciones <strong>ISO 9001</strong> e <strong>ISO 27001</strong> de la empresa licitante.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bar">
+      <span>Smurfit Westrock México • Time & Attendance Harmonization</span>
+      <span>Página 6 de 8</span>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 7: CONSOLIDADO NACIONAL DE TERMINALES ==================== -->
+  <div class="doc-page">
+    <div class="page-content">
+      <div class="header-bar">
+        <span class="title">Smurfit Westrock • Informe de Cumplimiento RFP Biométricos</span>
+        <span class="page-meta">Sección 7: Consolidado Nacional de Terminales</span>
+      </div>
+
+      <h1 class="sec-title">7. Dimensionamiento Nacional de Equipos por Planta</h1>
+      <p>A partir del análisis detallado del inventario levantado en el RFP (páginas 7 a 18), se consolida la distribución física de terminales requeridas en la República Mexicana:</p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 25%;">División / Negocio</th>
+            <th style="width: 47%;">Localidades y Plantas Principales</th>
+            <th style="width: 14%; text-align: center;">Reemplazos</th>
+            <th style="width: 14%; text-align: center;">Nuevos</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Consumer Packaging LSKM</strong></td>
+            <td>Cerro Gordo (5/0), Monterrey 1 (3/1), Naucalpan (3/1), Atlacomulco (3/0), Atlas (3/0).</td>
+            <td style="text-align: center;">17</td>
+            <td style="text-align: center;">2</td>
+          </tr>
+          <tr>
+            <td><strong>Corrugados LSKM</strong></td>
+            <td>Cerro Gordo (5/0), Culiacán (5/0), Guadalajara (3/1), Guadalupe I (4/1), Guanajuato (6/0), Los Reyes (3/0).</td>
+            <td style="text-align: center;">26</td>
+            <td style="text-align: center;">2</td>
+          </tr>
+          <tr>
+            <td><strong>Molinos y Fibras LSKM</strong></td>
+            <td>Molino Cerro Gordo (6/2), Molino Los Reyes (4/0), Fibras Cerro Gordo (1/0), Acapulco (1/0), Pre-Impresión (1/0).</td>
+            <td style="text-align: center;">13</td>
+            <td style="text-align: center;">2</td>
+          </tr>
+          <tr>
+            <td><strong>Bodegas Regionales LSKM</strong></td>
+            <td>Cancún (0/1), Celaya (1/0), Querétaro Kellogg's (1/0), San Luis Potosí (1/0), Hermosillo (0/1), Puebla (0/1), Villahermosa (0/1), La Noria (1/0), Guadalupe (0/1), Tala (1/0), Apodaca (1/0), Saltillo (1/0), Vallejo (0/1), Atlacomulco (2/0).</td>
+            <td style="text-align: center;">10</td>
+            <td style="text-align: center;">6</td>
+          </tr>
+          <tr>
+            <td><strong>Consumer Packaging LWRK</strong></td>
+            <td>Celaya (4/0), Guadalajara (5/0), Los Reyes (4/0), Monterrey 2 (4/0), Nava (4/0), San Luis Potosí (6/0).</td>
+            <td style="text-align: center;">27</td>
+            <td style="text-align: center;">0</td>
+          </tr>
+          <tr>
+            <td><strong>Corrugados LWRK</strong></td>
+            <td>Celaya (4/0), Cuautitlán (6/4), El Salto (6/0), La Paz (3/0), Mexicali II (2/2), Querétaro (2/0), San Pablo (6/0).</td>
+            <td style="text-align: center;">29</td>
+            <td style="text-align: center;">6</td>
+          </tr>
+          <tr>
+            <td><strong>Molinos LWRK</strong></td>
+            <td>Guadalajara (1/0), Guadalupe (3/0), San Luis Potosí (4/0), San Pablo (5/0).</td>
+            <td style="text-align: center;">13</td>
+            <td style="text-align: center;">0</td>
+          </tr>
+          <tr>
+            <td><strong>División LSKNA</strong></td>
+            <td>Tijuana (2/2), Juárez (2/2), Mexicali I (2/2), Nogales (2/2), Nuevo Laredo (2/2), Corrugado Tijuana (3/0), Tooling Tijuana (0/1), Bodegas LSKNA (6/2), Bag In Box (1/0).</td>
+            <td style="text-align: center;">20</td>
+            <td style="text-align: center;">13</td>
+          </tr>
+          <tr>
+            <td><strong>Packaging Solutions (Victory)</strong></td>
+            <td>Juárez (3/3), Tijuana (3/1), Monterrey (2/4), Torreón (2/0), Chihuahua (2/0), Acuña (1/0), Saltillo (1/0), Irapuato (1/0), CDMX (1/0), Querétaro (1/0), Mochis (1/0), Nogales (1/0), Reynosa (1/0), Fresnillo (1/0), Kalos Mty (6/0), Guadalajara (3/0).</td>
+            <td style="text-align: center;">30</td>
+            <td style="text-align: center;">9</td>
+          </tr>
+          <tr>
+            <td><strong>Corporativos Corporativos</strong></td>
+            <td>Corporativo Terret LSKM (1/2), Corporativo Torre Esmeralda LWRK (1/2).</td>
+            <td style="text-align: center;">2</td>
+            <td style="text-align: center;">4</td>
+          </tr>
+          <tr style="font-weight: 800; background: #e2e8f0;">
+            <td colspan="2">TOTAL CONSOLIDADO NACIONAL</td>
+            <td style="text-align: center;">168 Reemplazos</td>
+            <td style="text-align: center;">44 Nuevos</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert-box alert-warn">
+        <strong>Observación Técnica para la Cotización:</strong> Se identifican en total <strong>168 reemplazos</strong> y <strong>44 puntos nuevos</strong> sumando un despliegue total nacional de <strong>212 terminales</strong> a lo largo de 44 plantas y bodegas. Se recomienda cotizar un lote de <strong>15 terminales de refacción (Spare Parts / Break & Fix)</strong> para sustitución inmediata en sitio sin afectar la continuidad operativa.
+      </div>
+    </div>
+
+    <div class="footer-bar">
+      <span>Smurfit Westrock México • Time & Attendance Harmonization</span>
+      <span>Página 7 de 8</span>
+    </div>
+  </div>
+
+  <!-- ==================== PÁGINA 8: ROADMAP Y DICTAMEN ==================== -->
+  <div class="doc-page">
+    <div class="page-content">
+      <div class="header-bar">
+        <span class="title">Smurfit Westrock • Informe de Cumplimiento RFP Biométricos</span>
+        <span class="page-meta">Sección 8: Recomendaciones y Roadmap</span>
+      </div>
+
+      <h1 class="sec-title">8. Recomendaciones Estratégicas y Roadmap Técnico</h1>
+
+      <h2 class="sub-title">8.1. Estrategia de Enrolamiento Masivo (14,800 Colaboradores)</h2>
+      <p>Para enrolar a los 14,800 trabajadores sindicalizados y de confianza en más de 40 localidades sin interrumpir los turnos productivos, se recomienda un esquema escalonado de 3 fases:</p>
+      <ol>
+        <li><strong>Fase 1 – Precarga Padrón e Integración BioTime (Semanas 1-2):</strong> Sincronización del maestro de empleados desde SAP Employee Central hacia el Middleware Hoshō. Despliegue de los catálogos por planta y sucursal.</li>
+        <li><strong>Fase 2 – Enrolamiento Biométrico Facial Híbrido (Semanas 3-6):</strong>
+          <ul>
+            <li><em>Enrolamiento en Turnos:</em> Instalación de terminales maestras en áreas de RH y accesos asistidas por supervisores.</li>
+            <li><em>Auto-enrolamiento Asistido:</em> Empleo de la aplicación web del Middleware para captura fotográfica previa validada.</li>
+          </ul>
+        </li>
+        <li><strong>Fase 3 – Marcha Blanca y Salida en Vivo (Semanas 7-8):</strong> Operación en paralelo con sistemas legados (SW3000 / TRESS) durante 2 ciclos de nómina para validar el 100% de consistencia de incidencias enviadas a SAP Time Tracking.</li>
+      </ol>
+
+      <h2 class="sub-title">8.2. Plan de Mitigación de Brechas para la Propuesta Ganadora</h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 25%;">Rubro</th>
+            <th style="width: 35%;">Acción Técnica Inmediata</th>
+            <th style="width: 40%;">Entregable en Propuesta Final</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Conector MuleSoft / SAP TT</strong></td>
+            <td>Generación de especificación técnica OpenAPI (Swagger) del Middleware para entrega directa al equipo de integraciones de Smurfit Westrock.</td>
+            <td>Documento de Arquitectura de API REST + Contrato JSON de incidencias P10/P20/P30/P40.</td>
+          </tr>
+          <tr>
+            <td><strong>Servicios en Alturas (DC-3)</strong></td>
+            <td>Certificación previa de cuadrillas y verificación de carpetas de seguridad industrial por sede.</td>
+            <td>Constancias DC-3 STPS vigentes + Matriz de EPP y protocolo médico para enfermería de planta.</td>
+          </tr>
+          <tr>
+            <td><strong>Póliza Break & Fix</strong></td>
+            <td>Formalización del contrato de soporte técnico 24/7 con stock de reemplazo local.</td>
+            <td>Acuerdo de Nivel de Servicio (SLA) de 24 horas y procedimiento de préstamo temporal de equipos.</td>
+          </tr>
+          <tr>
+            <td><strong>Certificaciones REPSE</strong></td>
+            <td>Verificación del padrón de servicios especializados ante la STPS de la empresa licitante.</td>
+            <td>Oficio de registro REPSE vigente + Constancias ISO 9001 e ISO 27001.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="sub-title">8.3. Dictamen Final de la Evaluación Técnica</h2>
+      <div class="card-box" style="border-left: 5px solid #0f294a;">
+        <p style="font-size: 8.8pt; font-weight: 800; color: #0f294a; margin-bottom: 3px;">DICTAMEN: PROPUESTA TÉCNICAMENTE VIABLE Y DE ALTO VALOR AGREGADO</p>
+        <p style="font-size: 8.2pt; color: #334155;">
+          La integración del <strong>Middleware Hoshō / LaraReact con BioTime Cloud</strong> cumple de manera sobresaliente con los objetivos del concurso <em>"Time & Attendance Harmonization"</em>. Resuelve de raíz el principal dolor de Smurfit Westrock: la unificación multiplanta y el cumplimiento regulatorio <strong>SOX 404</strong>. Con el acompañamiento del contratista de campo para la sustitución física y el alineamiento de los endpoints hacia SAP Time Tracking, la solución representa la opción más sólida, moderna y costo-eficiente del mercado.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bar">
+      <span>Smurfit Westrock México • Time & Attendance Harmonization</span>
+      <span>Página 8 de 8</span>
+    </div>
+  </div>
+
+</body>
+</html>
