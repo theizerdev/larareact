@@ -3147,14 +3147,14 @@ class InternalAssistantService
         $estadoLabel = $estados[$orden->estado_orden]['title'] ?? ucfirst($orden->estado_orden);
 
         if ($orden->estado_orden === OrdenReparacion::ESTADO_LISTO_REPARADO) {
-            $mensaje = "*¡SU EQUIPO YA ESTA LISTO PARA RETIRAR!*\n\n"
-                . "Estimado(a) *{$clienteNombre}*,\n"
-                . "Le informamos que la reparación de su equipo ha finalizado con éxito y ya se encuentra *DISPONIBLE PARA RETIRO*.\n\n"
-                . "📋 *Orden:* #{$orden->numero_orden}\n"
-                . "📱 *Equipo:* {$marcaNombre} {$modeloNombre}\n"
-                . "💰 *Saldo Pendiente:* {$currency} {$saldoFmt}\n\n"
-                . "🔍 *Ver detalle de su orden:*\n{$trackingUrl}\n\n"
-                . "Puede pasar por nuestra sucursal. ¡Gracias por su preferencia!";
+            $deviceName = trim("{$marcaNombre} {$modeloNombre}") ?: 'Equipo';
+            $garantia = $orden->garantia_dias ?: 30;
+            $mensaje = "🟢 ¡Buenas noticias *{$clienteNombre}*! Su equipo *{$deviceName}* (Orden *{$orden->numero_orden}*) ha sido *REPARADO EXITOSAMENTE* y superó las pruebas de calidad.\n\n"
+                . "🎉 Ya puede pasar a retirarlo por nuestra sucursal.\n"
+                . "💰 *Saldo a liquidar:* *{$currency}{$saldoFmt}*\n"
+                . "🛡️ *Garantía del servicio:* {$garantia} días\n\n"
+                . "📌 Detalles y ubicación: {$trackingUrl}\n"
+                . "¡Le esperamos!";
         } else {
             $mensaje = "*ACTUALIZACION DE SERVICIO TECNICO*\n\n"
                 . "Estimado(a) *{$clienteNombre}*,\n"
