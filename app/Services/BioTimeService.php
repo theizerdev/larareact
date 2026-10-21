@@ -388,7 +388,22 @@ class BioTimeService
      */
     public function getEmployeePhoto(string $empCode): array
     {
-        // 1) Campo con URL/base64 dentro del detalle del empleado.
+        // 1) Rutas estáticas de fotos en BioTime Cloud y BioTime 8.0/8.5.
+        foreach ([
+            "/files/photo/{$empCode}.jpg",
+            "/media/photo/{$empCode}.jpg",
+            "/media/employee/{$empCode}.jpg",
+            "/files/employee/{$empCode}.jpg",
+            "/auth_files/photo/{$empCode}.jpg",
+            "/auth_files/biophoto/{$empCode}.jpg",
+        ] as $mediaPath) {
+            $bin = $this->getBinary($this->url($mediaPath));
+            if ($bin['success'] && ! empty($bin['body'])) {
+                return $bin;
+            }
+        }
+
+        // 2) Campo con URL/base64 dentro del detalle del empleado en /personnel/api/employees/
         $detail = $this->get('/personnel/api/employees/', ['emp_code' => $empCode, 'limit' => 1]);
         if ($detail['success']) {
             $row = $detail['data']['data'][0] ?? $detail['data']['results'][0] ?? null;
@@ -403,17 +418,9 @@ class BioTimeService
 
             if (is_string($photoField) && $photoField !== '') {
                 $bin = $this->getBinary(str_starts_with($photoField, 'http') ? $photoField : $this->url('/'.ltrim($photoField, '/')));
-                if ($bin['success']) {
+                if ($bin['success'] && ! empty($bin['body'])) {
                     return $bin;
                 }
-            }
-        }
-
-        // 2) Rutas de media habituales en instalaciones BioTime 8.0.
-        foreach (["/media/employee/{$empCode}.jpg", "/files/employee/{$empCode}.jpg"] as $mediaPath) {
-            $bin = $this->getBinary($this->url($mediaPath));
-            if ($bin['success']) {
-                return $bin;
             }
         }
 

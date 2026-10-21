@@ -27,6 +27,7 @@ interface BiotimeEmpleado {
     link_status: 'auto' | 'manual' | 'unmatched';
     empleado_id: number | null;
     foto_exportada: string | null;
+    foto_biotime_url?: string;
     empleado?: { id: number; nombres: string; apellidos: string; documento_identidad: string; foto_empleado: string | null } | null;
 }
 
@@ -86,6 +87,26 @@ export default function BioTimeEmpleados({ empleados, stats, filters, empleados_
     };
 
     const columns: ColumnDef<BiotimeEmpleado>[] = [
+        {
+            header: __('Foto BioTime'),
+            className: 'w-14 text-center',
+            cell: (r) => (
+                <div className="flex items-center justify-center">
+                    <img
+                        src={`/admin/biotime/empleados/${r.id}/foto`}
+                        alt={`${r.first_name ?? ''} ${r.last_name ?? ''}`}
+                        title={__('Foto guardada en BioTime')}
+                        className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm bg-slate-100 dark:bg-slate-800 dark:border-slate-700"
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                            const target = e.currentTarget;
+                            target.src =
+                                'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                            target.title = __('Sin foto en BioTime');
+                        }}
+                    />
+                </div>
+            ),
+        },
         { header: __('Code'), accessorKey: 'emp_code', className: 'font-mono font-semibold' },
         {
             header: __('Name'),

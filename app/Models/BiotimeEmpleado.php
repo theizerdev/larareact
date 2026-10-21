@@ -66,8 +66,18 @@ class BiotimeEmpleado extends Model
         return $this->hasMany(BiotimeMarcaje::class, 'biotime_empleado_id');
     }
 
+    protected $appends = [
+        'nombre_completo',
+        'foto_biotime_url',
+    ];
+
     public function getNombreCompletoAttribute(): string
     {
         return trim(($this->first_name ?? '').' '.($this->last_name ?? ''));
+    }
+
+    public function getFotoBiotimeUrlAttribute(): string
+    {
+        return "/admin/biotime/empleados/{$this->id}/foto";
     }
 }

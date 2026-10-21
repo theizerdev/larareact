@@ -363,12 +363,14 @@ class BioTimeController extends Controller
     {
         $this->authorizeEmpresa($request, $biotimeEmpleado->empresa_id);
 
-        if ($biotimeEmpleado->photo_path && Storage::disk('public')->exists($biotimeEmpleado->photo_path)) {
-            return response(Storage::disk('public')->get($biotimeEmpleado->photo_path), 200)
-                ->header('Content-Type', 'image/jpeg');
+        $cachedPath = 'biotime/photos_descargadas/'.$biotimeEmpleado->emp_code.'.jpg';
+        if (Storage::disk('public')->exists($cachedPath)) {
+            return response(Storage::disk('public')->get($cachedPath), 200)
+                ->header('Content-Type', 'image/jpeg')
+                ->header('Cache-Control', 'public, max-age=1800');
         }
 
-        $empresa = $request->user()?->empresa;
+        $empresa = $request->user()?->empresa ?? Empresa::find($biotimeEmpleado->empresa_id);
         if (! $empresa) {
             abort(404);
         }
@@ -379,11 +381,11 @@ class BioTimeController extends Controller
             abort(404);
         }
 
-        $path = 'biotime/empleados/'.$biotimeEmpleado->emp_code.'.jpg';
-        Storage::disk('public')->put($path, $photo['body']);
-        $biotimeEmpleado->forceFill(['photo_path' => $path, 'photo_synced_at' => now()])->save();
+        Storage::disk('public')->put($cachedPath, $photo['body']);
 
-        return response($photo['body'], 200)->header('Content-Type', $photo['content_type'] ?? 'image/jpeg');
+        return response($photo['body'], 200)
+            ->header('Content-Type', $photo['content_type'] ?? 'image/jpeg')
+            ->header('Cache-Control', 'public, max-age=1800');
     }
 
     /* ------------------------------------------------------------------ */
