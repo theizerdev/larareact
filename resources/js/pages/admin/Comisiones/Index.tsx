@@ -240,6 +240,7 @@ interface Props {
         total: number;
         prev_page_url: string | null;
         next_page_url: string | null;
+        links?: Array<{ url: string | null; label: string; active: boolean }>;
     };
     reparaciones?: {
         data: ReparacionItem[];
@@ -249,6 +250,7 @@ interface Props {
         total: number;
         prev_page_url: string | null;
         next_page_url: string | null;
+        links?: Array<{ url: string | null; label: string; active: boolean }>;
     };
     pagos_recientes: PagoReciente[];
     empleados_list: Array<{ id: number; nombre_completo: string; cargo: string; porcentaje_comision: number }>;
@@ -272,7 +274,9 @@ interface Props {
         search?: string;
         sucursal_id?: string;
         perPage?: number;
+        tab?: string;
     };
+    tab?: 'empleados' | 'ventas' | 'reparaciones' | 'pagos';
 }
 
 export const WORKSHOP_DETAILED_STATES = [
@@ -306,12 +310,75 @@ export default function ComisionesIndex({
     currencySymbol = '$',
     empresa,
     filters,
+    tab: tabProp,
 }: Props) {
     const { __ } = useTranslate();
     const pageProps = usePage().props as any;
 
-    // Pestaña activa
-    const [activeTab, setActiveTab] = useState<'empleados' | 'ventas' | 'reparaciones' | 'pagos'>('empleados');
+    // Pestaña activa con persistencia inteligente
+    const getInitialTab = (): 'empleados' | 'ventas' | 'reparaciones' | 'pagos' => {
+        if (tabProp && ['empleados', 'ventas', 'reparaciones', 'pagos'].includes(tabProp)) {
+            return tabProp;
+        }
+        if (filters?.tab && ['empleados', 'ventas', 'reparaciones', 'pagos'].includes(filters.tab)) {
+            return filters.tab as any;
+        }
+        if (pageProps?.tab && ['empleados', 'ventas', 'reparaciones', 'pagos'].includes(pageProps.tab)) {
+            return pageProps.tab as any;
+        }
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlTab = urlParams.get('tab');
+            if (urlTab && ['empleados', 'ventas', 'reparaciones', 'pagos'].includes(urlTab)) {
+                return urlTab as any;
+            }
+            if (urlParams.has('page_reparaciones')) {
+                return 'reparaciones';
+            }
+            if (urlParams.has('page_ventas')) {
+                return 'ventas';
+            }
+        }
+        return 'empleados';
+    };
+
+    const [activeTab, setActiveTab] = useState<'empleados' | 'ventas' | 'reparaciones' | 'pagos'>(getInitialTab);
+
+    const handleTabChange = (newTab: 'empleados' | 'ventas' | 'reparaciones' | 'pagos') => {
+        setActiveTab(newTab);
+        if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', newTab);
+            window.history.replaceState({}, '', url.pathname + url.search);
+        }
+    };
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlTab = urlParams.get('tab');
+            if (urlTab && ['empleados', 'ventas', 'reparaciones', 'pagos'].includes(urlTab)) {
+                if (urlTab !== activeTab) {
+                    setActiveTab(urlTab as any);
+                }
+            } else if (urlParams.has('page_reparaciones') && activeTab !== 'reparaciones') {
+                setActiveTab('reparaciones');
+            } else if (urlParams.has('page_ventas') && activeTab !== 'ventas') {
+                setActiveTab('ventas');
+            }
+        }
+    }, [pageProps?.url, tabProp, filters?.tab, ventas?.current_page, reparaciones?.current_page]);
+
+    const handlePagination = (url: string | null, targetTab: 'ventas' | 'reparaciones') => {
+        if (!url) return;
+        const urlObj = new URL(url, window.location.origin);
+        urlObj.searchParams.set('tab', targetTab);
+        router.get(urlObj.pathname + urlObj.search, {}, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    };
 
     // Filtros
     const [selectedEmpleadoId, setSelectedEmpleadoId] = useState(filters.empleado_id || 'all');
@@ -645,6 +712,7 @@ export default function ComisionesIndex({
             from: customParams.from !== undefined ? customParams.from : dateFrom,
             to: customParams.to !== undefined ? customParams.to : dateTo,
             search: customParams.search !== undefined ? customParams.search : searchTerm,
+            tab: customParams.tab !== undefined ? customParams.tab : activeTab,
             ...customParams,
         };
 
@@ -689,7 +757,7 @@ export default function ComisionesIndex({
         setDateFrom('');
         setDateTo('');
         setSearchTerm('');
-        router.get('/admin/comisiones', {}, { preserveState: true, preserveScroll: true, replace: true });
+        router.get('/admin/comisiones', { tab: activeTab }, { preserveState: true, preserveScroll: true, replace: true });
     };
 
     // Abrir modal de liquidación para un empleado
@@ -1053,7 +1121,7 @@ export default function ComisionesIndex({
                 </div>
 
                 {/* Pestañas de Vista: Por Empleado | Detalle de Ventas | Detalle de Taller | Pagos Recientes */}
-                <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-4">
+                <Tabs value={activeTab} onValueChange={(v: any) => handleTabChange(v)} className="space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-2">
                         <TabsList className="bg-muted p-1">
                             <TabsTrigger value="empleados" className="gap-2 font-medium">
@@ -1480,28 +1548,58 @@ export default function ComisionesIndex({
 
                             {/* Paginación */}
                             {ventas.last_page > 1 && (
-                                <div className="flex items-center justify-between p-4 border-t text-xs text-muted-foreground">
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t text-xs text-muted-foreground">
                                     <div>
-                                        {__('Mostrando')} <span className="font-semibold">{ventas.data.length}</span> {__('de')}{' '}
-                                        <span className="font-semibold">{ventas.total}</span> {__('ventas')}
+                                        {__('Mostrando')} <span className="font-semibold text-foreground">{ventas.data.length}</span> {__('de')}{' '}
+                                        <span className="font-semibold text-foreground">{ventas.total}</span> {__('ventas')}
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5 flex-wrap justify-center">
                                         <Button
                                             variant="outline"
                                             size="sm"
+                                            className="h-8 px-2.5 text-xs"
                                             disabled={!ventas.prev_page_url}
-                                            onClick={() => ventas.prev_page_url && router.get(ventas.prev_page_url)}
+                                            onClick={() => handlePagination(ventas.prev_page_url, 'ventas')}
                                         >
                                             {__('Anterior')}
                                         </Button>
-                                        <span className="font-medium text-foreground">
-                                            {ventas.current_page} / {ventas.last_page}
-                                        </span>
+
+                                        {ventas.links && ventas.links.length > 3 ? (
+                                            ventas.links
+                                                .filter((l) => !l.label.includes('&laquo;') && !l.label.includes('&raquo;') && !l.label.includes('Previous') && !l.label.includes('Next'))
+                                                .map((link, idx) => {
+                                                    const isDots = link.label === '...';
+                                                    return isDots ? (
+                                                        <span key={idx} className="px-1 text-muted-foreground text-xs">...</span>
+                                                    ) : (
+                                                        <Button
+                                                            key={idx}
+                                                            variant={link.active ? "default" : "outline"}
+                                                            size="sm"
+                                                            className={`h-8 min-w-[32px] px-2 text-xs font-semibold ${
+                                                                link.active
+                                                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                                                    : ''
+                                                            }`}
+                                                            disabled={!link.url || link.active}
+                                                            onClick={() => handlePagination(link.url, 'ventas')}
+                                                        >
+                                                            {link.label}
+                                                        </Button>
+                                                    );
+                                                })
+                                        ) : (
+                                            <span className="font-medium text-foreground px-2">
+                                                {ventas.current_page} / {ventas.last_page}
+                                            </span>
+                                        )}
+
                                         <Button
                                             variant="outline"
                                             size="sm"
+                                            className="h-8 px-2.5 text-xs"
                                             disabled={!ventas.next_page_url}
-                                            onClick={() => ventas.next_page_url && router.get(ventas.next_page_url)}
+                                            onClick={() => handlePagination(ventas.next_page_url, 'ventas')}
                                         >
                                             {__('Siguiente')}
                                         </Button>
@@ -1884,28 +1982,58 @@ export default function ComisionesIndex({
 
                             {/* Paginación Reparaciones */}
                             {reparaciones && reparaciones.last_page > 1 && (
-                                <div className="flex items-center justify-between p-4 border-t text-xs text-muted-foreground">
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t text-xs text-muted-foreground">
                                     <div>
-                                        {__('Mostrando')} <span className="font-semibold">{reparaciones.data.length}</span> {__('de')}{' '}
-                                        <span className="font-semibold">{reparaciones.total}</span> {__('reparaciones')}
+                                        {__('Mostrando')} <span className="font-semibold text-foreground">{reparaciones.data.length}</span> {__('de')}{' '}
+                                        <span className="font-semibold text-foreground">{reparaciones.total}</span> {__('reparaciones')}
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5 flex-wrap justify-center">
                                         <Button
                                             variant="outline"
                                             size="sm"
+                                            className="h-8 px-2.5 text-xs"
                                             disabled={!reparaciones.prev_page_url}
-                                            onClick={() => reparaciones.prev_page_url && router.get(reparaciones.prev_page_url)}
+                                            onClick={() => handlePagination(reparaciones.prev_page_url, 'reparaciones')}
                                         >
                                             {__('Anterior')}
                                         </Button>
-                                        <span className="font-medium text-foreground">
-                                            {reparaciones.current_page} / {reparaciones.last_page}
-                                        </span>
+
+                                        {reparaciones.links && reparaciones.links.length > 3 ? (
+                                            reparaciones.links
+                                                .filter((l) => !l.label.includes('&laquo;') && !l.label.includes('&raquo;') && !l.label.includes('Previous') && !l.label.includes('Next'))
+                                                .map((link, idx) => {
+                                                    const isDots = link.label === '...';
+                                                    return isDots ? (
+                                                        <span key={idx} className="px-1 text-muted-foreground text-xs">...</span>
+                                                    ) : (
+                                                        <Button
+                                                            key={idx}
+                                                            variant={link.active ? "default" : "outline"}
+                                                            size="sm"
+                                                            className={`h-8 min-w-[32px] px-2 text-xs font-semibold ${
+                                                                link.active
+                                                                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                                                    : ''
+                                                            }`}
+                                                            disabled={!link.url || link.active}
+                                                            onClick={() => handlePagination(link.url, 'reparaciones')}
+                                                        >
+                                                            {link.label}
+                                                        </Button>
+                                                    );
+                                                })
+                                        ) : (
+                                            <span className="font-medium text-foreground px-2">
+                                                {reparaciones.current_page} / {reparaciones.last_page}
+                                            </span>
+                                        )}
+
                                         <Button
                                             variant="outline"
                                             size="sm"
+                                            className="h-8 px-2.5 text-xs"
                                             disabled={!reparaciones.next_page_url}
-                                            onClick={() => reparaciones.next_page_url && router.get(reparaciones.next_page_url)}
+                                            onClick={() => handlePagination(reparaciones.next_page_url, 'reparaciones')}
                                         >
                                             {__('Siguiente')}
                                         </Button>

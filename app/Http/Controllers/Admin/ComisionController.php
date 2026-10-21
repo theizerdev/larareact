@@ -66,6 +66,7 @@ class ComisionController extends Controller
             'search' => $request->input('search'),
             'sucursal_id' => $sucursalId,
             'perPage' => (int) $request->input('perPage', 15),
+            'tab' => $request->input('tab', 'empleados'),
         ];
 
         $data = $this->commissionService->getCommissionsDashboard($filters, $empresaId, $sucursalId);
@@ -106,7 +107,8 @@ class ComisionController extends Controller
                 'direccion' => $empresa->direccion,
                 'logo' => $empresa->logo ? (str_starts_with($empresa->logo, '/') || str_starts_with($empresa->logo, 'http') ? $empresa->logo : "/storage/{$empresa->logo}") : ($empresa->logo_mini ? (str_starts_with($empresa->logo_mini, '/') || str_starts_with($empresa->logo_mini, 'http') ? $empresa->logo_mini : "/storage/{$empresa->logo_mini}") : '/image/logo/5.png'),
             ] : null,
-            'filters' => $request->only(['empleado_id', 'estado', 'from', 'to', 'search', 'sucursal_id', 'perPage']),
+            'tab' => $request->input('tab', 'empleados'),
+            'filters' => $request->only(['empleado_id', 'estado', 'estado_orden', 'from', 'to', 'search', 'sucursal_id', 'perPage', 'tab']),
         ]);
     }
 
