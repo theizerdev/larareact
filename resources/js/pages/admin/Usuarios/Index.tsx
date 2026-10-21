@@ -208,8 +208,8 @@ export default function UsersIndexPage({
         const unbindFinish = router.on('finish', () => setIsTableLoading(false));
 
         return () => {
- unbindStart(); unbindFinish(); 
-};
+            unbindStart(); unbindFinish();
+        };
     }, []);
 
     // Filter Query debouncing
@@ -249,8 +249,8 @@ export default function UsersIndexPage({
     // Filtrar sucursales según la empresa seleccionada
     const filteredSucursales = useMemo(() => {
         if (!data.empresa_id) {
-return [];
-}
+            return [];
+        }
 
         return sucursales.filter((s) => s.empresa_id === Number(data.empresa_id));
     }, [data.empresa_id, sucursales]);
@@ -340,8 +340,8 @@ return [];
 
     const handleDeleteConfirm = () => {
         if (!deletingUser) {
-return;
-}
+            return;
+        }
 
         router.delete(`/admin/usuarios/${deletingUser.id}`, {
             onSuccess: () => {
@@ -466,8 +466,8 @@ return;
                             user.status === 'activo'
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900'
                                 : user.status === 'suspendido'
-                                ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900'
-                                : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800'
+                                    ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800'
                         )}>
                             {__(user.status)}
                         </span>
@@ -714,8 +714,8 @@ return;
                                     {editingUser
                                         ? __('Edit User')
                                         : duplicatingUser
-                                        ? __('Duplicate User')
-                                        : __('New User')}
+                                            ? __('Duplicate User')
+                                            : __('New User')}
                                 </DialogTitle>
                                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                                     {duplicatingUser
@@ -932,8 +932,8 @@ return;
                                                         key={g.id}
                                                         className={cn(
                                                             "flex items-start space-x-3 p-3.5 rounded-xl border transition-all cursor-pointer select-none",
-                                                            isChecked 
-                                                                ? "bg-sky-50/70 dark:bg-sky-950/40 border-sky-300 dark:border-sky-700 shadow-xs" 
+                                                            isChecked
+                                                                ? "bg-sky-50/70 dark:bg-sky-950/40 border-sky-300 dark:border-sky-700 shadow-xs"
                                                                 : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300"
                                                         )}
                                                         onClick={() => handleGroupChange(g.id, !isChecked)}

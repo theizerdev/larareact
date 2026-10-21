@@ -30,6 +30,13 @@ class PermissionSeeder extends Seeder
                 'roles.create' => 'Crear Rol',
                 'roles.edit' => 'Editar Rol',
                 'roles.delete' => 'Eliminar Rol',
+
+                'grupos.view' => 'Ver Grupos',
+                'grupos.create' => 'Crear Grupo',
+                'grupos.edit' => 'Editar Grupo',
+                'grupos.delete' => 'Eliminar Grupo',
+
+                // Módulo: Cargos
             ],
 
             // Sector: Configuración
@@ -186,6 +193,7 @@ class PermissionSeeder extends Seeder
                     str_starts_with($permission, 'visitas_temporales.') => 'visitas_temporales',
                     str_starts_with($permission, 'control_acceso.') => 'control_acceso',
                     str_starts_with($permission, 'asistencia.') => 'asistencia',
+                    str_starts_with($permission, 'grupos.') => 'grupos',
 
                     default => 'general',
                 };
