@@ -278,6 +278,12 @@ export const WORKSHOP_DETAILED_STATES = [
     { key: 'reincidencia_garantia', label: '10-Garantía / Reincidencia', shortLabel: 'Garantía', step: '10', active: 'bg-yellow-600 text-white border-yellow-400' },
 ];
 
+export const WORKSHOP_CUT_STATES = [
+    { key: 'listo_reparado', label: '6-Listo para Entregar Reparado', shortLabel: 'Listo para Entregar', step: '6', active: 'bg-emerald-600 text-white border-emerald-400' },
+    { key: 'entregado_reparado', label: '8-Entregado Reparado', shortLabel: 'Entregado Reparado', step: '8', active: 'bg-teal-600 text-white border-teal-400' },
+    { key: 'entregado_no_reparado', label: '9-Entregado No Reparado', shortLabel: 'Entregado No Reparado', step: '9', active: 'bg-rose-600 text-white border-rose-400' },
+];
+
 export default function ComisionesIndex({
     stats,
     empleados_resumen,
@@ -328,9 +334,127 @@ export default function ComisionesIndex({
     const [isSyncingTaller, setIsSyncingTaller] = useState(false);
     const selectedEmpleado = empleados_list.find((e) => String(e.id) === String(selectedEmpleadoId));
 
+    // Porcentaje de comisión para cálculo automático en vivo y guardado en BD
+    const initialComisionPct = (stats.taller_semaforo?.pct_comision_input !== undefined && stats.taller_semaforo?.pct_comision_input !== null)
+        ? String(stats.taller_semaforo.pct_comision_input)
+        : (stats.taller_semaforo?.pct_efectivo ? String(stats.taller_semaforo.pct_efectivo) : '10');
+
+    const [customComisionPct, setCustomComisionPct] = useState<string>(initialComisionPct);
+    const [isSavingPct, setIsSavingPct] = useState(false);
+    const [justSavedPct, setJustSavedPct] = useState(false);
+    const [overrideTotalComisiones, setOverrideTotalComisiones] = useState<number | null>(null);
+    const autoSaveTimerRef = React.useRef<any>(null);
+
+    useEffect(() => {
+        if (stats.taller_semaforo?.pct_comision_input !== undefined && stats.taller_semaforo?.pct_comision_input !== null) {
+            setCustomComisionPct(String(stats.taller_semaforo.pct_comision_input));
+        } else if (stats.taller_semaforo?.pct_efectivo) {
+            setCustomComisionPct(String(stats.taller_semaforo.pct_efectivo));
+        }
+        setOverrideTotalComisiones(null);
+    }, [stats.taller_semaforo?.pct_comision_input, stats.taller_semaforo?.pct_efectivo, selectedEmpleadoId]);
+
+    const saveCustomPercentageToBackend = async (pctValue: string) => {
+        const parsed = parseFloat(pctValue);
+        if (isNaN(parsed) || parsed < 0 || parsed > 100) return;
+
+        setIsSavingPct(true);
+        try {
+            const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const res = await fetch('/admin/comisiones/actualizar-pct-taller', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    porcentaje: parsed,
+                    empleado_id: selectedEmpleadoId !== 'all' ? selectedEmpleadoId : undefined,
+                    sucursal_id: selectedSucursal !== 'all' ? selectedSucursal : undefined,
+                    from: dateFrom || undefined,
+                    to: dateTo || undefined,
+                }),
+            });
+
+            if (res.ok) {
+                const json = await res.json();
+                if (json.data) {
+                    setOverrideTotalComisiones(json.data.total_comisiones);
+                }
+                setJustSavedPct(true);
+                setTimeout(() => setJustSavedPct(false), 2500);
+            }
+        } catch (err) {
+            console.error('Error auto-saving workshop commission percentage', err);
+        } finally {
+            setIsSavingPct(false);
+        }
+    };
+
+    const handlePctInputChange = (val: string) => {
+        setCustomComisionPct(val);
+        setOverrideTotalComisiones(null);
+
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+        }
+        autoSaveTimerRef.current = setTimeout(() => {
+            saveCustomPercentageToBackend(val);
+        }, 800);
+    };
+
+    const handlePctInputBlur = () => {
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+        }
+        saveCustomPercentageToBackend(customComisionPct);
+    };
+
+    // Función de cálculo de comisión para una orden individual
+    const getRepairCommission = (r: any) => {
+        // Reincidencias y entregado no reparado nunca generan comisión
+        const isReincidencia = Boolean(
+            r.tuvo_reincidencia ||
+            r.estado_orden === 'reincidencia_garantia' ||
+            r.estado_orden === 'reincidencia'
+        );
+        const isNoReparado = r.estado_orden === 'entregado_no_reparado';
+
+        if (isReincidencia || isNoReparado) {
+            return 0;
+        }
+
+        const pct = parseFloat(customComisionPct);
+        const effectivePct = !isNaN(pct) && pct >= 0 ? pct : Number(r.comision_tecnico_pct || 0);
+
+        const total = Number(r.costo_total || r.costo_estimado || 0);
+        const manoObra = Number(r.costo_mano_obra || 0);
+        const base = manoObra > 0 ? manoObra : total;
+
+        return Math.round(base * (effectivePct / 100) * 100) / 100;
+    };
+
+    // Total de comisiones técnico dinámico
+    const dynamicTotalComisiones = React.useMemo(() => {
+        if (overrideTotalComisiones !== null) {
+            return overrideTotalComisiones;
+        }
+        const pct = parseFloat(customComisionPct);
+        if (isNaN(pct) || pct < 0) {
+            return Number(stats.taller_semaforo?.total_comisiones ?? stats.comisiones_reparaciones ?? 0);
+        }
+
+        const baseTotal = Number(stats.taller_semaforo?.total_generado ?? stats.total_reparaciones_monto ?? 0);
+        return Math.round(baseTotal * (pct / 100) * 100) / 100;
+    }, [overrideTotalComisiones, stats, customComisionPct]);
+
     const handleSyncTallerCommissions = () => {
         setIsSyncingTaller(true);
-        router.post('/admin/comisiones/sync-taller', {}, {
+        router.post('/admin/comisiones/sync-taller', {
+            porcentaje: parseFloat(customComisionPct) || undefined,
+        }, {
             preserveScroll: true,
             onFinish: () => setIsSyncingTaller(false),
         });
@@ -1064,16 +1188,50 @@ export default function ComisionesIndex({
                                                 {__('Total Comisiones Técnico')}
                                             </div>
                                             <div className="text-3xl lg:text-4xl font-mono font-black text-emerald-400">
-                                                {currencySymbol}{Number(stats.taller_semaforo?.total_comisiones ?? stats.comisiones_reparaciones ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                {currencySymbol}{Number(dynamicTotalComisiones).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
                                         </div>
                                         <div className="border-l border-slate-700 pl-6">
-                                            <div className="text-xs uppercase font-bold text-indigo-300 tracking-wider">
-                                                {__('% Efectivo Comisión')}
+                                            <div className="text-xs uppercase font-bold text-indigo-300 tracking-wider flex items-center gap-1.5">
+                                                <Percent className="h-3.5 w-3.5 text-indigo-400" />
+                                                <span>{__('% Efectivo Comisión')}</span>
+                                                {isSavingPct ? (
+                                                    <span className="flex items-center gap-1 text-[10px] text-amber-300 normal-case font-normal bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-400/30">
+                                                        <RefreshCw className="h-2.5 w-2.5 animate-spin" />
+                                                        {__('Guardando...')}
+                                                    </span>
+                                                ) : justSavedPct ? (
+                                                    <span className="flex items-center gap-1 text-[10px] text-emerald-300 normal-case font-normal bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-400/30">
+                                                        <Check className="h-2.5 w-2.5" />
+                                                        {__('Guardado')}
+                                                    </span>
+                                                ) : null}
                                             </div>
-                                            <div className="text-2xl lg:text-3xl font-mono font-black text-indigo-200 flex items-center gap-1">
-                                                <span>{Number(stats.taller_semaforo?.pct_efectivo ?? 0).toFixed(2)}%</span>
-                                                <span className="text-[10px] font-normal text-slate-400">({__('de lo facturado')})</span>
+                                            <div className="flex items-center gap-2 pt-1.5">
+                                                <div className="relative flex items-center">
+                                                    <input
+                                                        id="workshop-commission-percentage-input"
+                                                        type="number"
+                                                        step="0.1"
+                                                        min="0"
+                                                        max="100"
+                                                        value={customComisionPct}
+                                                        onChange={(e) => handlePctInputChange(e.target.value)}
+                                                        onBlur={handlePctInputBlur}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.currentTarget.blur();
+                                                            }
+                                                        }}
+                                                        className="w-24 bg-slate-800/90 hover:bg-slate-800 text-white font-mono font-black text-2xl lg:text-3xl px-2.5 py-1 rounded-xl border border-indigo-400/50 hover:border-indigo-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none text-center shadow-inner transition-all"
+                                                        title={__('Ingresa el porcentaje de comisión para calcular automáticamente en todas las reparaciones')}
+                                                    />
+                                                    <span className="ml-1.5 text-2xl lg:text-3xl font-mono font-black text-indigo-300">%</span>
+                                                </div>
+                                                <div className="text-[10px] text-slate-400 leading-tight">
+                                                    <div>({__('de lo facturado')})</div>
+                                                    <div className="text-[9px] text-indigo-300/80">{__('Auto-cálculo en vivo')}</div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1081,9 +1239,9 @@ export default function ComisionesIndex({
 
                                 {/* Semáforo de Equipos (Idéntico a las casillas de la Imagen 2) */}
                                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-                                    <div className="grid grid-cols-3 sm:flex items-center gap-2 w-full sm:w-auto">
+                                    <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
                                         {/* VERDE: Reparados */}
-                                        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-emerald-600/90 text-white min-w-[85px] shadow-lg border border-emerald-400/40">
+                                        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-emerald-600/90 text-white min-w-[95px] shadow-lg border border-emerald-400/40">
                                             <div className="text-2xl font-mono font-black leading-none">
                                                 {stats.taller_semaforo?.reparados ?? 0}
                                             </div>
@@ -1093,22 +1251,12 @@ export default function ComisionesIndex({
                                         </div>
 
                                         {/* ROJO: No Reparados */}
-                                        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-rose-600/90 text-white min-w-[85px] shadow-lg border border-rose-400/40">
+                                        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-rose-600/90 text-white min-w-[95px] shadow-lg border border-rose-400/40">
                                             <div className="text-2xl font-mono font-black leading-none">
                                                 {stats.taller_semaforo?.no_reparados ?? 0}
                                             </div>
                                             <div className="text-[10px] font-bold uppercase tracking-wider text-rose-100 mt-1 text-center">
                                                 {__('No Reparados')}
-                                            </div>
-                                        </div>
-
-                                        {/* AMARILLO: En Proceso */}
-                                        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-amber-500/90 text-white min-w-[85px] shadow-lg border border-amber-300/40">
-                                            <div className="text-2xl font-mono font-black leading-none">
-                                                {stats.taller_semaforo?.en_proceso ?? 0}
-                                            </div>
-                                            <div className="text-[10px] font-bold uppercase tracking-wider text-amber-100 mt-1 text-center">
-                                                {__('En Proceso')}
                                             </div>
                                         </div>
                                     </div>
@@ -1138,16 +1286,16 @@ export default function ComisionesIndex({
                                 </div>
                             </div>
 
-                            {/* DESGLOSE DETALLADO DE TODOS LOS DEMÁS ESTADOS DE TALLER */}
+                            {/* DESGLOSE DE LOS 3 ESTADOS VÁLIDOS DE CORTE DE TALLER */}
                             <div className="mt-5 pt-4 border-t border-indigo-900/50">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                                     <div className="flex items-center gap-2">
                                         <Wrench className="h-4 w-4 text-indigo-400" />
                                         <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                                            {__('Conteo Detallado de Estados')}
+                                            {__('Estados de Corte de Taller')}
                                         </span>
                                         <span className="text-[11px] text-slate-400">
-                                            • {__('Haz clic en un estado para filtrar el listado')}
+                                            • {__('Solo se muestran: Listo para Entregar, Entregado Reparado y Entregado No Reparado')}
                                         </span>
                                     </div>
 
@@ -1158,14 +1306,14 @@ export default function ComisionesIndex({
                                             className="text-xs font-bold text-amber-300 hover:text-white flex items-center gap-1 transition-colors bg-amber-500/20 px-2.5 py-1 rounded-md border border-amber-400/40"
                                         >
                                             <X className="h-3 w-3" />
-                                            <span>{__('Ver todos los estados')}</span>
+                                            <span>{__('Ver los 3 estados')}</span>
                                         </button>
                                     )}
                                 </div>
 
-                                {/* Grilla con los 10 Estados de Taller */}
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-2">
-                                    {WORKSHOP_DETAILED_STATES.map((st) => {
+                                {/* Grilla con los 3 Estados de Taller */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    {WORKSHOP_CUT_STATES.map((st) => {
                                         const count = stats.taller_semaforo?.estados?.[st.key] ?? 0;
                                         const isSelected = selectedEstadoOrden === st.key;
 
@@ -1175,23 +1323,25 @@ export default function ComisionesIndex({
                                                 type="button"
                                                 onClick={() => handleFilterByEstadoOrden(isSelected ? 'all' : st.key)}
                                                 className={cn(
-                                                    "flex flex-col items-center justify-center p-2 rounded-xl text-center transition-all cursor-pointer border relative overflow-hidden group",
+                                                    "flex items-center justify-between p-3 rounded-xl text-left transition-all cursor-pointer border relative overflow-hidden group shadow-md",
                                                     isSelected
-                                                        ? "ring-2 ring-white scale-[1.03] shadow-lg " + st.active
+                                                        ? "ring-2 ring-white scale-[1.02] " + st.active
                                                         : count > 0
-                                                            ? "bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700/80 hover:border-indigo-400/60 shadow-sm"
-                                                            : "bg-slate-900/40 text-slate-500 border-slate-800/40 opacity-60 hover:opacity-100"
+                                                            ? "bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700/80 hover:border-indigo-400/60"
+                                                            : "bg-slate-900/40 text-slate-500 border-slate-800/40 opacity-70 hover:opacity-100"
                                                 )}
                                                 title={`${st.label}: ${count} órdenes`}
                                             >
-                                                <div className="text-xl font-mono font-black leading-none text-white">
+                                                <div>
+                                                    <div className="text-xs font-bold uppercase tracking-tight text-slate-200">
+                                                        {st.label}
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400 mt-0.5">
+                                                        {st.key === 'entregado_no_reparado' ? __('No genera comisión') : __('Genera comisión')}
+                                                    </div>
+                                                </div>
+                                                <div className="text-2xl font-mono font-black text-white pl-4">
                                                     {count}
-                                                </div>
-                                                <div className="text-[10px] font-bold uppercase tracking-tight mt-1.5 text-slate-300 truncate w-full px-1">
-                                                    {st.shortLabel}
-                                                </div>
-                                                <div className="text-[9px] font-mono text-slate-400 mt-0.5">
-                                                    #{st.step}
                                                 </div>
                                             </button>
                                         );
@@ -1230,8 +1380,19 @@ export default function ComisionesIndex({
                                             </tr>
                                         ) : (
                                             reparaciones.data.map((r) => {
-                                                const isExito = ['entregado_reparado', 'entregado_finalizado', 'listo_reparado', 'reparado'].includes(r.estado_orden);
-                                                const isSinSolucion = ['entregado_no_reparado', 'listo_sin_solucion', 'cancelado'].includes(r.estado_orden);
+                                                const isReincidencia = Boolean(
+                                                    r.tuvo_reincidencia ||
+                                                    r.estado_orden === 'reincidencia_garantia' ||
+                                                    r.estado_orden === 'reincidencia'
+                                                );
+                                                const isNoReparado = r.estado_orden === 'entregado_no_reparado';
+                                                const isListoReparado = ['listo_reparado', 'reparado'].includes(r.estado_orden);
+                                                const isEntregadoReparado = ['entregado_reparado', 'entregado_finalizado', 'entregado'].includes(r.estado_orden);
+
+                                                const itemComision = getRepairCommission(r);
+                                                const effectivePct = parseFloat(customComisionPct) > 0
+                                                    ? parseFloat(customComisionPct)
+                                                    : Number(r.comision_tecnico_pct || 0);
 
                                                 return (
                                                     <tr key={r.id} className="hover:bg-muted/30 transition-colors">
@@ -1287,17 +1448,21 @@ export default function ComisionesIndex({
                                                         </td>
 
                                                         <td className="px-4 py-3 text-center whitespace-nowrap">
-                                                            {isExito ? (
-                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-300">
-                                                                    🟢 {__('REPARADO')}
+                                                            {isReincidencia ? (
+                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-pink-100 text-pink-800 dark:bg-pink-950/50 dark:text-pink-300 border border-pink-300" title={__('Reincidencia / Garantía de servicio previo')}>
+                                                                    🔄 {__('REINCIDENCIA')}
                                                                 </span>
-                                                            ) : isSinSolucion ? (
+                                                            ) : isNoReparado ? (
                                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-300">
                                                                     🔴 {__('NO REPARADO')}
                                                                 </span>
+                                                            ) : isListoReparado ? (
+                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-300">
+                                                                    🟢 {__('LISTO REPARADO')}
+                                                                </span>
                                                             ) : (
-                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300">
-                                                                    🟡 {__('EN PROCESO')}
+                                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300 border border-teal-300">
+                                                                    🟢 {__('ENTREGADO REP.')}
                                                                 </span>
                                                             )}
                                                         </td>
@@ -1310,8 +1475,31 @@ export default function ComisionesIndex({
                                                             {currencySymbol}{Number(r.costo_total || r.costo_estimado || 0).toFixed(2)}
                                                         </td>
 
-                                                        <td className="px-4 py-3 text-right font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                                                            +{currencySymbol}{Number(r.comision_monto || 0).toFixed(2)}
+                                                        <td className="px-4 py-3 text-right font-black whitespace-nowrap">
+                                                            {isReincidencia ? (
+                                                                <div className="flex flex-col items-end">
+                                                                    <span className="text-slate-400 font-mono">{currencySymbol}0.00</span>
+                                                                    <span className="text-[10px] font-bold text-pink-600 dark:text-pink-400">
+                                                                        {__('Reincidencia (0%)')}
+                                                                    </span>
+                                                                </div>
+                                                            ) : isNoReparado ? (
+                                                                <div className="flex flex-col items-end">
+                                                                    <span className="text-slate-400 font-mono">{currencySymbol}0.00</span>
+                                                                    <span className="text-[10px] font-bold text-rose-500">
+                                                                        {__('No Reparado (0%)')}
+                                                                    </span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex flex-col items-end">
+                                                                    <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">
+                                                                        +{currencySymbol}{itemComision.toFixed(2)}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-muted-foreground font-normal">
+                                                                        ({effectivePct.toFixed(1)}%)
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </td>
 
                                                         <td className="px-4 py-3 text-center whitespace-nowrap">
@@ -1925,16 +2113,16 @@ export default function ComisionesIndex({
                                             {__('Total Comisiones')}
                                         </div>
                                         <div className="text-2xl font-mono font-black text-emerald-400">
-                                            {currencySymbol}{Number(stats.taller_semaforo?.total_comisiones ?? stats.comisiones_reparaciones ?? 0).toFixed(2)}
+                                            {currencySymbol}{Number(dynamicTotalComisiones).toFixed(2)}
                                         </div>
                                         <div className="text-[10px] text-indigo-300 font-semibold mt-0.5">
-                                            {Number(stats.taller_semaforo?.pct_efectivo ?? 0).toFixed(2)}% {__('Efectivo')}
+                                            {customComisionPct ? `${Number(customComisionPct).toFixed(2)}% ${__('Comisión')}` : `${Number(stats.taller_semaforo?.pct_efectivo ?? 0).toFixed(2)}% ${__('Efectivo')}`}
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Semáforo de Casillas */}
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-2 gap-2">
                                     <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-emerald-600 text-white text-center">
                                         <div className="text-2xl font-black font-mono leading-none">
                                             {stats.taller_semaforo?.reparados ?? 0}
@@ -1951,30 +2139,22 @@ export default function ComisionesIndex({
                                             {__('No Reparados')}
                                         </div>
                                     </div>
-                                    <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-amber-500 text-white text-center">
-                                        <div className="text-2xl font-black font-mono leading-none">
-                                            {stats.taller_semaforo?.en_proceso ?? 0}
-                                        </div>
-                                        <div className="text-[10px] font-bold uppercase mt-1">
-                                            {__('En Proceso')}
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
 
-                            {/* Desglose de Todos los Estados en Hoja de Impresión */}
+                            {/* Desglose de Estados de Corte en Hoja de Impresión */}
                             <div className="mb-4 bg-slate-50 border border-slate-300 rounded-lg p-2.5">
                                 <div className="text-[10px] font-bold text-slate-700 uppercase mb-1.5 flex items-center justify-between">
-                                    <span>{__('Desglose de Estados de Taller:')}</span>
+                                    <span>{__('Estados Incluidos en Corte de Taller:')}</span>
                                     <span className="font-mono text-slate-500 font-normal">{__('Total Equipos:')} {stats.taller_semaforo?.total ?? 0}</span>
                                 </div>
-                                <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 text-center">
-                                    {WORKSHOP_DETAILED_STATES.map((st) => {
+                                <div className="grid grid-cols-3 gap-2 text-center">
+                                    {WORKSHOP_CUT_STATES.map((st) => {
                                         const count = stats.taller_semaforo?.estados?.[st.key] ?? 0;
                                         return (
-                                            <div key={st.key} className="border border-slate-200 bg-white rounded p-1">
-                                                <div className="font-mono font-bold text-xs text-slate-800">{count}</div>
-                                                <div className="text-[9px] text-slate-500 font-medium truncate" title={st.label}>{st.shortLabel}</div>
+                                            <div key={st.key} className="border border-slate-200 bg-white rounded p-1.5">
+                                                <div className="font-mono font-bold text-sm text-slate-800">{count}</div>
+                                                <div className="text-[10px] text-slate-600 font-medium truncate" title={st.label}>{st.shortLabel}</div>
                                             </div>
                                         );
                                     })}
@@ -2007,8 +2187,14 @@ export default function ComisionesIndex({
                                             </tr>
                                         ) : (
                                             reparaciones.data.map((r, i) => {
-                                                const isReparado = ['entregado_reparado', 'entregado_finalizado', 'listo_reparado', 'reparado'].includes(r.estado_orden);
-                                                const isNoReparado = ['entregado_no_reparado', 'listo_sin_solucion', 'cancelado'].includes(r.estado_orden);
+                                                const isReincidencia = Boolean(
+                                                    r.tuvo_reincidencia ||
+                                                    r.estado_orden === 'reincidencia_garantia' ||
+                                                    r.estado_orden === 'reincidencia'
+                                                );
+                                                const isNoReparado = r.estado_orden === 'entregado_no_reparado';
+                                                const isListoReparado = ['listo_reparado', 'reparado'].includes(r.estado_orden);
+                                                const itemComision = getRepairCommission(r);
 
                                                 return (
                                                     <tr key={r.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
@@ -2031,17 +2217,21 @@ export default function ComisionesIndex({
                                                             {r.descripcion_falla || __('Servicio de taller')}
                                                         </td>
                                                         <td className="p-2 border-r border-slate-200 text-center whitespace-nowrap">
-                                                            {isReparado ? (
-                                                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                                                    {__('REPARADO')}
+                                                            {isReincidencia ? (
+                                                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-pink-100 text-pink-800 border border-pink-300">
+                                                                    🔄 {__('REINCIDENCIA')}
                                                                 </span>
                                                             ) : isNoReparado ? (
                                                                 <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
-                                                                    {__('NO REPARADO')}
+                                                                    🔴 {__('NO REPARADO')}
+                                                                </span>
+                                                            ) : isListoReparado ? (
+                                                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                                    🟢 {__('LISTO REP.')}
                                                                 </span>
                                                             ) : (
-                                                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
-                                                                    {__('EN PROCESO')}
+                                                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-black bg-teal-100 text-teal-800 border border-teal-300">
+                                                                    🟢 {__('ENTREGADO REP.')}
                                                                 </span>
                                                             )}
                                                         </td>
@@ -2052,7 +2242,11 @@ export default function ComisionesIndex({
                                                             {currencySymbol}{Number(r.costo_total || r.costo_estimado || 0).toFixed(2)}
                                                         </td>
                                                         <td className="p-2 text-right font-mono font-bold text-emerald-700">
-                                                            {currencySymbol}{Number(r.comision_monto || 0).toFixed(2)}
+                                                            {isReincidencia || isNoReparado ? (
+                                                                <span className="text-slate-400 font-mono text-xs">{currencySymbol}0.00</span>
+                                                            ) : (
+                                                                <span>{currencySymbol}{itemComision.toFixed(2)}</span>
+                                                            )}
                                                         </td>
                                                     </tr>
                                                 );
@@ -2068,7 +2262,7 @@ export default function ComisionesIndex({
                                                 {currencySymbol}{Number(stats.taller_semaforo?.total_generado ?? 0).toFixed(2)}
                                             </td>
                                             <td className="p-2 text-right font-mono text-emerald-700">
-                                                {currencySymbol}{Number(stats.taller_semaforo?.total_comisiones ?? 0).toFixed(2)}
+                                                {currencySymbol}{Number(dynamicTotalComisiones).toFixed(2)}
                                             </td>
                                         </tr>
                                     </tfoot>
@@ -2173,15 +2367,15 @@ export default function ComisionesIndex({
                                     {__('Total Comisiones')}
                                 </div>
                                 <div className="text-lg font-mono font-black">
-                                    {currencySymbol}{Number(stats.taller_semaforo?.total_comisiones ?? stats.comisiones_reparaciones ?? 0).toFixed(2)}
+                                    {currencySymbol}{Number(dynamicTotalComisiones).toFixed(2)}
                                 </div>
                                 <div className="text-[9px] font-bold">
-                                    {Number(stats.taller_semaforo?.pct_efectivo ?? 0).toFixed(2)}% {__('Efectivo')}
+                                    {customComisionPct ? `${Number(customComisionPct).toFixed(2)}%` : `${Number(stats.taller_semaforo?.pct_efectivo ?? 0).toFixed(2)}%`} {__('Efectivo')}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-1">
+                        <div className="grid grid-cols-2 gap-1">
                             <div className="border-2 border-black p-1 text-center bg-gray-100">
                                 <div className="text-base font-black font-mono leading-none">
                                     {stats.taller_semaforo?.reparados ?? 0}
@@ -2196,14 +2390,6 @@ export default function ComisionesIndex({
                                 </div>
                                 <div className="text-[8px] font-black uppercase mt-0.5">
                                     {__('No Reparados')}
-                                </div>
-                            </div>
-                            <div className="border-2 border-black p-1 text-center bg-gray-100">
-                                <div className="text-base font-black font-mono leading-none">
-                                    {stats.taller_semaforo?.en_proceso ?? 0}
-                                </div>
-                                <div className="text-[8px] font-black uppercase mt-0.5">
-                                    {__('En Proceso')}
                                 </div>
                             </div>
                         </div>
@@ -2233,8 +2419,14 @@ export default function ComisionesIndex({
                                 </tr>
                             ) : (
                                 reparaciones.data.map((r) => {
-                                    const isReparado = ['entregado_reparado', 'entregado_finalizado', 'listo_reparado', 'reparado'].includes(r.estado_orden);
-                                    const isNoReparado = ['entregado_no_reparado', 'listo_sin_solucion', 'cancelado'].includes(r.estado_orden);
+                                    const isReincidencia = Boolean(
+                                        r.tuvo_reincidencia ||
+                                        r.estado_orden === 'reincidencia_garantia' ||
+                                        r.estado_orden === 'reincidencia'
+                                    );
+                                    const isNoReparado = r.estado_orden === 'entregado_no_reparado';
+                                    const isListoReparado = ['listo_reparado', 'reparado'].includes(r.estado_orden);
+                                    const itemComision = getRepairCommission(r);
 
                                     return (
                                         <tr key={`print-r-${r.id}`}>
@@ -2254,7 +2446,7 @@ export default function ComisionesIndex({
                                                 {r.descripcion_falla || __('Servicio de taller')}
                                             </td>
                                             <td className="p-1 border border-black text-center font-bold">
-                                                {isReparado ? 'REPARADO' : isNoReparado ? 'NO REPARADO' : 'EN PROCESO'}
+                                                {isReincidencia ? 'REINCIDENCIA' : isNoReparado ? 'NO REPARADO' : isListoReparado ? 'LISTO REP.' : 'ENTREGADO REP.'}
                                             </td>
                                             <td className="p-1 border border-black">
                                                 {r.observaciones_fisicas || '-'}
@@ -2263,7 +2455,11 @@ export default function ComisionesIndex({
                                                 {currencySymbol}{Number(r.costo_total || r.costo_estimado || 0).toFixed(2)}
                                             </td>
                                             <td className="p-1 border border-black text-right font-mono font-bold">
-                                                {currencySymbol}{Number(r.comision_monto || 0).toFixed(2)}
+                                                {isReincidencia || isNoReparado ? (
+                                                    <span className="text-gray-500 font-normal">{currencySymbol}0.00</span>
+                                                ) : (
+                                                    <span>{currencySymbol}{itemComision.toFixed(2)}</span>
+                                                )}
                                             </td>
                                         </tr>
                                     );
@@ -2279,7 +2475,7 @@ export default function ComisionesIndex({
                                     {currencySymbol}{Number(stats.taller_semaforo?.total_generado ?? 0).toFixed(2)}
                                 </td>
                                 <td className="p-1 text-right font-mono border border-black">
-                                    {currencySymbol}{Number(stats.taller_semaforo?.total_comisiones ?? 0).toFixed(2)}
+                                    {currencySymbol}{Number(dynamicTotalComisiones).toFixed(2)}
                                 </td>
                             </tr>
                         </tfoot>

@@ -204,7 +204,9 @@ class ComisionController extends Controller
             $empresaId = (int) $request->input('empresa_id');
         }
 
-        $result = $this->commissionService->syncRepairCommissions($empresaId);
+        $customPct = $request->filled('porcentaje') ? (float) $request->input('porcentaje') : null;
+
+        $result = $this->commissionService->syncRepairCommissions($empresaId, $customPct);
 
         return back()->with('notification', [
             'type' => 'success',
@@ -212,6 +214,52 @@ class ComisionController extends Controller
                 'linked' => $result['linked'],
                 'calculated' => $result['calculated'],
             ]),
+        ]);
+    }
+
+    /**
+     * Actualizar el porcentaje de comisión de taller y recalcular en tiempo real todas las reparaciones aplicables.
+     */
+    public function updateWorkshopPercentage(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && ($user->hasRole('Administrador') || $user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Admin'));
+
+        if (!$isAdmin && !$user?->can('comisiones.manage') && !$user?->can('comisiones.pay')) {
+            abort(403, 'No tienes permisos para modificar el porcentaje de comisiones.');
+        }
+
+        $validated = $request->validate([
+            'porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
+            'empleado_id' => ['nullable'],
+            'sucursal_id' => ['nullable'],
+            'from' => ['nullable'],
+            'to' => ['nullable'],
+        ]);
+
+        $empresaId = $user?->empresa_id;
+        $sucursalId = $validated['sucursal_id'] ?? $request->input('sucursal_id', $user?->sucursal_id);
+
+        $filters = [
+            'empleado_id' => $validated['empleado_id'] ?? null,
+            'from' => $validated['from'] ?? null,
+            'to' => $validated['to'] ?? null,
+        ];
+
+        $result = $this->commissionService->updateWorkshopCommissionPercentage(
+            (float) $validated['porcentaje'],
+            $filters,
+            $empresaId,
+            (!empty($sucursalId) && $sucursalId !== 'all') ? (int) $sucursalId : null
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => __("Porcentaje de comisión del :pct% aplicado correctamente a :count reparaciones.", [
+                'pct' => number_format((float) $validated['porcentaje'], 2),
+                'count' => $result['updated'],
+            ]),
+            'data' => $result,
         ]);
     }
 }

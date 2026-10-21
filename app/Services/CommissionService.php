@@ -43,8 +43,24 @@ class CommissionService
     /**
      * Calcular comisión técnica para una orden de reparación.
      */
-    public function calculateRepairCommission(OrdenReparacion $reparacion, ?Empleado $empleado = null): array
+    public function calculateRepairCommission(OrdenReparacion $reparacion, ?Empleado $empleado = null, ?float $forcePct = null): array
     {
+        // Reincidencias y equipos entregados no reparados no generan comisión
+        $isReincidencia = (bool) ($reparacion->tuvo_reincidencia
+            || in_array($reparacion->estado_orden, ['reincidencia_garantia', 'reincidencia'], true)
+            || ($reparacion->relationLoaded('historial')
+                ? $reparacion->historial->contains(fn($h) => str_contains($h->estado_nuevo ?? '', 'reincid') || str_contains($h->estado_anterior ?? '', 'reincid'))
+                : $reparacion->historial()->where(fn($q) => $q->where('estado_nuevo', 'LIKE', '%reincid%')->orWhere('estado_anterior', 'LIKE', '%reincid%'))->exists()));
+
+        if ($isReincidencia || $reparacion->estado_orden === 'entregado_no_reparado') {
+            return [
+                'porcentaje' => 0.0,
+                'monto' => 0.0,
+                'estado' => 'no_aplica',
+                'base' => 0.0,
+            ];
+        }
+
         if (!$empleado && $reparacion->empleado_id) {
             $empleado = Empleado::find($reparacion->empleado_id);
         }
@@ -52,7 +68,7 @@ class CommissionService
             $empleado = Empleado::where('user_id', $reparacion->tecnico_id)->first();
         }
 
-        $porcentaje = (float) ($reparacion->comision_tecnico_pct > 0
+        $porcentaje = $forcePct !== null ? (float) $forcePct : (float) ($reparacion->comision_tecnico_pct > 0
             ? $reparacion->comision_tecnico_pct
             : ($empleado?->porcentaje_comision_reparacion ?? 0));
 
@@ -89,12 +105,17 @@ class CommissionService
      * Sincroniza las órdenes de taller con sus respectivos empleados y calcula comisiones retroactivas.
      *
      * @param int|null $empresaId
+     * @param float|null $customPct
      * @return array{total: int, linked: int, calculated: int}
      */
-    public function syncRepairCommissions(?int $empresaId = null): array
+    public function syncRepairCommissions(?int $empresaId = null, ?float $customPct = null): array
     {
         $query = OrdenReparacion::withoutGlobalScope('multitenancy')
-            ->whereNotNull('tecnico_id');
+            ->whereNotNull('tecnico_id')
+            ->withExists(['historial as tuvo_reincidencia' => function ($q) {
+                $q->where('estado_nuevo', 'LIKE', '%reincid%')
+                  ->orWhere('estado_anterior', 'LIKE', '%reincid%');
+            }]);
 
         if ($empresaId) {
             $query->where('empresa_id', $empresaId);
@@ -119,19 +140,35 @@ class CommissionService
                 $linked++;
             }
 
-            // Estados que generan comisión si el equipo fue reparado/entregado con éxito
-            $isReparado = in_array($rep->estado_orden, ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado', 'entregado_reparado'], true);
+            // Las reincidencias y entregado no reparado nunca generan comisión
+            $isReincidencia = (bool) ($rep->tuvo_reincidencia || in_array($rep->estado_orden, ['reincidencia_garantia', 'reincidencia'], true));
+            $isNoReparado = $rep->estado_orden === 'entregado_no_reparado';
 
-            if ($isReparado && (float) $rep->comision_monto <= 0 && $empleado && (float) $empleado->porcentaje_comision_reparacion > 0) {
-                $calc = $this->calculateRepairCommission($rep, $empleado);
-                if ($calc['monto'] > 0) {
-                    $rep->comision_monto = $calc['monto'];
-                    $rep->comision_tecnico_pct = $calc['porcentaje'];
-                    if ($rep->comision_estado !== 'pagada') {
-                        $rep->comision_estado = 'pendiente';
-                    }
+            if ($isReincidencia || $isNoReparado) {
+                if ((float) $rep->comision_monto > 0 || (float) $rep->comision_tecnico_pct > 0 || $rep->comision_estado !== 'no_aplica') {
+                    $rep->comision_monto = 0.00;
+                    $rep->comision_tecnico_pct = 0.00;
+                    $rep->comision_estado = 'no_aplica';
                     $updated = true;
-                    $calculated++;
+                }
+            } else {
+                // Estados que generan comisión si el equipo fue reparado/listo para entregar
+                $isReparado = in_array($rep->estado_orden, ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado', 'entregado_reparado'], true);
+
+                if ($isReparado) {
+                    $targetPct = $customPct !== null ? $customPct : ($rep->comision_tecnico_pct > 0 ? (float) $rep->comision_tecnico_pct : ($empleado?->porcentaje_comision_reparacion ?? 0));
+                    if ($targetPct > 0) {
+                        $calc = $this->calculateRepairCommission($rep, $empleado, $targetPct);
+                        if ((float) $rep->comision_monto !== (float) $calc['monto'] || (float) $rep->comision_tecnico_pct !== (float) $calc['porcentaje']) {
+                            $rep->comision_monto = $calc['monto'];
+                            $rep->comision_tecnico_pct = $calc['porcentaje'];
+                            if ($rep->comision_estado !== 'pagada') {
+                                $rep->comision_estado = $calc['monto'] > 0 ? 'pendiente' : 'no_aplica';
+                            }
+                            $updated = true;
+                            $calculated++;
+                        }
+                    }
                 }
             }
 
@@ -207,14 +244,27 @@ class CommissionService
             ->withQueryString();
 
         // ── 2. QUERY DE REPARACIONES DE TALLER ─────────────────────────────────
+        // Solo mostrar equipos con estados: Listo para entregar, Entregado reparado y Entregado no reparado.
+        $workshopAllowedStates = [
+            'listo_reparado',
+            'reparado',
+            'entregado_reparado',
+            'entregado',
+            'entregado_finalizado',
+            'entregado_no_reparado',
+        ];
+
         $reparacionesQuery = OrdenReparacion::query()
             ->where('empresa_id', $empresaId)
             ->where(function ($q) {
                 $q->whereNotNull('empleado_id')
                     ->orWhereNotNull('tecnico_id');
             })
-            ->where('estado_orden', '!=', 'cancelado')
-            ->whereIn('estado_orden', ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado', 'entregado_reparado']);
+            ->whereIn('estado_orden', $workshopAllowedStates)
+            ->withExists(['historial as tuvo_reincidencia' => function ($q) {
+                $q->where('estado_nuevo', 'LIKE', '%reincid%')
+                  ->orWhere('estado_anterior', 'LIKE', '%reincid%');
+            }]);
 
         if (!empty($sucursalId) && $sucursalId !== 'all') {
             $reparacionesQuery->where('sucursal_id', (int) $sucursalId);
@@ -235,7 +285,11 @@ class CommissionService
         }
 
         if (!empty($filters['estado_orden']) && $filters['estado_orden'] !== 'all') {
-            $reparacionesQuery->where('estado_orden', $filters['estado_orden']);
+            if ($filters['estado_orden'] === 'listo_reparado') {
+                $reparacionesQuery->whereIn('estado_orden', ['listo_reparado', 'reparado']);
+            } elseif ($filters['estado_orden'] === 'entregado_reparado') {
+                $reparacionesQuery->whereIn('estado_orden', ['entregado_reparado', 'entregado', 'entregado_finalizado']);
+            }
         }
 
         if (!empty($filters['from'])) {
@@ -270,7 +324,7 @@ class CommissionService
         $comisionesReparacionesPagadas = (float) ((clone $repStatsClone)->where('comision_estado', 'pagada')->sum('comision_monto') ?? 0);
         $cantidadReparaciones = (clone $repStatsClone)->count();
 
-        // Conteo semáforo de taller para el período y empleado filtrado (Espejo de la hoja de cálculo)
+        // Conteo semáforo de taller para los estados permitidos de la hoja de corte
         $tallerBaseScope = OrdenReparacion::query()
             ->where('empresa_id', $empresaId);
 
@@ -296,9 +350,9 @@ class CommissionService
         }
 
         $countReparados = (clone $tallerBaseScope)->whereIn('estado_orden', ['entregado_reparado', 'entregado_finalizado', 'listo_reparado', 'reparado'])->count();
-        $countNoReparados = (clone $tallerBaseScope)->whereIn('estado_orden', ['entregado_no_reparado', 'listo_sin_solucion', 'cancelado'])->count();
+        $countNoReparados = (clone $tallerBaseScope)->where('estado_orden', 'entregado_no_reparado')->count();
         $countEnProceso = (clone $tallerBaseScope)->whereIn('estado_orden', ['recibido', 'en_diagnostico_presupuesto', 'confirmacion_presupuesto', 'espera_refaccion', 'en_reparacion', 'en_diagnostico', 'presupuestado', 'esperando_repuesto'])->count();
-        $totalTallerEquipos = $countReparados + $countNoReparados + $countEnProceso;
+        $totalTallerEquipos = $countReparados + $countNoReparados;
         $pctEfectivoComision = $totalReparacionesMonto > 0 ? round(($totalComisionesReparaciones / $totalReparacionesMonto) * 100, 2) : 0.0;
 
         $estadoCounts = (clone $tallerBaseScope)
@@ -307,19 +361,29 @@ class CommissionService
             ->pluck('count', 'estado_orden')
             ->toArray();
 
+        $countListoReparado = ($estadoCounts['listo_reparado'] ?? 0) + ($estadoCounts['reparado'] ?? 0);
+        $countEntregadoReparado = ($estadoCounts['entregado_reparado'] ?? 0) + ($estadoCounts['entregado_finalizado'] ?? 0) + ($estadoCounts['entregado'] ?? 0);
+        $countEntregadoNoReparado = $estadoCounts['entregado_no_reparado'] ?? 0;
+
         $estadosDetallados = [
-            'recibido' => $estadoCounts['recibido'] ?? 0,
-            'en_diagnostico_presupuesto' => $estadoCounts['en_diagnostico_presupuesto'] ?? 0,
-            'confirmacion_presupuesto' => $estadoCounts['confirmacion_presupuesto'] ?? 0,
-            'espera_refaccion' => $estadoCounts['espera_refaccion'] ?? 0,
-            'en_reparacion' => $estadoCounts['en_reparacion'] ?? 0,
-            'listo_reparado' => $estadoCounts['listo_reparado'] ?? 0,
-            'listo_sin_solucion' => $estadoCounts['listo_sin_solucion'] ?? 0,
-            'entregado_reparado' => $estadoCounts['entregado_reparado'] ?? 0,
-            'entregado_no_reparado' => $estadoCounts['entregado_no_reparado'] ?? 0,
-            'reincidencia_garantia' => $estadoCounts['reincidencia_garantia'] ?? 0,
-            'cancelado' => $estadoCounts['cancelado'] ?? 0,
+            'listo_reparado' => $countListoReparado,
+            'entregado_reparado' => $countEntregadoReparado,
+            'entregado_no_reparado' => $countEntregadoNoReparado,
         ];
+
+        // Porcentaje por defecto sugerido para el input
+        $defaultPctInput = 10.0;
+        if (!empty($filters['empleado_id']) && $filters['empleado_id'] !== 'all') {
+            $targetEmp = Empleado::find($filters['empleado_id']);
+            if ($targetEmp && (float) $targetEmp->porcentaje_comision_reparacion > 0) {
+                $defaultPctInput = (float) $targetEmp->porcentaje_comision_reparacion;
+            }
+        } else {
+            $avgPct = (float) ((clone $repStatsClone)->where('comision_tecnico_pct', '>', 0)->avg('comision_tecnico_pct') ?: 0);
+            if ($avgPct > 0) {
+                $defaultPctInput = round($avgPct, 2);
+            }
+        }
 
         // Reparaciones detalladas paginadas
         $reparaciones = $reparacionesQuery->with(['empleado', 'tecnico', 'sucursal', 'comisionPago', 'marca', 'modelo'])
@@ -352,7 +416,7 @@ class CommissionService
             $comisionVentasPendiente = (float) ((clone $sq)->where('comision_estado', 'pendiente')->sum('comision_monto') ?? 0);
             $comisionVentasPagada = (float) ((clone $sq)->where('comision_estado', 'pagada')->sum('comision_monto') ?? 0);
 
-            // Reparaciones del técnico / empleado
+            // Reparaciones del técnico / empleado (solo estados válidos de corte)
             $rq = OrdenReparacion::query()
                 ->where(function ($q) use ($emp) {
                     $q->where('empleado_id', $emp->id);
@@ -360,8 +424,7 @@ class CommissionService
                         $q->orWhere('tecnico_id', $emp->user_id);
                     }
                 })
-                ->where('estado_orden', '!=', 'cancelado')
-                ->whereIn('estado_orden', ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado', 'entregado_reparado']);
+                ->whereIn('estado_orden', ['reparado', 'listo_reparado', 'entregado', 'entregado_finalizado', 'entregado_reparado', 'entregado_no_reparado']);
 
             if (!empty($filters['from'])) {
                 $rq->whereDate('created_at', '>=', $filters['from']);
@@ -432,6 +495,7 @@ class CommissionService
                     'total_generado' => round($totalReparacionesMonto, 2),
                     'total_comisiones' => round($totalComisionesReparaciones, 2),
                     'pct_efectivo' => $pctEfectivoComision,
+                    'pct_comision_input' => $defaultPctInput,
                     'estados' => $estadosDetallados,
                 ],
             ],
@@ -439,6 +503,111 @@ class CommissionService
             'ventas' => $ventas,
             'reparaciones' => $reparaciones,
             'pagos_recientes' => $pagosQuery,
+        ];
+    }
+
+    /**
+     * Recalcular y guardar el porcentaje de comisión de taller para las reparaciones filtradas.
+     * Toma en cuenta que reincidencias y entregado no reparado NO generan comisión.
+     */
+    public function updateWorkshopCommissionPercentage(
+        float $porcentaje,
+        array $filters,
+        int $empresaId,
+        ?int $sucursalId = null
+    ): array {
+        $allowedStates = [
+            'listo_reparado',
+            'reparado',
+            'entregado_reparado',
+            'entregado',
+            'entregado_finalizado',
+            'entregado_no_reparado',
+        ];
+
+        $query = OrdenReparacion::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->whereIn('estado_orden', $allowedStates)
+            ->withExists(['historial as tuvo_reincidencia' => function ($q) {
+                $q->where('estado_nuevo', 'LIKE', '%reincid%')
+                  ->orWhere('estado_anterior', 'LIKE', '%reincid%');
+            }]);
+
+        if (!empty($sucursalId) && $sucursalId !== 'all') {
+            $query->where('sucursal_id', (int) $sucursalId);
+        }
+
+        if (!empty($filters['empleado_id']) && $filters['empleado_id'] !== 'all') {
+            $targetEmp = Empleado::find($filters['empleado_id']);
+            $query->where(function ($q) use ($filters, $targetEmp) {
+                $q->where('empleado_id', (int) $filters['empleado_id']);
+                if ($targetEmp?->user_id) {
+                    $q->orWhere('tecnico_id', $targetEmp->user_id);
+                }
+            });
+
+            // Actualizar también la tasa por defecto en el perfil del colaborador técnico
+            if ($targetEmp && $porcentaje >= 0) {
+                $targetEmp->porcentaje_comision_reparacion = $porcentaje;
+                $targetEmp->save();
+            }
+        }
+
+        if (!empty($filters['from'])) {
+            $query->whereDate('created_at', '>=', $filters['from']);
+        }
+        if (!empty($filters['to'])) {
+            $query->whereDate('created_at', '<=', $filters['to']);
+        }
+
+        $reparaciones = $query->get();
+        $updated = 0;
+
+        foreach ($reparaciones as $rep) {
+            // No alterar comisiones ya liquidadas en pagos cerrados
+            if ($rep->comision_estado === 'pagada') {
+                continue;
+            }
+
+            // Las reincidencias y entregados no reparados NUNCA generan comisión
+            $isReincidencia = (bool) ($rep->tuvo_reincidencia || in_array($rep->estado_orden, ['reincidencia_garantia', 'reincidencia'], true));
+            $isNoReparado = $rep->estado_orden === 'entregado_no_reparado';
+
+            if ($isReincidencia || $isNoReparado) {
+                $rep->comision_tecnico_pct = 0.00;
+                $rep->comision_monto = 0.00;
+                $rep->comision_estado = 'no_aplica';
+                $rep->save();
+                $updated++;
+                continue;
+            }
+
+            // Para equipos reparados (Listo para entregar y Entregado reparado)
+            $costoTotal = (float) max($rep->costo_estimado ?? 0, ($rep->costo_mano_obra ?? 0) + ($rep->costo_repuestos ?? 0));
+            $manoObra = (float) ($rep->costo_mano_obra ?? 0);
+            $base = $manoObra > 0 ? $manoObra : $costoTotal;
+
+            $monto = round($base * ($porcentaje / 100), 2);
+            $rep->comision_tecnico_pct = $porcentaje;
+            $rep->comision_monto = $monto;
+            $rep->comision_estado = $monto > 0 ? 'pendiente' : 'no_aplica';
+            $rep->save();
+            $updated++;
+        }
+
+        // Recalcular métricas para respuesta inmediata
+        $statsQuery = clone $query;
+        $totalGenerado = (float) ((clone $statsQuery)->sum('costo_estimado') ?? 0);
+        $totalComisiones = (float) ((clone $statsQuery)->sum('comision_monto') ?? 0);
+        $pctEfectivo = $totalGenerado > 0 ? round(($totalComisiones / $totalGenerado) * 100, 2) : 0.0;
+
+        return [
+            'updated' => $updated,
+            'total_reparaciones' => $reparaciones->count(),
+            'porcentaje_aplicado' => $porcentaje,
+            'total_generado' => round($totalGenerado, 2),
+            'total_comisiones' => round($totalComisiones, 2),
+            'pct_efectivo' => $pctEfectivo,
         ];
     }
 
@@ -473,7 +642,11 @@ class CommissionService
             })
             ->where('comision_estado', 'pendiente')
             ->where('comision_monto', '>', 0)
-            ->whereNotIn('estado_orden', ['cancelado', 'listo_sin_solucion', 'entregado_no_reparado'])
+            ->whereNotIn('estado_orden', ['cancelado', 'listo_sin_solucion', 'entregado_no_reparado', 'reincidencia_garantia', 'reincidencia'])
+            ->whereDoesntHave('historial', function ($q) {
+                $q->where('estado_nuevo', 'LIKE', '%reincid%')
+                  ->orWhere('estado_anterior', 'LIKE', '%reincid%');
+            })
             ->orderBy('created_at', 'asc')
             ->get([
                 'id',

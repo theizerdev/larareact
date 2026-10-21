@@ -7,6 +7,7 @@ Route::middleware(['verified'])->group(function () {
     Route::get('comisiones', [ComisionController::class, 'index'])->name('comisiones.index');
     Route::post('comisiones/pagar', [ComisionController::class, 'pagar'])->name('comisiones.pagar');
     Route::post('comisiones/sync-taller', [ComisionController::class, 'syncTaller'])->name('comisiones.sync-taller');
+    Route::post('comisiones/actualizar-pct-taller', [ComisionController::class, 'updateWorkshopPercentage'])->name('comisiones.actualizar-pct-taller');
     Route::get('comisiones/empleado/{empleado}/pendientes', [ComisionController::class, 'pendingSales'])->name('comisiones.pendientes');
     Route::get('comisiones/ticket/{comisionPago}', [ComisionController::class, 'ticket'])->name('comisiones.ticket');
 });
