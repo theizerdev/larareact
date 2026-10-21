@@ -55,6 +55,8 @@ import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -142,6 +144,10 @@ export default function CargosIndexPage({
     filters,
 }: CargosPageProps) {
     const { __ } = useTranslate();
+    const { can } = usePermission();
+    const canCreate = can('cargos.create');
+    const canEdit = can('cargos.edit');
+    const canDelete = can('cargos.delete');
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -204,12 +210,12 @@ export default function CargosIndexPage({
         reset();
 
         if (auth.user?.empresa_id) {
-            setData(prev => ({
-                ...prev,
-                empresa_id: auth.user.empresa_id,
-                sucursal_id: auth.user.sucursal_id || '',
+            setData({
+                ...initialForm,
+                empresa_id: (auth.user.empresa_id as string | number),
+                sucursal_id: ((auth.user.sucursal_id as string | number) || ''),
                 user_id: auth.user.id,
-            }));
+            });
         }
 
         setIsModalOpen(true);
@@ -334,8 +340,9 @@ return;
             cell: (cargo) => (
                 <div className="flex items-center space-x-2">
                     <Switch
+                        disabled={!canEdit}
                         checked={cargo.status === 1}
-                        onCheckedChange={() => handleToggleStatus(cargo)}
+                        onCheckedChange={() => canEdit && handleToggleStatus(cargo)}
                     />
                     <span className={cn(
                         'text-xs font-medium px-2 py-0.5 rounded-full border',
@@ -353,32 +360,43 @@ return;
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
-            cell: (cargo) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(cargo)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {__('Edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(cargo)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
-                            {cargo.status === 1 ? __('Deactivate') : __('Activate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setDeletingCargo(cargo)}
-                            className="text-red-600 focus:text-red-600 dark:text-red-400"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {__('Delete')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
+            cell: (cargo) => {
+                const hasAnyAction = canEdit || canDelete;
+                if (!hasAnyAction) return null;
+
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {canEdit && (
+                                <DropdownMenuItem onClick={() => handleEditClick(cargo)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    {__('Edit')}
+                                </DropdownMenuItem>
+                            )}
+                            {canEdit && (
+                                <DropdownMenuItem onClick={() => handleToggleStatus(cargo)}>
+                                    <ToggleRight className="mr-2 h-4 w-4" />
+                                    {cargo.status === 1 ? __('Deactivate') : __('Activate')}
+                                </DropdownMenuItem>
+                            )}
+                            {canDelete && (
+                                <DropdownMenuItem
+                                    onClick={() => setDeletingCargo(cargo)}
+                                    className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {__('Delete')}
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
         },
     ];
 
@@ -397,10 +415,12 @@ return;
                     description={__('Manage job positions, titles, departmental dependencies, and descriptions.')}
                     colorClassName="bg-teal-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Position')}
-                    </Button>
+                    <Can permission="cargos.create">
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Position')}
+                        </Button>
+                    </Can>
                 </ModuleHeader>
 
                 {/* Stat Cards */}
@@ -485,14 +505,16 @@ return;
                         data={cargos}
                         columns={columns}
                         isLoading={isTableLoading}
-                        onRowClick={(cargo) => handleEditClick(cargo)}
+                        onRowClick={(cargo) => {
+                            if (canEdit) handleEditClick(cargo);
+                        }}
                         emptyState={{
                             title: 'No positions found',
                             description: searchTerm || statusFilter || departamentoFilter
                                 ? 'Try clearing your search filters or changing your query.'
                                 : 'You have not registered any positions yet.',
-                            ctaLabel: 'New Position',
-                            onCtaClick: handleCreateClick,
+                            ctaLabel: canCreate ? 'New Position' : undefined,
+                            onCtaClick: canCreate ? handleCreateClick : undefined,
                         }}
                     />
                 </div>

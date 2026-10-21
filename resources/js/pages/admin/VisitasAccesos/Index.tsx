@@ -73,6 +73,9 @@ import { notifySuccess, notifyError } from '@/utils/notifications';
 import { useModulos } from '@/hooks/use-modulos';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams } from '@/lib/utils';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
+import type { Paginated } from '@/types/app';
 
 const formatImageUrl = (url?: string | null) => {
     if (!url) return null;
@@ -139,15 +142,6 @@ interface VisitaAcceso {
     proveedor_vehiculo?: any;
     productor_vehiculo?: any;
     responsable?: any;
-}
-
-interface Paginated<T> {
-    data: T[];
-    links: any[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
 }
 
 interface VisitasAccesosProps {
@@ -302,7 +296,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
 }
 
 export default function Index({
-    accesos = { data: [], current_page: 1, last_page: 1, per_page: 10, total: 0, links: [] },
+    accesos = { data: [], current_page: 1, last_page: 1, per_page: 10, total: 0, links: [], next_page_url: null, prev_page_url: null },
     visitasEsperadas = [],
     stats = { total: 0, en_instalaciones: 0, finalizados: 0, empleados: 0, proveedores: 0, productores: 0 },
     responsables = [],
@@ -319,6 +313,10 @@ export default function Index({
         { title: __('Dashboard'), href: '/dashboard' },
         { title: __('Accesos a Instalaciones'), href: '/admin/visitas-accesos' },
     ];
+
+    const { can } = usePermission();
+    const canCreate = can('visitas_temporales.create');
+    const canEdit = can('visitas_temporales.edit');
 
     const [activeImageModal, setActiveImageModal] = useState<string | null>(null);
 
@@ -1290,7 +1288,7 @@ export default function Index({
                         {__('Ver')}
                     </Button>
 
-                    {item.status === 1 && (
+                    {item.status === 1 && canEdit && (
                         <Button
                             size="sm"
                             variant="outline"
@@ -1322,18 +1320,20 @@ export default function Index({
                     colorClassName="bg-[#104a29]"
                 >
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                        <Button
-                            onClick={() => { resetInvModal(); setIsCreateInvitacionOpen(true); }}
-                            variant="secondary"
-                            className="bg-white/10 hover:bg-white/20 text-white border border-white/20 w-full sm:w-auto font-bold"
-                        >
-                            <Calendar className="mr-2 h-4 w-4 text-emerald-300" />
-                            {__('Pre-Anunciar / Invitar Visita')}
-                        </Button>
-                        <Button onClick={handleCreateClick} className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto shadow-md font-bold">
-                            <Plus className="mr-2 h-4 w-4" />
-                            {__('Nuevo Registro de Acceso')}
-                        </Button>
+                        <Can permission="visitas_temporales.create">
+                            <Button
+                                onClick={() => { resetInvModal(); setIsCreateInvitacionOpen(true); }}
+                                variant="secondary"
+                                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 w-full sm:w-auto font-bold"
+                            >
+                                <Calendar className="mr-2 h-4 w-4 text-emerald-300" />
+                                {__('Pre-Anunciar / Invitar Visita')}
+                            </Button>
+                            <Button onClick={handleCreateClick} className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto shadow-md font-bold">
+                                <Plus className="mr-2 h-4 w-4" />
+                                {__('Nuevo Registro de Acceso')}
+                            </Button>
+                        </Can>
                     </div>
                 </ModuleHeader>
 
@@ -3229,7 +3229,7 @@ export default function Index({
                                     </div>
                                 )}
                                 {invForm.errors.anfitrion_id && <p className="text-xs text-rose-500 font-medium mt-1">{invForm.errors.anfitrion_id}</p>}
-                                {invForm.errors.sucursal_id && <p className="text-xs text-rose-500 font-medium mt-1">{invForm.errors.sucursal_id}</p>}
+                                {(invForm.errors as any).sucursal_id && <p className="text-xs text-rose-500 font-medium mt-1">{(invForm.errors as any).sucursal_id}</p>}
                             </div>
 
                             <div className="border-t border-dashed pt-4 space-y-4">

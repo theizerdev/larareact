@@ -26,6 +26,7 @@ class VincularUsuariosEmpleadosTest extends TestCase
             'documento_identidad' => str_pad((string) (101000 + $n), 6, '0', STR_PAD_LEFT),
             'codigo_acceso' => str_pad((string) (10100000 + $n), 8, '0', STR_PAD_LEFT),
             'status' => true,
+            'permite_app_movil' => true,
         ], $atributos));
     }
 

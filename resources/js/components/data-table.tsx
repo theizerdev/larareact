@@ -23,6 +23,8 @@ import { cn, cleanParams } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
 
 export interface ColumnDef<T> {
+    /** Identificador opcional de la columna */
+    id?: string;
     /** Título de la columna o elemento React a renderizar en el header */
     header: React.ReactNode;
     /** Etiqueta de texto simple para el selector de visibilidad (si el header es un ReactNode) */

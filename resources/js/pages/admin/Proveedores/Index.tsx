@@ -44,6 +44,8 @@ import { cn } from '@/lib/utils';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import ProveedorEmpleadosModal from './Partials/ProveedorEmpleadosModal';
 import ProveedorVehiculosModal from './Partials/ProveedorVehiculosModal';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 
 // Cargar perezosamente el componente del mapa
 const ProveedorMapComponent = lazy(() => {
@@ -167,6 +169,11 @@ export default function ProveedoresIndexPage({
     sucursal: appSucursal,
 }: ProveedoresPageProps) {
     const { __ } = useTranslate();
+    const { can } = usePermission();
+    const canCreate = can('proveedores.create');
+    const canEdit = can('proveedores.edit');
+    const canDelete = can('proveedores.delete');
+    const canSendCarnet = can('proveedores.send-carnet-whatsapp') || canEdit;
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -549,6 +556,14 @@ export default function ProveedoresIndexPage({
                         break;
                 }
 
+                if (!canEdit) {
+                    return (
+                        <span className={cn('text-xs font-semibold px-2.5 py-0.5 rounded-full border', badgeStyle)}>
+                            {label}
+                        </span>
+                    );
+                }
+
                 return (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -579,46 +594,53 @@ export default function ProveedoresIndexPage({
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
-            cell: (prov) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(prov)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {__('Edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.get(`/admin/proveedores/${prov.id}/carnet`)}>
-                            <QrCode className="mr-2 h-4 w-4 text-rose-600" />
-                            {__('Gafete Rojo / Carnet')}
-                        </DropdownMenuItem>
-                        {prov.telefono && (
-                            <DropdownMenuItem onClick={() => handleSendCarnetWhatsApp(prov)}>
-                                <Send className="mr-2 h-4 w-4 text-emerald-600" />
-                                {__('Enviar Gafete por WhatsApp')}
+            cell: (prov) => {
+                const hasAnyAction = canEdit || canDelete;
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {canEdit && (
+                                <DropdownMenuItem onClick={() => handleEditClick(prov)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    {__('Edit')}
+                                </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => router.get(`/admin/proveedores/${prov.id}/carnet`)}>
+                                <QrCode className="mr-2 h-4 w-4 text-rose-600" />
+                                {__('Gafete Rojo / Carnet')}
                             </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => handleManageEmployeesClick(prov)}>
-                            <UserIcon className="mr-2 h-4 w-4 text-[#104a29]" />
-                            {__('Employees')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleManageVehiclesClick(prov)}>
-                            <Car className="mr-2 h-4 w-4 text-[#104a29]" />
-                            {__('Vehicles')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setDeletingProveedor(prov)}
-                            className="text-rose-600 focus:text-rose-600 dark:text-rose-400"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {__('Delete')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
+                            {prov.telefono && canSendCarnet && (
+                                <DropdownMenuItem onClick={() => handleSendCarnetWhatsApp(prov)}>
+                                    <Send className="mr-2 h-4 w-4 text-emerald-600" />
+                                    {__('Enviar Gafete por WhatsApp')}
+                                </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => handleManageEmployeesClick(prov)}>
+                                <UserIcon className="mr-2 h-4 w-4 text-[#104a29]" />
+                                {__('Employees')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleManageVehiclesClick(prov)}>
+                                <Car className="mr-2 h-4 w-4 text-[#104a29]" />
+                                {__('Vehicles')}
+                            </DropdownMenuItem>
+                            {canDelete && (
+                                <DropdownMenuItem
+                                    onClick={() => setDeletingProveedor(prov)}
+                                    className="text-rose-600 focus:text-rose-600 dark:text-rose-400"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {__('Delete')}
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
         },
     ];
 
@@ -637,22 +659,24 @@ export default function ProveedoresIndexPage({
                     colorClassName="bg-[#104a29]"
                 >
                     <div className="flex items-center gap-2">
-                        <Button
-                            type="button"
-                            onClick={() => setIsPreRegistroModalOpen(true)}
-                            variant="outline"
-                            className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
-                        >
-                            <Phone className="w-4 h-4" />
-                            {__('Pre-registro')}
-                        </Button>
-                        <Button
-                            onClick={handleCreateClick}
-                            className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
-                        >
-                            <Plus className="w-4.5 h-4.5" />
-                            {__('New Supplier')}
-                        </Button>
+                        <Can permission="proveedores.create">
+                            <Button
+                                type="button"
+                                onClick={() => setIsPreRegistroModalOpen(true)}
+                                variant="outline"
+                                className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
+                            >
+                                <Phone className="w-4 h-4" />
+                                {__('Pre-registro')}
+                            </Button>
+                            <Button
+                                onClick={handleCreateClick}
+                                className="bg-white text-[#104a29] hover:bg-white/90 font-semibold flex items-center gap-1.5 shadow-sm"
+                            >
+                                <Plus className="w-4.5 h-4.5" />
+                                {__('New Supplier')}
+                            </Button>
+                        </Can>
                     </div>
                 </ModuleHeader>
 
@@ -748,14 +772,16 @@ export default function ProveedoresIndexPage({
                         data={proveedores as any}
                         columns={columns}
                         isLoading={isTableLoading}
-                        onRowClick={(prov) => handleEditClick(prov)}
+                        onRowClick={(prov) => {
+                            if (canEdit) handleEditClick(prov);
+                        }}
                         emptyState={{
                             title: __('No suppliers found'),
                             description: searchTerm || statusFilter || paisFilter
                                 ? __('Try clearing your search filters or changing your query.')
                                 : __('You have not registered any suppliers yet.'),
-                            ctaLabel: __('New Supplier'),
-                            onCtaClick: handleCreateClick,
+                            ctaLabel: canCreate ? __('New Supplier') : undefined,
+                            onCtaClick: canCreate ? handleCreateClick : undefined,
                         }}
                     />
                 </div>

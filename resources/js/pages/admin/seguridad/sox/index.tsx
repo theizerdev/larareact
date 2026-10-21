@@ -39,6 +39,8 @@ import {
 import { FormField } from '@/components/ui/form-field';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { cn } from '@/lib/utils';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 
 interface SoxConfig {
     id: number;
@@ -114,6 +116,9 @@ export default function SoxIndex({ config, stats, users, checklist, recentLogs }
         { title: 'Seguridad', href: '/admin/usuarios' },
         { title: 'Cumplimiento SOX 404', href: '/admin/seguridad/sox' },
     ];
+
+    const { can } = usePermission();
+    const canEdit = can('users.edit');
 
     const [activeTab, setActiveTab] = useState('matrix');
     const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
@@ -515,7 +520,7 @@ export default function SoxIndex({ config, stats, users, checklist, recentLogs }
                                     </div>
 
                                     <div className="flex justify-end pt-4 border-t">
-                                        <Button type="submit" disabled={processing} className="gap-2">
+                                        <Button type="submit" disabled={processing || !canEdit} className="gap-2">
                                             <Save className="size-4" />
                                             {processing ? 'Guardando...' : 'Guardar Parámetros SOX'}
                                         </Button>
@@ -599,7 +604,7 @@ export default function SoxIndex({ config, stats, users, checklist, recentLogs }
                                     </div>
 
                                     <div className="flex justify-end pt-4 border-t">
-                                        <Button type="submit" disabled={processing} className="gap-2">
+                                        <Button type="submit" disabled={processing || !canEdit} className="gap-2">
                                             <Save className="size-4" />
                                             {processing ? 'Guardando...' : 'Guardar Credenciales SSO'}
                                         </Button>
@@ -686,7 +691,9 @@ export default function SoxIndex({ config, stats, users, checklist, recentLogs }
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right space-x-1">
-                                                    {u.is_locked ? (
+                                                    {!canEdit ? (
+                                                        <span className="text-xs text-muted-foreground">—</span>
+                                                    ) : u.is_locked ? (
                                                         <Button
                                                             size="sm"
                                                             variant="default"

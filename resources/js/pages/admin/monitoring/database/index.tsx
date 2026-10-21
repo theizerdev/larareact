@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Database, Activity, HardDrive, Hash, ShieldAlert, Cpu, RefreshCw, Layers } from 'lucide-react';
+import { Database, Activity, HardDrive, Hash, ShieldAlert, Cpu, RefreshCw, Layers, Download, Upload } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import Chart from 'react-apexcharts';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -10,6 +10,8 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslate } from '@/hooks/use-translate';
+import DatabaseExportWizardModal from './partials/DatabaseExportWizardModal';
+import DatabaseImportWizardModal from './partials/DatabaseImportWizardModal';
 
 interface TableInfo {
     name: string;
@@ -61,10 +63,40 @@ interface LiveMetrics {
 
 export default function DatabaseMonitoring({ dbInfo }: PageProps) {
     const { __ } = useTranslate();
+    const [currentDbInfo, setCurrentDbInfo] = useState<DbInfo>(dbInfo);
     const [metrics, setMetrics] = useState<LiveMetrics | null>(null);
     const [qpsHistory, setQpsHistory] = useState<number[]>(Array(15).fill(0));
     const [timeLabels, setTimeLabels] = useState<string[]>(Array(15).fill(''));
     const [loading, setLoading] = useState(false);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+    const refreshTables = async () => {
+        try {
+            const res = await fetch('/admin/monitoring/database/tables');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.tables && Array.isArray(data.tables)) {
+                    setCurrentDbInfo((prev) => ({
+                        ...prev,
+                        total_tables: data.tables.length,
+                        total_size_mb: data.total_size_mb ?? prev.total_size_mb,
+                        total_rows: data.total_rows ?? prev.total_rows,
+                        tables: data.tables,
+                    }));
+                }
+            }
+        } catch (err) {
+            console.error('Error auto-refreshing tables in monitoring index:', err);
+        }
+    };
+
+    // Si al cargar dbInfo viene vacío o 0 tablas, refrescar automáticamente del servidor
+    useEffect(() => {
+        if (!currentDbInfo.tables || currentDbInfo.tables.length === 0) {
+            refreshTables();
+        }
+    }, []);
 
     const fetchMetrics = async () => {
         try {
@@ -90,6 +122,12 @@ export default function DatabaseMonitoring({ dbInfo }: PageProps) {
         } catch (err) {
             console.error('Error fetching live DB metrics:', err);
         }
+    };
+
+    const handleManualRefresh = async () => {
+        setLoading(true);
+        await Promise.all([fetchMetrics(), refreshTables()]);
+        setLoading(false);
     };
 
     // Polling en vivo cada 3 segundos
@@ -214,16 +252,35 @@ return '0';
                             {__('View SQL engine metrics, live queries, slow logs, and storage optimization.')}
                         </p>
                     </div>
-                    <Button 
-                        onClick={fetchMetrics} 
-                        variant="outline" 
-                        size="sm" 
-                        className="gap-2 shrink-0 self-start md:self-auto"
-                        disabled={loading}
-                    >
-                        <RefreshCw className="h-4 w-4" />
-                        {__('Refresh')}
-                    </Button>
+                    <div className="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
+                        <Button 
+                            onClick={() => setIsImportModalOpen(true)} 
+                            size="sm" 
+                            variant="outline" 
+                            className="gap-2 border-amber-300 hover:border-amber-400 hover:bg-amber-50/50 text-amber-700 dark:border-amber-700 dark:text-amber-400 shadow-sm"
+                        >
+                            <Upload className="h-4 w-4" />
+                            {__('Importar Base de Datos')}
+                        </Button>
+                        <Button 
+                            onClick={() => setIsExportModalOpen(true)} 
+                            size="sm" 
+                            className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                        >
+                            <Download className="h-4 w-4" />
+                            {__('Exportar Base de Datos')}
+                        </Button>
+                        <Button 
+                            onClick={handleManualRefresh} 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-2"
+                            disabled={loading}
+                        >
+                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                            {__('Refrescar')}
+                        </Button>
+                    </div>
                 </div>
 
 
@@ -235,8 +292,8 @@ return '0';
                             <Cpu className="h-5 w-5 text-indigo-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold capitalize">{dbInfo.driver}</div>
-                            <p className="text-xs text-muted-foreground mt-1">{__('Version')} {dbInfo.version}</p>
+                            <div className="text-2xl font-bold capitalize">{currentDbInfo.driver}</div>
+                            <p className="text-xs text-muted-foreground mt-1">{__('Version')} {currentDbInfo.version}</p>
                         </CardContent>
                     </Card>
 
@@ -246,7 +303,7 @@ return '0';
                             <HardDrive className="h-5 w-5 text-blue-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{dbInfo.total_size_mb} MB</div>
+                            <div className="text-2xl font-bold">{currentDbInfo.total_size_mb} MB</div>
                             <p className="text-xs text-muted-foreground mt-1">{__('Occupied storage space')}</p>
                         </CardContent>
                     </Card>
@@ -257,8 +314,8 @@ return '0';
                             <Layers className="h-5 w-5 text-emerald-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{dbInfo.total_tables}</div>
-                            <p className="text-xs text-muted-foreground mt-1">{dbInfo.total_rows.toLocaleString()} {__('rows registered')}</p>
+                            <div className="text-2xl font-bold">{currentDbInfo.total_tables}</div>
+                            <p className="text-xs text-muted-foreground mt-1">{currentDbInfo.total_rows.toLocaleString()} {__('rows registered')}</p>
                         </CardContent>
                     </Card>
 
@@ -287,13 +344,13 @@ return '0';
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Activity className="h-5 w-5 text-indigo-500" />
-                                {__('Queries per Second (QPS)')}
+                                {__('Consultas por Segundo (QPS)')}
                             </CardTitle>
-                            <CardDescription>{__('Live transactional load in real time (3s refresh).')}</CardDescription>
+                            <CardDescription>{__('Carga transaccional actual en tiempo real (3s de refresco).')}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Chart 
-                                options={lineChartOptions} 
+                                options={lineChartOptions as any} 
                                 series={lineChartSeries} 
                                 type="line" 
                                 height={280} 
@@ -305,14 +362,14 @@ return '0';
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Hash className="h-5 w-5 text-blue-500" />
-                                {__('Query Distribution')}
+                                {__('Distribución de Consultas')}
                             </CardTitle>
-                            <CardDescription>{__('Statistics of the type of operations executed.')}</CardDescription>
+                            <CardDescription>{__('Estadística del tipo de operaciones ejecutadas.')}</CardDescription>
                         </CardHeader>
                         <CardContent className="flex flex-col justify-between h-[300px]">
                             <div className="pt-2">
                                 <Chart 
-                                    options={donutChartOptions} 
+                                    options={donutChartOptions as any} 
                                     series={donutChartSeries} 
                                     type="donut" 
                                     height={230} 
@@ -325,29 +382,51 @@ return '0';
                 {/* Detalle Radix UI Tabs */}
                 <Tabs defaultValue="tables" className="w-full">
                     <TabsList className="grid grid-cols-3 max-w-[480px]">
-                        <TabsTrigger value="tables">{__('Tables & Size')}</TabsTrigger>
-                        <TabsTrigger value="processes">{__('Active Processes')}</TabsTrigger>
+                        <TabsTrigger value="tables">{__('Tablas y Tamaño')}</TabsTrigger>
+                        <TabsTrigger value="processes">{__('Procesos Activos')}</TabsTrigger>
                         <TabsTrigger value="slow-queries">{__('Slow Queries')}</TabsTrigger>
                     </TabsList>
 
                     {/* Tab 1: Tablas y filas */}
                     <TabsContent value="tables" className="mt-4">
                         <Card className="shadow-sm">
-                            <CardHeader>
-                                <CardTitle>{__('Table Sizes & Storage')}</CardTitle>
-                                <CardDescription>{__('List and physical data volume for each table in the database.')}</CardDescription>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>{__('Tamaño de Tablas y Almacenamiento')}</CardTitle>
+                                    <CardDescription>{__('Listado y volumen físico de datos por cada tabla en la BD.')}</CardDescription>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        onClick={() => setIsImportModalOpen(true)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1.5 text-xs border-amber-200 hover:border-amber-400 hover:bg-amber-50/50 text-amber-700 dark:border-amber-800 dark:text-amber-400"
+                                    >
+                                        <Upload className="h-3.5 w-3.5" />
+                                        {__('Importar')}
+                                    </Button>
+                                    <Button
+                                        onClick={() => setIsExportModalOpen(true)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1.5 text-xs border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50 text-indigo-600 dark:border-indigo-800 dark:text-indigo-400"
+                                    >
+                                        <Download className="h-3.5 w-3.5" />
+                                        {__('Exportar')}
+                                    </Button>
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>{__('Table Name')}</TableHead>
-                                            <TableHead className="text-right">{__('Estimated Rows')}</TableHead>
-                                            <TableHead className="text-right">{__('Physical Size (MB)')}</TableHead>
+                                            <TableHead>{__('Nombre de la Tabla')}</TableHead>
+                                            <TableHead className="text-right">{__('Filas Estimadas')}</TableHead>
+                                            <TableHead className="text-right">{__('Tamaño Físico (MB)')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {dbInfo.tables.map((t, idx) => (
+                                        {currentDbInfo.tables.map((t, idx) => (
                                             <TableRow key={idx}>
                                                 <TableCell className="font-mono font-medium text-slate-800 dark:text-slate-200">
                                                     {t.name}
@@ -370,19 +449,19 @@ return '0';
                     <TabsContent value="processes" className="mt-4">
                         <Card className="shadow-sm">
                             <CardHeader>
-                                <CardTitle>{__('Process List (Threads)')}</CardTitle>
-                                <CardDescription>{__('Active connections currently being processed by the database.')}</CardDescription>
+                                <CardTitle>{__('Lista de Procesos (Threads)')}</CardTitle>
+                                <CardDescription>{__('Conexiones activas actualmente procesadas por la base de datos.')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-16">{__('ID')}</TableHead>
-                                            <TableHead>{__('User')}</TableHead>
+                                            <TableHead>{__('Usuario')}</TableHead>
                                             <TableHead>{__('Host')}</TableHead>
-                                            <TableHead>{__('Command')}</TableHead>
-                                            <TableHead className="text-right">{__('Time (s)')}</TableHead>
-                                            <TableHead>{__('State')}</TableHead>
+                                            <TableHead>{__('Comando')}</TableHead>
+                                            <TableHead className="text-right">{__('Tiempo (s)')}</TableHead>
+                                            <TableHead>{__('Estado')}</TableHead>
                                             <TableHead className="max-w-[300px] truncate">{__('Query')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -400,7 +479,7 @@ return '0';
                                                 <TableCell className="text-right tabular-nums font-mono text-xs">{p.time}</TableCell>
                                                 <TableCell className="text-xs text-slate-600">{p.state || 'idle'}</TableCell>
                                                 <TableCell className="font-mono text-xs max-w-[300px] truncate text-slate-700 dark:text-slate-300" title={p.info}>
-                                                    {p.info || <span className="italic text-muted-foreground">{__('None')}</span>}
+                                                    {p.info || <span className="italic text-muted-foreground">{__('Ninguno')}</span>}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -416,9 +495,9 @@ return '0';
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <ShieldAlert className="h-5 w-5 text-amber-500" />
-                                    {__('Slow Queries Log')}
+                                    {__('Registro de Slow Queries')}
                                 </CardTitle>
-                                <CardDescription>{__('Query alerts exceeding the optimal response time threshold (100ms).')}</CardDescription>
+                                <CardDescription>{__('Alertas de consultas que exceden el tiempo óptimo de respuesta (100ms).')}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
@@ -428,10 +507,10 @@ return '0';
                                                 <p className="font-mono text-xs bg-white dark:bg-slate-900 p-2.5 rounded border overflow-x-auto text-red-800 dark:text-red-300">
                                                     {q.query}
                                                 </p>
-                                                <p className="text-xs text-muted-foreground">{__('Executed at')} <span dir="ltr">{q.time}</span></p>
+                                                <p className="text-xs text-muted-foreground">{__('Ejecutado a las')} {q.time}</p>
                                             </div>
                                             <div className="flex gap-2 self-start md:self-auto items-center">
-                                                <span className="text-xs text-muted-foreground">{__('Duration:')}</span>
+                                                <span className="text-xs text-muted-foreground">{__('Duración:')}</span>
                                                 <Badge variant="destructive" className="font-mono text-xs">
                                                     {q.duration}
                                                 </Badge>
@@ -443,6 +522,25 @@ return '0';
                         </Card>
                     </TabsContent>
                 </Tabs>
+
+                {/* Modal Wizard de Exportación de Base de Datos */}
+                <DatabaseExportWizardModal
+                    open={isExportModalOpen}
+                    onOpenChange={setIsExportModalOpen}
+                    tables={currentDbInfo.tables}
+                    totalSizeMb={currentDbInfo.total_size_mb}
+                    totalRows={currentDbInfo.total_rows}
+                />
+
+                {/* Modal Wizard de Importación de Base de Datos */}
+                <DatabaseImportWizardModal
+                    open={isImportModalOpen}
+                    onOpenChange={setIsImportModalOpen}
+                    onImportSuccess={() => {
+                        refreshTables();
+                        fetchMetrics();
+                    }}
+                />
             </div>
         </>
     );

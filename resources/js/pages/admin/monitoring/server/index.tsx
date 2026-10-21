@@ -242,7 +242,7 @@ export default function ServerMonitoring({ serverInfo }: PageProps) {
                         </CardHeader>
                         <CardContent>
                             <Chart 
-                                options={lineChartOptions} 
+                                options={lineChartOptions as any} 
                                 series={lineChartSeries} 
                                 type="line" 
                                 height={280} 

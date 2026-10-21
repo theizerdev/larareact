@@ -362,14 +362,11 @@ export default function AdminSaasLayout({
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const { __ } = useTranslate();
 
+    const isSuperAdmin = (auth as any)?.user?.is_super_admin === true;
     const userPermissions = (auth as any)?.user?.permissions || [];
     const hasPermission = (permission: string) => {
-        return userPermissions.includes(permission);
+        return isSuperAdmin || userPermissions.includes(permission);
     };
-
-    // Visibilidad del menú controlada por el superadmin (global, solo visual).
-    // Ausencia de clave = visible. Ocultar aquí no afecta permisos ni rutas.
-    const isSuperAdmin = (auth as any)?.user?.is_super_admin === true;
     const menuVisibility = ((page.props as any)?.menuVisibility || {}) as Record<string, boolean>;
     const isMenuVisible = (key: string) => menuVisibility[key] !== false;
 
@@ -862,6 +859,12 @@ export default function AdminSaasLayout({
                                     href: usuariosIndex.url(),
                                     permission: 'users.view',
                                     key: 'security.users',
+                                },
+                                {
+                                    title: 'Grupos',
+                                    href: '/admin/grupos',
+                                    permission: 'roles.view',
+                                    key: 'security.groups',
                                 },
                                 {
                                     title: 'Roles',

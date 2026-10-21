@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Console\ServeCommand;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -27,6 +28,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Bypass global para Super Administrador y herencia por Grupos de Roles
+        Gate::before(function ($user, $ability) {
+            if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
+                return true;
+            }
+            if (method_exists($user, 'hasEffectivePermission') && $user->hasEffectivePermission($ability)) {
+                return true;
+            }
+            return null;
+        });
+
         $this->configureDefaults();
     }
 

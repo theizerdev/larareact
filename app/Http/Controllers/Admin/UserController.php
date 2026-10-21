@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ConfiguracionSox;
 use App\Models\Empresa;
+use App\Models\Group;
 use App\Models\Pais;
 use App\Models\Sucursal;
 use App\Models\User;
@@ -32,7 +33,7 @@ class UserController extends Controller
 
         $soxConfig = ConfiguracionSox::current($empresaId);
 
-        $query = User::with(['empresa', 'sucursal', 'roles', 'paisTelefono']);
+        $query = User::with(['empresa', 'sucursal', 'roles', 'paisTelefono', 'groups.roles:id,name']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -53,6 +54,13 @@ class UserController extends Controller
 
         if ($roleName) {
             $query->role($roleName);
+        }
+
+        $groupId = $request->input('group_id');
+        if ($groupId && $groupId !== 'all') {
+            $query->whereHas('groups', function ($q) use ($groupId) {
+                $q->where('groups.id', $groupId);
+            });
         }
 
         $users = $query->latest()->paginate($perPage)->withQueryString();
@@ -81,12 +89,13 @@ class UserController extends Controller
                 'expireDays' => $soxConfig->password_expires_days,
             ],
             'roles' => Role::all(['id', 'name']),
+            'groups' => Group::where('status', true)->with('roles:id,name')->get(['id', 'name', 'description']),
             'empresas' => Empresa::where('status', true)->orderBy('razon_social')->get(['id', 'razon_social']),
             'sucursales' => Sucursal::where('status', true)->orderBy('nombre')->get(['id', 'nombre', 'empresa_id']),
             'paises' => Pais::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
-            'filters' => $request->only(['search', 'status', 'role', 'empresa_id', 'perPage']),
+            'filters' => $request->only(['search', 'status', 'role', 'empresa_id', 'group_id', 'perPage']),
         ]);
     }
 
@@ -103,9 +112,9 @@ class UserController extends Controller
             'empresa_id' => 'nullable|exists:empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
             'roles' => 'array',
-            // Solo nombres: Spatie resuelve un entero como id de rol, y
-            // roles: [1] asignaba super-admin sin pasar por las guardas.
             'roles.*' => 'string',
+            'groups' => 'nullable|array',
+            'groups.*' => 'exists:groups,id',
         ]);
 
         $validated = $this->guardRoleAndTenantAssignment($request, $validated);
@@ -121,6 +130,10 @@ class UserController extends Controller
 
             if (isset($validated['roles'])) {
                 $user->syncRoles($validated['roles']);
+            }
+
+            if ($request->has('groups')) {
+                $user->groups()->sync($request->input('groups', []));
             }
 
             $user->notify(new WelcomeNotification());
@@ -167,9 +180,9 @@ class UserController extends Controller
             'empresa_id' => 'nullable|exists:empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
             'roles' => 'array',
-            // Solo nombres: Spatie resuelve un entero como id de rol, y
-            // roles: [1] asignaba super-admin sin pasar por las guardas.
             'roles.*' => 'string',
+            'groups' => 'nullable|array',
+            'groups.*' => 'exists:groups,id',
         ]);
 
         $validated = $this->guardRoleAndTenantAssignment($request, $validated, $user);
@@ -189,6 +202,10 @@ class UserController extends Controller
 
             if (isset($validated['roles'])) {
                 $user->syncRoles($validated['roles']);
+            }
+
+            if ($request->has('groups')) {
+                $user->groups()->sync($request->input('groups', []));
             }
 
             return back()->with('notification', [

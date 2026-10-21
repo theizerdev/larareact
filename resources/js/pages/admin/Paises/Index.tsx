@@ -33,6 +33,8 @@ import { useTranslate } from '@/hooks/use-translate';
 import { bulkDestroy } from '@/routes/admin/paises';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 
 const MapComponent = lazy(() => {
     // Importamos el componente del mapa
@@ -88,6 +90,10 @@ interface PaisesPageProps {
  */
 export default function PaisesIndexPage({ auth, paises, stats, filters }: PaisesPageProps) {
     const { __ } = useTranslate();
+    const { can } = usePermission();
+    const canCreate = can('paises.create');
+    const canEdit = can('paises.edit');
+    const canDelete = can('paises.delete');
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -225,14 +231,14 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
         });
     };
 
-    const bulkActions = [
+    const bulkActions = canDelete ? [
         {
             label: 'Delete selected',
             icon: <Trash2 className="h-4 w-4" />,
             onClick: handleBulkDeleteClick,
             variant: 'destructive' as const,
         }
-    ];
+    ] : undefined;
 
     const columns: ColumnDef<Pais>[] = [
         {
@@ -261,8 +267,9 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
             cell: (pais) => (
                 <div className="flex items-center space-x-2">
                     <Switch
+                        disabled={!canEdit}
                         checked={pais.activo}
-                        onCheckedChange={() => handleToggleActive(pais)}
+                        onCheckedChange={() => canEdit && handleToggleActive(pais)}
                     />
                     <span className={cn(
                         "text-xs font-medium px-2 py-0.5 rounded-full border",
@@ -280,25 +287,29 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
-            cell: (pais) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(pais)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {__('Edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleActive(pais)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
-                            {pais.activo ? __('Deactivate') : __('Activate')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            )
+            cell: (pais) => {
+                if (!canEdit) return null;
+
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditClick(pais)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {__('Edit')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleActive(pais)}>
+                                <ToggleRight className="mr-2 h-4 w-4" />
+                                {pais.activo ? __('Deactivate') : __('Activate')}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            }
         }
     ];
 
@@ -315,10 +326,12 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                     description={__('Manage countries, codes, and geolocation.')}
                     colorClassName="bg-blue-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Country')}
-                    </Button>
+                    <Can permission="paises.create">
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Country')}
+                        </Button>
+                    </Can>
                 </ModuleHeader>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -403,15 +416,15 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                             sortDir: filters.sortDir,
                         }}
                         isLoading={isTableLoading}
-                        onRowClick={(pais) => handleEditClick(pais)}
+                        onRowClick={canEdit ? (pais) => handleEditClick(pais) : undefined}
                         bulkActions={bulkActions}
                         emptyState={{
                             title: 'No countries found',
                             description: searchTerm || statusFilter
                                 ? 'Try clearing your search filters or changing your query.'
                                 : 'You have not registered any countries in the database yet.',
-                            ctaLabel: 'New Country',
-                            onCtaClick: handleCreateClick,
+                            ctaLabel: canCreate ? 'New Country' : undefined,
+                            onCtaClick: canCreate ? handleCreateClick : undefined,
                         }}
                     />
                 </div>

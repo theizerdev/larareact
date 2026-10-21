@@ -35,9 +35,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useTranslate } from '@/hooks/use-translate';
-import type { Auth } from '@/types';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Switch } from '@/components/ui/switch';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
+import type { Auth } from '@/types';
 
 interface User {
     id: number;
@@ -85,6 +87,10 @@ interface RolesPageProps {
 
 export default function RolesIndexPage({ auth, roles, stats, groupedPermissions, filters }: RolesPageProps) {
     const { __ } = useTranslate();
+    const { can } = usePermission();
+    const canCreate = can('roles.create');
+    const canEdit = can('roles.edit');
+    const canDelete = can('roles.delete');
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -244,10 +250,12 @@ return false;
                     description={__('Manage user roles and assign permissions grouped by sector.')}
                     colorClassName="bg-indigo-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Role')}
-                    </Button>
+                    <Can permission="roles.create">
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Role')}
+                        </Button>
+                    </Can>
                 </ModuleHeader>
 
                 {/* Stats */}
@@ -290,7 +298,7 @@ return false;
                                             {role.users_count} {role.users_count === 1 ? __('user') : __('users')}
                                         </p>
                                     </div>
-                                    {!role.is_super_admin && (
+                                    {!role.is_super_admin && (canEdit || canDelete) && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon">
@@ -298,17 +306,21 @@ return false;
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEditClick(role)}>
-                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                    {__('Edit')}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => setDeletingRole(role)}
-                                                    className="text-red-600 focus:text-red-600 dark:text-red-400"
-                                                >
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    {__('Delete')}
-                                                </DropdownMenuItem>
+                                                {canEdit && (
+                                                    <DropdownMenuItem onClick={() => handleEditClick(role)}>
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        {__('Edit')}
+                                                    </DropdownMenuItem>
+                                                )}
+                                                {canDelete && (
+                                                    <DropdownMenuItem
+                                                        onClick={() => setDeletingRole(role)}
+                                                        className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        {__('Delete')}
+                                                    </DropdownMenuItem>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     )}

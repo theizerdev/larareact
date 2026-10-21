@@ -46,7 +46,7 @@ class AuditoriaPermisosApiTest extends TestCase
     private function empleado(array $attrs): Empleado
     {
         $e = new Empleado();
-        $e->forceFill($attrs + ['status' => true])->save();
+        $e->forceFill($attrs + ['status' => true, 'permite_app_movil' => true])->save();
 
         return $e;
     }

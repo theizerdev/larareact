@@ -72,6 +72,9 @@ import { FilterBar, FilterField } from '@/components/filter-bar';
 import { DataTable } from '@/components/data-table';
 import type { ColumnDef } from '@/components/data-table';
 import { notifySuccess, notifyError } from '@/utils/notifications';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
+import type { Paginated } from '@/types/app';
 
 interface Pais {
     id: number;
@@ -127,21 +130,11 @@ interface VisitaTemporal {
     foto_documento?: string | null;
     empresa_id: number;
     sucursal_id: number;
-    status: number;
+    status: number | string;
     pais_telefono?: Pais | null;
     empleado?: Empleado | null;
     responsable?: Responsable | null;
     tipo_servicio?: TipoServicio | null;
-}
-
-interface Paginated<T> {
-    data: T[];
-    links: any[];
-    meta?: any;
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
 }
 
 interface VisitasPageProps {
@@ -150,6 +143,8 @@ interface VisitasPageProps {
         total: number;
         activos: number;
         inactivos: number;
+        suspendidos?: number;
+        revision?: number;
     };
     empleados: Empleado[];
     responsables: Responsable[];
@@ -292,7 +287,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
 
 // ─── Main View Component ──────────────────────────────────────────────────
 export default function Index({
-    visitas = { data: [], current_page: 1, last_page: 1, per_page: 10, total: 0, links: [] },
+    visitas = { data: [], current_page: 1, last_page: 1, per_page: 10, total: 0, links: [], next_page_url: null, prev_page_url: null },
     stats = { total: 0, activos: 0, inactivos: 0 },
     empleados = [],
     responsables = [],
@@ -310,13 +305,18 @@ export default function Index({
         { title: __('Temporary Visits'), href: '/admin/visitas-temporales' },
     ];
 
+    const { can } = usePermission();
+    const canCreate = can('visitas_temporales.create');
+    const canEdit = can('visitas_temporales.edit');
+    const canDelete = can('visitas_temporales.delete');
+
     // Form Hook
     const { data, setData, post, put, delete: destroyRoute, processing, errors, reset, clearErrors } = useForm({
         nombres: '',
         apellidos: '',
         nombre_comercial: '',
         documento_identidad: '',
-        pais_telefono_id: paises[0]?.id || '',
+        pais_telefono_id: (paises[0]?.id || '') as string | number,
         telefono: '',
         empleado_id: '',
         responsable_id: '',
@@ -328,7 +328,7 @@ export default function Index({
         hora_salida: new Date().toTimeString().split(' ')[0].substring(0, 5),
         foto_carnet: '' as string | null,
         foto_documento: '' as string | null,
-        status: 'activo',
+        status: 'activo' as string | number,
     });
 
     const { auth } = usePage<any>().props;
@@ -754,8 +754,9 @@ export default function Index({
                 return (
                     <div className="flex items-center space-x-2">
                         <Switch
+                            disabled={!canEdit}
                             checked={visit.status === 'activo'}
-                            onCheckedChange={() => handleToggleStatus(visit)}
+                            onCheckedChange={() => canEdit && handleToggleStatus(visit)}
                         />
                         <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full border', badgeClass)}>
                             {label}
@@ -769,40 +770,50 @@ export default function Index({
             header: __('Actions'),
             className: 'text-right',
             stopRowClick: true,
-            cell: (visit) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(visit)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {__('Edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.patch(`/admin/visitas-temporales/${visit.id}/toggle-status`, { status: 'activo' }, { preserveScroll: true, onSuccess: () => notifySuccess(__('Status updated successfully.')) })}>
-                            <CheckCircle className="mr-2 h-4 w-4 text-emerald-500" />
-                            {__('Set Active')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.patch(`/admin/visitas-temporales/${visit.id}/toggle-status`, { status: 'suspendido' }, { preserveScroll: true, onSuccess: () => notifySuccess(__('Status updated successfully.')) })}>
-                            <XCircle className="mr-2 h-4 w-4 text-rose-500" />
-                            {__('Set Suspended')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.patch(`/admin/visitas-temporales/${visit.id}/toggle-status`, { status: 'en_revision' }, { preserveScroll: true, onSuccess: () => notifySuccess(__('Status updated successfully.')) })}>
-                            <RefreshCw className="mr-2 h-4 w-4 text-amber-500" />
-                            {__('Set Under Review')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setDeletingVisit(visit)}
-                            className="text-red-650 focus:text-red-650 dark:text-red-400"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {__('Delete')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            )
+            cell: (visit) => {
+                if (!canEdit && !canDelete) return null;
+
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {canEdit && (
+                                <>
+                                    <DropdownMenuItem onClick={() => handleEditClick(visit)}>
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        {__('Edit')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => router.patch(`/admin/visitas-temporales/${visit.id}/toggle-status`, { status: 'activo' }, { preserveScroll: true, onSuccess: () => notifySuccess(__('Status updated successfully.')) })}>
+                                        <CheckCircle className="mr-2 h-4 w-4 text-emerald-500" />
+                                        {__('Set Active')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => router.patch(`/admin/visitas-temporales/${visit.id}/toggle-status`, { status: 'suspendido' }, { preserveScroll: true, onSuccess: () => notifySuccess(__('Status updated successfully.')) })}>
+                                        <XCircle className="mr-2 h-4 w-4 text-rose-500" />
+                                        {__('Set Suspended')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => router.patch(`/admin/visitas-temporales/${visit.id}/toggle-status`, { status: 'en_revision' }, { preserveScroll: true, onSuccess: () => notifySuccess(__('Status updated successfully.')) })}>
+                                        <RefreshCw className="mr-2 h-4 w-4 text-amber-500" />
+                                        {__('Set Under Review')}
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                            {canDelete && (
+                                <DropdownMenuItem
+                                    onClick={() => setDeletingVisit(visit)}
+                                    className="text-red-650 focus:text-red-650 dark:text-red-400"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {__('Delete')}
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            }
         }
     ];
 
@@ -843,10 +854,12 @@ export default function Index({
                             <Link className="mr-2 h-4 w-4" />
                             {__('Pre-registro')}
                         </Button> */}
-                        <Button onClick={handleCreateClick} className="bg-[#104a29] hover:bg-[#0c371e] text-white">
-                            <Plus className="mr-2 h-4 w-4" />
-                            {__('New Visit')}
-                        </Button>
+                        <Can permission="visitas_temporales.create">
+                            <Button onClick={handleCreateClick} className="bg-[#104a29] hover:bg-[#0c371e] text-white">
+                                <Plus className="mr-2 h-4 w-4" />
+                                {__('New Visit')}
+                            </Button>
+                        </Can>
                     </div>
                 </ModuleHeader>
 
@@ -935,14 +948,14 @@ export default function Index({
                         data={visitas}
                         columns={columns}
                         isLoading={isTableLoading}
-                        onRowClick={(v) => handleEditClick(v)}
+                        onRowClick={canEdit ? (v) => handleEditClick(v) : undefined}
                         emptyState={{
                             title: __('No temporary visits found'),
                             description: searchTerm || statusFilter !== 'none' || dateFilter
                                 ? __('Try clearing your search filters or changing your query.')
                                 : __('You have not registered any visits yet.'),
-                            ctaLabel: __('Register First Visit'),
-                            onCtaClick: handleCreateClick,
+                            ctaLabel: canCreate ? __('Register First Visit') : undefined,
+                            onCtaClick: canCreate ? handleCreateClick : undefined,
                         }}
                     />
                 </div>

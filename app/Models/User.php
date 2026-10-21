@@ -189,5 +189,50 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->hasOne(Empleado::class, 'user_id');
     }
+
+    public function groups(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Group::class, 'user_has_groups', 'user_id', 'group_id');
+    }
+
+    /**
+     * Obtains all role names (direct + inherited through groups)
+     */
+    public function getAllRoleNames(): \Illuminate\Support\Collection
+    {
+        $directRoles = $this->getRoleNames();
+        $groupRoles = $this->groups()->where('status', true)->with('roles')->get()
+            ->flatMap->roles->pluck('name');
+
+        return $directRoles->merge($groupRoles)->unique()->values();
+    }
+
+    /**
+     * Obtains all effective permissions (direct + inherited through groups)
+     */
+    public function getEffectivePermissions(): array
+    {
+        if ($this->isSuperAdmin()) {
+            return \Spatie\Permission\Models\Permission::pluck('name')->toArray();
+        }
+
+        $directPermissions = $this->getAllPermissions()->pluck('name');
+        $groupPermissions = $this->groups()->where('status', true)->with('roles.permissions')->get()
+            ->flatMap->roles->flatMap->permissions->pluck('name');
+
+        return $directPermissions->merge($groupPermissions)->unique()->values()->toArray();
+    }
+
+    /**
+     * Checks if user has a permission either directly or through their groups
+     */
+    public function hasEffectivePermission(string $permission): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        return in_array($permission, $this->getEffectivePermissions());
+    }
 }
 

@@ -57,6 +57,8 @@ import { notifySuccess, notifyError } from '@/utils/notifications';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 
 const DepartamentoMapComponent = lazy(() => {
     return import('../Empresas/Partials/MapComponent').then((mod) => ({ default: mod.default }));
@@ -163,6 +165,10 @@ export default function DepartamentosIndexPage({
     sucursal: appSucursal,
 }: DepartamentosPageProps) {
     const { __ } = useTranslate();
+    const { can } = usePermission();
+    const canCreate = can('departamentos.create');
+    const canEdit = can('departamentos.edit');
+    const canDelete = can('departamentos.delete');
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -237,12 +243,12 @@ export default function DepartamentosIndexPage({
 
         // Si el usuario tiene una empresa y sucursal preasignadas
         if (auth.user?.empresa_id) {
-            setData(prev => ({
-                ...prev,
-                empresa_id: auth.user.empresa_id,
-                sucursal_id: auth.user.sucursal_id || '',
+            setData({
+                ...initialForm,
+                empresa_id: (auth.user.empresa_id as string | number),
+                sucursal_id: ((auth.user.sucursal_id as string | number) || ''),
                 user_id: auth.user.id,
-            }));
+            });
         }
 
         setActiveTab('general');
@@ -393,8 +399,9 @@ return;
             cell: (dep) => (
                 <div className="flex items-center space-x-2">
                     <Switch
+                        disabled={!canEdit}
                         checked={dep.status === 1}
-                        onCheckedChange={() => handleToggleStatus(dep)}
+                        onCheckedChange={() => canEdit && handleToggleStatus(dep)}
                     />
                     <span className={cn(
                         'text-xs font-medium px-2 py-0.5 rounded-full border',
@@ -412,32 +419,43 @@ return;
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
-            cell: (dep) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(dep)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {__('Edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(dep)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
-                            {dep.status === 1 ? __('Deactivate') : __('Activate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setDeletingDepartamento(dep)}
-                            className="text-red-600 focus:text-red-600 dark:text-red-400"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {__('Delete')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
+            cell: (dep) => {
+                const hasAnyAction = canEdit || canDelete;
+                if (!hasAnyAction) return null;
+
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {canEdit && (
+                                <DropdownMenuItem onClick={() => handleEditClick(dep)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    {__('Edit')}
+                                </DropdownMenuItem>
+                            )}
+                            {canEdit && (
+                                <DropdownMenuItem onClick={() => handleToggleStatus(dep)}>
+                                    <ToggleRight className="mr-2 h-4 w-4" />
+                                    {dep.status === 1 ? __('Deactivate') : __('Activate')}
+                                </DropdownMenuItem>
+                            )}
+                            {canDelete && (
+                                <DropdownMenuItem
+                                    onClick={() => setDeletingDepartamento(dep)}
+                                    className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {__('Delete')}
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
         },
     ];
 
@@ -456,10 +474,12 @@ return;
                     description={__('Manage company departments, codes, building locations, and floor scopes.')}
                     colorClassName="bg-indigo-600"
                 >
-                    <Button onClick={handleCreateClick}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {__('New Department')}
-                    </Button>
+                    <Can permission="departamentos.create">
+                        <Button onClick={handleCreateClick}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            {__('New Department')}
+                        </Button>
+                    </Can>
                 </ModuleHeader>
 
                 {/* Stat Cards */}
@@ -529,14 +549,16 @@ return;
                         data={departamentos}
                         columns={columns}
                         isLoading={isTableLoading}
-                        onRowClick={(dep) => handleEditClick(dep)}
+                        onRowClick={(dep) => {
+                            if (canEdit) handleEditClick(dep);
+                        }}
                         emptyState={{
                             title: 'No departments found',
                             description: searchTerm || statusFilter
                                 ? 'Try clearing your search filters or changing your query.'
                                 : 'You have not registered any departments yet.',
-                            ctaLabel: 'New Department',
-                            onCtaClick: handleCreateClick,
+                            ctaLabel: canCreate ? 'New Department' : undefined,
+                            onCtaClick: canCreate ? handleCreateClick : undefined,
                         }}
                     />
                 </div>

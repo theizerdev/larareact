@@ -75,6 +75,8 @@ import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
 import { notifySuccess, notifyError } from '@/utils/notifications';
+import { usePermission } from '@/hooks/use-permission';
+import { Can } from '@/components/can';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -263,6 +265,11 @@ export default function EmpleadosIndexPage({
     sucursal: appSucursal,
 }: EmpleadosPageProps) {
     const { __ } = useTranslate();
+    const { can } = usePermission();
+    const canCreate = can('empleados.create');
+    const canEdit = can('empleados.edit');
+    const canDelete = can('empleados.delete');
+    const canImport = can('empleados.import');
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -365,7 +372,7 @@ export default function EmpleadosIndexPage({
 
     // ── Handlers ───────────────────────────────────────────────────────────────
 
-    // const [loadingRenapo, setLoadingRenapo] = useState(false); // RENAPO validation removed
+    const [loadingRenapo, setLoadingRenapo] = useState(false);
 
     const handleConsultarRenapo = async () => {
         if (!data.curp || data.curp.length !== 18) {
@@ -390,12 +397,12 @@ export default function EmpleadosIndexPage({
             if (res.ok && result.success) {
                 if (result.nombres) {
                     const apellidosCombined = [result.primer_apellido, result.segundo_apellido].filter(Boolean).join(' ');
-                    setData(prev => ({
-                        ...prev,
-                        nombres: result.nombres || prev.nombres,
-                        apellidos: apellidosCombined || prev.apellidos,
-                        genero: result.genero || prev.genero,
-                    }));
+                    setData({
+                        ...data,
+                        nombres: result.nombres || data.nombres,
+                        apellidos: apellidosCombined || data.apellidos,
+                        genero: result.genero || data.genero,
+                    });
                     notifySuccess(`¡Datos RENAPO obtenidos! Autocompletado: ${result.nombre_completo}`);
                 } else {
                     notifySuccess(result.nota || 'CURP sintácticamente válida.');
@@ -419,8 +426,8 @@ export default function EmpleadosIndexPage({
         const branchId = auth.user?.sucursal_id || appSucursal?.id || '';
         const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-        setData(prev => ({
-            ...prev,
+        setData({
+            ...initialForm,
             documento_identidad: randomCode,
             curp: '',
             empresa_id: companyId,
@@ -433,7 +440,7 @@ export default function EmpleadosIndexPage({
             vehiculos: [],
             permite_app_movil: false,
             intervalo_geolocalizacion_minutos: 15,
-        }));
+        } as any);
 
         setActiveTab('general');
         setActiveCameraField(null);
@@ -531,14 +538,14 @@ export default function EmpleadosIndexPage({
     };
 
     // Subida manual de archivos
-    const handleFileChange = (field: 'foto_empleado' | 'foto_documento' | 'foto_documento_reverso', file: File | null) => {
+    const handleFileChange = (field: 'foto_empleado' | 'foto_empleado_2' | 'foto_documento' | 'foto_documento_reverso', file: File | null) => {
         if (file) {
             setData(field, file);
         }
     };
 
     // Captura desde cámara
-    const handleCameraCapture = (field: 'foto_empleado' | 'foto_documento' | 'foto_documento_reverso', base64Data: string) => {
+    const handleCameraCapture = (field: 'foto_empleado' | 'foto_empleado_2' | 'foto_documento' | 'foto_documento_reverso', base64Data: string) => {
         setData(field, base64Data);
         setActiveCameraField(null);
     };
@@ -681,8 +688,9 @@ export default function EmpleadosIndexPage({
             cell: (emp) => (
                 <div className="flex items-center space-x-2">
                     <Switch
+                        disabled={!canEdit}
                         checked={emp.status}
-                        onCheckedChange={() => handleToggleStatus(emp)}
+                        onCheckedChange={() => canEdit && handleToggleStatus(emp)}
                     />
                     <span className={cn(
                         'text-xs font-medium px-2 py-0.5 rounded-full border',
@@ -703,8 +711,9 @@ export default function EmpleadosIndexPage({
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center space-x-2">
                         <Switch
+                            disabled={!canEdit}
                             checked={Boolean(emp.permite_app_movil)}
-                            onCheckedChange={() => handleToggleAppMovil(emp)}
+                            onCheckedChange={() => canEdit && handleToggleAppMovil(emp)}
                         />
                         <span className={cn(
                             'text-xs font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1',
@@ -730,48 +739,60 @@ export default function EmpleadosIndexPage({
             className: 'text-right',
             hideable: false,
             stopRowClick: true,
-            cell: (emp) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/enrolamiento`)}>
-                            <ScanFace className="mr-2 h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                            {emp.enrolado_en ? __('Repetir enrolamiento') : __('Enrolar')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditClick(emp)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {__('Edit')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/carnet`)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            {__('Ver Carnet')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.post(`/admin/empleados/${emp.id}/enviar-carnet`)}>
-                            <Send className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                            {__('Enviar Carnet por WhatsApp')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleAppMovil(emp)}>
-                            <Smartphone className="mr-2 h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                            {emp.permite_app_movil ? 'Desactivar App Móvil' : 'Permitir App Móvil'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(emp)}>
-                            <ToggleRight className="mr-2 h-4 w-4" />
-                            {emp.status ? __('Deactivate') : __('Activate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => setDeletingEmpleado(emp)}
-                            className="text-red-600 focus:text-red-600 dark:text-red-400"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {__('Delete')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
+            cell: (emp) => {
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {canEdit && (
+                                <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/enrolamiento`)}>
+                                    <ScanFace className="mr-2 h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                    {emp.enrolado_en ? __('Repetir enrolamiento') : __('Enrolar')}
+                                </DropdownMenuItem>
+                            )}
+                            {canEdit && (
+                                <DropdownMenuItem onClick={() => handleEditClick(emp)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    {__('Edit')}
+                                </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/carnet`)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                {__('Ver Carnet')}
+                            </DropdownMenuItem>
+                            {canEdit && (
+                                <>
+                                    <DropdownMenuItem onClick={() => router.post(`/admin/empleados/${emp.id}/enviar-carnet`)}>
+                                        <Send className="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                        {__('Enviar Carnet por WhatsApp')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleToggleAppMovil(emp)}>
+                                        <Smartphone className="mr-2 h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                        {emp.permite_app_movil ? 'Desactivar App Móvil' : 'Permitir App Móvil'}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleToggleStatus(emp)}>
+                                        <ToggleRight className="mr-2 h-4 w-4" />
+                                        {emp.status ? __('Deactivate') : __('Activate')}
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                            {canDelete && (
+                                <DropdownMenuItem
+                                    onClick={() => setDeletingEmpleado(emp)}
+                                    className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {__('Delete')}
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
         },
     ];
 
@@ -791,28 +812,32 @@ export default function EmpleadosIndexPage({
                     {/* Las altas llegan de BioTime; el enrolamiento se hace por colaborador (menú de cada fila). */}
                     {MOSTRAR_ALTA_MANUAL && (
                     <div className="flex items-center gap-2">
-                        <Button
-                            type="button"
-                            onClick={() => setIsImportModalOpen(true)}
-                            variant="outline"
-                            className="border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 flex items-center gap-1.5"
-                        >
-                            <FileSpreadsheet className="w-4 h-4" />
-                            {__('Importar Excel')}
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={() => setIsPreRegistroModalOpen(true)}
-                            variant="outline"
-                            className="border-indigo-600 text-indigo-600 hover:bg-indigo-600/10 flex items-center gap-1.5"
-                        >
-                            <Phone className="w-4 h-4" />
-                            {__('Pre-registro')}
-                        </Button>
-                        <Button onClick={handleCreateClick}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            {__('New Employee')}
-                        </Button>
+                        <Can permission="empleados.import">
+                            <Button
+                                type="button"
+                                onClick={() => setIsImportModalOpen(true)}
+                                variant="outline"
+                                className="border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 flex items-center gap-1.5"
+                            >
+                                <FileSpreadsheet className="w-4 h-4" />
+                                {__('Importar Excel')}
+                            </Button>
+                        </Can>
+                        <Can permission="empleados.create">
+                            <Button
+                                type="button"
+                                onClick={() => setIsPreRegistroModalOpen(true)}
+                                variant="outline"
+                                className="border-indigo-600 text-indigo-600 hover:bg-indigo-600/10 flex items-center gap-1.5"
+                            >
+                                <Phone className="w-4 h-4" />
+                                {__('Pre-registro')}
+                            </Button>
+                            <Button onClick={handleCreateClick}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                {__('New Employee')}
+                            </Button>
+                        </Can>
                     </div>
                     )}
                 </ModuleHeader>
@@ -899,14 +924,16 @@ export default function EmpleadosIndexPage({
                         data={empleados}
                         columns={columns}
                         isLoading={isTableLoading}
-                        onRowClick={(emp) => handleEditClick(emp)}
+                        onRowClick={(emp) => {
+                            if (canEdit) handleEditClick(emp);
+                        }}
                         emptyState={{
                             title: 'No employees found',
                             description: searchTerm || statusFilter || depFilter
                                 ? 'Try clearing your search filters or changing your query.'
                                 : 'You have not registered any employees yet.',
-                            ctaLabel: 'New Employee',
-                            onCtaClick: handleCreateClick,
+                            ctaLabel: canCreate ? 'New Employee' : undefined,
+                            onCtaClick: canCreate ? handleCreateClick : undefined,
                         }}
                     />
                 </div>
