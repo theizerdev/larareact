@@ -34,6 +34,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { CameraWidget } from '@/components/admin/empleados/CameraWidget';
 import { ImportWizardModal } from '@/components/admin/empleados/ImportWizardModal';
+import { EnrolarModal, EmpleadoSimple } from '@/components/admin/empleados/EnrolarModal';
 import { validarCurp } from '@/utils/curpValidator';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import type { ColumnDef } from '@/components/data-table';
@@ -187,6 +188,7 @@ interface EmpleadosPageProps {
         status?: string;
         perPage?: string;
         departamento_id?: string;
+        enrolado?: string;
     };
     empresa?: {
         id: number;
@@ -280,6 +282,8 @@ export default function EmpleadosIndexPage({
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingEmpleado, setEditingEmpleado] = useState<Empleado | null>(null);
     const [deletingEmpleado, setDeletingEmpleado] = useState<Empleado | null>(null);
+    const [isEnrolarModalOpen, setIsEnrolarModalOpen] = useState(false);
+    const [enrolarPreselectedEmpleado, setEnrolarPreselectedEmpleado] = useState<EmpleadoSimple | null>(null);
     const [activeTab, setActiveTab] = useState('general');
     const [isTableLoading, setIsTableLoading] = useState(false);
     const [activeCameraField, setActiveCameraField] = useState<'foto_empleado' | 'foto_empleado_2' | 'foto_documento' | 'foto_documento_reverso' | 'foto_frontal' | 'foto_trasera' | null>(null);
@@ -320,6 +324,7 @@ export default function EmpleadosIndexPage({
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [depFilter, setDepFilter] = useState(filters.departamento_id || '');
     const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '10');
+    const [enroladoFilter, setEnroladoFilter] = useState(filters.enrolado || '');
 
     const fileInputEmpleadoRef = useRef<HTMLInputElement>(null);
     const fileInputEmpleado2Ref = useRef<HTMLInputElement>(null);
@@ -349,13 +354,14 @@ export default function EmpleadosIndexPage({
                     status: statusFilter,
                     departamento_id: depFilter,
                     perPage: perPageFilter,
+                    enrolado: enroladoFilter === 'none' ? '' : enroladoFilter,
                 }),
                 { preserveState: true, preserveScroll: true }
             );
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [searchTerm, statusFilter, depFilter, perPageFilter]);
+    }, [searchTerm, statusFilter, depFilter, perPageFilter, enroladoFilter]);
 
     // ── Formulario Inertia ─────────────────────────────────────────────────────
     const { data, setData, post, reset, errors, processing } = useForm(initialForm);
@@ -735,6 +741,28 @@ export default function EmpleadosIndexPage({
             ),
         },
         {
+            header: __('Enrolamiento'),
+            hideOn: 'mobile',
+            cell: (emp) => (
+                <div className="flex flex-col gap-1 text-xs">
+                    <span className={cn(
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border w-fit',
+                        emp.enrolado_en
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800'
+                            : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800'
+                    )}>
+                        <ScanFace className="w-3.5 h-3.5" />
+                        {emp.enrolado_en ? __('Enrolado') : __('Sin enrolar')}
+                    </span>
+                    {emp.enrolado_en && (
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                            {new Date(emp.enrolado_en).toLocaleDateString('es-MX')}
+                        </span>
+                    )}
+                </div>
+            ),
+        },
+        {
             header: 'Actions',
             className: 'text-right',
             hideable: false,
@@ -749,10 +777,19 @@ export default function EmpleadosIndexPage({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             {canEdit && (
-                                <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/enrolamiento`)}>
-                                    <ScanFace className="mr-2 h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                                    {emp.enrolado_en ? __('Repetir enrolamiento') : __('Enrolar')}
-                                </DropdownMenuItem>
+                                <>
+                                    <DropdownMenuItem onClick={() => {
+                                        setEnrolarPreselectedEmpleado(emp as any);
+                                        setIsEnrolarModalOpen(true);
+                                    }}>
+                                        <Send className="mr-2 h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                        {__('Enviar link de enrolamiento')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/enrolamiento`)}>
+                                        <ScanFace className="mr-2 h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                        {emp.enrolado_en ? __('Repetir enrolamiento') : __('Enrolar en persona')}
+                                    </DropdownMenuItem>
+                                </>
                             )}
                             {canEdit && (
                                 <DropdownMenuItem onClick={() => handleEditClick(emp)}>
@@ -809,37 +846,50 @@ export default function EmpleadosIndexPage({
                     description={__('Manage employees, their departments, responsibles, contact info and photos.')}
                     colorClassName="bg-indigo-600"
                 >
-                    {/* Las altas llegan de BioTime; el enrolamiento se hace por colaborador (menú de cada fila). */}
-                    {MOSTRAR_ALTA_MANUAL && (
                     <div className="flex items-center gap-2">
-                        <Can permission="empleados.import">
-                            <Button
-                                type="button"
-                                onClick={() => setIsImportModalOpen(true)}
-                                variant="outline"
-                                className="border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 flex items-center gap-1.5"
-                            >
-                                <FileSpreadsheet className="w-4 h-4" />
-                                {__('Importar Excel')}
-                            </Button>
-                        </Can>
-                        <Can permission="empleados.create">
-                            <Button
-                                type="button"
-                                onClick={() => setIsPreRegistroModalOpen(true)}
-                                variant="outline"
-                                className="border-indigo-600 text-indigo-600 hover:bg-indigo-600/10 flex items-center gap-1.5"
-                            >
-                                <Phone className="w-4 h-4" />
-                                {__('Pre-registro')}
-                            </Button>
-                            <Button onClick={handleCreateClick}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                {__('New Employee')}
-                            </Button>
-                        </Can>
+                        <Button
+                            type="button"
+                            onClick={() => {
+                                setEnrolarPreselectedEmpleado(null);
+                                setIsEnrolarModalOpen(true);
+                            }}
+                            className="bg-white text-indigo-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-white shadow-sm font-semibold flex items-center gap-1.5"
+                        >
+                            <ScanFace className="w-4 h-4" />
+                            {__('Enrolar')}
+                        </Button>
+
+                        {MOSTRAR_ALTA_MANUAL && (
+                            <>
+                                <Can permission="empleados.import">
+                                    <Button
+                                        type="button"
+                                        onClick={() => setIsImportModalOpen(true)}
+                                        variant="outline"
+                                        className="border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 flex items-center gap-1.5"
+                                    >
+                                        <FileSpreadsheet className="w-4 h-4" />
+                                        {__('Importar Excel')}
+                                    </Button>
+                                </Can>
+                                <Can permission="empleados.create">
+                                    <Button
+                                        type="button"
+                                        onClick={() => setIsPreRegistroModalOpen(true)}
+                                        variant="outline"
+                                        className="border-indigo-600 text-indigo-600 hover:bg-indigo-600/10 flex items-center gap-1.5"
+                                    >
+                                        <Phone className="w-4 h-4" />
+                                        {__('Pre-registro')}
+                                    </Button>
+                                    <Button onClick={handleCreateClick}>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        {__('New Employee')}
+                                    </Button>
+                                </Can>
+                            </>
+                        )}
                     </div>
-                    )}
                 </ModuleHeader>
 
                 {/* Tarjetas Estadísticas */}
@@ -899,6 +949,18 @@ export default function EmpleadosIndexPage({
                                     <SelectItem value="none">{__('All')}</SelectItem>
                                     <SelectItem value="1">{__('Active')}</SelectItem>
                                     <SelectItem value="0">{__('Inactive')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FilterField>
+                        <FilterField label={__('Enrolamiento')}>
+                            <Select value={enroladoFilter} onValueChange={setEnroladoFilter}>
+                                <SelectTrigger className="w-full md:w-40">
+                                    <SelectValue placeholder={__('Todos')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">{__('Todos')}</SelectItem>
+                                    <SelectItem value="1">{__('Enrolados')}</SelectItem>
+                                    <SelectItem value="0">{__('Sin enrolar')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </FilterField>
@@ -2212,6 +2274,22 @@ export default function EmpleadosIndexPage({
             <ImportWizardModal
                 open={isImportModalOpen}
                 onOpenChange={setIsImportModalOpen}
+            />
+
+            {/* Modal de Enrolamiento de Colaboradores */}
+            <EnrolarModal
+                isOpen={isEnrolarModalOpen}
+                onClose={() => {
+                    setIsEnrolarModalOpen(false);
+                    setEnrolarPreselectedEmpleado(null);
+                }}
+                empleados={empleados.data}
+                departamentos={departamentos}
+                paises={paises}
+                preselectedEmpleado={enrolarPreselectedEmpleado}
+                onSuccess={() => {
+                    router.reload({ only: ['empleados', 'stats'] });
+                }}
             />
         </>
     );

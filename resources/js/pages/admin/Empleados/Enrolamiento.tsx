@@ -1,8 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { ArrowLeft, Camera, CheckCircle2, ScanFace, ShieldCheck, Upload, X } from 'lucide-react';
+import { ArrowLeft, Camera, CheckCircle2, ScanFace, ShieldCheck, Upload, X, AlertTriangle } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { CameraWidget } from '@/components/admin/empleados/CameraWidget';
-import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -24,6 +23,9 @@ interface EmpleadoEnrolamiento {
 interface Props {
     empleado: EmpleadoEnrolamiento;
     empresa: string | null;
+    isPublic?: boolean;
+    token?: string | null;
+    expirado?: boolean;
 }
 
 type CampoFoto = 'foto_empleado' | 'foto_empleado_2';
@@ -90,7 +92,7 @@ function Dato({ etiqueta, valor, mono = false }: { etiqueta: string; valor: stri
     );
 }
 
-export default function EnrolamientoPage({ empleado, empresa }: Props) {
+export default function EnrolamientoPage({ empleado, empresa, isPublic = false, token = null, expirado = false }: Props) {
     const { __ } = useTranslate();
     const [paso, setPaso] = useState(1);
     const [camara, setCamara] = useState<CampoFoto | null>(null);
@@ -105,12 +107,6 @@ export default function EnrolamientoPage({ empleado, empresa }: Props) {
         fecha_nacimiento: empleado.fecha_nacimiento || '',
     });
 
-    const breadcrumbs = [
-        { title: __('Dashboard'), href: '/admin/dashboard' },
-        { title: __('Employees'), href: '/admin/empleados' },
-        { title: __('Enrolamiento'), href: `/admin/empleados/${empleado.id}/enrolamiento` },
-    ];
-
     const elegirArchivo = (campo: CampoFoto) => {
         setArchivoCampo(campo);
         archivoRef.current?.click();
@@ -124,8 +120,6 @@ export default function EnrolamientoPage({ empleado, empresa }: Props) {
         const campo = archivoCampo;
         const lector = new FileReader();
         lector.onload = () => {
-            // Una foto de celular pesa varios MB y dos en base64 rebasan el post_max_size de PHP:
-            // se reduce como las de la cámara antes de enviarla.
             const img = new Image();
             img.onload = () => {
                 const escala = Math.min(1, LADO_MAXIMO / Math.max(img.width, img.height));
@@ -143,33 +137,77 @@ export default function EnrolamientoPage({ empleado, empresa }: Props) {
 
     const finalizar = (e: React.FormEvent) => {
         e.preventDefault();
-        post(`/admin/empleados/${empleado.id}/enrolamiento`, {
+        const submitUrl = isPublic && token
+            ? `/enrolamiento/${token}`
+            : `/admin/empleados/${empleado.id}/enrolamiento`;
+
+        post(submitUrl, {
             preserveScroll: true,
             onSuccess: () => setPaso(3),
         });
     };
 
+    if (expirado) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 dark:bg-slate-950">
+                <div className="max-w-md w-full rounded-2xl border border-amber-200 bg-white p-6 shadow-sm text-center dark:border-amber-900/50 dark:bg-slate-900">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 mb-4">
+                        <AlertTriangle className="h-8 w-8" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                        {__('Enlace Expirado')}
+                    </h2>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                        {__('Este enlace de enrolamiento ha vencido por motivos de seguridad. Por favor solicite a Recursos Humanos que le genere una nueva invitación.')}
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <>
-            <Head title={__('Enrolamiento')} />
+        <div className="min-h-screen bg-slate-50/80 dark:bg-slate-950 flex flex-col text-slate-800 dark:text-slate-100">
+            <Head title={__('Enrolamiento Biométrico')} />
 
-            <div className="space-y-6">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
+            {/* Header limpio y minimalista sin menús ni módulos de administración */}
+            <header className="bg-white/90 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex justify-between items-center shadow-xs">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/20">
+                        <ScanFace className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <span className="font-bold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white block">
+                            {empresa || 'Smurfit Westrock'}
+                        </span>
+                        <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block">
+                            Enrolamiento Biométrico Facial
+                        </span>
+                    </div>
+                </div>
 
-                <div className="mx-auto max-w-3xl space-y-6">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <Button variant="ghost" size="sm" onClick={() => router.get('/admin/empleados')}>
-                            <ArrowLeft className="mr-1.5 h-4 w-4" />
+                <div className="flex items-center gap-3 sm:gap-4">
+                    <Pasos paso={paso} />
+                    {!isPublic && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => router.get('/admin/empleados')}
+                            className="text-xs text-muted-foreground hover:text-foreground hidden sm:flex"
+                        >
+                            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
                             {__('Employees')}
                         </Button>
-                        <Pasos paso={paso} />
-                    </div>
+                    )}
+                </div>
+            </header>
 
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/40 sm:p-8">
-                        {paso === 1 && (
+            {/* Cuerpo principal centrado */}
+            <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-8 sm:py-10">
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xl shadow-slate-200/40 dark:shadow-none dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+                    {paso === 1 && (
                             <div className="space-y-6">
                                 <div className="flex items-start gap-4">
-                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white">
+                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/20">
                                         <ScanFace className="h-6 w-6" />
                                     </div>
                                     <div>
@@ -200,21 +238,28 @@ export default function EnrolamientoPage({ empleado, empresa }: Props) {
                                         <ShieldCheck className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                                         Aviso de privacidad
                                     </h2>
-                                    <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
-                                        <AvisoPrivacidad empresa={empresa || 'La empresa'} />
+                                    <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/50">
+                                        <AvisoPrivacidad empresa={empresa || 'Smurfit Westrock'} />
                                     </div>
-                                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+                                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-slate-50/30 p-3 hover:bg-slate-50 transition-colors dark:border-slate-800 dark:bg-slate-950/30">
                                         <Checkbox
                                             checked={data.aviso_privacidad}
                                             onCheckedChange={(v) => setData('aviso_privacidad', v === true)}
                                             className="mt-0.5"
                                         />
-                                        <span className="text-sm">He leído y acepto el aviso de privacidad.</span>
+                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                            He leído y acepto el aviso de privacidad.
+                                        </span>
                                     </label>
                                 </div>
 
-                                <div className="flex justify-end">
-                                    <Button size="lg" disabled={!data.aviso_privacidad} onClick={() => setPaso(2)}>
+                                <div className="flex justify-end pt-2">
+                                    <Button
+                                        size="lg"
+                                        disabled={!data.aviso_privacidad}
+                                        onClick={() => setPaso(2)}
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8"
+                                    >
                                         Iniciar
                                     </Button>
                                 </div>
@@ -235,7 +280,7 @@ export default function EnrolamientoPage({ empleado, empresa }: Props) {
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     {FOTOS.map(({ campo, titulo }) => (
                                         <div key={campo} className="space-y-2">
-                                            <Label>{titulo}</Label>
+                                            <Label className="font-semibold text-xs text-slate-700 dark:text-slate-300">{titulo}</Label>
                                             {camara === campo ? (
                                                 <CameraWidget
                                                     faceGuide
@@ -247,41 +292,53 @@ export default function EnrolamientoPage({ empleado, empresa }: Props) {
                                                     onCancel={() => setCamara(null)}
                                                 />
                                             ) : data[campo] ? (
-                                                <div className="relative overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+                                                <div className="relative overflow-hidden rounded-xl border border-slate-200 shadow-inner dark:border-slate-800">
                                                     <img src={data[campo]} alt={titulo} className="aspect-[4/3] w-full object-cover" />
                                                     <Button
                                                         type="button"
                                                         size="icon"
                                                         variant="destructive"
-                                                        className="absolute right-2 top-2 h-7 w-7"
+                                                        className="absolute right-2 top-2 h-7 w-7 rounded-full shadow"
                                                         onClick={() => setData(campo, '')}
                                                     >
                                                         <X className="h-4 w-4" />
                                                     </Button>
                                                 </div>
                                             ) : (
-                                                <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
-                                                    <ScanFace className="h-10 w-10 text-slate-300 dark:text-slate-600" />
+                                                <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 hover:bg-slate-50 transition-colors dark:border-slate-700 dark:bg-slate-950/50">
+                                                    <ScanFace className="h-10 w-10 text-slate-400 dark:text-slate-600" />
                                                     <div className="flex gap-2">
-                                                        <Button type="button" size="sm" onClick={() => setCamara(campo)} disabled={camara !== null}>
-                                                            <Camera className="mr-1.5 h-4 w-4" />
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            onClick={() => setCamara(campo)}
+                                                            disabled={camara !== null}
+                                                            className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+                                                        >
+                                                            <Camera className="h-4 w-4" />
                                                             Tomar foto
                                                         </Button>
-                                                        <Button type="button" size="sm" variant="outline" onClick={() => elegirArchivo(campo)}>
-                                                            <Upload className="mr-1.5 h-4 w-4" />
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => elegirArchivo(campo)}
+                                                            className="gap-1.5"
+                                                        >
+                                                            <Upload className="h-4 w-4" />
                                                             Subir
                                                         </Button>
                                                     </div>
                                                 </div>
                                             )}
-                                            {errors[campo] && <p className="text-xs text-red-500">{errors[campo]}</p>}
+                                            {errors[campo] && <p className="text-xs text-red-500 font-medium">{errors[campo]}</p>}
                                         </div>
                                     ))}
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2">
                                     <div className="space-y-2">
-                                        <Label>Sexo</Label>
+                                        <Label className="font-semibold text-xs text-slate-700 dark:text-slate-300">Sexo</Label>
                                         <div className="grid grid-cols-2 gap-2">
                                             {[
                                                 { valor: 'M', etiqueta: 'Hombre' },
@@ -291,6 +348,9 @@ export default function EnrolamientoPage({ empleado, empresa }: Props) {
                                                     key={valor}
                                                     type="button"
                                                     variant={data.genero === valor ? 'default' : 'outline'}
+                                                    className={cn(
+                                                        data.genero === valor ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : ''
+                                                    )}
                                                     onClick={() => {
                                                         setData('genero', valor);
                                                         clearErrors('genero');
@@ -300,25 +360,28 @@ export default function EnrolamientoPage({ empleado, empresa }: Props) {
                                                 </Button>
                                             ))}
                                         </div>
-                                        {errors.genero && <p className="text-xs text-red-500">{errors.genero}</p>}
+                                        {errors.genero && <p className="text-xs text-red-500 font-medium">{errors.genero}</p>}
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="fecha_nacimiento">Fecha de nacimiento</Label>
+                                        <Label htmlFor="fecha_nacimiento" className="font-semibold text-xs text-slate-700 dark:text-slate-300">
+                                            Fecha de nacimiento
+                                        </Label>
                                         <Input
                                             id="fecha_nacimiento"
                                             type="date"
                                             max={new Date().toISOString().slice(0, 10)}
                                             value={data.fecha_nacimiento}
                                             onChange={(e) => setData('fecha_nacimiento', e.target.value)}
+                                            className="font-mono text-xs"
                                         />
-                                        {errors.fecha_nacimiento && <p className="text-xs text-red-500">{errors.fecha_nacimiento}</p>}
+                                        {errors.fecha_nacimiento && <p className="text-xs text-red-500 font-medium">{errors.fecha_nacimiento}</p>}
                                     </div>
                                 </div>
 
                                 {errors.aviso_privacidad && <p className="text-sm text-red-500">{errors.aviso_privacidad}</p>}
 
-                                <div className="flex justify-between gap-3">
+                                <div className="flex justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                                     <Button type="button" variant="outline" onClick={() => setPaso(1)} disabled={processing}>
                                         Atrás
                                     </Button>
@@ -326,6 +389,7 @@ export default function EnrolamientoPage({ empleado, empresa }: Props) {
                                         type="submit"
                                         size="lg"
                                         disabled={processing || !data.foto_empleado || !data.foto_empleado_2 || !data.genero || !data.fecha_nacimiento}
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8"
                                     >
                                         {processing ? 'Guardando…' : 'Finalizar'}
                                     </Button>
@@ -334,20 +398,33 @@ export default function EnrolamientoPage({ empleado, empresa }: Props) {
                         )}
 
                         {paso === 3 && (
-                            <div className="flex flex-col items-center gap-4 py-6 text-center">
-                                <CheckCircle2 className="h-16 w-16 text-emerald-500" />
-                                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">¡Gracias, {empleado.nombres}!</h1>
-                                <p className="max-w-md text-muted-foreground">
-                                    Tu proceso de enrolamiento quedó completo. Cualquier duda, consulta a tu supervisor.
+                            <div className="flex flex-col items-center gap-4 py-8 text-center">
+                                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle2 className="h-12 w-12" />
+                                </div>
+                                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                                    ¡Gracias, {empleado.nombres}!
+                                </h1>
+                                <p className="max-w-md text-sm text-muted-foreground leading-relaxed">
+                                    Tu proceso de enrolamiento quedó completo y tus datos biométricos han sido registrados para el reloj checador. Cualquier duda, consulta a tu supervisor.
                                 </p>
-                                <Button className="mt-2" onClick={() => router.get('/admin/empleados')}>
-                                    Volver a colaboradores
-                                </Button>
+                                {!isPublic ? (
+                                    <Button className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold" onClick={() => router.get('/admin/empleados')}>
+                                        Volver a colaboradores
+                                    </Button>
+                                ) : (
+                                    <p className="text-xs text-slate-400 mt-2">
+                                        Ya puedes cerrar esta ventana con seguridad.
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>
-                </div>
-            </div>
-        </>
+            </main>
+        </div>
     );
 }
+
+// Prevenir layout persistente de administración: el colaborador no debe ver nada de módulos ni administración
+EnrolamientoPage.layout = (page: React.ReactNode) => page;
+

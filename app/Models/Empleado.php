@@ -95,6 +95,8 @@ class Empleado extends Model
         'kyc_estatus',
         'kyc_validado_en',
         'enrolado_en',
+        'enrolamiento_token',
+        'enrolamiento_token_expires_at',
     ];
 
     protected function casts(): array
@@ -107,6 +109,7 @@ class Empleado extends Model
             'fecha_ingreso' => 'date:Y-m-d',
             'fecha_nacimiento' => 'date:Y-m-d',
             'enrolado_en' => 'datetime',
+            'enrolamiento_token_expires_at' => 'datetime',
             'salario_diario' => 'decimal:2',
             'kyc_validado_en' => 'datetime',
         ];
@@ -155,6 +158,11 @@ class Empleado extends Model
     public function vehiculos()
     {
         return $this->hasMany(EmpleadoVehiculo::class, 'empleado_id');
+    }
+
+    public function biotimeEmpleado(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(BiotimeEmpleado::class, 'empleado_id');
     }
 
     /**

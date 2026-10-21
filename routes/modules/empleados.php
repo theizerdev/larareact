@@ -28,6 +28,7 @@ Route::middleware(['permission:empleados.edit'])->group(function () {
     Route::patch('/empleados/{empleado}/toggle-app-movil', [EmpleadoController::class, 'toggleAppMovil'])->name('empleados.toggle-app-movil');
     Route::get('/empleados/{empleado}/enrolamiento', [EmpleadoEnrolamientoController::class, 'show'])->name('empleados.enrolamiento');
     Route::post('/empleados/{empleado}/enrolamiento', [EmpleadoEnrolamientoController::class, 'store'])->name('empleados.enrolamiento.store');
+    Route::post('/empleados/enrolamiento/invitar', [EmpleadoEnrolamientoController::class, 'invitar'])->name('empleados.enrolamiento.invitar');
 });
 
 Route::middleware(['permission:empleados.delete'])->group(function () {

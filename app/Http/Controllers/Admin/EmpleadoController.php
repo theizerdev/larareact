@@ -47,6 +47,14 @@ class EmpleadoController extends Controller
             $query->where('departamento_id', $request->departamento_id);
         }
 
+        if ($request->filled('enrolado')) {
+            if ($request->enrolado === '1' || $request->enrolado === 'si') {
+                $query->whereNotNull('enrolado_en');
+            } elseif ($request->enrolado === '0' || $request->enrolado === 'no') {
+                $query->whereNull('enrolado_en');
+            }
+        }
+
         $empleados = $query->latest()->paginate($request->perPage ?? 10)->withQueryString();
 
         $stats = [
@@ -69,7 +77,7 @@ class EmpleadoController extends Controller
             'responsables' => Responsable::where('status', true)->with('cargo:id,nombre')->orderBy('nombres', 'asc')->get(['id', 'nombres', 'apellidos', 'departamento_id', 'cargo_id']),
             'cargos' => Cargo::where('status', true)->orderBy('nombre', 'asc')->get(['id', 'nombre', 'departamento_id']),
             'paises' => Pais::where('activo', true)->orderBy('nombre', 'asc')->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
-            'filters' => $request->only('search', 'status', 'perPage', 'departamento_id'),
+            'filters' => $request->only('search', 'status', 'perPage', 'departamento_id', 'enrolado'),
             'empresa' => $empresa ? [
                 'id' => $empresa->id,
                 'razon_social' => $empresa->razon_social,

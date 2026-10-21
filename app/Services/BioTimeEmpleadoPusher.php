@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Jobs\EnviarEmpleadoBioTime;
+use App\Models\BiotimeArea;
 use App\Models\BiotimeCargo;
 use App\Models\BiotimeDepartamento;
 use App\Models\BiotimeEmpleado;
@@ -11,6 +12,7 @@ use App\Models\Departamento;
 use App\Models\Empleado;
 use App\Models\Empresa;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Lleva a BioTime los cambios hechos en Organización / Colaboradores: el
@@ -23,8 +25,7 @@ use Illuminate\Support\Facades\Log;
  *   Un campo vacío aquí nunca borra el dato que BioTime sí tiene.
  * - El emp_code no se cambia después del alta: es el ID con el que la persona
  *   está enrolada en los relojes.
- * - No borra ni da de baja en BioTime, y no envía fotos (la API documentada
- *   no las acepta; ver BioTimeFotoService).
+ * - Sincroniza la bio-photo facial optimizada (< 25 KB) para enrolamiento y reconocimiento.
  *
  * Tras cada escritura el espejo se refresca con lo que quedó en BioTime, así
  * el siguiente sync no lo toma como un cambio hecho en el reloj.
@@ -34,7 +35,7 @@ class BioTimeEmpleadoPusher
     /** Columnas de empleados que viajan a BioTime. */
     public const CAMPOS = [
         'nombres', 'apellidos', 'documento_identidad', 'tarjeta_acceso_1', 'telefono',
-        'correo', 'genero', 'fecha_nacimiento', 'fecha_ingreso', 'departamento_id', 'cargo_id',
+        'correo', 'genero', 'fecha_nacimiento', 'fecha_ingreso', 'departamento_id', 'cargo_id', 'foto_empleado',
     ];
 
     /** Lo que el alta automática pone cuando BioTime no trae nombre: no se devuelve al reloj. */
@@ -145,7 +146,8 @@ class BioTimeEmpleadoPusher
 
     private function crear(Empleado $empleado, Empresa $empresa, BioTimeService $cliente, BioTimeSyncService $sync, string $codigo, bool $dryRun): array
     {
-        if (! $empresa->biotime_push_area_id) {
+        $areaId = $empresa->biotime_push_area_id ?: ($this->areaPorDefecto($empresa)?->biotime_id ?? 1);
+        if (! $areaId) {
             return $this->fallo($empleado, $dryRun, 'omitido', 'Falta elegir en Integraciones › Reloj checador el área de BioTime para los colaboradores nuevos.');
         }
 
@@ -157,11 +159,31 @@ class BioTimeEmpleadoPusher
         $payload = array_filter($this->deseado($empleado), fn ($v) => $v !== null) + [
             'emp_code' => $codigo,
             'department' => (int) $depto->biotime_id,
-            'area' => [(int) $empresa->biotime_push_area_id],
+            'area' => [(int) $areaId],
         ];
 
-        if ($cargo = $this->cargo($empleado, $empresa)) {
+        $cargo = $this->cargo($empleado, $empresa) ?? $this->cargoPorDefecto($empresa);
+        if ($cargo) {
             $payload['position'] = (int) $cargo->biotime_id;
+        }
+
+        // BioTime exige obligatoriamente email. Si no tiene correo válido, asignamos uno corporativo por defecto.
+        if (empty($payload['email'])) {
+            $cleanCode = preg_replace('/[^a-zA-Z0-9]/', '', $codigo) ?: (string) $empleado->id;
+            $payload['email'] = "emp_{$cleanCode}@smurfitwestrock.com";
+        }
+
+        // BioTime exige obligatoriamente mobile.
+        if (empty($payload['mobile'])) {
+            $pais = $empleado->pais_telefono_id ? \App\Models\Pais::find($empleado->pais_telefono_id) : null;
+            $prefix = preg_replace('/[^0-9]/', '', $pais?->codigo_telefonico ?? '52');
+            $cleanDigits = str_pad(substr(preg_replace('/\D/', '', (string) ($empleado->documento_identidad ?: $empleado->id)), -10), 10, '0', STR_PAD_LEFT);
+            $payload['mobile'] = "+{$prefix}-{$cleanDigits}";
+        }
+
+        if ($fotoB64 = $this->fotoBase64($empleado)) {
+            $payload['photo'] = $fotoB64;
+            $payload['emp_pic'] = $fotoB64;
         }
 
         if ($dryRun) {
@@ -173,7 +195,25 @@ class BioTimeEmpleadoPusher
             return $this->fallo($empleado, false, 'error', $r['error'] ?? 'BioTime rechazó el alta.', $r['status'] === null);
         }
 
-        $this->refrescarEspejo($empresa, $cliente, $sync, $codigo, $r['data'], ['empleado_id' => $empleado->id, 'link_status' => 'auto']);
+        $bio = $this->refrescarEspejo($empresa, $cliente, $sync, $codigo, $r['data'], ['empleado_id' => $empleado->id, 'link_status' => 'auto']);
+
+        if ($empleado->foto_empleado && $bio) {
+            $bio->update([
+                'photo_path' => $empleado->foto_empleado,
+                'photo_synced_at' => now(),
+                'foto_exportada' => $empleado->foto_empleado,
+                'foto_exportada_at' => now(),
+            ]);
+
+            if ($fotoB64) {
+                $rFoto = $cliente->uploadBioPhoto($codigo, $fotoB64);
+                if ($rFoto['success']) {
+                    Log::channel('biotime')->info("BioTime: Bio-photo subida por API para empleado {$codigo}");
+                } else {
+                    Log::channel('biotime')->notice("BioTime: Bio-photo no se pudo subir por API para {$codigo} ({$rFoto['error']}). Queda disponible para exportar en ZIP.");
+                }
+            }
+        }
 
         return $this->exito($empleado, 'creado', "Dado de alta en BioTime con el número {$codigo}.");
     }
@@ -198,6 +238,12 @@ class BioTimeEmpleadoPusher
             }
         }
 
+        // BioTime exige email: si en BioTime está vacío y aún no va en cambios, completar con fallback
+        if (empty($actual['email']) && empty($cambios['email'])) {
+            $cleanCode = preg_replace('/[^a-zA-Z0-9]/', '', (string) $bio->emp_code) ?: (string) $empleado->id;
+            $cambios['email'] = "emp_{$cleanCode}@smurfitwestrock.com";
+        }
+
         $depto = $this->departamento($empleado, $empresa);
         if ($depto !== null && (string) $depto->dept_code !== (string) $bio->dept_code) {
             $cambios['department'] = (int) $depto->biotime_id;
@@ -206,6 +252,13 @@ class BioTimeEmpleadoPusher
         $cargo = $this->cargo($empleado, $empresa);
         if ($cargo !== null && (string) $cargo->position_code !== (string) $bio->position_code) {
             $cambios['position'] = (int) $cargo->biotime_id;
+        }
+
+        if ($fotoB64 = $this->fotoBase64($empleado)) {
+            if ($bio->foto_exportada !== $empleado->foto_empleado) {
+                $cambios['photo'] = $fotoB64;
+                $cambios['emp_pic'] = $fotoB64;
+            }
         }
 
         if ($cambios === []) {
@@ -223,7 +276,25 @@ class BioTimeEmpleadoPusher
             return $this->fallo($empleado, false, 'error', $r['error'] ?? 'BioTime rechazó el cambio.', $r['status'] === null);
         }
 
-        $this->refrescarEspejo($empresa, $cliente, $sync, (string) $bio->emp_code, $r['data']);
+        $bio = $this->refrescarEspejo($empresa, $cliente, $sync, (string) $bio->emp_code, $r['data']) ?? $bio;
+
+        if ($empleado->foto_empleado) {
+            $bio->update([
+                'photo_path' => $empleado->foto_empleado,
+                'photo_synced_at' => now(),
+                'foto_exportada' => $empleado->foto_empleado,
+                'foto_exportada_at' => now(),
+            ]);
+
+            if ($fotoB64 && ($bio->foto_exportada !== $empleado->foto_empleado || isset($cambios['photo']))) {
+                $rFoto = $cliente->uploadBioPhoto((string) $bio->emp_code, $fotoB64);
+                if ($rFoto['success']) {
+                    Log::channel('biotime')->info("BioTime: Bio-photo actualizada por API para empleado {$bio->emp_code}");
+                } else {
+                    Log::channel('biotime')->notice("BioTime: Bio-photo no se pudo subir por API para {$bio->emp_code} ({$rFoto['error']}). Queda disponible para exportar en ZIP.");
+                }
+            }
+        }
 
         return $this->exito($empleado, 'actualizado', 'Actualizado en BioTime: '.implode(', ', array_keys($cambios)).'.');
     }
@@ -238,18 +309,37 @@ class BioTimeEmpleadoPusher
     {
         $correo = trim((string) $empleado->correo);
         $tarjeta = $this->texto($empleado->tarjeta_acceso_1);
+        $telefono = $this->telefonoFormateado($empleado);
 
         return [
             'first_name' => $this->texto($empleado->nombres),
             'last_name' => $this->texto($empleado->apellidos),
             // La columna nace en '0' = sin tarjeta.
             'card_no' => $tarjeta !== null && trim($tarjeta, '0') !== '' ? $tarjeta : null,
-            'mobile' => $this->texto($empleado->telefono),
+            'mobile' => $telefono,
             'email' => filter_var($correo, FILTER_VALIDATE_EMAIL) ? $correo : null,
             'gender' => in_array($empleado->genero, ['M', 'F'], true) ? $empleado->genero : null,
             'birthday' => $empleado->fecha_nacimiento?->format('Y-m-d'),
             'hire_date' => $empleado->fecha_ingreso?->format('Y-m-d'),
         ];
+    }
+
+    private function telefonoFormateado(Empleado $empleado): ?string
+    {
+        $tel = $this->texto($empleado->telefono);
+        if (! $tel) {
+            return null;
+        }
+
+        if (str_starts_with($tel, '+')) {
+            return $tel;
+        }
+
+        $pais = $empleado->pais_telefono_id ? \App\Models\Pais::find($empleado->pais_telefono_id) : null;
+        $prefix = preg_replace('/[^0-9]/', '', $pais?->codigo_telefonico ?? '52');
+        $cleanPhone = preg_replace('/[^0-9]/', '', $tel);
+
+        return "+{$prefix}-{$cleanPhone}";
     }
 
     private function texto(mixed $valor): ?string
@@ -297,14 +387,16 @@ class BioTimeEmpleadoPusher
      * Vuelve a leer al empleado: la respuesta del PATCH trae department como
      * id suelto y no como objeto, y el espejo guarda el código.
      */
-    private function refrescarEspejo(Empresa $empresa, BioTimeService $cliente, BioTimeSyncService $sync, string $codigo, mixed $respuesta, array $extra = []): void
+    private function refrescarEspejo(Empresa $empresa, BioTimeService $cliente, BioTimeSyncService $sync, string $codigo, mixed $respuesta, array $extra = []): ?BiotimeEmpleado
     {
         $fila = $cliente->findEmployeeByCode($codigo);
         $datos = $fila['success'] && $fila['data'] ? $fila['data'] : (is_array($respuesta) && isset($respuesta['id']) ? $respuesta : null);
 
         if ($datos !== null) {
-            $sync->espejarEmpleado($empresa, $datos, $extra);
+            return $sync->espejarEmpleado($empresa, $datos, $extra);
         }
+
+        return null;
     }
 
     private function exito(Empleado $empleado, string $accion, string $mensaje): array
@@ -326,6 +418,43 @@ class BioTimeEmpleadoPusher
         }
 
         return $this->resultado(false, $accion, $mensaje, $reintentar);
+    }
+
+    /**
+     * Prepara y codifica la foto del empleado en base64 JPG optimizado para BioTime (< 25 KB).
+     */
+    public function fotoBase64(Empleado $empleado): ?string
+    {
+        if (empty($empleado->foto_empleado)) {
+            return null;
+        }
+
+        $ruta = ltrim(str_replace('/storage/', '', $empleado->foto_empleado), '/');
+        if (! Storage::disk('public')->exists($ruta)) {
+            return null;
+        }
+
+        $bin = Storage::disk('public')->get($ruta);
+        if (! $bin) {
+            return null;
+        }
+
+        // Se optimiza a JPG < 25 KB con orientación EXIF
+        $preparado = app(BioTimeFotoService::class)->preparar($bin) ?? $bin;
+
+        return 'data:image/jpeg;base64,' . base64_encode($preparado);
+    }
+
+    private function areaPorDefecto(Empresa $empresa): ?BiotimeArea
+    {
+        return BiotimeArea::query()->where('empresa_id', $empresa->id)->where('area_code', '1')->first()
+            ?? BiotimeArea::query()->where('empresa_id', $empresa->id)->orderBy('biotime_id')->first();
+    }
+
+    private function cargoPorDefecto(Empresa $empresa): ?BiotimeCargo
+    {
+        return BiotimeCargo::query()->where('empresa_id', $empresa->id)->where('position_code', '1')->first()
+            ?? BiotimeCargo::query()->where('empresa_id', $empresa->id)->first();
     }
 
     /** @return array{ok: bool, accion: string, mensaje: string, reintentar: bool} */

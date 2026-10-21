@@ -100,6 +100,14 @@ Route::middleware('modulo:productores')->group(function () {
 Route::get('/preregistro-empleado/{token}', [EmpleadoPreRegistroController::class, 'showWizard'])->name('preregistro-empleado.wizard');
 Route::post('/preregistro-empleado/{token}', [EmpleadoPreRegistroController::class, 'submitWizard'])->name('preregistro-empleado.submit');
 
+// Enrolamiento biométrico público de colaboradores vía token
+Route::get('/enrolamiento/{token}', [\App\Http\Controllers\Admin\EmpleadoEnrolamientoController::class, 'showPublic'])
+    ->middleware('throttle:60,1')
+    ->name('enrolamiento.publico.show');
+Route::post('/enrolamiento/{token}', [\App\Http\Controllers\Admin\EmpleadoEnrolamientoController::class, 'storePublic'])
+    ->middleware('throttle:60,1')
+    ->name('enrolamiento.publico.store');
+
 Route::get('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::class, 'showWizard'])->name('preregistro-visita.wizard');
 Route::post('/preregistro-visita/{token}', [VisitaTemporalPreRegistroController::class, 'submitWizard'])->name('preregistro-visita.submit');
 Route::post('/preregistro-visita/{token}/tipo-servicio', [VisitaTemporalPreRegistroController::class, 'storeTipoServicio'])->name('preregistro-visita.tipo-servicio.store');

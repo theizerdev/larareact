@@ -469,6 +469,22 @@ class BioTimeService
     }
 
     /**
+     * Sube la foto biométrica facial (Bio-Photo) del empleado a BioTime para los checadores.
+     * Requiere que el usuario de API tenga permisos en Dispositivo › Datos › Bio-Photo.
+     *
+     * @return array{success: bool, data: mixed, error: string|null, status: int|null}
+     */
+    public function uploadBioPhoto(string $empCode, string $base64Photo): array
+    {
+        $cleanB64 = str_contains($base64Photo, ',') ? substr($base64Photo, strpos($base64Photo, ',') + 1) : $base64Photo;
+
+        return $this->send('post', '/iclock/api/bio_photo/upload/', [
+            'emp_code' => $empCode,
+            'bio_photo' => $cleanB64,
+        ]);
+    }
+
+    /**
      * POST / PATCH JSON con el mismo manejo de errores que get(). Un 400 trae
      * en el cuerpo el motivo por campo ({"emp_code": ["..."]}); se devuelve
      * tal cual para que quien lo vea sepa qué corregir.

@@ -28,6 +28,8 @@ createServer((page) =>
                     case name === 'welcome':
                     case name === 'admin/integrations/navigation':
                     case name === 'admin/integrations/map':
+                    case name === 'admin/Empleados/Enrolamiento':
+                    case name.toLowerCase().endsWith('/enrolamiento'):
                         pageComponent.layout = null;
                         break;
                     case name.startsWith('auth/'):
