@@ -37,6 +37,9 @@ class BioTimeEnvioEmpleadosTest extends TestCase
     /** Empleados que "tiene" el BioTime falso, por emp_code. */
     private array $reloj = [];
 
+    /** BioTime Cloud niega /iclock/api/bio_photo/ por API, aun a un super usuario. */
+    private int $bioPhotoStatus = 403;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -103,6 +106,12 @@ class BioTimeEnvioEmpleadosTest extends TestCase
                 }
 
                 return Http::response(['id' => (int) $m[1]] + $r->data());
+            }
+
+            if ($path === '/iclock/api/bio_photo/' && $r->method() === 'POST') {
+                return $this->bioPhotoStatus === 403
+                    ? Http::response(['detail' => 'Usted no tiene permiso para realizar esta acción.'], 403)
+                    : Http::response(['code' => 0, 'msg' => ''], $this->bioPhotoStatus);
             }
 
             return Http::response($env([]));
@@ -294,6 +303,60 @@ class BioTimeEnvioEmpleadosTest extends TestCase
         $zip->close();
         @unlink($destino);
         $this->assertNotNull($empleado);
+    }
+
+    private function fotoEnDisco(string $ruta): void
+    {
+        $img = imagecreatetruecolor(800, 1000);
+        ob_start();
+        imagejpeg($img);
+        Storage::disk('public')->put($ruta, ob_get_clean());
+    }
+
+    public function test_la_foto_no_viaja_en_el_alta_y_si_biotime_la_rechaza_sigue_pendiente(): void
+    {
+        Storage::fake('public');
+        $this->fotoEnDisco('empleados/ana.jpg');
+
+        $empleado = $this->colaborador(['foto_empleado' => '/storage/empleados/ana.jpg']);
+
+        $alta = $this->escrituras();
+        $this->assertCount(1, $alta);
+        $this->assertArrayNotHasKey('photo', $alta[0][0]->data());
+        $this->assertArrayNotHasKey('emp_pic', $alta[0][0]->data());
+        Http::assertSent(fn (Request $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/iclock/api/bio_photo/') && $r['emp_code'] === '901');
+
+        $bio = BiotimeEmpleado::where('emp_code', '901')->first();
+        $this->assertNull($bio->foto_exportada);
+        $this->assertSame(1, app(BioTimeFotoService::class)->pendientes($this->empresa));
+        $this->assertNull($empleado->fresh()->biotime_push_error);
+    }
+
+    public function test_si_biotime_acepta_la_bio_photo_queda_exportada(): void
+    {
+        Storage::fake('public');
+        $this->fotoEnDisco('empleados/ana.jpg');
+        $this->bioPhotoStatus = 200;
+
+        $this->colaborador(['foto_empleado' => '/storage/empleados/ana.jpg']);
+
+        $this->assertSame('/storage/empleados/ana.jpg', BiotimeEmpleado::where('emp_code', '901')->value('foto_exportada'));
+        $this->assertSame(0, app(BioTimeFotoService::class)->pendientes($this->empresa));
+    }
+
+    public function test_cambiar_solo_la_foto_reintenta_la_bio_photo_sin_patch_del_empleado(): void
+    {
+        Storage::fake('public');
+        $this->fotoEnDisco('empleados/ana.jpg');
+        $this->fotoEnDisco('empleados/ana-nueva.jpg');
+        $empleado = $this->colaborador(['foto_empleado' => '/storage/empleados/ana.jpg']);
+        $antes = count($this->escrituras());
+
+        $this->bioPhotoStatus = 200;
+        $empleado->update(['foto_empleado' => '/storage/empleados/ana-nueva.jpg']);
+
+        $this->assertCount($antes, $this->escrituras());
+        $this->assertSame('/storage/empleados/ana-nueva.jpg', BiotimeEmpleado::where('emp_code', '901')->value('foto_exportada'));
     }
 
     public function test_zip_de_pendientes_solo_trae_fotos_nuevas_o_cambiadas(): void

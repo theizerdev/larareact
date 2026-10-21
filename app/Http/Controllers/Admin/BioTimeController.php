@@ -11,6 +11,7 @@ use App\Models\BiotimeMarcaje;
 use App\Models\BiotimePermiso;
 use App\Models\BiotimeTurno;
 use App\Models\Empleado;
+use App\Models\Empresa;
 use App\Services\BioTimeFotoService;
 use App\Services\BioTimeService;
 use App\Services\BioTimeSyncService;
@@ -359,33 +360,57 @@ class BioTimeController extends Controller
     /*  Foto de empleado (proxy + caché a disco)                           */
     /* ------------------------------------------------------------------ */
 
+    /**
+     * La copia vive en el disco privado (no en /storage público) y por empresa:
+     * dos empresas pueden repetir emp_code. Se renueva cada hora; si BioTime no
+     * tiene foto se recuerda 10 minutos para no consultarlo en cada vista, y si
+     * no responde se sirve la última copia.
+     */
     public function fotoEmpleado(Request $request, BiotimeEmpleado $biotimeEmpleado): Response
     {
         $this->authorizeEmpresa($request, $biotimeEmpleado->empresa_id);
 
-        $cachedPath = 'biotime/photos_descargadas/'.$biotimeEmpleado->emp_code.'.jpg';
-        if (Storage::disk('public')->exists($cachedPath)) {
-            return response(Storage::disk('public')->get($cachedPath), 200)
-                ->header('Content-Type', 'image/jpeg')
-                ->header('Cache-Control', 'public, max-age=1800');
+        $disco = Storage::disk('local');
+        $codigo = preg_replace('/[^A-Za-z0-9._-]/', '_', (string) $biotimeEmpleado->emp_code);
+        $ruta = "biotime/fotos/{$biotimeEmpleado->empresa_id}/{$codigo}.jpg";
+        $sinFoto = "biotime:sin_foto:{$biotimeEmpleado->empresa_id}:{$codigo}";
+        $copia = $disco->exists($ruta);
+
+        if ($copia && $disco->lastModified($ruta) > now()->subHour()->getTimestamp()) {
+            return $this->foto($disco->get($ruta), 'image/jpeg');
         }
 
-        $empresa = $request->user()?->empresa ?? Empresa::find($biotimeEmpleado->empresa_id);
-        if (! $empresa) {
+        if (Cache::has($sinFoto)) {
             abort(404);
         }
 
-        $photo = (new BioTimeService($empresa))->getEmployeePhoto($biotimeEmpleado->emp_code);
+        $empresa = Empresa::find($biotimeEmpleado->empresa_id);
+        $photo = $empresa ? (new BioTimeService($empresa))->getEmployeePhoto((string) $biotimeEmpleado->emp_code) : null;
 
-        if (! $photo['success'] || ! $photo['body']) {
+        if ($photo['success'] ?? false) {
+            $disco->put($ruta, $photo['body']);
+
+            return $this->foto($photo['body'], $photo['content_type']);
+        }
+
+        if (($photo['status'] ?? null) === 404) {
+            $disco->delete($ruta);
+            Cache::put($sinFoto, true, now()->addMinutes(10));
             abort(404);
         }
 
-        Storage::disk('public')->put($cachedPath, $photo['body']);
+        if ($copia) {
+            return $this->foto($disco->get($ruta), 'image/jpeg');
+        }
 
-        return response($photo['body'], 200)
-            ->header('Content-Type', $photo['content_type'] ?? 'image/jpeg')
-            ->header('Cache-Control', 'public, max-age=1800');
+        abort(404);
+    }
+
+    private function foto(string $binario, ?string $tipo): Response
+    {
+        return response($binario, 200)
+            ->header('Content-Type', $tipo ?: 'image/jpeg')
+            ->header('Cache-Control', 'private, max-age=300');
     }
 
     /* ------------------------------------------------------------------ */

@@ -94,6 +94,7 @@ export default function BioTimeEmpleados({ empleados, stats, filters, empleados_
                 <div className="flex items-center justify-center">
                     <img
                         src={`/admin/biotime/empleados/${r.id}/foto`}
+                        loading="lazy"
                         alt={`${r.first_name ?? ''} ${r.last_name ?? ''}`}
                         title={__('Foto guardada en BioTime')}
                         className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm bg-slate-100 dark:bg-slate-800 dark:border-slate-700"

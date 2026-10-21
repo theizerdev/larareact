@@ -2,9 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\BiotimeCargo;
+use App\Models\BiotimeDepartamento;
+use App\Models\BiotimeDispositivo;
 use App\Models\Empresa;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -381,50 +385,72 @@ class BioTimeService
     }
 
     /**
-     * Foto del empleado. BioTime 8.0 no la documenta en el manual público;
-     * se intentan los patrones conocidos. Devuelve binario + content-type.
+     * Foto de perfil del empleado, la misma que muestra BioTime en Editar Empleado.
      *
-     * @return array{success: bool, body: string|null, content_type: string|null}
+     * BioTime Cloud la guarda en /files/photo/<carpeta de la compañía>/<emp_code>.jpg.
+     * La raíz /files/photo/<emp_code>.jpg de un BioTime Cloud es compartida y
+     * antigua (trae fotos de otras compañías con el mismo número), así que sólo
+     * se usa en un BioTime local, donde no hay compañías. El detalle del empleado
+     * en la API no trae la foto.
+     *
+     * @return array{success: bool, body: string|null, content_type: string|null, status: int|null}
      */
     public function getEmployeePhoto(string $empCode): array
     {
-        // 1) Rutas estáticas de fotos en BioTime Cloud y BioTime 8.0/8.5.
-        foreach ([
-            "/files/photo/{$empCode}.jpg",
-            "/media/photo/{$empCode}.jpg",
-            "/media/employee/{$empCode}.jpg",
-            "/files/employee/{$empCode}.jpg",
-            "/auth_files/photo/{$empCode}.jpg",
-            "/auth_files/biophoto/{$empCode}.jpg",
-        ] as $mediaPath) {
-            $bin = $this->getBinary($this->url($mediaPath));
-            if ($bin['success'] && ! empty($bin['body'])) {
-                return $bin;
+        $codigo = rawurlencode(trim($empCode));
+        if ($codigo === '') {
+            return ['success' => false, 'body' => null, 'content_type' => null, 'status' => null];
+        }
+
+        if (! $this->company) {
+            return $this->getBinary($this->url("/files/photo/{$codigo}.jpg"));
+        }
+
+        $carpeta = $this->carpetaFotos();
+        if ($carpeta === null) {
+            return ['success' => false, 'body' => null, 'content_type' => null, 'status' => null];
+        }
+
+        return $this->getBinary($this->url("/files/photo/{$carpeta}/{$codigo}.jpg"));
+    }
+
+    /**
+     * Carpeta de fotos de la compañía en BioTime Cloud: su id sin guiones. Llega
+     * como company.id en departamentos, cargos y relojes, y el sync ya lo deja
+     * en `raw`; sólo si aún no hay espejo se pregunta a BioTime.
+     */
+    public function carpetaFotos(): ?string
+    {
+        if (! $this->company) {
+            return null;
+        }
+
+        $clave = "biotime:carpeta_fotos:{$this->companyId}";
+        if ($carpeta = Cache::get($clave)) {
+            return $carpeta;
+        }
+
+        $id = null;
+        foreach ([BiotimeDepartamento::class, BiotimeCargo::class, BiotimeDispositivo::class] as $modelo) {
+            $id = data_get($modelo::query()->where('empresa_id', $this->companyId)->whereNotNull('raw')->value('raw'), 'company.id');
+            if (filled($id)) {
+                break;
             }
         }
 
-        // 2) Campo con URL/base64 dentro del detalle del empleado en /personnel/api/employees/
-        $detail = $this->get('/personnel/api/employees/', ['emp_code' => $empCode, 'limit' => 1]);
-        if ($detail['success']) {
-            $row = $detail['data']['data'][0] ?? $detail['data']['results'][0] ?? null;
-            $photoField = $row['photo'] ?? $row['photograph'] ?? $row['emp_pic'] ?? null;
-
-            if (is_string($photoField) && str_starts_with($photoField, 'data:image')) {
-                [$meta, $b64] = array_pad(explode(',', $photoField, 2), 2, '');
-                $ct = str_contains($meta, 'png') ? 'image/png' : 'image/jpeg';
-
-                return ['success' => true, 'body' => base64_decode($b64) ?: null, 'content_type' => $ct];
-            }
-
-            if (is_string($photoField) && $photoField !== '') {
-                $bin = $this->getBinary(str_starts_with($photoField, 'http') ? $photoField : $this->url('/'.ltrim($photoField, '/')));
-                if ($bin['success'] && ! empty($bin['body'])) {
-                    return $bin;
-                }
-            }
+        if (blank($id)) {
+            $r = $this->get('/personnel/api/departments/', ['page' => 1, 'limit' => 1]);
+            $id = $r['success'] ? data_get($r['data'], 'data.0.company.id') : null;
         }
 
-        return ['success' => false, 'body' => null, 'content_type' => null];
+        $carpeta = is_string($id) ? preg_replace('/[^0-9a-f]/', '', strtolower($id)) : '';
+        if ($carpeta === '') {
+            return null;
+        }
+
+        Cache::put($clave, $carpeta, now()->addDay());
+
+        return $carpeta;
     }
 
     /* ------------------------------------------------------------------ */
@@ -477,7 +503,11 @@ class BioTimeService
 
     /**
      * Sube la foto biométrica facial (Bio-Photo) del empleado a BioTime para los checadores.
-     * Requiere que el usuario de API tenga permisos en Dispositivo › Datos › Bio-Photo.
+     *
+     * El recurso es /iclock/api/bio_photo/ (acepta GET y POST; /upload/ cae en la
+     * ruta de detalle, que no acepta POST). BioTime Cloud responde 403 incluso a
+     * un super usuario, así que quien llama no debe dar la foto por subida si falla:
+     * queda pendiente para el ZIP de Dispositivo › Datos › Bio-Photo › Importar.
      *
      * @return array{success: bool, data: mixed, error: string|null, status: int|null}
      */
@@ -485,7 +515,7 @@ class BioTimeService
     {
         $cleanB64 = str_contains($base64Photo, ',') ? substr($base64Photo, strpos($base64Photo, ',') + 1) : $base64Photo;
 
-        return $this->send('post', '/iclock/api/bio_photo/upload/', [
+        return $this->send('post', '/iclock/api/bio_photo/', [
             'emp_code' => $empCode,
             'bio_photo' => $cleanB64,
         ]);
@@ -551,35 +581,40 @@ class BioTimeService
     /* ------------------------------------------------------------------ */
 
     /**
-     * Descarga binaria autenticada (fotos).
+     * Descarga binaria (fotos). BioTime las sirve sin token; sólo se inicia
+     * sesión si el servidor la pide, para no hacer un login por cada foto.
+     * `status` 404 = BioTime no tiene la foto; null = no respondió.
      *
-     * @return array{success: bool, body: string|null, content_type: string|null}
+     * @return array{success: bool, body: string|null, content_type: string|null, status: int|null}
      */
     private function getBinary(string $absoluteUrl): array
     {
         try {
-            $token = $this->authenticate();
+            $response = $this->baseClient()->get($absoluteUrl);
 
-            $response = $this->baseClient()
-                ->withHeaders(['Authorization' => 'JWT '.$token])
-                ->get($absoluteUrl);
+            if (in_array($response->status(), [401, 403], true)) {
+                $response = $this->baseClient()
+                    ->withHeaders(['Authorization' => 'JWT '.$this->authenticate()])
+                    ->get($absoluteUrl);
+            }
 
             if ($response->successful() && $response->body() !== '' && str_starts_with((string) $response->header('Content-Type'), 'image/')) {
                 return [
                     'success' => true,
                     'body' => $response->body(),
                     'content_type' => $response->header('Content-Type') ?: 'image/jpeg',
+                    'status' => $response->status(),
                 ];
             }
 
-            return ['success' => false, 'body' => null, 'content_type' => null];
+            return ['success' => false, 'body' => null, 'content_type' => null, 'status' => $response->status()];
         } catch (\Throwable $e) {
             Log::channel('biotime')->warning('BioTime foto error: '.$e->getMessage(), [
                 'company_id' => $this->companyId,
                 'url' => $absoluteUrl,
             ]);
 
-            return ['success' => false, 'body' => null, 'content_type' => null];
+            return ['success' => false, 'body' => null, 'content_type' => null, 'status' => null];
         }
     }
 

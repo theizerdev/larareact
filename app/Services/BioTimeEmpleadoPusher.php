@@ -25,7 +25,8 @@ use Illuminate\Support\Facades\Storage;
  *   Un campo vacío aquí nunca borra el dato que BioTime sí tiene.
  * - El emp_code no se cambia después del alta: es el ID con el que la persona
  *   está enrolada en los relojes.
- * - Sincroniza la bio-photo facial optimizada (< 25 KB) para enrolamiento y reconocimiento.
+ * - La foto no viaja en el alta/edición (BioTime la ignora ahí): se intenta como
+ *   bio-photo (< 25 KB) y, si BioTime no la acepta, queda pendiente para el ZIP.
  *
  * Tras cada escritura el espejo se refresca con lo que quedó en BioTime, así
  * el siguiente sync no lo toma como un cambio hecho en el reloj.
@@ -181,11 +182,6 @@ class BioTimeEmpleadoPusher
             $payload['mobile'] = "+{$prefix}-{$cleanDigits}";
         }
 
-        if ($fotoB64 = $this->fotoBase64($empleado)) {
-            $payload['photo'] = $fotoB64;
-            $payload['emp_pic'] = $fotoB64;
-        }
-
         if ($dryRun) {
             return $this->resultado(true, 'crear', "Se daría de alta con el número {$codigo} en el departamento {$depto->dept_name}.");
         }
@@ -197,25 +193,7 @@ class BioTimeEmpleadoPusher
 
         $bio = $this->refrescarEspejo($empresa, $cliente, $sync, $codigo, $r['data'], ['empleado_id' => $empleado->id, 'link_status' => 'auto']);
 
-        if ($empleado->foto_empleado && $bio) {
-            $bio->update([
-                'photo_path' => $empleado->foto_empleado,
-                'photo_synced_at' => now(),
-                'foto_exportada' => $empleado->foto_empleado,
-                'foto_exportada_at' => now(),
-            ]);
-            
-            if ($fotoB64) {
-                $rFoto = $cliente->uploadBioPhoto($codigo, $fotoB64);
-                if ($rFoto['success']) {
-                    Log::channel('biotime')->info("BioTime: Bio-photo subida por API para empleado {$codigo}");
-                } else {
-                    Log::channel('biotime')->notice("BioTime: Bio-photo no se pudo subir por API para {$codigo} ({$rFoto['error']}). Queda disponible para exportar en ZIP.");
-                }
-            }
-        }
-
-        return $this->exito($empleado, 'creado', "Dado de alta en BioTime con el número {$codigo}.");
+        return $this->exito($empleado, 'creado', "Dado de alta en BioTime con el número {$codigo}.".($bio ? $this->subirFoto($empleado, $cliente, $bio) : ''));
     }
 
     private function actualizar(Empleado $empleado, Empresa $empresa, BioTimeService $cliente, BioTimeSyncService $sync, BiotimeEmpleado $bio, bool $dryRun): array
@@ -254,49 +232,66 @@ class BioTimeEmpleadoPusher
             $cambios['position'] = (int) $cargo->biotime_id;
         }
 
-        if ($fotoB64 = $this->fotoBase64($empleado)) {
-            if ($bio->foto_exportada !== $empleado->foto_empleado) {
-                $cambios['photo'] = $fotoB64;
-                $cambios['emp_pic'] = $fotoB64;
-            }
-        }
+        $fotoPendiente = $this->fotoPendiente($empleado, $bio);
 
-        if ($cambios === []) {
+        if ($cambios === [] && ! $fotoPendiente) {
             return $dryRun
                 ? $this->resultado(true, 'sin_cambios', 'BioTime ya tiene estos datos.')
                 : $this->exito($empleado, 'sin_cambios', 'BioTime ya tiene estos datos.');
         }
 
         if ($dryRun) {
-            return $this->resultado(true, 'actualizar', 'Se actualizaría: '.implode(', ', array_keys($cambios)).'.');
+            return $this->resultado(true, 'actualizar', 'Se actualizaría: '.implode(', ', array_merge(array_keys($cambios), $fotoPendiente ? ['foto'] : [])).'.');
         }
 
-        $r = $cliente->updateEmployee((string) $bio->biotime_id, $cambios);
-        if (! $r['success']) {
-            return $this->fallo($empleado, false, 'error', $r['error'] ?? 'BioTime rechazó el cambio.', $r['status'] === null);
-        }
+        $mensaje = 'BioTime ya tiene estos datos.';
 
-        $bio = $this->refrescarEspejo($empresa, $cliente, $sync, (string) $bio->emp_code, $r['data']) ?? $bio;
-
-        if ($empleado->foto_empleado) {
-            $bio->update([
-                'photo_path' => $empleado->foto_empleado,
-                'photo_synced_at' => now(),
-                'foto_exportada' => $empleado->foto_empleado,
-                'foto_exportada_at' => now(),
-            ]);
-
-            if ($fotoB64 && ($bio->foto_exportada !== $empleado->foto_empleado || isset($cambios['photo']))) {
-                $rFoto = $cliente->uploadBioPhoto((string) $bio->emp_code, $fotoB64);
-                if ($rFoto['success']) {
-                    Log::channel('biotime')->info("BioTime: Bio-photo actualizada por API para empleado {$bio->emp_code}");
-                } else {
-                    Log::channel('biotime')->notice("BioTime: Bio-photo no se pudo subir por API para {$bio->emp_code} ({$rFoto['error']}). Queda disponible para exportar en ZIP.");
-                }
+        if ($cambios !== []) {
+            $r = $cliente->updateEmployee((string) $bio->biotime_id, $cambios);
+            if (! $r['success']) {
+                return $this->fallo($empleado, false, 'error', $r['error'] ?? 'BioTime rechazó el cambio.', $r['status'] === null);
             }
+
+            $bio = $this->refrescarEspejo($empresa, $cliente, $sync, (string) $bio->emp_code, $r['data']) ?? $bio;
+            $mensaje = 'Actualizado en BioTime: '.implode(', ', array_keys($cambios)).'.';
         }
 
-        return $this->exito($empleado, 'actualizado', 'Actualizado en BioTime: '.implode(', ', array_keys($cambios)).'.');
+        return $this->exito($empleado, $cambios === [] ? 'sin_cambios' : 'actualizado', $mensaje.$this->subirFoto($empleado, $cliente, $bio));
+    }
+
+    /** La foto actual del colaborador aún no llega a BioTime (ni por API ni en un ZIP). */
+    private function fotoPendiente(Empleado $empleado, BiotimeEmpleado $bio): bool
+    {
+        return filled($empleado->foto_empleado) && $bio->foto_exportada !== $empleado->foto_empleado;
+    }
+
+    /**
+     * Intenta subir la foto pendiente como bio-photo. Sólo se marca exportada si
+     * BioTime la acepta; si no, sigue pendiente para el ZIP de Bio-Photo.
+     * Devuelve la nota para el mensaje del envío ('' si no había foto pendiente).
+     */
+    private function subirFoto(Empleado $empleado, BioTimeService $cliente, BiotimeEmpleado $bio): string
+    {
+        if (! $this->fotoPendiente($empleado, $bio)) {
+            return '';
+        }
+
+        $fotoB64 = $this->fotoBase64($empleado);
+        if ($fotoB64 === null) {
+            return ' La foto no es una imagen válida para BioTime.';
+        }
+
+        $r = $cliente->uploadBioPhoto((string) $bio->emp_code, $fotoB64);
+        if (! $r['success']) {
+            Log::channel('biotime')->notice("BioTime: la bio-photo de {$bio->emp_code} no se pudo subir por API ({$r['error']}). Queda pendiente para el ZIP de Bio-Photo.", ['empleado_id' => $empleado->id, 'empresa_id' => $empleado->empresa_id]);
+
+            return ' La foto queda pendiente: impórtala con el ZIP de Bio-Photo.';
+        }
+
+        $bio->update(['foto_exportada' => $empleado->foto_empleado, 'foto_exportada_at' => now()]);
+        Log::channel('biotime')->info("BioTime: bio-photo subida por API para {$bio->emp_code}.", ['empleado_id' => $empleado->id, 'empresa_id' => $empleado->empresa_id]);
+
+        return ' Foto enviada a BioTime.';
     }
 
     /**
@@ -439,10 +434,10 @@ class BioTimeEmpleadoPusher
             return null;
         }
 
-        // Se optimiza a JPG < 25 KB con orientación EXIF
-        $preparado = app(BioTimeFotoService::class)->preparar($bin) ?? $bin;
+        // JPG < 25 KB con la orientación EXIF aplicada; si no se puede, no se manda.
+        $preparado = app(BioTimeFotoService::class)->preparar($bin);
 
-        return 'data:image/jpeg;base64,' . base64_encode($preparado);
+        return $preparado === null ? null : 'data:image/jpeg;base64,'.base64_encode($preparado);
     }
 
     private function areaPorDefecto(Empresa $empresa): ?BiotimeArea
