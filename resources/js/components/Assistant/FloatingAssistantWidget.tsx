@@ -259,12 +259,16 @@ export default function FloatingAssistantWidget() {
         }
     }, [isOpen, isMinimized]);
 
-    // Atajo de teclado: Escape cierra el panel de categorías
+    // Atajo de teclado: Escape cierra el panel de categorías o la ventana
     useEffect(() => {
         if (!isOpen) return;
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape' && activeCategory) {
-                setActiveCategory(null);
+            if (event.key === 'Escape') {
+                if (activeCategory) {
+                    setActiveCategory(null);
+                } else {
+                    setIsOpen(false);
+                }
             }
         };
         window.addEventListener('keydown', onKey);
@@ -552,11 +556,12 @@ export default function FloatingAssistantWidget() {
     const bubbleMax = isExpanded ? 'max-w-[82%]' : 'max-w-[88%]';
 
     return (
-        <div className="pointer-events-auto fixed right-4 bottom-4 z-50 flex flex-col items-end sm:right-6 sm:bottom-6">
+        <>
             {/* Ventana de Chat */}
             {isOpen && (
-                <div
-                    id="assistant-window"
+                <div className="pointer-events-auto fixed right-4 bottom-4 z-50 flex flex-col items-end sm:right-6 sm:bottom-6">
+                    <div
+                        id="assistant-window"
                     className={cn(
                         'animate-in fade-in zoom-in-95 slide-in-from-bottom-4 mb-3 flex origin-bottom-right flex-col overflow-hidden rounded-3xl border border-white/10 bg-background/90 shadow-[0_24px_80px_-12px_rgba(79,70,229,0.45)] ring-1 ring-black/5 backdrop-blur-2xl duration-300 transition-[width,height]',
                         isExpanded ? 'w-[94vw] sm:w-[700px]' : 'w-[92vw] sm:w-[430px]',
@@ -616,12 +621,12 @@ export default function FloatingAssistantWidget() {
                             </button>
                             <button
                                 id="assistant-minimize"
-                                onClick={() => setIsMinimized(!isMinimized)}
-                                title={isMinimized ? 'Expandir' : 'Minimizar'}
-                                aria-label={isMinimized ? 'Expandir' : 'Minimizar'}
+                                onClick={() => setIsOpen(false)}
+                                title="Minimizar a pestaña lateral"
+                                aria-label="Minimizar a pestaña lateral"
                                 className="rounded-xl p-2 text-white/80 transition-colors hover:bg-white/15 hover:text-white"
                             >
-                                <ChevronDown className={cn('h-4 w-4 transition-transform', isMinimized && 'rotate-180')} />
+                                <ChevronDown className="h-4 w-4" />
                             </button>
                             <button
                                 id="assistant-close"
@@ -1534,10 +1539,11 @@ export default function FloatingAssistantWidget() {
                             </div>
                         </>
                     )}
+                    </div>
                 </div>
             )}
 
-            {/* Botón Flotante Principal con Ambient Glow */}
+            {/* Pestaña Lateral / Herradura de Fixy (Right Edge Dock idéntico a Theme Customizer) */}
             {!isOpen && (
                 <button
                     id="assistant-launcher"
@@ -1545,30 +1551,29 @@ export default function FloatingAssistantWidget() {
                         setIsOpen(true);
                         setIsMinimized(false);
                     }}
-                    className="group relative flex items-center gap-3 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-4 py-2.5 text-white shadow-[0_12px_32px_-6px_rgba(79,70,229,0.55)] ring-1 ring-white/20 transition-all duration-300 hover:scale-105 hover:shadow-[0_16px_40px_-4px_rgba(79,70,229,0.7)] active:scale-95"
+                    className="fixed right-0 top-[calc(50%-68px)] z-40 flex h-10 w-10 items-center justify-center rounded-l-md bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:via-indigo-500 hover:to-violet-500 text-white shadow-lg border-l border-t border-b border-indigo-400/30 focus:outline-none cursor-pointer transition-all hover:pr-1 group"
                     title="Abrir Fixy · Copilot FixSale"
                     aria-label="Abrir Fixy · Copilot FixSale"
                 >
-                    <span className="absolute -inset-1 -z-10 animate-pulse rounded-full bg-gradient-to-r from-blue-600 to-violet-600 opacity-40 blur-md group-hover:opacity-75 transition duration-500" />
-                    <div className="relative flex h-7.5 w-7.5 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30 backdrop-blur-xs">
-                        <Bot className="h-4.5 w-4.5 text-white transition-transform group-hover:rotate-12" />
-                        <Sparkles className="absolute -top-1 -right-1 h-3 w-3 animate-pulse text-amber-300" />
+                    <div className="relative flex items-center justify-center">
+                        <Bot className="size-5 text-white transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6" />
+                        <Sparkles className="absolute -top-1.5 -right-1.5 size-2.5 text-amber-300 animate-pulse" />
+                        <span className="absolute -bottom-1 -left-1 flex size-2">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex size-2 rounded-full bg-emerald-400 ring-1 ring-indigo-900" />
+                        </span>
                     </div>
-                    <div className="flex flex-col text-left leading-tight">
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold tracking-wide">Fixy</span>
-                            <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[8.5px] font-semibold text-white/95">
-                                Copilot
-                            </span>
-                        </div>
-                        <span className="text-[9.5px] text-white/80 font-medium">Asistente Operativo</span>
+
+                    {/* Tooltip flotante hacia la izquierda al pasar el cursor */}
+                    <div className="pointer-events-none absolute right-full mr-2.5 hidden items-center whitespace-nowrap rounded-lg bg-slate-900/95 px-3 py-1.5 text-xs font-semibold text-white shadow-xl ring-1 ring-white/10 backdrop-blur-md transition-all group-hover:flex">
+                        <span className="flex items-center gap-2">
+                            <Bot className="size-3.5 text-indigo-400" />
+                            <span>Fixy Copilot</span>
+                            <span className="text-[10.5px] text-emerald-400 font-normal">· Asistente</span>
+                        </span>
                     </div>
-                    <span className="relative flex h-2.5 w-2.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-indigo-900" />
-                    </span>
                 </button>
             )}
-        </div>
+        </>
     );
 }
