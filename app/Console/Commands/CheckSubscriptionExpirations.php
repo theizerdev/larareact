@@ -137,12 +137,25 @@ class CheckSubscriptionExpirations extends Command
             try {
                 $resultado = $whatsappService->sendMessage($cleanPhone, $mensaje, true);
 
+                if (is_array($resultado) && (isset($resultado['error']) || (isset($resultado['status']) && $resultado['status'] >= 400))) {
+                    $errorMsg = is_string($resultado['error'] ?? null)
+                        ? $resultado['error']
+                        : ($resultado['message'] ?? 'Error devuelto por la API de WhatsApp');
+
+                    Log::error("Fallo al enviar recordatorio WhatsApp a {$empresa->razon_social} ({$cleanPhone}): {$errorMsg}", [
+                        'instance' => $whatsappService->getInstanceName(),
+                    ]);
+                    $this->error("❌ Error enviando a {$empresa->razon_social} ({$whatsappService->getInstanceName()}): {$errorMsg}");
+                    $fallidos++;
+                    continue;
+                }
+
                 $sub->update([
                     'last_reminder_sent_at' => now(),
                     'reminder_sent_count' => ($sub->reminder_sent_count ?? 0) + 1,
                 ]);
 
-                Log::info("Notificación de vencimiento enviada a {$empresa->razon_social} ({$cleanPhone}) - Días restantes: {$diasRestantes}");
+                Log::info("Notificación de vencimiento enviada a {$empresa->razon_social} ({$cleanPhone}) [Instancia: {$whatsappService->getInstanceName()}] - Días restantes: {$diasRestantes}");
                 $this->info("✅ Notificación enviada a {$empresa->razon_social} ({$cleanPhone}) - Días: {$diasRestantes}");
                 $enviados++;
             } catch (\Throwable $e) {

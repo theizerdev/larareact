@@ -63,7 +63,7 @@ class WhatsAppService
 
     public static function forSucursal($sucursal): self
     {
-        $service = new self();
+        $service = new self($sucursal instanceof \App\Models\Sucursal ? $sucursal : null);
         $service->resolveSucursal($sucursal);
 
         return $service;
@@ -89,14 +89,39 @@ class WhatsAppService
         $this->apiKey = $credentials['api_key'] ?? $credentials['apiKey'] ?? null;
         $this->instanceName = $credentials['instance'] ?? $credentials['whatsapp_instance'] ?? '';
 
-        if ($this->companyId) {
-            $empresaModel = Empresa::with('pais')->find($this->companyId);
+        if ($this->sucursalId) {
+            $sucursalModel = \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])->find($this->sucursalId);
+            if ($sucursalModel) {
+                if (! $this->apiKey) {
+                    $this->apiKey = $sucursalModel->empresa?->whatsapp_api_key;
+                }
+                if (! $this->instanceName && ! empty($sucursalModel->whatsapp_instance)) {
+                    $this->instanceName = $sucursalModel->whatsapp_instance;
+                }
+                $pais = $sucursalModel->paisTelefono ?? $sucursalModel->empresa?->pais;
+                $this->countryCode = $pais?->codigo_telefonico ?? '+58';
+            }
+        } elseif ($this->companyId) {
+            $empresaModel = Empresa::with(['pais', 'sucursales'])->find($this->companyId);
             if ($empresaModel) {
                 if (! $this->apiKey) {
                     $this->apiKey = $empresaModel->whatsapp_api_key;
                 }
-                if (! $this->instanceName && ! empty($empresaModel->whatsapp_instance)) {
-                    $this->instanceName = $empresaModel->whatsapp_instance;
+                if (! $this->instanceName) {
+                    $sucursal = $empresaModel->sucursales()
+                        ->where('whatsapp_active', true)
+                        ->where('whatsapp_status', 'connected')
+                        ->whereNotNull('whatsapp_instance')
+                        ->first()
+                        ?? $empresaModel->sucursales()->whereNotNull('whatsapp_instance')->first()
+                        ?? $empresaModel->sucursales()->first();
+
+                    if ($sucursal) {
+                        $this->sucursalId = (int) $sucursal->id;
+                        $this->instanceName = $sucursal->whatsapp_instance ?: 'sucursal_'.$sucursal->id;
+                    } elseif (! empty($empresaModel->whatsapp_instance)) {
+                        $this->instanceName = $empresaModel->whatsapp_instance;
+                    }
                 }
                 $this->countryCode = $empresaModel->pais?->codigo_telefonico ?? '+58';
             }
@@ -112,7 +137,7 @@ class WhatsAppService
     }
 
     /**
-     * Resuelve la sucursal y configura su instancia aislada (estricto por sucursal, sin fallback a empresa)
+     * Resuelve la sucursal y configura su instancia aislada
      */
     public function resolveSucursal($sucursal = null): void
     {
@@ -121,6 +146,23 @@ class WhatsAppService
             $sucursalModel = $sucursal;
         } elseif (is_numeric($sucursal)) {
             $sucursalModel = \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])->find($sucursal);
+            if (! $sucursalModel) {
+                // Si el número no corresponde a un ID de sucursal, verificar si corresponde a un empresa_id
+                $sucursalModel = \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])
+                    ->where('empresa_id', $sucursal)
+                    ->where('whatsapp_status', 'connected')
+                    ->whereNotNull('whatsapp_instance')
+                    ->where('whatsapp_instance', '!=', '')
+                    ->first()
+                    ?? \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])
+                    ->where('empresa_id', $sucursal)
+                    ->whereNotNull('whatsapp_instance')
+                    ->where('whatsapp_instance', '!=', '')
+                    ->first()
+                    ?? \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])
+                    ->where('empresa_id', $sucursal)
+                    ->first();
+            }
         } elseif (auth()->check() && auth()->user()->sucursal_id) {
             $sucursalModel = \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])->find(auth()->user()->sucursal_id);
         }
@@ -135,7 +177,7 @@ class WhatsAppService
                 $this->baseUrl = rtrim($empresa->whatsapp_api_url, '/');
             }
 
-            // Cada sucursal maneja su propia instancia dedicada (sucursal_{id})
+            // Cada sucursal maneja su propia instancia dedicada (o fallback a sucursal_{id})
             $this->instanceName = ! empty($sucursalModel->whatsapp_instance)
                 ? $sucursalModel->whatsapp_instance
                 : 'sucursal_'.$sucursalModel->id;
@@ -146,13 +188,34 @@ class WhatsAppService
             return;
         }
 
-        // Si no se proporcionó sucursal específica, buscar la primera sucursal de la empresa activa
+        // Si no se proporcionó sucursal específica, buscar la sucursal activa de la empresa activa
         if (auth()->check() && auth()->user()->empresa_id) {
-            $firstSucursal = \App\Models\Sucursal::where('empresa_id', auth()->user()->empresa_id)->first();
+            $firstSucursal = \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])
+                ->where('empresa_id', auth()->user()->empresa_id)
+                ->where('whatsapp_status', 'connected')
+                ->whereNotNull('whatsapp_instance')
+                ->where('whatsapp_instance', '!=', '')
+                ->first()
+                ?? \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])
+                ->where('empresa_id', auth()->user()->empresa_id)
+                ->whereNotNull('whatsapp_instance')
+                ->where('whatsapp_instance', '!=', '')
+                ->first()
+                ?? \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])
+                ->where('empresa_id', auth()->user()->empresa_id)
+                ->first();
+
             if ($firstSucursal) {
                 $this->resolveSucursal($firstSucursal);
                 return;
             }
+        }
+
+        // Fallback global a la sucursal 1 (SaaS principal)
+        $defaultSucursal = \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])->find(1);
+        if ($defaultSucursal) {
+            $this->resolveSucursal($defaultSucursal);
+            return;
         }
 
         $this->instanceName = 'sucursal_1';
@@ -160,7 +223,7 @@ class WhatsAppService
     }
 
     /**
-     * Resuelve la empresa y configura la API key e instancia
+     * Resuelve la empresa y configura la API key e instancia basada en sus sucursales
      */
     private function resolveCompany($empresa = null): void
     {
@@ -184,6 +247,68 @@ class WhatsAppService
             if (! empty($empresaModel->whatsapp_api_url)) {
                 $this->baseUrl = rtrim($empresaModel->whatsapp_api_url, '/');
             }
+
+            // Las instancias de WhatsApp están asociadas a las SUCURSALES:
+            // 1. Si el usuario autenticado pertenece a esta empresa y tiene sucursal con instancia configurada:
+            $sucursal = null;
+            if (auth()->check() && auth()->user()->empresa_id == $empresaModel->id && auth()->user()->sucursal_id) {
+                $userSucursal = \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])->find(auth()->user()->sucursal_id);
+                if ($userSucursal && ! empty($userSucursal->whatsapp_instance)) {
+                    $sucursal = $userSucursal;
+                }
+            }
+
+            // 2. Si hay una sucursal activa en la sesión para esta empresa:
+            if (! $sucursal && session()->has('active_whatsapp_sucursal_id')) {
+                $sessSucursal = \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])->find(session('active_whatsapp_sucursal_id'));
+                if ($sessSucursal && $sessSucursal->empresa_id == $empresaModel->id && ! empty($sessSucursal->whatsapp_instance)) {
+                    $sucursal = $sessSucursal;
+                }
+            }
+
+            // 3. Buscar la primera sucursal conectada y activa de la empresa:
+            if (! $sucursal) {
+                $sucursal = $empresaModel->sucursales()
+                    ->with(['empresa.pais', 'paisTelefono'])
+                    ->where('whatsapp_active', true)
+                    ->where('whatsapp_status', 'connected')
+                    ->whereNotNull('whatsapp_instance')
+                    ->where('whatsapp_instance', '!=', '')
+                    ->first();
+            }
+
+            // 4. Si ninguna está marcada como conectada, buscar cualquier sucursal activa con instancia:
+            if (! $sucursal) {
+                $sucursal = $empresaModel->sucursales()
+                    ->with(['empresa.pais', 'paisTelefono'])
+                    ->where('whatsapp_active', true)
+                    ->whereNotNull('whatsapp_instance')
+                    ->where('whatsapp_instance', '!=', '')
+                    ->first();
+            }
+
+            // 5. Buscar cualquier sucursal con instancia configurada:
+            if (! $sucursal) {
+                $sucursal = $empresaModel->sucursales()
+                    ->with(['empresa.pais', 'paisTelefono'])
+                    ->whereNotNull('whatsapp_instance')
+                    ->where('whatsapp_instance', '!=', '')
+                    ->first();
+            }
+
+            // 6. Si tiene sucursales pero sin instancia configurada, tomar la primera:
+            if (! $sucursal) {
+                $sucursal = $empresaModel->sucursales()
+                    ->with(['empresa.pais', 'paisTelefono'])
+                    ->first();
+            }
+
+            if ($sucursal) {
+                $this->resolveSucursal($sucursal);
+                return;
+            }
+
+            // Fallback si la empresa no posee ninguna sucursal registrada en la BD
             $this->instanceName = ! empty($empresaModel->whatsapp_instance)
                 ? $empresaModel->whatsapp_instance
                 : 'empresa_'.$empresaModel->id;
@@ -191,6 +316,13 @@ class WhatsAppService
             $pais = $empresaModel->relationLoaded('pais') ? $empresaModel->pais : $empresaModel->pais()->first();
             $this->countryCode = $pais?->codigo_telefonico ?? '+58';
 
+            return;
+        }
+
+        // Fallback global a la sucursal 1 (SaaS) si existe
+        $defaultSucursal = \App\Models\Sucursal::with(['empresa.pais', 'paisTelefono'])->find(1);
+        if ($defaultSucursal) {
+            $this->resolveSucursal($defaultSucursal);
             return;
         }
 

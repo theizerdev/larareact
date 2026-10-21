@@ -705,9 +705,37 @@ class SubscriptionController extends Controller
         }
 
         try {
-            $whatsappService = new \App\Services\WhatsAppService(1);
+            $user = auth()->user();
+            $sucursal = null;
+            if ($user && $user->sucursal_id) {
+                $sucursal = \App\Models\Sucursal::find($user->sucursal_id);
+            }
+            if (! $sucursal || empty($sucursal->whatsapp_instance)) {
+                $sucursal = \App\Models\Sucursal::where('empresa_id', 1)
+                    ->where('whatsapp_active', true)
+                    ->where('whatsapp_status', 'connected')
+                    ->whereNotNull('whatsapp_instance')
+                    ->first()
+                    ?? \App\Models\Sucursal::where('empresa_id', 1)->first();
+            }
+
+            $whatsappService = $sucursal
+                ? \App\Services\WhatsAppService::forSucursal($sucursal)
+                : new \App\Services\WhatsAppService(1);
+
             $whatsappService->setTimeout(10);
-            $whatsappService->sendMessage($cleanPhone, $mensaje, true);
+            $response = $whatsappService->sendMessage($cleanPhone, $mensaje, true);
+
+            if (is_array($response) && (isset($response['error']) || (isset($response['status']) && $response['status'] >= 400))) {
+                $errorMsg = is_string($response['error'] ?? null)
+                    ? $response['error']
+                    : ($response['message'] ?? 'No se pudo enviar el mensaje a través de WhatsApp.');
+
+                return back()->with('notification', [
+                    'type' => 'error',
+                    'message' => "Error al enviar WhatsApp ({$whatsappService->getInstanceName()}): {$errorMsg}",
+                ]);
+            }
 
             $sub->update([
                 'last_reminder_sent_at' => now(),
