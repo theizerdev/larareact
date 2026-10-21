@@ -262,5 +262,80 @@ class ComisionController extends Controller
             'data' => $result,
         ]);
     }
+
+    /**
+     * Sincronizar comisiones de ventas con porcentaje global o por empleado.
+     */
+    public function syncVentas(Request $request)
+    {
+        $user = auth()->user();
+        $isSuperAdmin = $user && ($user->hasRole('Super Administrador') || $user->hasRole('super-admin'));
+
+        $empresaId = null;
+        if (! $isSuperAdmin) {
+            $empresaId = $user?->empresa_id;
+        } elseif ($request->filled('empresa_id') && $request->input('empresa_id') !== 'all') {
+            $empresaId = (int) $request->input('empresa_id');
+        }
+
+        $customPct = $request->filled('porcentaje') ? (float) $request->input('porcentaje') : null;
+
+        $result = $this->commissionService->syncSalesCommissions($empresaId, $customPct);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __("Comisiones de ventas sincronizadas: :calculated comisiones calculadas de :total ventas.", [
+                'total' => $result['total'],
+                'calculated' => $result['calculated'],
+            ]),
+        ]);
+    }
+
+    /**
+     * Actualizar el porcentaje de comisión de ventas y recalcular en tiempo real todas las ventas filtradas.
+     */
+    public function updateSalesPercentage(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && ($user->hasRole('Administrador') || $user->hasRole('Super Administrador') || $user->hasRole('super-admin') || $user->hasRole('Admin'));
+
+        if (!$isAdmin && !$user?->can('comisiones.manage') && !$user?->can('comisiones.pay')) {
+            abort(403, 'No tienes permisos para modificar el porcentaje de comisiones.');
+        }
+
+        $validated = $request->validate([
+            'porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
+            'empleado_id' => ['nullable'],
+            'sucursal_id' => ['nullable'],
+            'from' => ['nullable'],
+            'to' => ['nullable'],
+        ]);
+
+        $empresaId = $user?->empresa_id;
+        $sucursalId = $validated['sucursal_id'] ?? $request->input('sucursal_id', $user?->sucursal_id);
+
+        $filters = [
+            'empleado_id' => $validated['empleado_id'] ?? null,
+            'from' => $validated['from'] ?? null,
+            'to' => $validated['to'] ?? null,
+        ];
+
+        $result = $this->commissionService->updateSalesCommissionPercentage(
+            (float) $validated['porcentaje'],
+            $filters,
+            $empresaId,
+            (!empty($sucursalId) && $sucursalId !== 'all') ? (int) $sucursalId : null
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => __("Porcentaje de comisión del :pct% aplicado correctamente a :count ventas.", [
+                'pct' => number_format((float) $validated['porcentaje'], 2),
+                'count' => $result['updated'],
+            ]),
+            'data' => $result,
+        ]);
+    }
 }
+
 

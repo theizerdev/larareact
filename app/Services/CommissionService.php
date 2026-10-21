@@ -18,9 +18,9 @@ class CommissionService
     /**
      * Calcular comisión correspondiente para una venta según la configuración del empleado.
      */
-    public function calculateCommission(float $subtotal, float $total, Empleado $empleado): array
+    public function calculateCommission(float $subtotal, float $total, ?Empleado $empleado = null, ?float $forcePct = null): array
     {
-        $porcentaje = (float) $empleado->porcentaje_comision;
+        $porcentaje = $forcePct !== null ? (float) $forcePct : (float) ($empleado?->porcentaje_comision ?? 0);
         if ($porcentaje <= 0) {
             return [
                 'porcentaje' => 0.0,
@@ -30,7 +30,7 @@ class CommissionService
         }
 
         // Determinar base imponible para la comisión (Subtotal neto sin IVA o Total)
-        $base = ($empleado->comision_aplica_a === 'total') ? $total : $subtotal;
+        $base = ($empleado?->comision_aplica_a === 'total') ? $total : ($subtotal > 0 ? $subtotal : $total);
         $monto = round(($base * ($porcentaje / 100)), 2);
 
         return [
@@ -236,6 +236,23 @@ class CommissionService
         $comisionesVentasPendientes = (float) ((clone $salesStatsClone)->where('comision_estado', 'pendiente')->sum('comision_monto') ?? 0);
         $comisionesVentasPagadas = (float) ((clone $salesStatsClone)->where('comision_estado', 'pagada')->sum('comision_monto') ?? 0);
         $cantidadVentas = (clone $salesStatsClone)->count();
+        $cantidadVentasPendientes = (clone $salesStatsClone)->where('comision_estado', 'pendiente')->count();
+        $cantidadVentasPagadas = (clone $salesStatsClone)->where('comision_estado', 'pagada')->count();
+
+        $pctEfectivoVentas = $totalVentasMonto > 0 ? round(($totalComisionesVentas / $totalVentasMonto) * 100, 2) : 0.0;
+
+        $defaultPctVentasInput = 5.0;
+        if (!empty($filters['empleado_id']) && $filters['empleado_id'] !== 'all') {
+            $targetEmpVendedor = Empleado::find($filters['empleado_id']);
+            if ($targetEmpVendedor && (float) $targetEmpVendedor->porcentaje_comision > 0) {
+                $defaultPctVentasInput = (float) $targetEmpVendedor->porcentaje_comision;
+            }
+        } else {
+            $avgPctVentas = (float) ((clone $salesStatsClone)->where('comision_porcentaje', '>', 0)->avg('comision_porcentaje') ?: 0);
+            if ($avgPctVentas > 0) {
+                $defaultPctVentasInput = round($avgPctVentas, 2);
+            }
+        }
 
         // Ventas detalladas paginadas
         $ventas = $salesQuery->with(['empleado', 'sucursal', 'comisionPago'])
@@ -497,6 +514,15 @@ class CommissionService
                     'pct_efectivo' => $pctEfectivoComision,
                     'pct_comision_input' => $defaultPctInput,
                     'estados' => $estadosDetallados,
+                ],
+                'ventas_semaforo' => [
+                    'total_ventas' => $cantidadVentas,
+                    'ventas_pendientes' => $cantidadVentasPendientes,
+                    'ventas_pagadas' => $cantidadVentasPagadas,
+                    'total_generado' => round($totalVentasMonto, 2),
+                    'total_comisiones' => round($totalComisionesVentas, 2),
+                    'pct_efectivo' => $pctEfectivoVentas,
+                    'pct_comision_input' => $defaultPctVentasInput,
                 ],
             ],
             'empleados_resumen' => $empleados,
@@ -897,4 +923,117 @@ class CommissionService
             ]),
         ];
     }
+
+    /**
+     * Recalcular y guardar el porcentaje de comisión de ventas para las ventas filtradas.
+     */
+    public function updateSalesCommissionPercentage(
+        float $porcentaje,
+        array $filters,
+        int $empresaId,
+        ?int $sucursalId = null
+    ): array {
+        $query = Sale::withoutGlobalScope('multitenancy')
+            ->where('empresa_id', $empresaId)
+            ->where('estado', '!=', 'cancelada');
+
+        if (!empty($sucursalId) && $sucursalId !== 'all') {
+            $query->where('sucursal_id', (int) $sucursalId);
+        }
+
+        if (!empty($filters['empleado_id']) && $filters['empleado_id'] !== 'all') {
+            $targetEmp = Empleado::find($filters['empleado_id']);
+            $query->where('empleado_id', (int) $filters['empleado_id']);
+
+            // Actualizar también la tasa por defecto en el perfil del empleado vendedor
+            if ($targetEmp && $porcentaje >= 0) {
+                $targetEmp->porcentaje_comision = $porcentaje;
+                $targetEmp->save();
+            }
+        }
+
+        if (!empty($filters['from'])) {
+            $query->whereDate('created_at', '>=', $filters['from']);
+        }
+        if (!empty($filters['to'])) {
+            $query->whereDate('created_at', '<=', $filters['to']);
+        }
+
+        $sales = $query->get();
+        $updated = 0;
+
+        foreach ($sales as $sale) {
+            // No alterar comisiones ya liquidadas en pagos cerrados
+            if ($sale->comision_estado === 'pagada') {
+                continue;
+            }
+
+            $base = (float) $sale->total;
+            $monto = round($base * ($porcentaje / 100), 2);
+
+            $sale->comision_porcentaje = $porcentaje;
+            $sale->comision_monto = $monto;
+            $sale->comision_estado = $monto > 0 ? 'pendiente' : 'no_aplica';
+            $sale->save();
+            $updated++;
+        }
+
+        // Recalcular métricas para respuesta inmediata
+        $statsQuery = clone $query;
+        $totalGenerado = (float) ((clone $statsQuery)->sum('total') ?? 0);
+        $totalComisiones = (float) ((clone $statsQuery)->sum('comision_monto') ?? 0);
+        $pctEfectivo = $totalGenerado > 0 ? round(($totalComisiones / $totalGenerado) * 100, 2) : 0.0;
+
+        return [
+            'updated' => $updated,
+            'total_ventas' => $sales->count(),
+            'porcentaje_aplicado' => $porcentaje,
+            'total_generado' => round($totalGenerado, 2),
+            'total_comisiones' => round($totalComisiones, 2),
+            'pct_efectivo' => $pctEfectivo,
+        ];
+    }
+
+    /**
+     * Sincronizar comisiones de ventas con el porcentaje configurado o por empleado.
+     */
+    public function syncSalesCommissions(?int $empresaId = null, ?float $customPct = null): array
+    {
+        $query = Sale::withoutGlobalScope('multitenancy')
+            ->whereNotNull('empleado_id')
+            ->where('estado', '!=', 'cancelada');
+
+        if ($empresaId) {
+            $query->where('empresa_id', $empresaId);
+        }
+
+        $sales = $query->get();
+        $calculated = 0;
+
+        $empleados = Empleado::withoutGlobalScope('multitenancy')->get()->keyBy('id');
+
+        foreach ($sales as $sale) {
+            if ($sale->comision_estado === 'pagada') {
+                continue;
+            }
+
+            $empleado = $empleados->get($sale->empleado_id);
+            $targetPct = $customPct !== null ? $customPct : ($sale->comision_porcentaje > 0 ? (float) $sale->comision_porcentaje : ($empleado?->porcentaje_comision ?? 0));
+
+            $base = (float) $sale->total;
+            $monto = round($base * ($targetPct / 100), 2);
+
+            $sale->comision_porcentaje = $targetPct;
+            $sale->comision_monto = $monto;
+            $sale->comision_estado = $monto > 0 ? 'pendiente' : 'no_aplica';
+            $sale->save();
+            $calculated++;
+        }
+
+        return [
+            'total' => $sales->count(),
+            'calculated' => $calculated,
+        ];
+    }
 }
+

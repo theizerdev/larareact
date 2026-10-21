@@ -210,6 +210,15 @@ interface Props {
         comisiones_ventas?: number;
         comisiones_reparaciones?: number;
         cantidad_reparaciones?: number;
+        ventas_semaforo?: {
+            total_ventas: number;
+            ventas_pendientes: number;
+            ventas_pagadas: number;
+            total_generado: number;
+            total_comisiones: number;
+            pct_efectivo: number;
+            pct_comision_input?: number;
+        };
         taller_semaforo?: {
             reparados: number;
             no_reparados: number;
@@ -218,6 +227,7 @@ interface Props {
             total_generado: number;
             total_comisiones: number;
             pct_efectivo: number;
+            pct_comision_input?: number;
             estados?: Record<string, number>;
         };
     };
@@ -460,6 +470,117 @@ export default function ComisionesIndex({
         });
     };
 
+    // ── GESTIÓN DE PORCENTAJE Y COMISIONES DE VENTAS ──────────────────────────
+    const initialSalesComisionPct = (stats.ventas_semaforo?.pct_comision_input !== undefined && stats.ventas_semaforo?.pct_comision_input !== null)
+        ? String(stats.ventas_semaforo.pct_comision_input)
+        : (stats.ventas_semaforo?.pct_efectivo ? String(stats.ventas_semaforo.pct_efectivo) : '5');
+
+    const [customComisionPctVentas, setCustomComisionPctVentas] = useState<string>(initialSalesComisionPct);
+    const [isSavingPctVentas, setIsSavingPctVentas] = useState(false);
+    const [justSavedPctVentas, setJustSavedPctVentas] = useState(false);
+    const [overrideTotalComisionesVentas, setOverrideTotalComisionesVentas] = useState<number | null>(null);
+    const autoSaveTimerVentasRef = React.useRef<any>(null);
+    const [isSyncingVentas, setIsSyncingVentas] = useState(false);
+    const [isPrintSalesSheetOpen, setIsPrintSalesSheetOpen] = useState(false);
+
+    useEffect(() => {
+        if (stats.ventas_semaforo?.pct_comision_input !== undefined && stats.ventas_semaforo?.pct_comision_input !== null) {
+            setCustomComisionPctVentas(String(stats.ventas_semaforo.pct_comision_input));
+        } else if (stats.ventas_semaforo?.pct_efectivo) {
+            setCustomComisionPctVentas(String(stats.ventas_semaforo.pct_efectivo));
+        }
+        setOverrideTotalComisionesVentas(null);
+    }, [stats.ventas_semaforo?.pct_comision_input, stats.ventas_semaforo?.pct_efectivo, selectedEmpleadoId]);
+
+    const saveSalesPercentageToBackend = async (pctValue: string) => {
+        const parsed = parseFloat(pctValue);
+        if (isNaN(parsed) || parsed < 0 || parsed > 100) return;
+
+        setIsSavingPctVentas(true);
+        try {
+            const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const res = await fetch('/admin/comisiones/actualizar-pct-ventas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    porcentaje: parsed,
+                    empleado_id: selectedEmpleadoId !== 'all' ? selectedEmpleadoId : undefined,
+                    sucursal_id: selectedSucursal !== 'all' ? selectedSucursal : undefined,
+                    from: dateFrom || undefined,
+                    to: dateTo || undefined,
+                }),
+            });
+
+            if (res.ok) {
+                const json = await res.json();
+                if (json.data) {
+                    setOverrideTotalComisionesVentas(json.data.total_comisiones);
+                }
+                setJustSavedPctVentas(true);
+                setTimeout(() => setJustSavedPctVentas(false), 2500);
+            }
+        } catch (err) {
+            console.error('Error auto-saving sales commission percentage', err);
+        } finally {
+            setIsSavingPctVentas(false);
+        }
+    };
+
+    const handlePctVentasInputChange = (val: string) => {
+        setCustomComisionPctVentas(val);
+        setOverrideTotalComisionesVentas(null);
+
+        if (autoSaveTimerVentasRef.current) {
+            clearTimeout(autoSaveTimerVentasRef.current);
+        }
+        autoSaveTimerVentasRef.current = setTimeout(() => {
+            saveSalesPercentageToBackend(val);
+        }, 800);
+    };
+
+    const handlePctVentasInputBlur = () => {
+        if (autoSaveTimerVentasRef.current) {
+            clearTimeout(autoSaveTimerVentasRef.current);
+        }
+        saveSalesPercentageToBackend(customComisionPctVentas);
+    };
+
+    const getSaleCommission = (v: any) => {
+        const pct = parseFloat(customComisionPctVentas);
+        const effectivePct = !isNaN(pct) && pct >= 0 ? pct : Number(v.comision_porcentaje || 0);
+        const total = Number(v.total || 0);
+        return Math.round(total * (effectivePct / 100) * 100) / 100;
+    };
+
+    const dynamicTotalComisionesVentas = React.useMemo(() => {
+        if (overrideTotalComisionesVentas !== null) {
+            return overrideTotalComisionesVentas;
+        }
+        const pct = parseFloat(customComisionPctVentas);
+        if (isNaN(pct) || pct < 0) {
+            return Number(stats.ventas_semaforo?.total_comisiones ?? stats.comisiones_ventas ?? 0);
+        }
+
+        const baseTotal = Number(stats.ventas_semaforo?.total_generado ?? stats.total_ventas_monto ?? 0);
+        return Math.round(baseTotal * (pct / 100) * 100) / 100;
+    }, [overrideTotalComisionesVentas, stats, customComisionPctVentas]);
+
+    const handleSyncVentasCommissions = () => {
+        setIsSyncingVentas(true);
+        router.post('/admin/comisiones/sync-ventas', {
+            porcentaje: parseFloat(customComisionPctVentas) || undefined,
+        }, {
+            preserveScroll: true,
+            onFinish: () => setIsSyncingVentas(false),
+        });
+    };
+
+
     // Presets rápidos de corte
     const handleQuickFilterSemana = () => {
         const now = new Date();
@@ -513,25 +634,51 @@ export default function ComisionesIndex({
         }
     }, [pageProps?.notification, pageProps?.flash?.notification]);
 
-    const handleApplyFilters = (customParams = {}) => {
-        router.get('/admin/comisiones', {
-            empleado_id: selectedEmpleadoId !== 'all' ? selectedEmpleadoId : undefined,
-            estado: selectedEstado !== 'all' ? selectedEstado : undefined,
-            estado_orden: selectedEstadoOrden !== 'all' ? selectedEstadoOrden : undefined,
-            sucursal_id: selectedSucursal !== 'all' ? selectedSucursal : undefined,
-            from: dateFrom || undefined,
-            to: dateTo || undefined,
-            search: searchTerm || undefined,
+    const searchDebounceRef = React.useRef<any>(null);
+
+    const applyFiltersDirectly = (customParams: Record<string, any> = {}) => {
+        const params: Record<string, any> = {
+            empleado_id: customParams.empleado_id !== undefined ? customParams.empleado_id : selectedEmpleadoId,
+            estado: customParams.estado !== undefined ? customParams.estado : selectedEstado,
+            estado_orden: customParams.estado_orden !== undefined ? customParams.estado_orden : selectedEstadoOrden,
+            sucursal_id: customParams.sucursal_id !== undefined ? customParams.sucursal_id : selectedSucursal,
+            from: customParams.from !== undefined ? customParams.from : dateFrom,
+            to: customParams.to !== undefined ? customParams.to : dateTo,
+            search: customParams.search !== undefined ? customParams.search : searchTerm,
             ...customParams,
-        }, {
+        };
+
+        const cleanParams: Record<string, any> = {};
+        Object.entries(params).forEach(([k, v]) => {
+            if (v && v !== 'all') {
+                cleanParams[k] = v;
+            }
+        });
+
+        router.get('/admin/comisiones', cleanParams, {
             preserveState: true,
             preserveScroll: true,
+            replace: true,
         });
+    };
+
+    const handleApplyFilters = (customParams = {}) => {
+        applyFiltersDirectly(customParams);
+    };
+
+    const handleSearchChange = (val: string) => {
+        setSearchTerm(val);
+        if (searchDebounceRef.current) {
+            clearTimeout(searchDebounceRef.current);
+        }
+        searchDebounceRef.current = setTimeout(() => {
+            applyFiltersDirectly({ search: val || undefined });
+        }, 400);
     };
 
     const handleFilterByEstadoOrden = (key: string) => {
         setSelectedEstadoOrden(key);
-        handleApplyFilters({ estado_orden: key !== 'all' ? key : undefined });
+        applyFiltersDirectly({ estado_orden: key !== 'all' ? key : undefined });
     };
 
     const handleResetFilters = () => {
@@ -542,7 +689,7 @@ export default function ComisionesIndex({
         setDateFrom('');
         setDateTo('');
         setSearchTerm('');
-        router.get('/admin/comisiones', {}, { preserveState: true, preserveScroll: true });
+        router.get('/admin/comisiones', {}, { preserveState: true, preserveScroll: true, replace: true });
     };
 
     // Abrir modal de liquidación para un empleado
@@ -742,7 +889,10 @@ export default function ComisionesIndex({
                             <Label className="text-xs text-muted-foreground mb-1 block">{__('Empleado')}</Label>
                             <Select
                                 value={selectedEmpleadoId}
-                                onValueChange={(val) => setSelectedEmpleadoId(val)}
+                                onValueChange={(val) => {
+                                    setSelectedEmpleadoId(val);
+                                    applyFiltersDirectly({ empleado_id: val });
+                                }}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder={__('Todos los empleados')} />
@@ -763,7 +913,10 @@ export default function ComisionesIndex({
                             <Label className="text-xs text-muted-foreground mb-1 block">{__('Estado')}</Label>
                             <Select
                                 value={selectedEstado}
-                                onValueChange={(val) => setSelectedEstado(val)}
+                                onValueChange={(val) => {
+                                    setSelectedEstado(val);
+                                    applyFiltersDirectly({ estado: val });
+                                }}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder={__('Todos')} />
@@ -781,7 +934,10 @@ export default function ComisionesIndex({
                             <Label className="text-xs text-muted-foreground mb-1 block">{__('Sucursal')}</Label>
                             <Select
                                 value={selectedSucursal}
-                                onValueChange={(val) => setSelectedSucursal(val)}
+                                onValueChange={(val) => {
+                                    setSelectedSucursal(val);
+                                    applyFiltersDirectly({ sucursal_id: val });
+                                }}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder={__('Todas')} />
@@ -803,7 +959,11 @@ export default function ComisionesIndex({
                             <Input
                                 type="date"
                                 value={dateFrom}
-                                onChange={(e) => setDateFrom(e.target.value)}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setDateFrom(val);
+                                    applyFiltersDirectly({ from: val });
+                                }}
                             />
                         </div>
 
@@ -813,7 +973,11 @@ export default function ComisionesIndex({
                             <Input
                                 type="date"
                                 value={dateTo}
-                                onChange={(e) => setDateTo(e.target.value)}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setDateTo(val);
+                                    applyFiltersDirectly({ to: val });
+                                }}
                             />
                         </div>
                     </div>
@@ -870,22 +1034,19 @@ export default function ComisionesIndex({
                         </div>
 
                         <div className="flex items-center gap-2 self-end">
-                            <Button
-                                size="sm"
-                                onClick={() => handleApplyFilters()}
-                                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-                            >
-                                <Filter className="h-4 w-4" />
-                                {__('Aplicar Filtros')}
-                            </Button>
+                            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 rounded-md">
+                                <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                {__('Filtros automáticos en tiempo real')}
+                            </span>
                             <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={handleResetFilters}
                                 title={__('Limpiar Filtros')}
-                                className="px-3"
+                                className="gap-1.5 px-3 text-xs"
                             >
-                                <RefreshCw className="h-4 w-4" />
+                                <RefreshCw className="h-3.5 w-3.5" />
+                                <span>{__('Limpiar')}</span>
                             </Button>
                         </div>
                     </div>
@@ -919,8 +1080,7 @@ export default function ComisionesIndex({
                                 <Input
                                     placeholder={activeTab === 'ventas' ? __('Buscar ticket o cliente...') : __('Buscar folio o equipo...')}
                                     value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters({ search: searchTerm })}
+                                    onChange={(e) => handleSearchChange(e.target.value)}
                                     className="pl-8 h-9 text-xs"
                                 />
                             </div>
@@ -1042,91 +1202,279 @@ export default function ComisionesIndex({
                         </div>
                     </TabsContent>
 
-                    {/* ── TAB 2: DETALLE DE VENTAS CON COMISIÓN ────────────────────────── */}
+                    {/* ── TAB 2: DETALLE DE VENTAS CON COMISIÓN (HOJA DE CORTE COMERCIAL) ── */}
                     <TabsContent value="ventas" className="space-y-4 m-0">
+                        {/* ENCABEZADO ESTILO HOJA DE CORTE DE VENTAS */}
+                        <div
+                            className="rounded-2xl p-5 text-white shadow-xl border border-emerald-500/30"
+                            style={{ background: 'linear-gradient(135deg, #0e1e24 0%, #102a32 50%, #0c1b22 100%)' }}
+                        >
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
+                                                <ShoppingCart className="h-3.5 w-3.5 text-emerald-400" />
+                                                {__('Hoja de Corte de Ventas y Rendimiento Comercial')}
+                                            </span>
+                                            {isSavingPctVentas && (
+                                                <span className="text-[11px] text-emerald-300 flex items-center gap-1 font-mono animate-pulse">
+                                                    <RefreshCw className="h-3 w-3 animate-spin" /> {__('Guardando % en BD...')}
+                                                </span>
+                                            )}
+                                            {justSavedPctVentas && (
+                                                <span className="text-[11px] text-emerald-400 flex items-center gap-1 font-bold">
+                                                    <Check className="h-3.5 w-3.5" /> {__('Guardado')}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-wrap items-center gap-6 mt-1">
+                                            {/* TOTAL GENERADO AL NEGOCIO */}
+                                            <div>
+                                                <div className="text-[11px] uppercase font-bold text-slate-300 tracking-wider">
+                                                    {__('TOTAL GENERADO AL NEGOCIO')}
+                                                </div>
+                                                <div className="text-3xl font-mono font-black text-white tracking-tight">
+                                                    {currencySymbol}{Number(stats.ventas_semaforo?.total_generado ?? stats.total_ventas_monto ?? 0).toFixed(2)}
+                                                </div>
+                                            </div>
+
+                                            <div className="hidden sm:block h-10 w-px bg-slate-700/60" />
+
+                                            {/* TOTAL COMISIONES VENDEDOR */}
+                                            <div>
+                                                <div className="text-[11px] uppercase font-bold text-emerald-400 tracking-wider">
+                                                    {__('TOTAL COMISIONES VENDEDOR')}
+                                                </div>
+                                                <div className="text-3xl font-mono font-black text-emerald-400 tracking-tight">
+                                                    {currencySymbol}{Number(dynamicTotalComisionesVentas).toFixed(2)}
+                                                </div>
+                                            </div>
+
+                                            <div className="hidden sm:block h-10 w-px bg-slate-700/60" />
+
+                                            {/* % EFECTIVO COMISIÓN CON INPUT INTERACTIVO */}
+                                            <div>
+                                                <div className="text-[11px] uppercase font-bold text-slate-300 tracking-wider flex items-center gap-1.5">
+                                                    <span>{__('% EFECTIVO COMISIÓN')}</span>
+                                                    {isSavingPctVentas && <RefreshCw className="h-3 w-3 animate-spin text-emerald-300" />}
+                                                    {justSavedPctVentas && <Check className="h-3 w-3 text-emerald-400" />}
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            id="sales-commission-percentage-input"
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            step="0.5"
+                                                            value={customComisionPctVentas}
+                                                            onChange={(e) => handlePctVentasInputChange(e.target.value)}
+                                                            onBlur={handlePctVentasInputBlur}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.currentTarget.blur();
+                                                                }
+                                                            }}
+                                                            className="w-24 bg-slate-800/90 hover:bg-slate-800 text-white font-mono font-black text-2xl lg:text-3xl px-2.5 py-1 rounded-xl border border-emerald-400/50 hover:border-emerald-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/50 outline-none text-center shadow-inner transition-all"
+                                                            title={__('Ingresa el porcentaje de comisión para calcular automáticamente en todas las ventas')}
+                                                        />
+                                                        <span className="ml-1.5 text-2xl lg:text-3xl font-mono font-black text-emerald-300">%</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400 leading-tight">
+                                                        <div>({__('de lo facturado')})</div>
+                                                        <div className="text-[9px] text-emerald-300/80">{__('Auto-cálculo en vivo')}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Casillas con las cantidades de ventas realizadas */}
+                                <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                                    <div className="grid grid-cols-3 sm:flex items-center gap-2 w-full sm:w-auto">
+                                        {/* VERDE: Total Ventas Realizadas */}
+                                        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-emerald-600/90 text-white min-w-[95px] shadow-lg border border-emerald-400/40">
+                                            <div className="text-2xl font-mono font-black leading-none">
+                                                {stats.ventas_semaforo?.total_ventas ?? stats.cantidad_ventas ?? 0}
+                                            </div>
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-100 mt-1 text-center">
+                                                {__('Realizadas')}
+                                            </div>
+                                        </div>
+
+                                        {/* TEAL: Ventas Pagadas */}
+                                        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-teal-600/90 text-white min-w-[95px] shadow-lg border border-teal-400/40">
+                                            <div className="text-2xl font-mono font-black leading-none">
+                                                {stats.ventas_semaforo?.ventas_pagadas ?? 0}
+                                            </div>
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-teal-100 mt-1 text-center">
+                                                {__('Pagadas')}
+                                            </div>
+                                        </div>
+
+                                        {/* ÁMBAR: Ventas Pendientes */}
+                                        <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-amber-600/90 text-white min-w-[95px] shadow-lg border border-amber-400/40">
+                                            <div className="text-2xl font-mono font-black leading-none">
+                                                {stats.ventas_semaforo?.ventas_pendientes ?? 0}
+                                            </div>
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-amber-100 mt-1 text-center">
+                                                {__('Pendientes')}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:w-auto">
+                                        {/* Botón Sincronizar Comisiones */}
+                                        <Button
+                                            onClick={handleSyncVentasCommissions}
+                                            disabled={isSyncingVentas}
+                                            variant="outline"
+                                            className="w-full sm:w-auto gap-2 bg-emerald-600/40 hover:bg-emerald-600/60 text-white font-bold shadow-md h-12 px-4 border border-emerald-400/30"
+                                            title={__('Recalcula comisiones de ventas con el porcentaje configurado')}
+                                        >
+                                            <RefreshCw className={`h-4 w-4 ${isSyncingVentas ? 'animate-spin' : ''}`} />
+                                            <span>{isSyncingVentas ? __('Sincronizando...') : __('Sincronizar Comisiones')}</span>
+                                        </Button>
+
+                                        {/* Botón Imprimir Hoja de Corte Ventas */}
+                                        <Button
+                                            onClick={() => setIsPrintSalesSheetOpen(true)}
+                                            className="w-full sm:w-auto gap-2 bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-md h-12 px-4"
+                                        >
+                                            <Printer className="h-4 w-4 text-emerald-600" />
+                                            <span>{__('Imprimir Hoja de Corte')}</span>
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* TABLA DE VENTAS CON COMISIÓN */}
                         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-muted/50 text-xs uppercase font-semibold text-muted-foreground border-b">
                                         <tr>
-                                            <th className="px-5 py-3.5">{__('Ticket')}</th>
                                             <th className="px-5 py-3.5">{__('Fecha')}</th>
-                                            <th className="px-5 py-3.5">{__('Vendedor')}</th>
+                                            <th className="px-5 py-3.5 font-mono">{__('Ticket')}</th>
                                             <th className="px-5 py-3.5">{__('Cliente')}</th>
+                                            <th className="px-5 py-3.5">{__('Vendedor')}</th>
                                             <th className="px-5 py-3.5 text-right">{__('Total Venta')}</th>
-                                            <th className="px-5 py-3.5 text-center">{__('% Com.')}</th>
-                                            <th className="px-5 py-3.5 text-right">{__('Monto Comisión')}</th>
+                                            <th className="px-5 py-3.5 text-right">{__('Comisión')}</th>
                                             <th className="px-5 py-3.5 text-center">{__('Estado')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {ventas.data.length === 0 ? (
                                             <tr>
-                                                <td colSpan={8} className="text-center py-10 text-muted-foreground">
+                                                <td colSpan={7} className="text-center py-10 text-muted-foreground">
                                                     {__('No se encontraron ventas para los filtros aplicados.')}
                                                 </td>
                                             </tr>
                                         ) : (
-                                            ventas.data.map((v) => (
-                                                <tr key={v.id} className="hover:bg-muted/30 transition-colors">
-                                                    <td className="px-5 py-3.5 font-mono font-bold text-primary">
-                                                        {v.codigo_ticket}
-                                                    </td>
+                                            ventas.data.map((v) => {
+                                                const itemComision = getSaleCommission(v);
+                                                const effectivePct = parseFloat(customComisionPctVentas) > 0
+                                                    ? parseFloat(customComisionPctVentas)
+                                                    : Number(v.comision_porcentaje || 0);
 
-                                                    <td className="px-5 py-3.5 text-xs text-muted-foreground">
-                                                        {new Date(v.created_at).toLocaleDateString()} {new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </td>
+                                                return (
+                                                    <tr key={v.id} className="hover:bg-muted/30 transition-colors">
+                                                        <td className="px-5 py-3.5 text-xs text-muted-foreground whitespace-nowrap">
+                                                            {new Date(v.created_at).toLocaleDateString()} {new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </td>
 
-                                                    <td className="px-5 py-3.5 font-medium text-foreground">
-                                                        {v.empleado?.nombre_completo || __('Sin Vendedor')}
-                                                    </td>
+                                                        <td className="px-5 py-3.5 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                                            {v.codigo_ticket}
+                                                        </td>
 
-                                                    <td className="px-5 py-3.5 text-muted-foreground">
-                                                        {v.cliente_nombre || __('Cliente General')}
-                                                    </td>
+                                                        <td className="px-5 py-3.5">
+                                                            <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200">
+                                                                {v.cliente_nombre || __('Cliente General')}
+                                                            </span>
+                                                        </td>
 
-                                                    <td className="px-5 py-3.5 text-right font-semibold text-foreground">
-                                                        {currencySymbol}{Number(v.total).toFixed(2)}
-                                                    </td>
+                                                        <td className="px-5 py-3.5">
+                                                            {v.empleado ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold flex items-center justify-center text-[10px] shrink-0 border border-emerald-200">
+                                                                        {(v.empleado.nombre_completo || 'V')[0].toUpperCase()}
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <div className="font-semibold text-xs text-foreground truncate max-w-[140px]" title={v.empleado.nombre_completo}>
+                                                                            {v.empleado.nombre_completo}
+                                                                        </div>
+                                                                        <div className="text-[10px] text-muted-foreground truncate">
+                                                                            {v.empleado.cargo || __('Vendedor')}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs text-muted-foreground italic">{__('Sin Vendedor')}</span>
+                                                            )}
+                                                        </td>
 
-                                                    <td className="px-5 py-3.5 text-center">
-                                                        <Badge variant="outline" className="text-xs font-bold">
-                                                            {Number(v.comision_porcentaje).toFixed(2)}%
-                                                        </Badge>
-                                                    </td>
+                                                        <td className="px-5 py-3.5 text-right font-semibold text-foreground whitespace-nowrap font-mono">
+                                                            {currencySymbol}{Number(v.total).toFixed(2)}
+                                                        </td>
 
-                                                    <td className="px-5 py-3.5 text-right font-bold text-foreground">
-                                                        {currencySymbol}{Number(v.comision_monto).toFixed(2)}
-                                                    </td>
-
-                                                    <td className="px-5 py-3.5 text-center">
-                                                        {v.comision_estado === 'pagada' ? (
-                                                            <div className="inline-flex items-center gap-1">
-                                                                <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
-                                                                    <Check className="h-3 w-3 mr-1" />
-                                                                    {__('Pagada')}
-                                                                </Badge>
-                                                                {v.comision_pago && (
-                                                                    <button
-                                                                        onClick={() => viewTicket(v.comision_pago!.id)}
-                                                                        title={__('Ver Ticket de Liquidación: ') + v.comision_pago.codigo_recibo}
-                                                                        className="text-xs text-primary underline ml-1 cursor-pointer"
-                                                                    >
-                                                                        {v.comision_pago.codigo_recibo}
-                                                                    </button>
-                                                                )}
+                                                        <td className="px-5 py-3.5 text-right font-black whitespace-nowrap">
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">
+                                                                    +{currencySymbol}{itemComision.toFixed(2)}
+                                                                </span>
+                                                                <span className="text-[10px] text-muted-foreground font-normal">
+                                                                    ({effectivePct.toFixed(1)}%)
+                                                                </span>
                                                             </div>
-                                                        ) : (
-                                                            <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
-                                                                <Clock className="h-3 w-3 mr-1" />
-                                                                {__('Pendiente')}
-                                                            </Badge>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                        </td>
+
+                                                        <td className="px-5 py-3.5 text-center whitespace-nowrap">
+                                                            {v.comision_estado === 'pagada' ? (
+                                                                <div className="inline-flex items-center gap-1">
+                                                                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                                                                        <Check className="h-3 w-3 mr-1" />
+                                                                        {__('Pagada')}
+                                                                    </Badge>
+                                                                    {v.comision_pago && (
+                                                                        <button
+                                                                            onClick={() => viewTicket(v.comision_pago!.id)}
+                                                                            title={__('Ver Ticket de Liquidación: ') + v.comision_pago.codigo_recibo}
+                                                                            className="text-xs text-primary underline ml-1 cursor-pointer font-mono"
+                                                                        >
+                                                                            {v.comision_pago.codigo_recibo}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
+                                                                    <Clock className="h-3 w-3 mr-1" />
+                                                                    {__('Pendiente')}
+                                                                </Badge>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                         )}
                                     </tbody>
+                                    <tfoot className="bg-muted/40 font-bold border-t text-xs">
+                                        <tr>
+                                            <td colSpan={4} className="px-5 py-3 text-right uppercase text-muted-foreground">
+                                                {__('TOTALES CORTE VENTAS:')}
+                                            </td>
+                                            <td className="px-5 py-3 text-right font-mono text-foreground">
+                                                {currencySymbol}{Number(stats.ventas_semaforo?.total_generado ?? stats.total_ventas_monto ?? 0).toFixed(2)}
+                                            </td>
+                                            <td className="px-5 py-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                                                {currencySymbol}{Number(dynamicTotalComisionesVentas).toFixed(2)}
+                                            </td>
+                                            <td className="px-5 py-3" />
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
 
@@ -2502,6 +2850,399 @@ export default function ComisionesIndex({
                     </div>
                 </div>
             )}
+
+            {/* ── MODAL DE PREVISUALIZACIÓN DE HOJA DE CORTE DE VENTAS ────── */}
+            <Dialog open={isPrintSalesSheetOpen} onOpenChange={setIsPrintSalesSheetOpen}>
+                <DialogContent className="max-w-5xl max-h-[92vh] flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="p-4 border-b bg-muted/40 flex flex-row items-center justify-between space-y-0">
+                        <div>
+                            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+                                <ShoppingCart className="h-5 w-5 text-emerald-600" />
+                                <span>{__('Hoja de Corte de Ventas - Rendimiento y Liquidación')}</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                {__('Formato ejecutivo estilo hoja de cálculo para auditoría y firma de comisiones de ventas.')}
+                            </DialogDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                onClick={() => window.print()}
+                                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-9"
+                            >
+                                <Printer className="h-4 w-4" />
+                                <span>{__('Imprimir / Guardar PDF')}</span>
+                            </Button>
+                        </div>
+                    </DialogHeader>
+
+                    {/* CONTENEDOR PREVIEW EN PANTALLA */}
+                    <div className="flex-1 overflow-y-auto p-6 bg-slate-100 dark:bg-slate-950">
+                        <div className="max-w-4xl mx-auto bg-white text-slate-900 rounded-xl shadow-lg border p-6 font-sans">
+                            {/* ENCABEZADO EMPRESA */}
+                            <div className="flex items-start justify-between border-b pb-4 mb-4">
+                                <div>
+                                    <h2 className="text-xl font-black uppercase text-emerald-900 tracking-wide">
+                                        {empresa?.razon_social || 'FixSale POS - Área Comercial'}
+                                    </h2>
+                                    <div className="text-xs text-slate-500 font-medium space-y-0.5 mt-1">
+                                        {empresa?.documento && <div><b>ID / RFC:</b> {empresa.documento}</div>}
+                                        {empresa?.direccion && <div><b>Ubicación:</b> {empresa.direccion}</div>}
+                                        {empresa?.telefono && <div><b>Contacto:</b> {empresa.telefono}</div>}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="inline-block px-3 py-1 rounded bg-emerald-100 text-emerald-900 text-xs font-black uppercase tracking-wider mb-1">
+                                        {__('CORTE DE COMISIONES DE VENTAS')}
+                                    </span>
+                                    <div className="text-xs text-slate-600 font-medium">
+                                        <b>{__('Período:')}</b> {dateFrom || 'Inicio'} {__('al')} {dateTo || 'Hoy'}
+                                    </div>
+                                    <div className="text-xs text-slate-600 font-medium">
+                                        <b>{__('Vendedor:')}</b> {selectedEmpleado?.nombre_completo || __('Consolidado Comercial')}
+                                    </div>
+                                    <div className="text-[11px] text-slate-400 mt-1">
+                                        {__('Emitido:')} {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* RESUMEN FINANCIERO Y CASILLAS */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                <div className="bg-slate-900 text-white rounded-xl p-3 flex items-center justify-between shadow-sm">
+                                    <div>
+                                        <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                                            {__('Total Facturado Ventas')}
+                                        </div>
+                                        <div className="text-2xl font-mono font-black">
+                                            {currencySymbol}{Number(stats.ventas_semaforo?.total_generado ?? stats.total_ventas_monto ?? 0).toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div className="text-right border-l border-slate-700 pl-4">
+                                        <div className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
+                                            {__('Total Comisiones')}
+                                        </div>
+                                        <div className="text-2xl font-mono font-black text-emerald-400">
+                                            {currencySymbol}{Number(dynamicTotalComisionesVentas).toFixed(2)}
+                                        </div>
+                                        <div className="text-[10px] text-emerald-300 font-semibold mt-0.5">
+                                            {customComisionPctVentas ? `${Number(customComisionPctVentas).toFixed(2)}% ${__('Comisión')}` : `${Number(stats.ventas_semaforo?.pct_efectivo ?? 0).toFixed(2)}% ${__('Efectivo')}`}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Casillas de Cantidades */}
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-emerald-600 text-white text-center">
+                                        <div className="text-2xl font-black font-mono leading-none">
+                                            {stats.ventas_semaforo?.total_ventas ?? stats.cantidad_ventas ?? 0}
+                                        </div>
+                                        <div className="text-[10px] font-bold uppercase mt-1">
+                                            {__('Realizadas')}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-teal-600 text-white text-center">
+                                        <div className="text-2xl font-black font-mono leading-none">
+                                            {stats.ventas_semaforo?.ventas_pagadas ?? 0}
+                                        </div>
+                                        <div className="text-[10px] font-bold uppercase mt-1">
+                                            {__('Pagadas')}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-amber-500 text-white text-center">
+                                        <div className="text-2xl font-black font-mono leading-none">
+                                            {stats.ventas_semaforo?.ventas_pendientes ?? 0}
+                                        </div>
+                                        <div className="text-[10px] font-bold uppercase mt-1">
+                                            {__('Pendientes')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* TABLA ESTILO HOJA DE CÁLCULO */}
+                            <div className="border border-slate-300 rounded-lg overflow-hidden mb-6">
+                                <table className="w-full text-xs text-left border-collapse">
+                                    <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-300">
+                                        <tr>
+                                            <th className="p-2 border-r border-slate-200">{__('Fecha')}</th>
+                                            <th className="p-2 border-r border-slate-200 font-mono">{__('Ticket')}</th>
+                                            <th className="p-2 border-r border-slate-200">{__('Cliente')}</th>
+                                            <th className="p-2 border-r border-slate-200">{__('Vendedor')}</th>
+                                            <th className="p-2 border-r border-slate-200 text-right">{__('Total Venta')}</th>
+                                            <th className="p-2 text-right">{__('Comisión')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        {!ventas || ventas.data.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="text-center py-8 text-slate-400">
+                                                    {__('No hay ventas registradas en este período.')}
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            ventas.data.map((v, i) => {
+                                                const itemComision = getSaleCommission(v);
+
+                                                return (
+                                                    <tr key={`sales-preview-${v.id}`} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                                                        <td className="p-2 border-r border-slate-200 text-slate-600 whitespace-nowrap">
+                                                            {new Date(v.created_at).toLocaleDateString()} {new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200 font-mono font-bold text-emerald-700">
+                                                            {v.codigo_ticket}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200 font-medium">
+                                                            {v.cliente_nombre || __('Cliente General')}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200 text-slate-700 font-medium whitespace-nowrap">
+                                                            {v.empleado?.nombre_completo || __('Sin Vendedor')}
+                                                        </td>
+                                                        <td className="p-2 border-r border-slate-200 text-right font-mono font-medium">
+                                                            {currencySymbol}{Number(v.total).toFixed(2)}
+                                                        </td>
+                                                        <td className="p-2 text-right font-mono font-bold text-emerald-700">
+                                                            {currencySymbol}{itemComision.toFixed(2)}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                    <tfoot className="bg-slate-100 font-bold border-t border-slate-300">
+                                        <tr>
+                                            <td colSpan={4} className="p-2 text-right text-slate-700 uppercase">
+                                                {__('TOTALES CORTE VENTAS:')}
+                                            </td>
+                                            <td className="p-2 text-right font-mono text-slate-900 border-r border-slate-200">
+                                                {currencySymbol}{Number(stats.ventas_semaforo?.total_generado ?? stats.total_ventas_monto ?? 0).toFixed(2)}
+                                            </td>
+                                            <td className="p-2 text-right font-mono text-emerald-700">
+                                                {currencySymbol}{Number(dynamicTotalComisionesVentas).toFixed(2)}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            {/* FIRMAS DE CONFORMIDAD Y AUDITORÍA */}
+                            <div className="grid grid-cols-2 gap-12 pt-8 text-center text-xs">
+                                <div>
+                                    <div className="border-t-2 border-slate-400 pt-2 font-bold text-slate-800 uppercase">
+                                        {selectedEmpleado?.nombre_completo || __('Firma del Vendedor Responsable')}
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 font-medium">
+                                        {__('Recibí Conforme / Comisión Liquidada')}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="border-t-2 border-slate-400 pt-2 font-bold text-slate-800 uppercase">
+                                        {empresa?.razon_social || __('Administración / Área Comercial')}
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 font-medium">
+                                        {__('Aprobado y Pagado')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── PLANTILLA OFICIAL DE IMPRESIÓN HOJA DE CORTE DE VENTAS (@media print) ────── */}
+            {isPrintSalesSheetOpen && (
+                <div id="printable-sales-sheet" className="hidden print:block text-black bg-white font-sans p-6 text-xs w-full max-w-[280mm] mx-auto">
+                    <style>{`
+                        @media print {
+                            body * {
+                                visibility: hidden !important;
+                            }
+                            #printable-sales-sheet, #printable-sales-sheet * {
+                                visibility: visible !important;
+                            }
+                            #printable-sales-sheet {
+                                position: absolute !important;
+                                left: 0 !important;
+                                top: 0 !important;
+                                width: 100% !important;
+                                margin: 0 !important;
+                                padding: 8mm !important;
+                                background: white !important;
+                                color: black !important;
+                                font-family: Arial, Helvetica, sans-serif !important;
+                                font-size: 10px !important;
+                            }
+                            @page {
+                                size: letter landscape;
+                                margin: 8mm;
+                            }
+                        }
+                    `}</style>
+
+                    {/* ENCABEZADO EMPRESA PRINT */}
+                    <div className="flex items-start justify-between border-b-2 border-black pb-3 mb-3">
+                        <div>
+                            <h2 className="text-lg font-black uppercase text-black tracking-wide">
+                                {empresa?.razon_social || 'FixSale POS - Área Comercial'}
+                            </h2>
+                            <div className="text-[10px] text-gray-700 font-medium space-y-0.5 mt-0.5">
+                                {empresa?.documento && <div><b>ID / RFC:</b> {empresa.documento}</div>}
+                                {empresa?.direccion && <div><b>Ubicación:</b> {empresa.direccion}</div>}
+                                {empresa?.telefono && <div><b>Contacto:</b> {empresa.telefono}</div>}
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-xs font-black uppercase border border-black px-2 py-0.5 inline-block mb-1">
+                                {__('HOJA DE CORTE DE COMISIONES - VENTAS')}
+                            </div>
+                            <div className="text-[10px] text-gray-800">
+                                <b>{__('Período:')}</b> {dateFrom || 'Inicio'} {__('al')} {dateTo || 'Hoy'}
+                            </div>
+                            <div className="text-[10px] text-gray-800">
+                                <b>{__('Vendedor:')}</b> {selectedEmpleado?.nombre_completo || __('Consolidado Comercial')}
+                            </div>
+                            <div className="text-[9px] text-gray-500 mt-0.5">
+                                {__('Emitido:')} {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* RESUMEN FINANCIERO PRINT */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="border border-black p-2 flex items-center justify-between">
+                            <div>
+                                <div className="text-[9px] uppercase font-bold text-gray-600">
+                                    {__('Total Facturado Ventas')}
+                                </div>
+                                <div className="text-lg font-mono font-black">
+                                    {currencySymbol}{Number(stats.ventas_semaforo?.total_generado ?? stats.total_ventas_monto ?? 0).toFixed(2)}
+                                </div>
+                            </div>
+                            <div className="text-right border-l border-gray-400 pl-3">
+                                <div className="text-[9px] uppercase font-bold text-gray-700">
+                                    {__('Total Comisiones')}
+                                </div>
+                                <div className="text-lg font-mono font-black">
+                                    {currencySymbol}{Number(dynamicTotalComisionesVentas).toFixed(2)}
+                                </div>
+                                <div className="text-[9px] font-bold">
+                                    {customComisionPctVentas ? `${Number(customComisionPctVentas).toFixed(2)}%` : `${Number(stats.ventas_semaforo?.pct_efectivo ?? 0).toFixed(2)}%`} {__('Efectivo')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1">
+                            <div className="border-2 border-black p-1 text-center bg-gray-100">
+                                <div className="text-base font-black font-mono leading-none">
+                                    {stats.ventas_semaforo?.total_ventas ?? stats.cantidad_ventas ?? 0}
+                                </div>
+                                <div className="text-[8px] font-black uppercase mt-0.5">
+                                    {__('Realizadas')}
+                                </div>
+                            </div>
+                            <div className="border-2 border-black p-1 text-center bg-gray-100">
+                                <div className="text-base font-black font-mono leading-none">
+                                    {stats.ventas_semaforo?.ventas_pagadas ?? 0}
+                                </div>
+                                <div className="text-[8px] font-black uppercase mt-0.5">
+                                    {__('Pagadas')}
+                                </div>
+                            </div>
+                            <div className="border-2 border-black p-1 text-center bg-gray-100">
+                                <div className="text-base font-black font-mono leading-none">
+                                    {stats.ventas_semaforo?.ventas_pendientes ?? 0}
+                                </div>
+                                <div className="text-[8px] font-black uppercase mt-0.5">
+                                    {__('Pendientes')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* TABLA PRINT */}
+                    <table className="w-full text-[10px] text-left border-collapse border border-black mb-4">
+                        <thead className="bg-gray-100 font-bold border-b border-black">
+                            <tr>
+                                <th className="p-1 border border-black">{__('Fecha')}</th>
+                                <th className="p-1 border border-black font-mono">{__('Ticket')}</th>
+                                <th className="p-1 border border-black">{__('Cliente')}</th>
+                                <th className="p-1 border border-black">{__('Vendedor')}</th>
+                                <th className="p-1 border border-black text-right">{__('Total Venta')}</th>
+                                <th className="p-1 border border-black text-right">{__('Comisión')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {!ventas || ventas.data.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="text-center py-4 text-gray-500 border border-black">
+                                        {__('No hay ventas registradas en este período.')}
+                                    </td>
+                                </tr>
+                            ) : (
+                                ventas.data.map((v) => {
+                                    const itemComision = getSaleCommission(v);
+
+                                    return (
+                                        <tr key={`print-v-${v.id}`}>
+                                            <td className="p-1 border border-black whitespace-nowrap">
+                                                {new Date(v.created_at).toLocaleDateString()} {new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td className="p-1 border border-black font-mono font-bold">
+                                                {v.codigo_ticket}
+                                            </td>
+                                            <td className="p-1 border border-black">
+                                                {v.cliente_nombre || __('Cliente General')}
+                                            </td>
+                                            <td className="p-1 border border-black">
+                                                {v.empleado?.nombre_completo || __('Sin Vendedor')}
+                                            </td>
+                                            <td className="p-1 border border-black text-right font-mono">
+                                                {currencySymbol}{Number(v.total).toFixed(2)}
+                                            </td>
+                                            <td className="p-1 border border-black text-right font-mono font-bold">
+                                                {currencySymbol}{itemComision.toFixed(2)}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                        <tfoot className="font-bold border-t-2 border-black bg-gray-100">
+                            <tr>
+                                <td colSpan={4} className="p-1 text-right border border-black uppercase">
+                                    {__('TOTALES:')}
+                                </td>
+                                <td className="p-1 text-right font-mono border border-black">
+                                    {currencySymbol}{Number(stats.ventas_semaforo?.total_generado ?? stats.total_ventas_monto ?? 0).toFixed(2)}
+                                </td>
+                                <td className="p-1 text-right font-mono border border-black">
+                                    {currencySymbol}{Number(dynamicTotalComisionesVentas).toFixed(2)}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    {/* FIRMAS PRINT */}
+                    <div className="grid grid-cols-2 gap-12 pt-8 text-center text-xs">
+                        <div>
+                            <div className="border-t border-black pt-1 font-bold uppercase">
+                                {selectedEmpleado?.nombre_completo || __('Firma del Vendedor Responsable')}
+                            </div>
+                            <div className="text-[10px] text-gray-600">
+                                {__('Recibí Conforme / Comisión Liquidada')}
+                            </div>
+                        </div>
+                        <div>
+                            <div className="border-t border-black pt-1 font-bold uppercase">
+                                {empresa?.razon_social || __('Administración / Área Comercial')}
+                            </div>
+                            <div className="text-[10px] text-gray-600">
+                                {__('Aprobado y Pagado')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             {/* ── PLANTILLA OFICIAL DE IMPRESIÓN TÉRMICA 80MM (@media print) ────── */}
             {ticketData && isTicketModalOpen && (
