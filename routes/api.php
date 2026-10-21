@@ -44,6 +44,7 @@ Route::middleware(['auth:sanctum', EnsureUserActive::class])->group(function () 
     // Perfil / cuenta
     Route::put('/user', [AuthController::class, 'updateProfile']);
     Route::put('/user/password', [AuthController::class, 'updatePassword']);
+    Route::put('/user/layout', [AuthController::class, 'updateLayout']);
 
     // Kiosko Checador (API para la app móvil)
     Route::prefix('reloj-checador')->group(function () {

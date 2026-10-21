@@ -285,6 +285,28 @@ class AuthController extends Controller
     }
 
     /**
+     * Apariencia desde la app móvil: modo claro/oscuro/sistema y color
+     * primario. Son las mismas claves de `layout_settings` que guarda el
+     * personalizador de la web, así que el cambio se ve en ambos lados.
+     */
+    public function updateLayout(Request $request)
+    {
+        $data = $request->validate([
+            'appearance' => 'sometimes|string|in:light,dark,system',
+            'primaryColor' => ['sometimes', 'string', 'regex:/^(indigo|teal|orange|pink|blue|#[0-9a-fA-F]{6})$/'],
+        ]);
+
+        $user = $request->user();
+        $user->layout_settings = array_merge($user->layout_settings ?? [], $data);
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'layout_settings' => $user->layout_settings,
+        ]);
+    }
+
+    /**
      * Cambiar la contraseña (requiere la contraseña actual).
      */
     public function updatePassword(Request $request)

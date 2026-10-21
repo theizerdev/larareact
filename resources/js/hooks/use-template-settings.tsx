@@ -31,6 +31,8 @@ interface TemplateSettingsContextType {
     updateSetting: <K extends keyof TemplateSettings>(key: K, value: TemplateSettings[K]) => void;
 }
 
+const APPEARANCES: readonly unknown[] = ['light', 'dark', 'system'];
+
 const TemplateSettingsContext = createContext<TemplateSettingsContextType | undefined>(undefined);
 
 // Helper to determine text contrast (light or dark text) for dynamic hex colors
@@ -55,7 +57,11 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
     const locale = (page.props as any)?.locale;
     const defaultDir: 'ltr' | 'rtl' = 'ltr';
     const user = (page.props.auth as any)?.user;
-    const dbSettings = user?.layout_settings;
+    // layout_settings también guarda `appearance` (para la app móvil), que no
+    // es parte de TemplateSettings: se separa para no mezclarlo en el estado.
+    const { appearance: dbAppearance, ...dbSettingsRaw } = user?.layout_settings ?? {};
+    const dbSettings = user?.layout_settings ? (dbSettingsRaw as Partial<TemplateSettings>) : undefined;
+    const accountAppearance: Appearance | undefined = APPEARANCES.includes(dbAppearance) ? dbAppearance : undefined;
     const userId = user?.id;
 
     const [settings, setSettings] = useState<TemplateSettings>(() => {
@@ -116,18 +122,32 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
         }
     }, [userId, dbSettings, defaultDir]);
 
+    // El modo guardado en la cuenta (desde la web o la app móvil) gana sobre
+    // el que recuerda este navegador. Sólo al cargar o cambiar de usuario.
+    useEffect(() => {
+        if (accountAppearance && accountAppearance !== appearance) {
+            updateAppearance(accountAppearance);
+        }
+    }, [userId]);
+
     // Save changes to database (debounced and with progress indicators disabled)
     const isFirstRun = useRef(true);
     const lastSavedSettings = useRef<string>('');
 
     useEffect(() => {
-        const currentStr = JSON.stringify(settings);
+        const payload = { ...settings, appearance };
+        const currentStr = JSON.stringify(payload);
 
         if (isFirstRun.current) {
             isFirstRun.current = false;
-            lastSavedSettings.current = currentStr;
 
-            return;
+            // Sin `appearance` en la cuenta (se elegía sólo por navegador) se
+            // sube una vez el de este navegador para que la app móvil lo herede.
+            if (!dbSettings || accountAppearance) {
+                lastSavedSettings.current = JSON.stringify({ ...settings, appearance: accountAppearance ?? appearance });
+
+                return;
+            }
         }
 
         // Avoid duplicate saves if settings haven't actually changed from last save
@@ -138,7 +158,7 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
         const timer = setTimeout(() => {
             if (user) {
                 lastSavedSettings.current = currentStr;
-                router.put('/settings/layout', settings as any, {
+                router.put('/settings/layout', payload as any, {
                     preserveScroll: true,
                     preserveState: true,
                     showProgress: false, // Prevent the top Inertia loading bar
@@ -148,7 +168,7 @@ export function TemplateSettingsProvider({ children }: { children: React.ReactNo
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [settings, user]);
+    }, [settings, appearance, user]);
 
     // Apply settings to document element
     useEffect(() => {

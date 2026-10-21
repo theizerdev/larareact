@@ -75,10 +75,15 @@ class ProfileController extends Controller
             'navbarType' => 'required|string|in:sticky,static,hidden',
             'contentWidth' => 'required|string|in:compact,wide',
             'direction' => 'required|string|in:ltr,rtl',
+            // Modo claro/oscuro/sistema: se guarda junto al resto para que la
+            // app móvil use el mismo que el usuario eligió en la web.
+            'appearance' => 'sometimes|string|in:light,dark,system',
         ]);
 
+        // Se fusiona para no perder lo que la app móvil haya guardado
+        // (p. ej. `appearance` desde un navegador que aún no la envía).
         $user = $request->user();
-        $user->layout_settings = $validated;
+        $user->layout_settings = array_merge($user->layout_settings ?? [], $validated);
         $user->save();
 
         return back();
