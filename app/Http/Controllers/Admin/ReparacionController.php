@@ -1406,6 +1406,7 @@ class ReparacionController extends Controller
                     'estado_anterior' => $reparacion->estado_orden,
                     'estado_nuevo' => $reparacion->estado_orden,
                     'comentario' => "Notificación de WhatsApp enviada al cliente ({$targetPhone})",
+                    'mensaje_whatsapp' => $validated['mensaje'] ?? null,
                 ]);
             }
 
@@ -1744,6 +1745,7 @@ class ReparacionController extends Controller
                 'comentario' => $isSuccess
                     ? "📲 Notificación de WhatsApp enviada automáticamente al cliente ({$targetPhone}) para estado: " . ucfirst(str_replace('_', ' ', $nuevoEstado))
                     : "⚠️ Intento de envío WhatsApp al cliente ({$targetPhone}). " . (is_array($result) && !empty($result['error']) ? $result['error'] : ''),
+                'mensaje_whatsapp' => $mensaje,
             ]);
 
             if ($isSuccess) {

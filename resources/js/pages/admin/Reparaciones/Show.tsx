@@ -36,6 +36,7 @@ import {
     Loader2,
     ExternalLink,
     Tag,
+    MessageSquare,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { QRCodeSVG } from '@/components/qr-code-svg';
@@ -83,6 +84,7 @@ interface Historial {
     estado_anterior?: string;
     estado_nuevo: string;
     comentario?: string;
+    mensaje_whatsapp?: string | null;
     created_at: string;
     user?: { name: string };
 }
@@ -823,6 +825,23 @@ export default function ShowReparacion({
 
     const [activeTab, setActiveTab] = useState<'general' | 'preservicio' | 'postservicio' | 'repuestos' | 'fotos' | 'historial'>('general');
     const [previewPhoto, setPreviewPhoto] = useState<{ url: string; label: string } | null>(null);
+    const [viewingWhatsAppHistorial, setViewingWhatsAppHistorial] = useState<Historial | null>(null);
+    const [copiedMessage, setCopiedMessage] = useState(false);
+
+    const renderWhatsAppFormattedText = (text: string) => {
+        if (!text) return null;
+        const parts = text.split(/(\*[^*]+\*)/g);
+        return parts.map((part, index) => {
+            if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+                return (
+                    <strong key={index} className="font-bold text-slate-900 dark:text-emerald-50">
+                        {part.slice(1, -1)}
+                    </strong>
+                );
+            }
+            return part;
+        });
+    };
 
     const inspeccionData = React.useMemo(() => {
         if (!orden.inspeccion_json) return null;
@@ -3843,9 +3862,40 @@ export default function ShowReparacion({
                                                     </span>
                                                 )}
                                                 {h.comentario && (
-                                                    <p className="text-xs text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800 mt-1.5 font-medium leading-relaxed">
-                                                        "{h.comentario}"
-                                                    </p>
+                                                    (h.mensaje_whatsapp || h.comentario.includes('WhatsApp') || h.comentario.includes('📲')) ? (
+                                                        <div
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            onClick={() => setViewingWhatsAppHistorial(h)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                                    e.preventDefault();
+                                                                    setViewingWhatsAppHistorial(h);
+                                                                }
+                                                            }}
+                                                            className="group mt-1.5 p-3 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/70 hover:bg-emerald-100/80 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-slate-800 dark:text-slate-200 transition-all cursor-pointer shadow-xs hover:shadow-sm"
+                                                        >
+                                                            <div className="flex items-start justify-between gap-2">
+                                                                <p className="text-xs font-medium leading-relaxed flex-1 text-slate-800 dark:text-slate-200">
+                                                                    "{h.comentario}"
+                                                                </p>
+                                                                <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs group-hover:scale-105 transition-all">
+                                                                    <Eye className="w-3.5 h-3.5" />
+                                                                    {__('Ver mensaje')}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 dark:text-emerald-400 mt-2 font-semibold">
+                                                                <span>💬</span>
+                                                                <span className="underline decoration-dotted underline-offset-2">
+                                                                    {__('Clic para ver el mensaje completo enviado al cliente')}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-xs text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800 mt-1.5 font-medium leading-relaxed">
+                                                            "{h.comentario}"
+                                                        </p>
+                                                    )
                                                 )}
                                             </div>
                                         ))}
@@ -3946,7 +3996,21 @@ export default function ShowReparacion({
                                                 <span className="font-bold capitalize text-slate-800 dark:text-slate-200">{h.estado_nuevo.replace('_', ' ')}</span>
                                                 <span className="text-[10px] text-slate-400">{formatDate(h.created_at)}</span>
                                             </div>
-                                            {h.comentario && <p className="text-[11px] text-slate-500 italic truncate">"{h.comentario}"</p>}
+                                            {h.comentario && (
+                                                (h.mensaje_whatsapp || h.comentario.includes('WhatsApp') || h.comentario.includes('📲')) ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setViewingWhatsAppHistorial(h)}
+                                                        className="w-full text-left text-[11px] text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-medium italic truncate flex items-center justify-between group"
+                                                        title={__('Ver mensaje de WhatsApp enviado')}
+                                                    >
+                                                        <span className="truncate">"{h.comentario}"</span>
+                                                        <Eye className="w-3 h-3 shrink-0 ml-1 opacity-70 group-hover:opacity-100 text-emerald-600" />
+                                                    </button>
+                                                ) : (
+                                                    <p className="text-[11px] text-slate-500 italic truncate">"{h.comentario}"</p>
+                                                )
+                                            )}
                                         </div>
                                     ))}
                                 </CardContent>
@@ -5467,6 +5531,131 @@ export default function ShowReparacion({
                 initialSucursalId={orden.sucursal_id || null}
                 onItemsUpdated={handleChecklistUpdated}
             />
+
+            {/* MODAL DETALLE DE MENSAJE DE WHATSAPP ENVIADO */}
+            <Dialog open={!!viewingWhatsAppHistorial} onOpenChange={(open) => { if (!open) setViewingWhatsAppHistorial(null); }}>
+                <DialogContent className="sm:max-w-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0 overflow-hidden shadow-2xl">
+                    <DialogHeader className="p-5 pb-4 bg-emerald-600 dark:bg-emerald-700 text-white">
+                        <DialogTitle className="text-base font-bold flex items-center gap-2 text-white">
+                            <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20 text-white text-sm">
+                                📲
+                            </span>
+                            {__('Notificación de WhatsApp Enviada')}
+                        </DialogTitle>
+                        <p className="text-xs text-emerald-100 mt-1 font-normal">
+                            {__('Mensaje registrado en la línea de tiempo de la orden')} <strong className="text-white">#{orden.numero_orden}</strong>
+                        </p>
+                    </DialogHeader>
+
+                    <div className="p-5 space-y-4">
+                        {/* Información del envío */}
+                        <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+                            <div>
+                                <span className="text-[11px] text-slate-400 block font-medium">{__('Cliente')}</span>
+                                <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
+                                    {orden.cliente_nombre || __('Cliente')}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-[11px] text-slate-400 block font-medium">{__('Fecha y Hora')}</span>
+                                <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold text-[11px]">
+                                    {viewingWhatsAppHistorial?.created_at ? formatDate(viewingWhatsAppHistorial.created_at) : '-'}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-[11px] text-slate-400 block font-medium">{__('Estado Notificado')}</span>
+                                <span className="font-bold text-emerald-700 dark:text-emerald-400 capitalize">
+                                    {viewingWhatsAppHistorial?.estado_nuevo ? viewingWhatsAppHistorial.estado_nuevo.replace(/_/g, ' ') : '-'}
+                                </span>
+                            </div>
+                            {viewingWhatsAppHistorial?.user?.name && (
+                                <div>
+                                    <span className="text-[11px] text-slate-400 block font-medium">{__('Emitido por')}</span>
+                                    <span className="font-semibold text-slate-700 dark:text-slate-300 truncate block">
+                                        👤 {viewingWhatsAppHistorial.user.name}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Burbuja estilo WhatsApp */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                                    {__('Mensaje Enviado al Cliente')}
+                                </Label>
+                                {viewingWhatsAppHistorial?.mensaje_whatsapp && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 px-2.5 text-xs text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 gap-1 font-semibold"
+                                        onClick={() => {
+                                            if (viewingWhatsAppHistorial?.mensaje_whatsapp) {
+                                                navigator.clipboard.writeText(viewingWhatsAppHistorial.mensaje_whatsapp);
+                                                setCopiedMessage(true);
+                                                notifySuccess(__('Mensaje copiado al portapapeles.'));
+                                                setTimeout(() => setCopiedMessage(false), 2000);
+                                            }
+                                        }}
+                                    >
+                                        {copiedMessage ? (
+                                            <>
+                                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                                <span>{__('Copiado')}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Copy className="w-3.5 h-3.5" />
+                                                <span>{__('Copiar')}</span>
+                                            </>
+                                        )}
+                                    </Button>
+                                )}
+                            </div>
+
+                            {viewingWhatsAppHistorial?.mensaje_whatsapp ? (
+                                <div className="p-4 bg-[#eefeec] dark:bg-[#0b291d] border border-emerald-200 dark:border-emerald-900/60 rounded-2xl shadow-inner relative max-h-80 overflow-y-auto">
+                                    <div className="whitespace-pre-wrap font-sans text-xs text-slate-900 dark:text-emerald-100 leading-relaxed break-words">
+                                        {renderWhatsAppFormattedText(viewingWhatsAppHistorial.mensaje_whatsapp)}
+                                    </div>
+                                    <div className="mt-2 text-right">
+                                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-mono">
+                                            ✓✓ {__('Entregado vía WhatsApp')}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl text-center space-y-2">
+                                    <AlertCircle className="w-8 h-8 text-amber-500 mx-auto" />
+                                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                        {__('No hay copia guardada del texto para este registro previo')}
+                                    </p>
+                                    <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+                                        {viewingWhatsAppHistorial?.comentario}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter className="p-4 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-200 dark:border-slate-800 flex sm:justify-between items-center gap-2">
+                        <span className="text-[11px] text-slate-400 font-mono">
+                            FixSale WhatsApp Dispatcher
+                        </span>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setViewingWhatsAppHistorial(null)}
+                            className="h-8 px-4 text-xs font-semibold"
+                        >
+                            {__('Cerrar')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Fin modal de impresión unificado */}
 
