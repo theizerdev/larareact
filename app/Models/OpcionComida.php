@@ -46,6 +46,7 @@ class OpcionComida extends Model
                 'color',
                 'orden',
                 'status',
+                'proveedor_id',
             ])
             ->logOnlyDirty()
             ->setDescriptionForEvent(fn (string $eventName) => static::getSpanishDescription($eventName));
@@ -54,6 +55,7 @@ class OpcionComida extends Model
     protected $fillable = [
         'empresa_id',
         'sucursal_id',
+        'proveedor_id',
         'nombre',
         'tipo',
         'descripcion',
@@ -102,5 +104,10 @@ class OpcionComida extends Model
     public function sucursal(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class);
+    }
+
+    public function proveedor(): BelongsTo
+    {
+        return $this->belongsTo(Proveedor::class);
     }
 }

@@ -18,7 +18,8 @@ import {
     Sparkles,
     Search,
     SlidersHorizontal,
-    RotateCcw
+    RotateCcw,
+    Store
 } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
@@ -67,10 +68,19 @@ import { notifySuccess, notifyError } from '@/utils/notifications';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
+export interface ProveedorItem {
+    id: number;
+    nombre_comercial: string;
+    razon_social: string;
+    rfc?: string | null;
+    sucursal_id?: number | null;
+}
+
 export interface OpcionComidaItem {
     id: number;
     empresa_id: number;
     sucursal_id?: number | null;
+    proveedor_id?: number | null;
     nombre: string;
     tipo: 'desayuno' | 'almuerzo' | 'cena' | 'refrigerio';
     descripcion?: string | null;
@@ -84,6 +94,7 @@ export interface OpcionComidaItem {
     orden: number;
     status: boolean;
     sucursal?: { id: number; nombre: string } | null;
+    proveedor?: ProveedorItem | null;
 }
 
 interface SucursalItem {
@@ -110,17 +121,24 @@ interface Props {
     };
     tipos: Record<string, string>;
     sucursales: SucursalItem[];
+    proveedores?: ProveedorItem[];
+    sucursal_usuario?: {
+        id: number;
+        nombre: string;
+        empresa_id?: number;
+    } | null;
     filters: {
         search?: string;
         tipo?: string;
         status?: string;
         sucursal_id?: string;
+        proveedor_id?: string;
     };
 }
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
-export default function ComedorIndex({ opciones, stats, tipos, sucursales, filters }: Props) {
+export default function ComedorIndex({ opciones, stats, tipos, sucursales, proveedores = [], sucursal_usuario, filters }: Props) {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<OpcionComidaItem | null>(null);
     const [deletingItem, setDeletingItem] = useState<OpcionComidaItem | null>(null);
@@ -130,6 +148,7 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
     const [tipoFilter, setTipoFilter] = useState(filters.tipo || 'all');
     const [statusFilter, setStatusFilter] = useState(filters.status !== undefined ? String(filters.status) : 'all');
     const [sucursalFilter, setSucursalFilter] = useState(filters.sucursal_id || 'all');
+    const [proveedorFilter, setProveedorFilter] = useState(filters.proveedor_id || 'all');
 
     // Formulario de Creación / Edición
     const form = useForm({
@@ -144,8 +163,18 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
         color: 'emerald',
         orden: 1,
         status: true,
-        sucursal_id: '',
+        sucursal_id: sucursal_usuario?.id ? String(sucursal_usuario.id) : '',
+        proveedor_id: '',
     });
+
+    const activeModalSucursalId = form.data.sucursal_id
+        ? Number(form.data.sucursal_id)
+        : (sucursal_usuario?.id ?? null);
+
+    const proveedoresFiltradosModal = React.useMemo(() => {
+        if (!activeModalSucursalId) return proveedores;
+        return proveedores.filter((p) => !p.sucursal_id || p.sucursal_id === activeModalSucursalId);
+    }, [proveedores, activeModalSucursalId]);
 
     const handleApplyFilters = () => {
         router.get('/admin/asistencia/comedor', {
@@ -153,6 +182,7 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
             tipo: tipoFilter !== 'all' ? tipoFilter : undefined,
             status: statusFilter !== 'all' ? statusFilter : undefined,
             sucursal_id: sucursalFilter !== 'all' ? sucursalFilter : undefined,
+            proveedor_id: proveedorFilter !== 'all' ? proveedorFilter : undefined,
         }, {
             preserveState: true,
             replace: true,
@@ -164,6 +194,7 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
         setTipoFilter('all');
         setStatusFilter('all');
         setSucursalFilter('all');
+        setProveedorFilter('all');
         router.get('/admin/asistencia/comedor', {}, { preserveState: true, replace: true });
     };
 
@@ -181,7 +212,8 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
             color: 'emerald',
             orden: (opciones.data.length || 0) + 1,
             status: true,
-            sucursal_id: '',
+            sucursal_id: sucursal_usuario?.id ? String(sucursal_usuario.id) : '',
+            proveedor_id: '',
         });
         form.clearErrors();
         setIsCreateOpen(true);
@@ -202,6 +234,7 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
             orden: item.orden,
             status: item.status,
             sucursal_id: item.sucursal_id ? String(item.sucursal_id) : '',
+            proveedor_id: item.proveedor_id ? String(item.proveedor_id) : '',
         });
         form.clearErrors();
         setIsCreateOpen(true);
@@ -212,7 +245,8 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
 
         const payload = {
             ...form.data,
-            sucursal_id: form.data.sucursal_id ? Number(form.data.sucursal_id) : null,
+            sucursal_id: form.data.sucursal_id ? Number(form.data.sucursal_id) : (sucursal_usuario?.id ?? null),
+            proveedor_id: form.data.proveedor_id ? Number(form.data.proveedor_id) : null,
             costo_empleado: Number(form.data.costo_empleado) || 0,
             costo_empresa: Number(form.data.costo_empresa) || 0,
             hora_inicio: form.data.hora_inicio || null,
@@ -416,6 +450,25 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
                                 </div>
                             )}
 
+                            {proveedores.length > 0 && (
+                                <div className="w-full md:w-52 space-y-1">
+                                    <Label className="text-xs text-muted-foreground">Proveedor de Alimentos</Label>
+                                    <Select value={proveedorFilter} onValueChange={setProveedorFilter}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Todos los proveedores" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos los proveedores</SelectItem>
+                                            {proveedores.map((p) => (
+                                                <SelectItem key={p.id} value={String(p.id)}>
+                                                    {p.nombre_comercial}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
                             <div className="flex gap-2">
                                 <Button onClick={handleApplyFilters} className="gap-1.5">
                                     <SlidersHorizontal className="w-4 h-4" />
@@ -454,6 +507,7 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
                                         <TableHead className="text-right">Costo Colaborador (MXN)</TableHead>
                                         <TableHead className="text-right">Costo Proveedor (MXN)</TableHead>
                                         <TableHead>Planta / Sucursal</TableHead>
+                                        <TableHead>Proveedor</TableHead>
                                         <TableHead className="text-center">Estado</TableHead>
                                         <TableHead className="text-right w-24">Acciones</TableHead>
                                     </TableRow>
@@ -461,7 +515,7 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
                                 <TableBody>
                                     {opciones.data.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
+                                            <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
                                                 <div className="flex flex-col items-center gap-2">
                                                     <Utensils className="w-8 h-8 text-muted-foreground/50" />
                                                     <p className="font-medium text-sm">No se encontraron opciones de comida registradas.</p>
@@ -533,6 +587,20 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
                                                         </Badge>
                                                     )}
                                                 </TableCell>
+                                                <TableCell>
+                                                    {item.proveedor ? (
+                                                        <span className="text-xs flex items-center gap-1.5 font-medium text-foreground">
+                                                            <Store className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                                            <span className="truncate max-w-[140px]" title={`${item.proveedor.nombre_comercial} (${item.proveedor.razon_social})`}>
+                                                                {item.proveedor.nombre_comercial}
+                                                            </span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground italic">
+                                                            Interno
+                                                        </span>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex items-center justify-center">
                                                         <Switch
@@ -590,6 +658,33 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-6 pt-3">
+                        {/* BANNER INFORMATIVO: SEDE / SUCURSAL DEL MENÚ (SUCURSAL DEL USUARIO AUTENTICADO) */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border border-blue-500/30 bg-blue-500/10 dark:bg-blue-950/30">
+                            <div className="flex items-center gap-3.5">
+                                <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                                    <Building2 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                            Sede / Sucursal del Menú:
+                                        </span>
+                                        <Badge className="bg-blue-600 text-white dark:bg-blue-500 font-bold text-xs px-2.5 py-0.5">
+                                            {editingItem?.sucursal?.nombre || sucursal_usuario?.nombre || 'Planta Principal (Smurfit México)'}
+                                        </Badge>
+                                        <Badge variant="outline" className="text-[10px] bg-background text-blue-600 dark:text-blue-400 border-blue-500/30">
+                                            {editingItem ? 'Sede Asignada' : 'Sucursal de tu Usuario Autenticado'}
+                                        </Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        {editingItem
+                                            ? `Menú asignado a ${editingItem.sucursal ? editingItem.sucursal.nombre : 'todas las plantas'}.`
+                                            : `Este menú se asocia automáticamente a tu sucursal actual (${sucursal_usuario?.nombre || 'Planta Principal'}) para el Kiosko Checador.`}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                             {/* COLUMNA IZQUIERDA (7 columnas): DATOS PRINCIPALES Y COSTOS */}
                             <div className="lg:col-span-7 space-y-5">
@@ -643,6 +738,40 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
                                             </SelectContent>
                                         </Select>
                                         {form.errors.tipo && <p className="text-xs text-destructive">{form.errors.tipo}</p>}
+                                    </div>
+
+                                    {/* PROVEEDOR DE ALIMENTOS */}
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="proveedor_id" className="text-xs font-bold flex items-center justify-between">
+                                            <span className="flex items-center gap-1.5">
+                                                <Store className="w-3.5 h-3.5 text-amber-500" /> Proveedor del Menú / Concesionaria
+                                            </span>
+                                            {proveedoresFiltradosModal.length > 0 && (
+                                                <Badge variant="outline" className="text-[10px] text-muted-foreground font-mono">
+                                                    {proveedoresFiltradosModal.length} disponibles
+                                                </Badge>
+                                            )}
+                                        </Label>
+                                        <Select
+                                            value={form.data.proveedor_id || 'none'}
+                                            onValueChange={(val) => form.setData('proveedor_id', val === 'none' ? '' : val)}
+                                        >
+                                            <SelectTrigger id="proveedor_id" className="h-10">
+                                                <SelectValue placeholder="Seleccione un proveedor de alimentos..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">🍽️ Sin proveedor asignado (Preparación propia / Interna)</SelectItem>
+                                                {proveedoresFiltradosModal.map((p) => (
+                                                    <SelectItem key={p.id} value={String(p.id)}>
+                                                        🏪 {p.nombre_comercial} {p.rfc ? `(${p.rfc})` : ''}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Empresa o concesionaria externa que suministra y factura este alimento.
+                                        </p>
+                                        {form.errors.proveedor_id && <p className="text-xs text-destructive">{form.errors.proveedor_id}</p>}
                                     </div>
 
                                     <div className="space-y-1.5">
@@ -717,7 +846,7 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
                                 {sucursales.length > 0 && (
                                     <div className="space-y-1.5 p-4 rounded-xl border bg-muted/20">
                                         <Label htmlFor="sucursal_id" className="text-xs font-bold flex items-center gap-1.5">
-                                            <Building2 className="w-3.5 h-3.5 text-slate-400" /> Planta / Sucursal Asignada
+                                            <Building2 className="w-3.5 h-3.5 text-slate-400" /> Sede / Planta Asignada
                                         </Label>
                                         <Select
                                             value={form.data.sucursal_id || 'all'}
@@ -730,11 +859,16 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
                                                 <SelectItem value="all">Global (Disponible en todas las plantas)</SelectItem>
                                                 {sucursales.map((s) => (
                                                     <SelectItem key={s.id} value={String(s.id)}>
-                                                        {s.nombre}
+                                                        {s.nombre} {sucursal_usuario?.id === s.id ? '★ (Tu Sucursal Autenticada)' : ''}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
+                                        {sucursal_usuario && (
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Predeterminada para tu sede actual: <strong className="text-foreground">{sucursal_usuario.nombre}</strong>
+                                            </p>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -844,6 +978,12 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, filte
                                             <span className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                                                 {tipos[form.data.tipo] || form.data.tipo}
                                             </span>
+                                            {form.data.proveedor_id && (
+                                                <span className="text-[10px] font-semibold tracking-wide text-amber-300/90 flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                                                    <Store className="w-3 h-3 text-amber-400" />
+                                                    {proveedores.find((p) => String(p.id) === String(form.data.proveedor_id))?.nombre_comercial || 'Proveedor Externo'}
+                                                </span>
+                                            )}
                                         </div>
 
                                         {form.data.hora_inicio && form.data.hora_fin ? (

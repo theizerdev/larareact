@@ -146,4 +146,58 @@ class OpcionComidaCrudTest extends TestCase
         $this->actingAs($user)->delete("/admin/asistencia/comedor/{$opcion->id}")->assertRedirect();
         $this->assertSoftDeleted('opciones_comida', ['id' => $opcion->id]);
     }
+
+    public function test_proveedor_seeder_crea_al_menos_cinco_proveedores(): void
+    {
+        $this->seed(\Database\Seeders\ProveedorSeeder::class);
+
+        $this->assertGreaterThanOrEqual(5, \App\Models\Proveedor::count());
+        $this->assertDatabaseHas('proveedores', [
+            'nombre_comercial' => 'Sodexo Servicios de Comedor Industrial',
+            'status' => 'activo',
+        ]);
+    }
+
+    public function test_puede_crear_opcion_con_proveedor_id_y_sucursal_del_usuario(): void
+    {
+        [$empresa, $user] = $this->escenario();
+
+        $sucursal = \App\Models\Sucursal::create([
+            'empresa_id' => $empresa->id,
+            'nombre' => 'Planta Querétaro Smurfit',
+        ]);
+
+        $user->update(['sucursal_id' => $sucursal->id]);
+
+        $proveedor = \App\Models\Proveedor::create([
+            'empresa_id' => $empresa->id,
+            'sucursal_id' => $sucursal->id,
+            'razon_social' => 'Gourmet Bajío S.A. de C.V.',
+            'nombre_comercial' => 'Gourmet Bajío Comedores',
+            'documento_identidad' => 'GBJ880901XX1',
+            'email' => 'bajio@example.com',
+            'telefono' => '4421234567',
+            'status' => 'activo',
+        ]);
+
+        $response = $this->actingAs($user)->post('/admin/asistencia/comedor', [
+            'nombre' => 'Chilaquiles Verdes con Pollo',
+            'tipo' => 'desayuno',
+            'costo_empleado' => 18.00,
+            'costo_empresa' => 45.00,
+            'proveedor_id' => $proveedor->id,
+            'icono' => 'coffee',
+            'color' => 'amber',
+            'status' => true,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('opciones_comida', [
+            'empresa_id' => $empresa->id,
+            'sucursal_id' => $sucursal->id,
+            'proveedor_id' => $proveedor->id,
+            'nombre' => 'Chilaquiles Verdes con Pollo',
+        ]);
+    }
 }
+

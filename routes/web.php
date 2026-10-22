@@ -163,6 +163,10 @@ Route::middleware('auth')->group(function () {
     Route::post('admin/api/reloj-checador/registrar', [RelojChecadorKioskoController::class, 'registrarMarcaje'])
         ->middleware('permission:asistencia.kiosko')
         ->name('api.reloj-checador.registrar');
+
+    Route::post('admin/api/reloj-checador/enrolar', [RelojChecadorKioskoController::class, 'enrolarEmpleado'])
+        ->middleware('permission:asistencia.kiosko|asistencia.view|empleados.edit')
+        ->name('api.reloj-checador.enrolar');
 });
 
 

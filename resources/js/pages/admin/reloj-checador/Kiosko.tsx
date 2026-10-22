@@ -20,6 +20,7 @@ import {
     Delete,
     QrCode,
     Scan,
+    ScanFace,
     Volume2,
     VolumeX,
     X,
@@ -45,6 +46,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import ClientLogo from '@/components/client-logo';
 import { TemplateSettingsProvider } from '@/hooks/use-template-settings';
+import { KioskoEnrolamientoModal } from '@/components/admin/reloj-checador/KioskoEnrolamientoModal';
 
 interface Configuracion {
     requiere_foto_marcaje?: boolean;
@@ -83,13 +85,23 @@ export interface MarcajeItem {
 interface EmpleadoFound {
     id: number;
     nombre_completo: string;
+    nombres?: string;
+    apellidos?: string;
     documento_identidad: string;
+    numero?: string | null;
+    codigo_acceso?: string | null;
     foto_empleado?: string | null;
     departamento?: string;
+    area?: string;
     cargo?: string;
     turno?: string;
     minutos_descanso?: number;
     ultimo_marcaje_tipo?: string | null;
+    enrolado?: boolean;
+    enrolado_en?: string | null;
+    genero?: string | null;
+    fecha_nacimiento?: string | null;
+    empresa_nombre?: string | null;
 }
 
 function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: Props) {
@@ -249,12 +261,27 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
     // Último código leído, para no repetir la búsqueda mientras el mismo gafete sigue frente a la cámara.
     const ultimoCodigoRef = useRef<{ codigo: string; at: number } | null>(null);
 
-    // Modales para Descansos, Comidas e Incidentes
+    // Modales para Descansos, Comidas, Incidentes y Enrolamiento
     const [isDescansoModalOpen, setIsDescansoModalOpen] = useState(false);
     const [selectedMinutosDescanso, setSelectedMinutosDescanso] = useState<number>(15);
     const [isIncidenteModalOpen, setIsIncidenteModalOpen] = useState(false);
     const [isComidaModalOpen, setIsComidaModalOpen] = useState(false);
     const [incidenteCausaInput, setIncidenteCausaInput] = useState<string>('');
+    const [isEnrolamientoModalOpen, setIsEnrolamientoModalOpen] = useState(false);
+
+    const handleEnrolamientoSuccess = (updatedEmpleado: any) => {
+        setEmpleado((prev) => prev ? {
+            ...prev,
+            ...updatedEmpleado,
+            enrolado: true,
+            foto_empleado: updatedEmpleado.foto_empleado || prev.foto_empleado,
+        } : null);
+        playBeepSound();
+        triggerHaptic();
+        const primerNombre = (updatedEmpleado.nombres || updatedEmpleado.nombre_completo || '').split(' ')[0];
+        speakMessage(`¡Enrolamiento completado exitosamente para ${primerNombre}! Ya puedes registrar tu asistencia.`);
+        setInactivityCountdown(25);
+    };
 
     const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -417,7 +444,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
 
     // Temporizador de Inactividad (15s) cuando hay empleado verificado
     useEffect(() => {
-        if (!empleado || isComidaModalOpen || isDescansoModalOpen || isIncidenteModalOpen || successMessage) {
+        if (!empleado || isComidaModalOpen || isDescansoModalOpen || isIncidenteModalOpen || isEnrolamientoModalOpen || successMessage) {
             return;
         }
 
@@ -442,7 +469,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
             window.removeEventListener('pointerdown', resetInactivity);
             window.removeEventListener('keydown', resetInactivity);
         };
-    }, [empleado, isComidaModalOpen, isDescansoModalOpen, isIncidenteModalOpen, successMessage]);
+    }, [empleado, isComidaModalOpen, isDescansoModalOpen, isIncidenteModalOpen, isEnrolamientoModalOpen, successMessage]);
 
     // Temporizador de Cuenta Regresiva de Éxito (4s para siguiente colaborador)
     useEffect(() => {
@@ -483,7 +510,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
         }
     };
 
-    const necesitaCamara = modoEntrada === 'camara' || Boolean(configuracion?.requiere_foto_marcaje);
+    const necesitaCamara = (modoEntrada === 'camara' || Boolean(configuracion?.requiere_foto_marcaje)) && !isEnrolamientoModalOpen;
 
     useEffect(() => {
         if (!necesitaCamara) return;
@@ -672,6 +699,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
         setUltimoMarcaje(null);
         setMarcajesHoy([]);
         setErrorMessage(null);
+        setIsEnrolamientoModalOpen(false);
         setInactivityCountdown(15);
         if (inputRef.current) inputRef.current.focus();
     };
@@ -734,6 +762,11 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
                 setSugerenciaMarcaje(data.sugerencia_marcaje);
                 setTipoMarcajeSeleccionado(data.sugerencia_marcaje);
                 setInactivityCountdown(15);
+
+                if (!data.empleado.enrolado) {
+                    const primerNombre = (data.empleado.nombres || data.empleado.nombre_completo || '').split(' ')[0];
+                    speakMessage(`Atención ${primerNombre}: Aún no cuentas con enrolamiento biométrico facial. Por favor pulsa el botón para enrolarte.`);
+                }
             } else {
                 setEmpleado(null);
                 setUltimoMarcaje(null);
@@ -759,6 +792,14 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
     // Registrar Marcaje
     const handleRegisterMarcaje = async (tipo: string, extraPayload: any = {}) => {
         if (!empleado) return;
+
+        if (!empleado.enrolado) {
+            triggerHaptic();
+            setErrorMessage('El colaborador debe completar su enrolamiento biométrico antes de registrar asistencia.');
+            speakMessage('Atención: Debe completar su enrolamiento biométrico antes de registrar asistencia.');
+            setIsEnrolamientoModalOpen(true);
+            return;
+        }
 
         setLoadingSearch(true);
         setErrorMessage(null);
@@ -1271,10 +1312,10 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
                                 </div>
                             </Card>
                         ) : empleado ? (
-                            <Card className="shadow-sm border-t-4 border-t-emerald-500 space-y-5 p-5 sm:p-6">
+                            <Card className={`shadow-sm space-y-5 p-5 sm:p-6 ${empleado.enrolado ? 'border-t-4 border-t-emerald-500' : 'border-t-4 border-t-amber-500'}`}>
                                 {/* CABECERA DE PERFIL DEL EMPLEADO */}
                                 <div className="flex items-center gap-4 border-b pb-4">
-                                    <div className="w-20 h-20 shrink-0 rounded-2xl bg-muted border overflow-hidden flex items-center justify-center text-muted-foreground font-bold text-xl">
+                                    <div className="w-20 h-20 shrink-0 rounded-2xl bg-muted border overflow-hidden flex items-center justify-center text-muted-foreground font-bold text-xl relative">
                                         {empleado.foto_empleado && !fotoFallida ? (
                                             <img
                                                 src={empleado.foto_empleado}
@@ -1285,12 +1326,25 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
                                         ) : (
                                             <span>{empleado.nombre_completo.substring(0, 2).toUpperCase()}</span>
                                         )}
+                                        {!empleado.enrolado && (
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-amber-300">
+                                                <ScanFace className="w-8 h-8 animate-pulse" />
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="space-y-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900 text-xs">
-                                                Empleado Verificado
-                                            </Badge>
+                                            {empleado.enrolado ? (
+                                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900 text-xs flex items-center gap-1 font-semibold">
+                                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                                    <span>Empleado Verificado y Enrolado</span>
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 text-xs flex items-center gap-1 font-bold">
+                                                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                                                    <span>Sin Enrolamiento Biométrico</span>
+                                                </Badge>
+                                            )}
                                             {ultimoMarcaje && (
                                                 <Badge variant="outline" className="text-[11px] bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900 flex items-center gap-1 font-mono">
                                                     <Clock className="w-3 h-3" />
@@ -1299,8 +1353,20 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
                                             )}
                                         </div>
                                         <h2 className="text-xl font-bold text-foreground truncate">{empleado.nombre_completo}</h2>
-                                        <p className="text-xs text-muted-foreground truncate">{empleado.cargo || 'Sin cargo'} • {empleado.departamento || 'Sin departamento'}</p>
-                                        <p className="text-xs text-primary font-medium">Turno: {empleado.turno}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{empleado.cargo || 'Sin cargo'} • {empleado.departamento || empleado.area || 'Sin departamento'}</p>
+                                        <div className="flex items-center gap-3">
+                                            <p className="text-xs text-primary font-medium">Turno: {empleado.turno}</p>
+                                            {empleado.enrolado && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsEnrolamientoModalOpen(true)}
+                                                    className="text-[11px] text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 underline decoration-dotted flex items-center gap-1 transition-colors"
+                                                >
+                                                    <ScanFace className="w-3 h-3" />
+                                                    <span>Actualizar fotos</span>
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                     <Button
                                         type="button"
@@ -1315,265 +1381,302 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
                                     </Button>
                                 </div>
 
-                                {/* MINI LÍNEA DE TIEMPO DEL DÍA (TIMELINE DE ASISTENCIA - 4 HITOS) */}
-                                {(() => {
-                                    const hitoEntrada = marcajesHoy.find(m => m.tipo === 'entrada' || m.tipo === 'entrada_extraordinaria');
-                                    const hitoInicioComida = marcajesHoy.find(m => m.tipo === 'salida_comida');
-                                    const hitoFinComida = marcajesHoy.find(m => m.tipo === 'entrada_comida');
-                                    const hitoSalida = marcajesHoy.find(m => m.tipo === 'salida');
-
-                                    const hitos = [
-                                        {
-                                            key: 'entrada',
-                                            label: 'Entrada',
-                                            icon: LogIn,
-                                            marcaje: hitoEntrada,
-                                            esSugerido: sugerenciaMarcaje === 'entrada',
-                                        },
-                                        {
-                                            key: 'salida_comida',
-                                            label: 'Inicio Comida',
-                                            icon: Utensils,
-                                            marcaje: hitoInicioComida,
-                                            esSugerido: sugerenciaMarcaje === 'salida_comida',
-                                        },
-                                        {
-                                            key: 'entrada_comida',
-                                            label: 'Fin Comida',
-                                            icon: UtensilsCrossed,
-                                            marcaje: hitoFinComida,
-                                            esSugerido: sugerenciaMarcaje === 'entrada_comida',
-                                        },
-                                        {
-                                            key: 'salida',
-                                            label: 'Salida',
-                                            icon: LogOut,
-                                            marcaje: hitoSalida,
-                                            esSugerido: sugerenciaMarcaje === 'salida',
-                                        },
-                                    ];
-
-                                    return (
-                                        <div className="bg-muted/40 border rounded-2xl p-3 sm:p-4 space-y-2">
-                                            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider">
-                                                <span className="flex items-center gap-1.5 text-muted-foreground">
-                                                    <Clock className="w-3.5 h-3.5 text-primary" />
-                                                    <span>Línea de Asistencia del Turno</span>
-                                                </span>
-                                                <span className="text-[11px] text-muted-foreground font-normal normal-case">
-                                                    {formatDate(currentTime).split(',')[0]}
-                                                </span>
+                                {/* BANNER Y BOTÓN DE ENROLAMIENTO SI NO ESTÁ ENROLADO */}
+                                {!empleado.enrolado && (
+                                    <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/15 border-2 border-dashed border-amber-400/80 dark:border-amber-700/80 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in-50 duration-300">
+                                        <div className="flex items-center gap-3.5 text-center md:text-left">
+                                            <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/30">
+                                                <ScanFace className="w-6 h-6 animate-pulse" />
                                             </div>
-
-                                            <div className="grid grid-cols-4 gap-1.5 sm:gap-2 pt-1">
-                                                {hitos.map((h) => {
-                                                    const Icon = h.icon;
-                                                    const tieneMarcaje = Boolean(h.marcaje);
-                                                    const esActivo = !tieneMarcaje && h.esSugerido;
-
-                                                    return (
-                                                        <div
-                                                            key={h.key}
-                                                            className={`relative flex flex-col items-center text-center p-2 rounded-xl border transition-all ${
-                                                                tieneMarcaje
-                                                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
-                                                                    : esActivo
-                                                                        ? 'bg-amber-50 border-amber-400 text-amber-700 ring-2 ring-amber-400/30 animate-pulse dark:bg-amber-950/30 dark:text-amber-300'
-                                                                        : 'bg-card border-border text-muted-foreground'
-                                                            }`}
-                                                        >
-                                                            <div className="flex items-center gap-1 mb-1">
-                                                                {tieneMarcaje ? (
-                                                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                                                ) : esActivo ? (
-                                                                    <Icon className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 animate-bounce" />
-                                                                ) : (
-                                                                    <Circle className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-                                                                )}
-                                                                <span className="text-[10px] sm:text-xs font-bold truncate max-w-[65px] sm:max-w-none">
-                                                                    {h.label}
-                                                                </span>
-                                                            </div>
-
-                                                            <div className="font-mono text-[11px] sm:text-xs font-bold">
-                                                                {tieneMarcaje ? (
-                                                                    <span>{h.marcaje?.hora?.slice(0, 5)}</span>
-                                                                ) : esActivo ? (
-                                                                    <span className="uppercase tracking-tighter text-[9px] sm:text-[10px]">
-                                                                        Siguiente
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-muted-foreground/60 font-normal">--:--</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                            <div>
+                                                <h3 className="text-base font-bold text-foreground flex items-center justify-center md:justify-start gap-2">
+                                                    <span>Colaborador Pendiente de Enrolar</span>
+                                                    <Badge variant="outline" className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300">
+                                                        Acción Requerida
+                                                    </Badge>
+                                                </h3>
+                                                <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
+                                                    Sus datos ya se encuentran en el sistema. Realice su proceso de enrolamiento con toma de fotografías faciales para sincronizar su perfil biométrico con BioTime y habilitar su checado.
+                                                </p>
                                             </div>
                                         </div>
-                                    );
-                                })()}
 
-                                {/* TEMPORIZADOR DE INACTIVIDAD (AUTO-RESET TRAS 15s) */}
-                                <div className="space-y-1.5 bg-muted/40 p-2.5 rounded-xl border">
-                                    <div className="flex items-center text-[11px] text-muted-foreground gap-1.5">
-                                        <Timer className="w-3.5 h-3.5 text-amber-500 animate-spin" />
-                                        <span>Tiempo restante para checar: <strong className="text-amber-600 dark:text-amber-400 font-mono">{inactivityCountdown}s</strong></span>
+                                        <Button
+                                            type="button"
+                                            size="lg"
+                                            onClick={() => setIsEnrolamientoModalOpen(true)}
+                                            className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm sm:text-base py-6 px-8 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2.5 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                        >
+                                            <ScanFace className="w-5 h-5" />
+                                            <span>ENROLAR AHORA</span>
+                                        </Button>
                                     </div>
-                                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                                        <div
-                                            className={`h-full transition-all duration-1000 ease-linear rounded-full ${inactivityCountdown <= 5 ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                                            style={{ width: `${(inactivityCountdown / 15) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
+                                )}
 
-                                {/* BOTONES DE MARCAJE CON SUGERENCIA RESALTADA */}
-                                <div className="space-y-3">
-                                    <Label className="text-muted-foreground text-xs font-semibold uppercase tracking-wider block">
-                                        SELECCIONE LA ACCIÓN A REGISTRAR:
-                                    </Label>
-
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {/* LA SECCIÓN DE MARCAJE (TIMELINE, TIMER Y BOTONES) ES EXCLUSIVA PARA EMPLEADOS ENROLADOS */}
+                                {empleado.enrolado && (
+                                    <>
+                                        {/* MINI LÍNEA DE TIEMPO DEL DÍA (TIMELINE DE ASISTENCIA - 4 HITOS) */}
                                         {(() => {
-                                            const esDescansoActivo = sugerenciaMarcaje === 'descanso_fin' || empleado?.ultimo_marcaje_tipo === 'descanso_inicio';
-                                            const esIncidenteActivo = sugerenciaMarcaje === 'incidente_fin' || empleado?.ultimo_marcaje_tipo === 'incidente_inicio';
-                                            const tieneUnicaOpcionComida = opcionesDisponibles.length === 1;
-                                            const unicaOpcionComida = tieneUnicaOpcionComida ? opcionesDisponibles[0] : null;
+                                            const hitoEntrada = marcajesHoy.find(m => m.tipo === 'entrada' || m.tipo === 'entrada_extraordinaria');
+                                            const hitoInicioComida = marcajesHoy.find(m => m.tipo === 'salida_comida');
+                                            const hitoFinComida = marcajesHoy.find(m => m.tipo === 'entrada_comida');
+                                            const hitoSalida = marcajesHoy.find(m => m.tipo === 'salida');
+
+                                            const hitos = [
+                                                {
+                                                    key: 'entrada',
+                                                    label: 'Entrada',
+                                                    icon: LogIn,
+                                                    marcaje: hitoEntrada,
+                                                    esSugerido: sugerenciaMarcaje === 'entrada',
+                                                },
+                                                {
+                                                    key: 'salida_comida',
+                                                    label: 'Inicio Comida',
+                                                    icon: Utensils,
+                                                    marcaje: hitoInicioComida,
+                                                    esSugerido: sugerenciaMarcaje === 'salida_comida',
+                                                },
+                                                {
+                                                    key: 'entrada_comida',
+                                                    label: 'Fin Comida',
+                                                    icon: UtensilsCrossed,
+                                                    marcaje: hitoFinComida,
+                                                    esSugerido: sugerenciaMarcaje === 'entrada_comida',
+                                                },
+                                                {
+                                                    key: 'salida',
+                                                    label: 'Salida',
+                                                    icon: LogOut,
+                                                    marcaje: hitoSalida,
+                                                    esSugerido: sugerenciaMarcaje === 'salida',
+                                                },
+                                            ];
 
                                             return (
-                                                <>
-                                                    <Button
-                                                        onClick={() => handleRegisterMarcaje('entrada', { tipo_entrada: 'normal' })}
-                                                        disabled={loadingSearch}
-                                                        className={`${accionBase} ${
-                                                            sugerenciaMarcaje === 'entrada'
-                                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/30 shadow-md'
-                                                                : accionNeutra
-                                                        }`}
-                                                    >
-                                                        <LogIn className={`w-5 h-5 ${sugerenciaMarcaje === 'entrada' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
-                                                        <span>INICIO JORNADA</span>
-                                                    </Button>
-
-                                                    <Button
-                                                        onClick={() => {
-                                                            if (esDescansoActivo) {
-                                                                handleRegisterMarcaje('descanso_fin');
-                                                            } else {
-                                                                setIsDescansoModalOpen(true);
-                                                            }
-                                                        }}
-                                                        disabled={loadingSearch}
-                                                        className={`${accionBase} ${
-                                                            esDescansoActivo
-                                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/30 shadow-md animate-pulse'
-                                                                : 'bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 shadow-sm dark:bg-teal-950/30 dark:hover:bg-teal-950/50 dark:text-teal-300 dark:border-teal-900'
-                                                        }`}
-                                                    >
-                                                        <Coffee className={`w-5 h-5 ${esDescansoActivo ? 'text-white' : 'text-teal-600 dark:text-teal-400'}`} />
-                                                        <span>{esDescansoActivo ? 'FIN DESCANSO' : 'DESCANSO'}</span>
-                                                    </Button>
-
-                                                    <Button
-                                                        onClick={() => handleRegisterMarcaje('entrada_extraordinaria', { tipo_entrada: 'extraordinaria_doble' })}
-                                                        disabled={loadingSearch}
-                                                        className={`${accionBase} bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 shadow-sm dark:bg-purple-950/30 dark:hover:bg-purple-950/50 dark:text-purple-300 dark:border-purple-900`}
-                                                    >
-                                                        <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                                                        <span>TIEMPO EXTRA</span>
-                                                    </Button>
-
-                                                    {/* BOTÓN INICIO COMIDA: CON MARCAJE RÁPIDO SI SOLO HAY 1 PLATILLO ACTIVO */}
-                                                    <div className="flex flex-col">
-                                                        <Button
-                                                            onClick={() => {
-                                                                if (tieneUnicaOpcionComida && unicaOpcionComida) {
-                                                                    handleRegisterMarcaje('salida_comida', {
-                                                                        comida_opcion: unicaOpcionComida.id ?? unicaOpcionComida._idx,
-                                                                    });
-                                                                } else {
-                                                                    setIsComidaModalOpen(true);
-                                                                }
-                                                            }}
-                                                            disabled={loadingSearch}
-                                                            className={`${accionBase} gap-0.5 w-full ${
-                                                                sugerenciaMarcaje === 'salida_comida'
-                                                                    ? 'bg-amber-500 hover:bg-amber-400 text-white ring-4 ring-amber-500/30 shadow-md'
-                                                                    : accionNeutra
-                                                            }`}
-                                                        >
-                                                            <Utensils className={`w-5 h-5 ${sugerenciaMarcaje === 'salida_comida' ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
-                                                            <span>INICIO COMIDA</span>
-                                                            {tieneUnicaOpcionComida && unicaOpcionComida ? (
-                                                                <span className="text-[10px] opacity-80 font-medium truncate max-w-[130px]">
-                                                                    ⚡ Rápido: {unicaOpcionComida.nombre}
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-[10px] opacity-75 font-normal">Salida a Comer</span>
-                                                            )}
-                                                        </Button>
-                                                        {tieneUnicaOpcionComida && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setIsComidaModalOpen(true)}
-                                                                className="text-[10px] text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 underline mt-1 text-center"
-                                                            >
-                                                                Ver menú / Sin consumo
-                                                            </button>
-                                                        )}
+                                                <div className="bg-muted/40 border rounded-2xl p-3 sm:p-4 space-y-2">
+                                                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider">
+                                                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                                                            <Clock className="w-3.5 h-3.5 text-primary" />
+                                                            <span>Línea de Asistencia del Turno</span>
+                                                        </span>
+                                                        <span className="text-[11px] text-muted-foreground font-normal normal-case">
+                                                            {formatDate(currentTime).split(',')[0]}
+                                                        </span>
                                                     </div>
 
-                                                    <Button
-                                                        onClick={() => handleRegisterMarcaje('entrada_comida')}
-                                                        disabled={loadingSearch}
-                                                        className={`${accionBase} gap-0.5 ${
-                                                            sugerenciaMarcaje === 'entrada_comida'
-                                                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-4 ring-indigo-500/30 shadow-md'
-                                                                : accionNeutra
-                                                        }`}
-                                                    >
-                                                        <LogIn className={`w-5 h-5 ${sugerenciaMarcaje === 'entrada_comida' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`} />
-                                                        <span>FIN COMIDA</span>
-                                                        <span className="text-[10px] opacity-75 font-normal">Regreso de Comer</span>
-                                                    </Button>
+                                                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2 pt-1">
+                                                        {hitos.map((h) => {
+                                                            const Icon = h.icon;
+                                                            const tieneMarcaje = Boolean(h.marcaje);
+                                                            const esActivo = !tieneMarcaje && h.esSugerido;
 
-                                                    <Button
-                                                        onClick={() => {
-                                                            if (esIncidenteActivo) {
-                                                                handleRegisterMarcaje('incidente_fin');
-                                                            } else {
-                                                                setIsIncidenteModalOpen(true);
-                                                            }
-                                                        }}
-                                                        disabled={loadingSearch}
-                                                        className={`${accionBase} ${
-                                                            esIncidenteActivo
-                                                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/30 shadow-md animate-pulse'
-                                                                : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 shadow-sm dark:bg-amber-950/30 dark:hover:bg-amber-950/50 dark:text-amber-300 dark:border-amber-900'
-                                                        }`}
-                                                    >
-                                                        <AlertTriangle className={`w-5 h-5 ${esIncidenteActivo ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
-                                                        <span>{esIncidenteActivo ? 'FIN INCIDENTE' : 'INCIDENTE'}</span>
-                                                    </Button>
+                                                            return (
+                                                                <div
+                                                                    key={h.key}
+                                                                    className={`relative flex flex-col items-center text-center p-2 rounded-xl border transition-all ${
+                                                                        tieneMarcaje
+                                                                            ? 'bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
+                                                                            : esActivo
+                                                                                ? 'bg-amber-50 border-amber-400 text-amber-700 ring-2 ring-amber-400/30 animate-pulse dark:bg-amber-950/30 dark:text-amber-300'
+                                                                                : 'bg-card border-border text-muted-foreground'
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex items-center gap-1 mb-1">
+                                                                        {tieneMarcaje ? (
+                                                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                                        ) : esActivo ? (
+                                                                            <Icon className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 animate-bounce" />
+                                                                        ) : (
+                                                                            <Circle className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+                                                                        )}
+                                                                        <span className="text-[10px] sm:text-xs font-bold truncate max-w-[65px] sm:max-w-none">
+                                                                            {h.label}
+                                                                        </span>
+                                                                    </div>
 
-                                                    <Button
-                                                        onClick={() => handleRegisterMarcaje('salida')}
-                                                        disabled={loadingSearch}
-                                                        className={`col-span-2 sm:col-span-3 h-16 text-base font-bold flex items-center justify-center gap-2 rounded-xl transition-all ${
-                                                            sugerenciaMarcaje === 'salida'
-                                                                ? 'bg-rose-600 hover:bg-rose-500 text-white ring-4 ring-rose-500/30 shadow-md'
-                                                                : accionNeutra
-                                                        }`}
-                                                    >
-                                                        <LogOut className={`w-6 h-6 ${sugerenciaMarcaje === 'salida' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
-                                                        <span>SALIDA JORNADA</span>
-                                                    </Button>
-                                                </>
+                                                                    <div className="font-mono text-[11px] sm:text-xs font-bold">
+                                                                        {tieneMarcaje ? (
+                                                                            <span>{h.marcaje?.hora?.slice(0, 5)}</span>
+                                                                        ) : esActivo ? (
+                                                                            <span className="uppercase tracking-tighter text-[9px] sm:text-[10px]">
+                                                                                Siguiente
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="text-muted-foreground/60 font-normal">--:--</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
                                             );
                                         })()}
-                                    </div>
-                                </div>
+
+                                        {/* TEMPORIZADOR DE INACTIVIDAD (AUTO-RESET TRAS 15s) */}
+                                        <div className="space-y-1.5 bg-muted/40 p-2.5 rounded-xl border">
+                                            <div className="flex items-center text-[11px] text-muted-foreground gap-1.5">
+                                                <Timer className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+                                                <span>Tiempo restante para checar: <strong className="text-amber-600 dark:text-amber-400 font-mono">{inactivityCountdown}s</strong></span>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full transition-all duration-1000 ease-linear rounded-full ${inactivityCountdown <= 5 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                                    style={{ width: `${(inactivityCountdown / 15) * 100}%` }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* BOTONES DE MARCAJE CON SUGERENCIA RESALTADA */}
+                                        <div className="space-y-3">
+                                            <Label className="text-muted-foreground text-xs font-semibold uppercase tracking-wider block">
+                                                SELECCIONE LA ACCIÓN A REGISTRAR:
+                                            </Label>
+
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                {(() => {
+                                                    const esDescansoActivo = sugerenciaMarcaje === 'descanso_fin' || empleado?.ultimo_marcaje_tipo === 'descanso_inicio';
+                                                    const esIncidenteActivo = sugerenciaMarcaje === 'incidente_fin' || empleado?.ultimo_marcaje_tipo === 'incidente_inicio';
+                                                    const tieneUnicaOpcionComida = opcionesDisponibles.length === 1;
+                                                    const unicaOpcionComida = tieneUnicaOpcionComida ? opcionesDisponibles[0] : null;
+
+                                                    return (
+                                                        <>
+                                                            <Button
+                                                                onClick={() => handleRegisterMarcaje('entrada', { tipo_entrada: 'normal' })}
+                                                                disabled={loadingSearch}
+                                                                className={`${accionBase} ${
+                                                                    sugerenciaMarcaje === 'entrada'
+                                                                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/30 shadow-md'
+                                                                        : accionNeutra
+                                                                }`}
+                                                            >
+                                                                <LogIn className={`w-5 h-5 ${sugerenciaMarcaje === 'entrada' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                                                                <span>INICIO JORNADA</span>
+                                                            </Button>
+
+                                                            <Button
+                                                                onClick={() => {
+                                                                    if (esDescansoActivo) {
+                                                                        handleRegisterMarcaje('descanso_fin');
+                                                                    } else {
+                                                                        setIsDescansoModalOpen(true);
+                                                                    }
+                                                                }}
+                                                                disabled={loadingSearch}
+                                                                className={`${accionBase} ${
+                                                                    esDescansoActivo
+                                                                        ? 'bg-teal-600 hover:bg-teal-500 text-white ring-4 ring-teal-500/30 shadow-md animate-pulse'
+                                                                        : 'bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 shadow-sm dark:bg-teal-950/30 dark:hover:bg-teal-950/50 dark:text-teal-300 dark:border-teal-900'
+                                                                }`}
+                                                            >
+                                                                <Coffee className={`w-5 h-5 ${esDescansoActivo ? 'text-white' : 'text-teal-600 dark:text-teal-400'}`} />
+                                                                <span>{esDescansoActivo ? 'FIN DESCANSO' : 'DESCANSO'}</span>
+                                                            </Button>
+
+                                                            <Button
+                                                                onClick={() => handleRegisterMarcaje('entrada_extraordinaria', { tipo_entrada: 'extraordinaria_doble' })}
+                                                                disabled={loadingSearch}
+                                                                className={`${accionBase} bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 shadow-sm dark:bg-purple-950/30 dark:hover:bg-purple-950/50 dark:text-purple-300 dark:border-purple-900`}
+                                                            >
+                                                                <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                                                                <span>TIEMPO EXTRA</span>
+                                                            </Button>
+
+                                                            {/* BOTÓN INICIO COMIDA: CON MARCAJE RÁPIDO SI SOLO HAY 1 PLATILLO ACTIVO */}
+                                                            <div className="flex flex-col">
+                                                                <Button
+                                                                    onClick={() => {
+                                                                        if (tieneUnicaOpcionComida && unicaOpcionComida) {
+                                                                            handleRegisterMarcaje('salida_comida', {
+                                                                                comida_opcion: unicaOpcionComida.id ?? unicaOpcionComida._idx,
+                                                                            });
+                                                                        } else {
+                                                                            setIsComidaModalOpen(true);
+                                                                        }
+                                                                    }}
+                                                                    disabled={loadingSearch}
+                                                                    className={`${accionBase} gap-0.5 w-full ${
+                                                                        sugerenciaMarcaje === 'salida_comida'
+                                                                            ? 'bg-amber-500 hover:bg-amber-400 text-white ring-4 ring-amber-500/30 shadow-md'
+                                                                            : accionNeutra
+                                                                    }`}
+                                                                >
+                                                                    <Utensils className={`w-5 h-5 ${sugerenciaMarcaje === 'salida_comida' ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
+                                                                    <span>INICIO COMIDA</span>
+                                                                    {tieneUnicaOpcionComida && unicaOpcionComida ? (
+                                                                        <span className="text-[10px] opacity-80 font-medium truncate max-w-[130px]">
+                                                                            ⚡ Rápido: {unicaOpcionComida.nombre}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-[10px] opacity-75 font-normal">Salida a Comer</span>
+                                                                    )}
+                                                                </Button>
+                                                                {tieneUnicaOpcionComida && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setIsComidaModalOpen(true)}
+                                                                        className="text-[10px] text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 underline mt-1 text-center"
+                                                                    >
+                                                                        Ver menú / Sin consumo
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            <Button
+                                                                onClick={() => handleRegisterMarcaje('entrada_comida')}
+                                                                disabled={loadingSearch}
+                                                                className={`${accionBase} gap-0.5 ${
+                                                                    sugerenciaMarcaje === 'entrada_comida'
+                                                                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-4 ring-indigo-500/30 shadow-md'
+                                                                        : accionNeutra
+                                                                }`}
+                                                            >
+                                                                <LogIn className={`w-5 h-5 ${sugerenciaMarcaje === 'entrada_comida' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                                                                <span>FIN COMIDA</span>
+                                                                <span className="text-[10px] opacity-75 font-normal">Regreso de Comer</span>
+                                                            </Button>
+
+                                                            <Button
+                                                                onClick={() => {
+                                                                    if (esIncidenteActivo) {
+                                                                        handleRegisterMarcaje('incidente_fin');
+                                                                    } else {
+                                                                        setIsIncidenteModalOpen(true);
+                                                                    }
+                                                                }}
+                                                                disabled={loadingSearch}
+                                                                className={`${accionBase} ${
+                                                                    esIncidenteActivo
+                                                                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-4 ring-emerald-500/30 shadow-md animate-pulse'
+                                                                        : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 shadow-sm dark:bg-amber-950/30 dark:hover:bg-amber-950/50 dark:text-amber-300 dark:border-amber-900'
+                                                                }`}
+                                                            >
+                                                                <AlertTriangle className={`w-5 h-5 ${esIncidenteActivo ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
+                                                                <span>{esIncidenteActivo ? 'FIN INCIDENTE' : 'INCIDENTE'}</span>
+                                                            </Button>
+
+                                                            <Button
+                                                                onClick={() => handleRegisterMarcaje('salida')}
+                                                                disabled={loadingSearch}
+                                                                className={`col-span-2 sm:col-span-3 h-16 text-base font-bold flex items-center justify-center gap-2 rounded-xl transition-all ${
+                                                                    sugerenciaMarcaje === 'salida'
+                                                                        ? 'bg-rose-600 hover:bg-rose-500 text-white ring-4 ring-rose-500/30 shadow-md'
+                                                                        : accionNeutra
+                                                                }`}
+                                                            >
+                                                                <LogOut className={`w-6 h-6 ${sugerenciaMarcaje === 'salida' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
+                                                                <span>SALIDA JORNADA</span>
+                                                            </Button>
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </Card>
                         ) : (
                             <Card className="border-2 border-dashed shadow-none p-10 text-center space-y-4">
@@ -2000,6 +2103,16 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
                     </form>
                 </DialogContent>
             </Dialog>
+
+            {/* MODAL DE ENROLAMIENTO BIOMÉTRICO FACIAL EN KIOSKO */}
+            <KioskoEnrolamientoModal
+                isOpen={isEnrolamientoModalOpen}
+                onClose={() => setIsEnrolamientoModalOpen(false)}
+                empleado={empleado}
+                empresaNombre="Smurfit Westrock"
+                csrfToken={getCsrfToken()}
+                onSuccess={handleEnrolamientoSuccess}
+            />
 
             {/* PIE DE PÁGINA CON ESTADO DE RED, COLA OFFLINE Y SINCRONIZACIÓN */}
             <footer className="border-t bg-card px-4 md:px-8 py-3 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-2">

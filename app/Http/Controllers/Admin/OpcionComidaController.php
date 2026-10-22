@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OpcionComidaRequest;
 use App\Models\OpcionComida;
+use App\Models\Proveedor;
 use App\Models\Sucursal;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,7 +16,7 @@ class OpcionComidaController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $query = OpcionComida::with(['sucursal', 'empresa'])
+        $query = OpcionComida::with(['sucursal', 'empresa', 'proveedor'])
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->input('search');
                 $q->where(function ($sub) use ($search) {
@@ -31,6 +32,9 @@ class OpcionComidaController extends Controller
             })
             ->when($request->filled('sucursal_id'), function ($q) use ($request) {
                 $q->where('sucursal_id', (int) $request->input('sucursal_id'));
+            })
+            ->when($request->filled('proveedor_id'), function ($q) use ($request) {
+                $q->where('proveedor_id', (int) $request->input('proveedor_id'));
             });
 
         $opciones = $query->orderBy('orden', 'asc')
@@ -53,18 +57,50 @@ class OpcionComidaController extends Controller
             $sucursalesQuery->where('empresa_id', $user->empresa_id);
         }
 
+        $proveedoresQuery = Proveedor::withoutGlobalScope('multitenancy')
+            ->where('status', 'activo')
+            ->orderBy('nombre_comercial', 'asc');
+
+        if ($user && ! $user->isSuperAdmin()) {
+            if ($user->empresa_id) {
+                $proveedoresQuery->where('empresa_id', $user->empresa_id);
+            }
+            if ($user->sucursal_id) {
+                $proveedoresQuery->where(function ($q) use ($user) {
+                    $q->where('sucursal_id', $user->sucursal_id)
+                        ->orWhereNull('sucursal_id');
+                });
+            }
+        }
+
+        $sucursalUsuario = ($user && $user->sucursal_id)
+            ? Sucursal::find($user->sucursal_id)
+            : null;
+
         return Inertia::render('admin/asistencia/comedor/Index', [
             'opciones' => $opciones,
             'stats' => $stats,
             'tipos' => OpcionComida::TIPOS,
             'sucursales' => $sucursalesQuery->get(['id', 'nombre', 'empresa_id']),
-            'filters' => $request->only('search', 'tipo', 'status', 'sucursal_id', 'perPage'),
+            'proveedores' => $proveedoresQuery->get(['id', 'nombre_comercial', 'razon_social', 'rfc', 'sucursal_id']),
+            'sucursal_usuario' => $sucursalUsuario ? [
+                'id' => $sucursalUsuario->id,
+                'nombre' => $sucursalUsuario->nombre,
+                'empresa_id' => $sucursalUsuario->empresa_id,
+            ] : null,
+            'filters' => $request->only('search', 'tipo', 'status', 'sucursal_id', 'proveedor_id', 'perPage'),
         ]);
     }
 
     public function store(OpcionComidaRequest $request)
     {
         $validated = $request->validated();
+        $user = $request->user();
+
+        if (empty($validated['sucursal_id']) && $user && $user->sucursal_id) {
+            $validated['sucursal_id'] = $user->sucursal_id;
+        }
+
         if (! isset($validated['orden']) || $validated['orden'] === null) {
             $validated['orden'] = (OpcionComida::max('orden') ?? 0) + 1;
         }

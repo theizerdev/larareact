@@ -37,6 +37,7 @@ class OpcionComidaRequest extends FormRequest
             'orden' => 'nullable|integer|min:0|max:999',
             'status' => 'nullable|boolean',
             'sucursal_id' => 'nullable|exists:sucursales,id',
+            'proveedor_id' => 'nullable|exists:proveedores,id',
         ];
     }
 
@@ -53,6 +54,7 @@ class OpcionComidaRequest extends FormRequest
             'icono' => 'ícono',
             'color' => 'color distintivo',
             'orden' => 'orden de visualización',
+            'proveedor_id' => 'proveedor de alimentos',
         ];
     }
 
@@ -72,6 +74,13 @@ class OpcionComidaRequest extends FormRequest
 
                 if ($user->empresa_id && ! Sucursal::where('id', $sucursalId)->where('empresa_id', $user->empresa_id)->exists()) {
                     $validator->errors()->add('sucursal_id', 'La sucursal seleccionada no pertenece a su empresa.');
+                }
+            }
+
+            if ($this->filled('proveedor_id')) {
+                $proveedorId = (int) $this->input('proveedor_id');
+                if ($user->empresa_id && ! \App\Models\Proveedor::where('id', $proveedorId)->where('empresa_id', $user->empresa_id)->exists()) {
+                    $validator->errors()->add('proveedor_id', 'El proveedor seleccionado no pertenece a su empresa.');
                 }
             }
         });

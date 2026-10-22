@@ -8,6 +8,7 @@ use App\Models\ConfiguracionAsistencia;
 use App\Models\Empleado;
 use App\Models\OpcionComida;
 use App\Services\CalculoAsistenciaLftService;
+use App\Services\EmpleadoEnrolamientoService;
 use App\Services\RegistroMarcajeService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -117,19 +118,30 @@ class RelojChecadorKioskoController extends Controller
                 'comida_tipo' => $m->comida_tipo,
             ]);
 
+        $estaEnrolado = !empty($empleado->enrolado_en);
+
         return response()->json([
             'success' => true,
             'empleado' => [
                 'id' => $empleado->id,
                 'nombre_completo' => $empleado->nombre_completo,
+                'nombres' => $empleado->nombres,
+                'apellidos' => $empleado->apellidos,
                 'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'numero' => $empleado->documento_identidad,
                 'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
                 'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
                 'departamento' => $empleado->departamento?->nombre,
+                'area' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
                 'minutos_descanso' => $minutosDescanso,
                 'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
+                'enrolado' => $estaEnrolado,
+                'enrolado_en' => $empleado->enrolado_en?->toIso8601String(),
+                'genero' => $empleado->genero,
+                'fecha_nacimiento' => $empleado->fecha_nacimiento?->format('Y-m-d'),
+                'empresa_nombre' => $empleado->empresa?->razon_social ?? $empleado->empresa?->nombre_comercial ?? 'Smurfit Westrock',
             ],
             'marcajes_hoy' => $marcajesHoy,
             'ultimo_marcaje' => $ultimoMarcaje ? [
@@ -321,5 +333,71 @@ class RelojChecadorKioskoController extends Controller
             'entrada_extraordinaria' => 'Tiempo Extra',
             default => $tipo ? str_replace('_', ' ', ucfirst($tipo)) : '',
         };
+    }
+
+    /**
+     * Enrola al colaborador directamente desde el Kiosko y lo sincroniza con BioTime.
+     */
+    public function enrolarEmpleado(Request $request, EmpleadoEnrolamientoService $enrolamientoService)
+    {
+        $request->validate([
+            'empleado_id' => 'required|integer|exists:empleados,id',
+            'aviso_privacidad' => 'accepted',
+            'foto_empleado' => 'required|string',
+            'foto_empleado_2' => 'required|string',
+            'genero' => 'required|in:M,F',
+            'fecha_nacimiento' => 'required|date|before:-14 years|after:1900-01-01',
+        ], [
+            'aviso_privacidad.accepted' => 'Debe aceptar el aviso de privacidad.',
+            'foto_empleado.required' => 'Falta la primera foto frontal.',
+            'foto_empleado_2.required' => 'Falta la segunda foto frontal.',
+            'genero.required' => 'Seleccione el sexo.',
+            'fecha_nacimiento.required' => 'Capture la fecha de nacimiento.',
+            'fecha_nacimiento.before' => 'La fecha de nacimiento no es válida.',
+            'fecha_nacimiento.after' => 'La fecha de nacimiento no es válida.',
+        ]);
+
+        $user = $request->user();
+        $empleado = Empleado::where('id', $request->input('empleado_id'))
+            ->when($user?->empresa_id, fn ($q) => $q->where('empresa_id', $user->empresa_id))
+            ->first();
+
+        if (! $empleado) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Colaborador no encontrado o no pertenece a su empresa.',
+            ], 404);
+        }
+
+        $empleado = $enrolamientoService->guardar($empleado, $request->all());
+
+        activity('empleados')
+            ->causedBy($user)
+            ->performedOn($empleado)
+            ->log("Se completó el enrolamiento biométrico de {$empleado->nombre_completo} desde el Kiosko.");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Enrolamiento biométrico completado y sincronizado con BioTime exitosamente.',
+            'empleado' => [
+                'id' => $empleado->id,
+                'nombre_completo' => $empleado->nombre_completo,
+                'nombres' => $empleado->nombres,
+                'apellidos' => $empleado->apellidos,
+                'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'numero' => $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
+                'departamento' => $empleado->departamento?->nombre,
+                'area' => $empleado->departamento?->nombre,
+                'cargo' => $empleado->cargo?->nombre,
+                'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
+                'enrolado' => true,
+                'enrolado_en' => $empleado->enrolado_en?->toIso8601String(),
+                'genero' => $empleado->genero,
+                'fecha_nacimiento' => $empleado->fecha_nacimiento?->format('Y-m-d'),
+                'empresa_nombre' => $empleado->empresa?->razon_social ?? $empleado->empresa?->nombre_comercial ?? 'Smurfit Westrock',
+            ],
+        ]);
     }
 }
