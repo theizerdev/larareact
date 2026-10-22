@@ -19,7 +19,11 @@ import {
     Search,
     SlidersHorizontal,
     RotateCcw,
-    Store
+    Store,
+    FileSpreadsheet,
+    Calendar,
+    Download,
+    Receipt
 } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
@@ -175,6 +179,80 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, prove
         if (!activeModalSucursalId) return proveedores;
         return proveedores.filter((p) => !p.sucursal_id || p.sucursal_id === activeModalSucursalId);
     }, [proveedores, activeModalSucursalId]);
+
+    // Modal de Reporte de Liquidación a Proveedores
+    const [isReportOpen, setIsReportOpen] = useState(false);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const firstDayMonthStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
+    const [reportFechaInicio, setReportFechaInicio] = useState(firstDayMonthStr);
+    const [reportFechaFin, setReportFechaFin] = useState(todayStr);
+    const [reportProveedorId, setReportProveedorId] = useState(proveedorFilter !== 'all' ? proveedorFilter : 'all');
+    const [reportSucursalId, setReportSucursalId] = useState(sucursalFilter !== 'all' ? sucursalFilter : (sucursal_usuario?.id ? String(sucursal_usuario.id) : 'all'));
+    const [reportTipo, setReportTipo] = useState('all');
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    const handleOpenReport = (presetProveedorId?: string) => {
+        if (presetProveedorId && presetProveedorId !== 'all') {
+            setReportProveedorId(presetProveedorId);
+        } else if (proveedorFilter !== 'all') {
+            setReportProveedorId(proveedorFilter);
+        }
+        setIsReportOpen(true);
+    };
+
+    const handleSetDateRange = (preset: 'quincena' | 'mes_actual' | 'mes_anterior' | '30dias') => {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        const d = now.getDate();
+
+        if (preset === 'quincena') {
+            if (d <= 15) {
+                const f1 = new Date(Date.UTC(y, m, 1)).toISOString().split('T')[0];
+                const f2 = new Date(Date.UTC(y, m, 15)).toISOString().split('T')[0];
+                setReportFechaInicio(f1);
+                setReportFechaFin(f2);
+            } else {
+                const f1 = new Date(Date.UTC(y, m, 16)).toISOString().split('T')[0];
+                const f2 = new Date(Date.UTC(y, m + 1, 0)).toISOString().split('T')[0];
+                setReportFechaInicio(f1);
+                setReportFechaFin(f2);
+            }
+        } else if (preset === 'mes_actual') {
+            const f1 = new Date(Date.UTC(y, m, 1)).toISOString().split('T')[0];
+            setReportFechaInicio(f1);
+            setReportFechaFin(todayStr);
+        } else if (preset === 'mes_anterior') {
+            const firstPrev = new Date(Date.UTC(y, m - 1, 1)).toISOString().split('T')[0];
+            const lastPrev = new Date(Date.UTC(y, m, 0)).toISOString().split('T')[0];
+            setReportFechaInicio(firstPrev);
+            setReportFechaFin(lastPrev);
+        } else if (preset === '30dias') {
+            const past30 = new Date();
+            past30.setDate(past30.getDate() - 30);
+            setReportFechaInicio(past30.toISOString().split('T')[0]);
+            setReportFechaFin(todayStr);
+        }
+    };
+
+    const handleDownloadExcel = () => {
+        setIsDownloading(true);
+        const params = new URLSearchParams();
+        if (reportFechaInicio) params.append('fecha_inicio', reportFechaInicio);
+        if (reportFechaFin) params.append('fecha_fin', reportFechaFin);
+        if (reportProveedorId && reportProveedorId !== 'all') params.append('proveedor_id', reportProveedorId);
+        if (reportSucursalId && reportSucursalId !== 'all') params.append('sucursal_id', reportSucursalId);
+        if (reportTipo && reportTipo !== 'all') params.append('tipo', reportTipo);
+
+        window.location.href = `/admin/asistencia/comedor/reporte/liquidacion?${params.toString()}`;
+
+        setTimeout(() => {
+            setIsDownloading(false);
+            notifySuccess('Se ha iniciado la descarga del reporte de liquidación en Excel (.xlsx).');
+            setIsReportOpen(false);
+        }, 1200);
+    };
 
     const handleApplyFilters = () => {
         router.get('/admin/asistencia/comedor', {
@@ -343,10 +421,20 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, prove
                     description="Catálogo dinámico de tiempos de comida (Desayuno, Almuerzo, Cena, Refrigerio), costos al colaborador, subsidios y horarios disponibles en el Kiosko Checador."
                     colorClassName="bg-slate-900 dark:bg-slate-800"
                 >
-                    <Button onClick={handleOpenCreate} className="bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-2 shadow-sm">
-                        <Plus className="w-4 h-4" />
-                        <span>Nueva Opción de Comida</span>
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        <Button
+                            onClick={() => handleOpenReport()}
+                            variant="outline"
+                            className="bg-white/10 hover:bg-white/20 text-white border-white/20 font-semibold gap-2 shadow-sm backdrop-blur-sm"
+                        >
+                            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                            <span>Reporte de Liquidación</span>
+                        </Button>
+                        <Button onClick={handleOpenCreate} className="bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-2 shadow-sm">
+                            <Plus className="w-4 h-4" />
+                            <span>Nueva Opción de Comida</span>
+                        </Button>
+                    </div>
                 </ModuleHeader>
 
                 {/* Stat Cards */}
@@ -469,7 +557,7 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, prove
                                 </div>
                             )}
 
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 <Button onClick={handleApplyFilters} className="gap-1.5">
                                     <SlidersHorizontal className="w-4 h-4" />
                                     <span>Filtrar</span>
@@ -477,6 +565,18 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, prove
                                 <Button variant="outline" onClick={handleResetFilters} title="Limpiar Filtros">
                                     <RotateCcw className="w-4 h-4" />
                                 </Button>
+                                {proveedorFilter !== 'all' && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => handleOpenReport(proveedorFilter)}
+                                        className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 gap-1.5"
+                                        title="Generar reporte de liquidación para el proveedor seleccionado"
+                                    >
+                                        <FileSpreadsheet className="w-4 h-4" />
+                                        <span className="hidden sm:inline">Liquidación Proveedor</span>
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </CardContent>
@@ -1037,6 +1137,202 @@ export default function ComedorIndex({ opciones, stats, tipos, sucursales, prove
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* ── MODAL DE REPORTE DE LIQUIDACIÓN A PROVEEDORES (EXCEL) ───────────── */}
+            <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
+                <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-xl md:max-w-2xl p-6 sm:p-7 rounded-2xl shadow-2xl">
+                    <DialogHeader className="pb-3 border-b border-border/60">
+                        <DialogTitle className="flex items-center gap-2.5 text-lg font-bold">
+                            <div className="p-2 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                                <FileSpreadsheet className="w-5 h-5" />
+                            </div>
+                            <span>Reporte de Liquidación a Proveedores de Comedor</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
+                            Conciliación de raciones de alimentos consumidas para el pago a proveedores de catering, auditoría de descuentos a colaboradores y subsidios de la empresa.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-5 pt-3">
+                        {/* Atajos de Fecha */}
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5 text-emerald-500" /> Período del Corte de Liquidación
+                            </Label>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs h-8 hover:bg-emerald-500/10 hover:border-emerald-500/30"
+                                    onClick={() => handleSetDateRange('quincena')}
+                                >
+                                    Esta Quincena
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs h-8 hover:bg-emerald-500/10 hover:border-emerald-500/30"
+                                    onClick={() => handleSetDateRange('mes_actual')}
+                                >
+                                    Mes Actual
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs h-8 hover:bg-emerald-500/10 hover:border-emerald-500/30"
+                                    onClick={() => handleSetDateRange('mes_anterior')}
+                                >
+                                    Mes Anterior
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-xs h-8 hover:bg-emerald-500/10 hover:border-emerald-500/30"
+                                    onClick={() => handleSetDateRange('30dias')}
+                                >
+                                    Últimos 30 días
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Rango de Fechas Desde - Hasta */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl border bg-muted/20">
+                            <div className="space-y-1">
+                                <Label htmlFor="report_desde" className="text-xs font-semibold">Fecha Desde (Inicio)</Label>
+                                <Input
+                                    id="report_desde"
+                                    type="date"
+                                    value={reportFechaInicio}
+                                    onChange={(e) => setReportFechaInicio(e.target.value)}
+                                    className="bg-background font-mono text-xs"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="report_hasta" className="text-xs font-semibold">Fecha Hasta (Corte)</Label>
+                                <Input
+                                    id="report_hasta"
+                                    type="date"
+                                    value={reportFechaFin}
+                                    onChange={(e) => setReportFechaFin(e.target.value)}
+                                    className="bg-background font-mono text-xs"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Selector de Proveedor */}
+                        <div className="space-y-1.5">
+                            <Label htmlFor="report_proveedor" className="text-xs font-bold flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                    <Store className="w-3.5 h-3.5 text-amber-500" /> Proveedor de Alimentos
+                                </span>
+                                {reportProveedorId !== 'all' ? (
+                                    <Badge variant="outline" className="text-[10px] text-amber-600 dark:text-amber-400 border-amber-500/30">
+                                        Proveedor Individual
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="outline" className="text-[10px] text-blue-600 dark:text-blue-400 border-blue-500/30">
+                                        Consolidado (Todos los Proveedores)
+                                    </Badge>
+                                )}
+                            </Label>
+                            <Select value={reportProveedorId} onValueChange={setReportProveedorId}>
+                                <SelectTrigger id="report_proveedor" className="h-10">
+                                    <SelectValue placeholder="Seleccione un proveedor..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">📊 TODOS LOS PROVEEDORES (Reporte Consolidado)</SelectItem>
+                                    {proveedores.map((p) => (
+                                        <SelectItem key={p.id} value={String(p.id)}>
+                                            🏪 {p.nombre_comercial} {p.rfc ? `(${p.rfc})` : ''}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-muted-foreground">
+                                {reportProveedorId === 'all'
+                                    ? 'Genera la relación completa agrupando y totalizando los alimentos de todos los proveedores.'
+                                    : 'Genera el corte exacto y estado de cuenta exclusivo para el proveedor seleccionado.'}
+                            </p>
+                        </div>
+
+                        {/* Filtros Secundarios: Sede y Clasificación */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-bold flex items-center gap-1.5">
+                                    <Building2 className="w-3.5 h-3.5 text-slate-400" /> Sede / Planta
+                                </Label>
+                                <Select value={reportSucursalId} onValueChange={setReportSucursalId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Todas las plantas" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas las plantas (Global)</SelectItem>
+                                        {sucursales.map((s) => (
+                                            <SelectItem key={s.id} value={String(s.id)}>
+                                                {s.nombre} {sucursal_usuario?.id === s.id ? '(Tu Sede)' : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-bold flex items-center gap-1.5">
+                                    <Utensils className="w-3.5 h-3.5 text-slate-400" /> Clasificación / Tiempo
+                                </Label>
+                                <Select value={reportTipo} onValueChange={setReportTipo}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Todos los tiempos" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos los tiempos de comida</SelectItem>
+                                        <SelectItem value="desayuno">☕ Desayunos</SelectItem>
+                                        <SelectItem value="almuerzo">🍽️ Almuerzos / Comidas</SelectItem>
+                                        <SelectItem value="cena">🌙 Cenas</SelectItem>
+                                        <SelectItem value="refrigerio">🍎 Refrigerios</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {/* Caja Informativa de lo que contiene el archivo Excel */}
+                        <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-xs text-muted-foreground space-y-1.5">
+                            <p className="font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                                <Receipt className="w-4 h-4" /> El archivo Excel (.xlsx) contendrá 2 hojas ejecutivas:
+                            </p>
+                            <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1">
+                                <li><strong>Hoja 1: Resumen y Liquidación</strong> (Carátula con KPIs de facturación, total de raciones, descuento nómina, subsidio empresa y tabla por proveedor/tiempo).</li>
+                                <li><strong>Hoja 2: Detalle de Consumos</strong> (Relación completa de cada alimento consumido con fecha, hora, no. nómina, colaborador, departamento, puesto, platillo, costo factura y fórmulas).</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 pt-4 border-t border-border/60">
+                        <Button type="button" variant="outline" onClick={() => setIsReportOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleDownloadExcel}
+                            disabled={isDownloading}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-sm"
+                        >
+                            {isDownloading ? (
+                                <span>Generando Excel...</span>
+                            ) : (
+                                <>
+                                    <FileSpreadsheet className="w-4 h-4" />
+                                    <span>Exportar a Excel (.xlsx)</span>
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

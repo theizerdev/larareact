@@ -48,6 +48,10 @@ class AsistenciaMarcaje extends Model
         'duracion_descanso_minutos',
         'comida_tipo',
         'comida_costo',
+        'opcion_comida_id',
+        'proveedor_id',
+        'comida_costo_empresa',
+        'comida_subsidio',
         'geolocalizacion',
         'tipo_entrada',
         // Evidencia de la app móvil
@@ -112,6 +116,8 @@ class AsistenciaMarcaje extends Model
             'ubicacion_simulada' => 'boolean',
             'ubicacion_fecha_hora' => 'datetime',
             'comida_costo' => 'decimal:2',
+            'comida_costo_empresa' => 'decimal:2',
+            'comida_subsidio' => 'decimal:2',
         ];
     }
 
@@ -151,5 +157,15 @@ class AsistenciaMarcaje extends Model
     public function registradoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'registrado_por_user_id');
+    }
+
+    public function opcionComida(): BelongsTo
+    {
+        return $this->belongsTo(OpcionComida::class, 'opcion_comida_id');
+    }
+
+    public function proveedor(): BelongsTo
+    {
+        return $this->belongsTo(Proveedor::class, 'proveedor_id');
     }
 }

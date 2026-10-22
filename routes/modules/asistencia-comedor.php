@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['permission:asistencia.configuracion|asistencia.view'])->group(function () {
     Route::get('/asistencia/comedor', [OpcionComidaController::class, 'index'])
         ->name('asistencia.comedor.index');
+    Route::get('/asistencia/comedor/reporte/liquidacion', [OpcionComidaController::class, 'exportarLiquidacion'])
+        ->name('asistencia.comedor.reporte.liquidacion');
 });
 
 // Rutas de modificación (exigen asistencia.configuracion)

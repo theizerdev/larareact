@@ -140,6 +140,11 @@ class Empleado extends Model
         return $this->belongsTo(Cargo::class);
     }
 
+    public function puesto(): BelongsTo
+    {
+        return $this->cargo();
+    }
+
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class);

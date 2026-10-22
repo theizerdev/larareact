@@ -255,14 +255,29 @@ class RelojChecadorKioskoController extends Controller
                     ->find($opcionIdentificador);
 
                 if ($opcionModel) {
+                    $costoEmp = (float) $opcionModel->costo_empleado;
+                    $costoEmpresa = (float) $opcionModel->costo_empresa;
+                    $subsidio = max(0.0, $costoEmpresa - $costoEmp);
                     $comida = [
+                        'id' => $opcionModel->id,
+                        'proveedor_id' => $opcionModel->proveedor_id,
                         'nombre' => $opcionModel->nombre,
-                        'costo' => (float) $opcionModel->costo_empleado,
+                        'costo' => $costoEmp,
+                        'costo_empresa' => $costoEmpresa,
+                        'subsidio' => $subsidio,
                     ];
                 } else {
                     // 2. Si no es un ID directo (o en tests/fallback donde viene un índice 0, 1, 2)
                     $opcionesKiosko = ConfiguracionAsistencia::obtenerOpcionesParaKiosko($empleado->empresa_id, $empleado->sucursal_id);
                     $comida = $opcionesKiosko[$opcionIdentificador] ?? null;
+                    if ($comida && isset($comida['id'])) {
+                        $model = OpcionComida::find($comida['id']);
+                        if ($model) {
+                            $comida['proveedor_id'] = $model->proveedor_id;
+                            $comida['costo_empresa'] = (float) $model->costo_empresa;
+                            $comida['subsidio'] = max(0.0, (float) $model->costo_empresa - (float) ($comida['costo'] ?? 0));
+                        }
+                    }
                 }
 
                 if (! $comida) {
@@ -287,6 +302,10 @@ class RelojChecadorKioskoController extends Controller
             'duracion_descanso_minutos' => $validated['duracion_descanso_minutos'] ?? null,
             'comida_tipo' => $comida['nombre'] ?? null,
             'comida_costo' => $comida['costo'] ?? null,
+            'opcion_comida_id' => $comida['id'] ?? null,
+            'proveedor_id' => $comida['proveedor_id'] ?? null,
+            'comida_costo_empresa' => $comida['costo_empresa'] ?? null,
+            'comida_subsidio' => $comida['subsidio'] ?? null,
             'tipo_entrada' => $validated['tipo_entrada'] ?? 'normal',
             'registrado_por_user_id' => $request->user()?->id,
         ]);

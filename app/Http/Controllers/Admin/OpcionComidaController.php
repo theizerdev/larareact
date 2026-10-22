@@ -7,6 +7,7 @@ use App\Http\Requests\OpcionComidaRequest;
 use App\Models\OpcionComida;
 use App\Models\Proveedor;
 use App\Models\Sucursal;
+use App\Services\ComedorLiquidacionExportService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -146,5 +147,26 @@ class OpcionComidaController extends Controller
             'type' => 'success',
             'message' => 'Opción de comida eliminada correctamente.',
         ]);
+    }
+
+    /**
+     * Exporta el reporte de liquidación y conciliación de consumo de alimentos
+     * a proveedores en formato Excel (.xlsx).
+     */
+    public function exportarLiquidacion(Request $request, ComedorLiquidacionExportService $exportService)
+    {
+        $user = $request->user();
+        $empresa = $user?->empresa;
+        $sucursal = ($user && $user->sucursal_id) ? Sucursal::find($user->sucursal_id) : null;
+
+        $filters = $request->only([
+            'fecha_inicio',
+            'fecha_fin',
+            'proveedor_id',
+            'sucursal_id',
+            'tipo',
+        ]);
+
+        return $exportService->exportarExcel($filters, $empresa, $sucursal);
     }
 }
