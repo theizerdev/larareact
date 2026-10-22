@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             ProveedorSeeder::class,
             ComedorMexicoSeeder::class,
             GroupSeeder::class,
+            ProveedorSeeder::class,
         ]);
     }
 }
