@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::index
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:14
-* @route '/admin/monitoring/queues'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:14
+ * @route '/admin/monitoring/queues'
+ */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -16,28 +16,27 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::index
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:14
-* @route '/admin/monitoring/queues'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:14
+ * @route '/admin/monitoring/queues'
+ */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::index
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:14
-* @route '/admin/monitoring/queues'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:14
+ * @route '/admin/monitoring/queues'
+ */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::index
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:14
-* @route '/admin/monitoring/queues'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:14
+ * @route '/admin/monitoring/queues'
+ */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
@@ -45,9 +44,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::retryAll
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:81
-* @route '/admin/monitoring/queues/retry-all'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:81
+ * @route '/admin/monitoring/queues/retry-all'
+ */
 export const retryAll = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: retryAll.url(options),
     method: 'post',
@@ -60,18 +59,18 @@ retryAll.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::retryAll
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:81
-* @route '/admin/monitoring/queues/retry-all'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:81
+ * @route '/admin/monitoring/queues/retry-all'
+ */
 retryAll.url = (options?: RouteQueryOptions) => {
     return retryAll.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::retryAll
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:81
-* @route '/admin/monitoring/queues/retry-all'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:81
+ * @route '/admin/monitoring/queues/retry-all'
+ */
 retryAll.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: retryAll.url(options),
     method: 'post',
@@ -79,9 +78,9 @@ retryAll.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::retry
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:68
-* @route '/admin/monitoring/queues/{id}/retry'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:68
+ * @route '/admin/monitoring/queues/{id}/retry'
+ */
 export const retry = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: retry.url(args, options),
     method: 'post',
@@ -94,25 +93,26 @@ retry.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::retry
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:68
-* @route '/admin/monitoring/queues/{id}/retry'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:68
+ * @route '/admin/monitoring/queues/{id}/retry'
+ */
 retry.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { id: args }
     }
 
+    
     if (Array.isArray(args)) {
         args = {
-            id: args[0],
-        }
+                    id: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        id: args.id,
-    }
+                        id: args.id,
+                }
 
     return retry.definition.url
             .replace('{id}', parsedArgs.id.toString())
@@ -121,9 +121,9 @@ retry.url = (args: { id: string | number } | [id: string | number ] | string | n
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::retry
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:68
-* @route '/admin/monitoring/queues/{id}/retry'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:68
+ * @route '/admin/monitoring/queues/{id}/retry'
+ */
 retry.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: retry.url(args, options),
     method: 'post',
@@ -131,9 +131,9 @@ retry.post = (args: { id: string | number } | [id: string | number ] | string | 
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::destroyAll
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:107
-* @route '/admin/monitoring/queues/clear-all'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:107
+ * @route '/admin/monitoring/queues/clear-all'
+ */
 export const destroyAll = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroyAll.url(options),
     method: 'delete',
@@ -146,18 +146,18 @@ destroyAll.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::destroyAll
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:107
-* @route '/admin/monitoring/queues/clear-all'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:107
+ * @route '/admin/monitoring/queues/clear-all'
+ */
 destroyAll.url = (options?: RouteQueryOptions) => {
     return destroyAll.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::destroyAll
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:107
-* @route '/admin/monitoring/queues/clear-all'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:107
+ * @route '/admin/monitoring/queues/clear-all'
+ */
 destroyAll.delete = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroyAll.url(options),
     method: 'delete',
@@ -165,9 +165,9 @@ destroyAll.delete = (options?: RouteQueryOptions): RouteDefinition<'delete'> => 
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::destroy
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:94
-* @route '/admin/monitoring/queues/{id}'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:94
+ * @route '/admin/monitoring/queues/{id}'
+ */
 export const destroy = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
@@ -180,25 +180,26 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::destroy
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:94
-* @route '/admin/monitoring/queues/{id}'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:94
+ * @route '/admin/monitoring/queues/{id}'
+ */
 destroy.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { id: args }
     }
 
+    
     if (Array.isArray(args)) {
         args = {
-            id: args[0],
-        }
+                    id: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        id: args.id,
-    }
+                        id: args.id,
+                }
 
     return destroy.definition.url
             .replace('{id}', parsedArgs.id.toString())
@@ -207,14 +208,13 @@ destroy.url = (args: { id: string | number } | [id: string | number ] | string |
 
 /**
 * @see \App\Http\Controllers\Admin\QueueMonitoringController::destroy
-* @see app/Http/Controllers/Admin/QueueMonitoringController.php:94
-* @route '/admin/monitoring/queues/{id}'
-*/
+ * @see app/Http/Controllers/Admin/QueueMonitoringController.php:94
+ * @route '/admin/monitoring/queues/{id}'
+ */
 destroy.delete = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
-
 const QueueMonitoringController = { index, retryAll, retry, destroyAll, destroy }
 
 export default QueueMonitoringController

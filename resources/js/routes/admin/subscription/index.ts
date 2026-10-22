@@ -1,10 +1,11 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 import paypal from './paypal'
+import stripe from './stripe'
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::expired
-* @see app/Http/Controllers/Admin/SubscriptionController.php:118
-* @route '/admin/subscription/expired'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:122
+ * @route '/admin/subscription/expired'
+ */
 export const expired = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: expired.url(options),
     method: 'get',
@@ -17,28 +18,27 @@ expired.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::expired
-* @see app/Http/Controllers/Admin/SubscriptionController.php:118
-* @route '/admin/subscription/expired'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:122
+ * @route '/admin/subscription/expired'
+ */
 expired.url = (options?: RouteQueryOptions) => {
     return expired.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::expired
-* @see app/Http/Controllers/Admin/SubscriptionController.php:118
-* @route '/admin/subscription/expired'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:122
+ * @route '/admin/subscription/expired'
+ */
 expired.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: expired.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::expired
-* @see app/Http/Controllers/Admin/SubscriptionController.php:118
-* @route '/admin/subscription/expired'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:122
+ * @route '/admin/subscription/expired'
+ */
 expired.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: expired.url(options),
     method: 'head',
@@ -46,9 +46,9 @@ expired.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::index
-* @see app/Http/Controllers/Admin/SubscriptionController.php:21
-* @route '/admin/monitoring/subscription'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:21
+ * @route '/admin/monitoring/subscription'
+ */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -61,28 +61,27 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::index
-* @see app/Http/Controllers/Admin/SubscriptionController.php:21
-* @route '/admin/monitoring/subscription'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:21
+ * @route '/admin/monitoring/subscription'
+ */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::index
-* @see app/Http/Controllers/Admin/SubscriptionController.php:21
-* @route '/admin/monitoring/subscription'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:21
+ * @route '/admin/monitoring/subscription'
+ */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::index
-* @see app/Http/Controllers/Admin/SubscriptionController.php:21
-* @route '/admin/monitoring/subscription'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:21
+ * @route '/admin/monitoring/subscription'
+ */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
@@ -90,9 +89,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::renew
-* @see app/Http/Controllers/Admin/SubscriptionController.php:126
-* @route '/admin/monitoring/subscription/renew'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:130
+ * @route '/admin/monitoring/subscription/renew'
+ */
 export const renew = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: renew.url(options),
     method: 'post',
@@ -105,18 +104,18 @@ renew.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::renew
-* @see app/Http/Controllers/Admin/SubscriptionController.php:126
-* @route '/admin/monitoring/subscription/renew'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:130
+ * @route '/admin/monitoring/subscription/renew'
+ */
 renew.url = (options?: RouteQueryOptions) => {
     return renew.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::renew
-* @see app/Http/Controllers/Admin/SubscriptionController.php:126
-* @route '/admin/monitoring/subscription/renew'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:130
+ * @route '/admin/monitoring/subscription/renew'
+ */
 renew.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: renew.url(options),
     method: 'post',
@@ -124,9 +123,9 @@ renew.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::manage
-* @see app/Http/Controllers/Admin/SubscriptionController.php:392
-* @route '/admin/monitoring/subscription/manage'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:675
+ * @route '/admin/monitoring/subscription/manage'
+ */
 export const manage = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: manage.url(options),
     method: 'get',
@@ -139,28 +138,27 @@ manage.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::manage
-* @see app/Http/Controllers/Admin/SubscriptionController.php:392
-* @route '/admin/monitoring/subscription/manage'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:675
+ * @route '/admin/monitoring/subscription/manage'
+ */
 manage.url = (options?: RouteQueryOptions) => {
     return manage.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::manage
-* @see app/Http/Controllers/Admin/SubscriptionController.php:392
-* @route '/admin/monitoring/subscription/manage'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:675
+ * @route '/admin/monitoring/subscription/manage'
+ */
 manage.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: manage.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::manage
-* @see app/Http/Controllers/Admin/SubscriptionController.php:392
-* @route '/admin/monitoring/subscription/manage'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:675
+ * @route '/admin/monitoring/subscription/manage'
+ */
 manage.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: manage.url(options),
     method: 'head',
@@ -168,9 +166,9 @@ manage.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::approve
-* @see app/Http/Controllers/Admin/SubscriptionController.php:453
-* @route '/admin/monitoring/subscription/approve/{payment}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:736
+ * @route '/admin/monitoring/subscription/approve/{payment}'
+ */
 export const approve = (args: { payment: number | { id: number } } | [payment: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: approve.url(args, options),
     method: 'post',
@@ -183,31 +181,31 @@ approve.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::approve
-* @see app/Http/Controllers/Admin/SubscriptionController.php:453
-* @route '/admin/monitoring/subscription/approve/{payment}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:736
+ * @route '/admin/monitoring/subscription/approve/{payment}'
+ */
 approve.url = (args: { payment: number | { id: number } } | [payment: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { payment: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { payment: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { payment: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            payment: args[0],
-        }
+                    payment: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        payment: typeof args.payment === 'object'
-        ? args.payment.id
-        : args.payment,
-    }
+                        payment: typeof args.payment === 'object'
+                ? args.payment.id
+                : args.payment,
+                }
 
     return approve.definition.url
             .replace('{payment}', parsedArgs.payment.toString())
@@ -216,9 +214,9 @@ approve.url = (args: { payment: number | { id: number } } | [payment: number | {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::approve
-* @see app/Http/Controllers/Admin/SubscriptionController.php:453
-* @route '/admin/monitoring/subscription/approve/{payment}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:736
+ * @route '/admin/monitoring/subscription/approve/{payment}'
+ */
 approve.post = (args: { payment: number | { id: number } } | [payment: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: approve.url(args, options),
     method: 'post',
@@ -226,9 +224,9 @@ approve.post = (args: { payment: number | { id: number } } | [payment: number | 
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::reject
-* @see app/Http/Controllers/Admin/SubscriptionController.php:550
-* @route '/admin/monitoring/subscription/reject/{payment}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:833
+ * @route '/admin/monitoring/subscription/reject/{payment}'
+ */
 export const reject = (args: { payment: number | { id: number } } | [payment: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: reject.url(args, options),
     method: 'post',
@@ -241,31 +239,31 @@ reject.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::reject
-* @see app/Http/Controllers/Admin/SubscriptionController.php:550
-* @route '/admin/monitoring/subscription/reject/{payment}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:833
+ * @route '/admin/monitoring/subscription/reject/{payment}'
+ */
 reject.url = (args: { payment: number | { id: number } } | [payment: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { payment: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { payment: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { payment: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            payment: args[0],
-        }
+                    payment: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        payment: typeof args.payment === 'object'
-        ? args.payment.id
-        : args.payment,
-    }
+                        payment: typeof args.payment === 'object'
+                ? args.payment.id
+                : args.payment,
+                }
 
     return reject.definition.url
             .replace('{payment}', parsedArgs.payment.toString())
@@ -274,9 +272,9 @@ reject.url = (args: { payment: number | { id: number } } | [payment: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::reject
-* @see app/Http/Controllers/Admin/SubscriptionController.php:550
-* @route '/admin/monitoring/subscription/reject/{payment}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:833
+ * @route '/admin/monitoring/subscription/reject/{payment}'
+ */
 reject.post = (args: { payment: number | { id: number } } | [payment: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: reject.url(args, options),
     method: 'post',
@@ -284,9 +282,9 @@ reject.post = (args: { payment: number | { id: number } } | [payment: number | {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::updateEmpresa
-* @see app/Http/Controllers/Admin/SubscriptionController.php:571
-* @route '/admin/monitoring/subscription/update-empresa/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:854
+ * @route '/admin/monitoring/subscription/update-empresa/{empresa}'
+ */
 export const updateEmpresa = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateEmpresa.url(args, options),
     method: 'post',
@@ -299,31 +297,31 @@ updateEmpresa.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::updateEmpresa
-* @see app/Http/Controllers/Admin/SubscriptionController.php:571
-* @route '/admin/monitoring/subscription/update-empresa/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:854
+ * @route '/admin/monitoring/subscription/update-empresa/{empresa}'
+ */
 updateEmpresa.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empresa: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { empresa: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { empresa: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            empresa: args[0],
-        }
+                    empresa: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        empresa: typeof args.empresa === 'object'
-        ? args.empresa.id
-        : args.empresa,
-    }
+                        empresa: typeof args.empresa === 'object'
+                ? args.empresa.id
+                : args.empresa,
+                }
 
     return updateEmpresa.definition.url
             .replace('{empresa}', parsedArgs.empresa.toString())
@@ -332,9 +330,9 @@ updateEmpresa.url = (args: { empresa: number | { id: number } } | [empresa: numb
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::updateEmpresa
-* @see app/Http/Controllers/Admin/SubscriptionController.php:571
-* @route '/admin/monitoring/subscription/update-empresa/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:854
+ * @route '/admin/monitoring/subscription/update-empresa/{empresa}'
+ */
 updateEmpresa.post = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateEmpresa.url(args, options),
     method: 'post',
@@ -342,9 +340,9 @@ updateEmpresa.post = (args: { empresa: number | { id: number } } | [empresa: num
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::notify
-* @see app/Http/Controllers/Admin/SubscriptionController.php:634
-* @route '/admin/monitoring/subscription/notify/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:917
+ * @route '/admin/monitoring/subscription/notify/{empresa}'
+ */
 export const notify = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: notify.url(args, options),
     method: 'post',
@@ -357,31 +355,31 @@ notify.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::notify
-* @see app/Http/Controllers/Admin/SubscriptionController.php:634
-* @route '/admin/monitoring/subscription/notify/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:917
+ * @route '/admin/monitoring/subscription/notify/{empresa}'
+ */
 notify.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empresa: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { empresa: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { empresa: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            empresa: args[0],
-        }
+                    empresa: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        empresa: typeof args.empresa === 'object'
-        ? args.empresa.id
-        : args.empresa,
-    }
+                        empresa: typeof args.empresa === 'object'
+                ? args.empresa.id
+                : args.empresa,
+                }
 
     return notify.definition.url
             .replace('{empresa}', parsedArgs.empresa.toString())
@@ -390,24 +388,24 @@ notify.url = (args: { empresa: number | { id: number } } | [empresa: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\SubscriptionController::notify
-* @see app/Http/Controllers/Admin/SubscriptionController.php:634
-* @route '/admin/monitoring/subscription/notify/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/SubscriptionController.php:917
+ * @route '/admin/monitoring/subscription/notify/{empresa}'
+ */
 notify.post = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: notify.url(args, options),
     method: 'post',
 })
-
 const subscription = {
     expired: Object.assign(expired, expired),
-    paypal: Object.assign(paypal, paypal),
-    index: Object.assign(index, index),
-    renew: Object.assign(renew, renew),
-    manage: Object.assign(manage, manage),
-    approve: Object.assign(approve, approve),
-    reject: Object.assign(reject, reject),
-    updateEmpresa: Object.assign(updateEmpresa, updateEmpresa),
-    notify: Object.assign(notify, notify),
+paypal: Object.assign(paypal, paypal),
+stripe: Object.assign(stripe, stripe),
+index: Object.assign(index, index),
+renew: Object.assign(renew, renew),
+manage: Object.assign(manage, manage),
+approve: Object.assign(approve, approve),
+reject: Object.assign(reject, reject),
+updateEmpresa: Object.assign(updateEmpresa, updateEmpresa),
+notify: Object.assign(notify, notify),
 }
 
 export default subscription

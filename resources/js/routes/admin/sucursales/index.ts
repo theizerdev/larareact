@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::index
-* @see app/Http/Controllers/Admin/SucursalController.php:17
-* @route '/admin/sucursales'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:17
+ * @route '/admin/sucursales'
+ */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -16,28 +16,27 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::index
-* @see app/Http/Controllers/Admin/SucursalController.php:17
-* @route '/admin/sucursales'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:17
+ * @route '/admin/sucursales'
+ */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::index
-* @see app/Http/Controllers/Admin/SucursalController.php:17
-* @route '/admin/sucursales'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:17
+ * @route '/admin/sucursales'
+ */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::index
-* @see app/Http/Controllers/Admin/SucursalController.php:17
-* @route '/admin/sucursales'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:17
+ * @route '/admin/sucursales'
+ */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
@@ -45,9 +44,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::store
-* @see app/Http/Controllers/Admin/SucursalController.php:83
-* @route '/admin/sucursales'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:83
+ * @route '/admin/sucursales'
+ */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -60,18 +59,18 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::store
-* @see app/Http/Controllers/Admin/SucursalController.php:83
-* @route '/admin/sucursales'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:83
+ * @route '/admin/sucursales'
+ */
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::store
-* @see app/Http/Controllers/Admin/SucursalController.php:83
-* @route '/admin/sucursales'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:83
+ * @route '/admin/sucursales'
+ */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -79,9 +78,9 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::update
-* @see app/Http/Controllers/Admin/SucursalController.php:120
-* @route '/admin/sucursales/{sucursal}'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:120
+ * @route '/admin/sucursales/{sucursal}'
+ */
 export const update = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
@@ -94,31 +93,31 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::update
-* @see app/Http/Controllers/Admin/SucursalController.php:120
-* @route '/admin/sucursales/{sucursal}'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:120
+ * @route '/admin/sucursales/{sucursal}'
+ */
 update.url = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { sucursal: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { sucursal: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { sucursal: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            sucursal: args[0],
-        }
+                    sucursal: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        sucursal: typeof args.sucursal === 'object'
-        ? args.sucursal.id
-        : args.sucursal,
-    }
+                        sucursal: typeof args.sucursal === 'object'
+                ? args.sucursal.id
+                : args.sucursal,
+                }
 
     return update.definition.url
             .replace('{sucursal}', parsedArgs.sucursal.toString())
@@ -127,9 +126,9 @@ update.url = (args: { sucursal: number | { id: number } } | [sucursal: number | 
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::update
-* @see app/Http/Controllers/Admin/SucursalController.php:120
-* @route '/admin/sucursales/{sucursal}'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:120
+ * @route '/admin/sucursales/{sucursal}'
+ */
 update.put = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
@@ -137,9 +136,9 @@ update.put = (args: { sucursal: number | { id: number } } | [sucursal: number | 
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::destroy
-* @see app/Http/Controllers/Admin/SucursalController.php:143
-* @route '/admin/sucursales/{sucursal}'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:143
+ * @route '/admin/sucursales/{sucursal}'
+ */
 export const destroy = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
@@ -152,31 +151,31 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::destroy
-* @see app/Http/Controllers/Admin/SucursalController.php:143
-* @route '/admin/sucursales/{sucursal}'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:143
+ * @route '/admin/sucursales/{sucursal}'
+ */
 destroy.url = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { sucursal: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { sucursal: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { sucursal: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            sucursal: args[0],
-        }
+                    sucursal: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        sucursal: typeof args.sucursal === 'object'
-        ? args.sucursal.id
-        : args.sucursal,
-    }
+                        sucursal: typeof args.sucursal === 'object'
+                ? args.sucursal.id
+                : args.sucursal,
+                }
 
     return destroy.definition.url
             .replace('{sucursal}', parsedArgs.sucursal.toString())
@@ -185,9 +184,9 @@ destroy.url = (args: { sucursal: number | { id: number } } | [sucursal: number |
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::destroy
-* @see app/Http/Controllers/Admin/SucursalController.php:143
-* @route '/admin/sucursales/{sucursal}'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:143
+ * @route '/admin/sucursales/{sucursal}'
+ */
 destroy.delete = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
@@ -195,9 +194,9 @@ destroy.delete = (args: { sucursal: number | { id: number } } | [sucursal: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::toggleStatus
-* @see app/Http/Controllers/Admin/SucursalController.php:162
-* @route '/admin/sucursales/{sucursal}/toggle-status'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:162
+ * @route '/admin/sucursales/{sucursal}/toggle-status'
+ */
 export const toggleStatus = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
@@ -210,31 +209,31 @@ toggleStatus.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::toggleStatus
-* @see app/Http/Controllers/Admin/SucursalController.php:162
-* @route '/admin/sucursales/{sucursal}/toggle-status'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:162
+ * @route '/admin/sucursales/{sucursal}/toggle-status'
+ */
 toggleStatus.url = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { sucursal: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { sucursal: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { sucursal: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            sucursal: args[0],
-        }
+                    sucursal: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        sucursal: typeof args.sucursal === 'object'
-        ? args.sucursal.id
-        : args.sucursal,
-    }
+                        sucursal: typeof args.sucursal === 'object'
+                ? args.sucursal.id
+                : args.sucursal,
+                }
 
     return toggleStatus.definition.url
             .replace('{sucursal}', parsedArgs.sucursal.toString())
@@ -243,20 +242,19 @@ toggleStatus.url = (args: { sucursal: number | { id: number } } | [sucursal: num
 
 /**
 * @see \App\Http\Controllers\Admin\SucursalController::toggleStatus
-* @see app/Http/Controllers/Admin/SucursalController.php:162
-* @route '/admin/sucursales/{sucursal}/toggle-status'
-*/
+ * @see app/Http/Controllers/Admin/SucursalController.php:162
+ * @route '/admin/sucursales/{sucursal}/toggle-status'
+ */
 toggleStatus.patch = (args: { sucursal: number | { id: number } } | [sucursal: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
 })
-
 const sucursales = {
     index: Object.assign(index, index),
-    store: Object.assign(store, store),
-    update: Object.assign(update, update),
-    destroy: Object.assign(destroy, destroy),
-    toggleStatus: Object.assign(toggleStatus, toggleStatus),
+store: Object.assign(store, store),
+update: Object.assign(update, update),
+destroy: Object.assign(destroy, destroy),
+toggleStatus: Object.assign(toggleStatus, toggleStatus),
 }
 
 export default sucursales

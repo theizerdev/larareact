@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::add
-* @see app/Http/Controllers/Admin/IntegrationController.php:784
-* @route '/admin/integrations/whatsapp/blacklist'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:785
+ * @route '/admin/integrations/whatsapp/blacklist'
+ */
 export const add = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: add.url(options),
     method: 'post',
@@ -16,18 +16,18 @@ add.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::add
-* @see app/Http/Controllers/Admin/IntegrationController.php:784
-* @route '/admin/integrations/whatsapp/blacklist'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:785
+ * @route '/admin/integrations/whatsapp/blacklist'
+ */
 add.url = (options?: RouteQueryOptions) => {
     return add.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::add
-* @see app/Http/Controllers/Admin/IntegrationController.php:784
-* @route '/admin/integrations/whatsapp/blacklist'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:785
+ * @route '/admin/integrations/whatsapp/blacklist'
+ */
 add.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: add.url(options),
     method: 'post',
@@ -35,9 +35,9 @@ add.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::remove
-* @see app/Http/Controllers/Admin/IntegrationController.php:811
-* @route '/admin/integrations/whatsapp/blacklist/{phone}'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:812
+ * @route '/admin/integrations/whatsapp/blacklist/{phone}'
+ */
 export const remove = (args: { phone: string | number } | [phone: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: remove.url(args, options),
     method: 'delete',
@@ -50,25 +50,26 @@ remove.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::remove
-* @see app/Http/Controllers/Admin/IntegrationController.php:811
-* @route '/admin/integrations/whatsapp/blacklist/{phone}'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:812
+ * @route '/admin/integrations/whatsapp/blacklist/{phone}'
+ */
 remove.url = (args: { phone: string | number } | [phone: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { phone: args }
     }
 
+    
     if (Array.isArray(args)) {
         args = {
-            phone: args[0],
-        }
+                    phone: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        phone: args.phone,
-    }
+                        phone: args.phone,
+                }
 
     return remove.definition.url
             .replace('{phone}', parsedArgs.phone.toString())
@@ -77,17 +78,16 @@ remove.url = (args: { phone: string | number } | [phone: string | number ] | str
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::remove
-* @see app/Http/Controllers/Admin/IntegrationController.php:811
-* @route '/admin/integrations/whatsapp/blacklist/{phone}'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:812
+ * @route '/admin/integrations/whatsapp/blacklist/{phone}'
+ */
 remove.delete = (args: { phone: string | number } | [phone: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: remove.url(args, options),
     method: 'delete',
 })
-
 const blacklist = {
     add: Object.assign(add, add),
-    remove: Object.assign(remove, remove),
+remove: Object.assign(remove, remove),
 }
 
 export default blacklist

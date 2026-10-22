@@ -12,6 +12,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/integrations/control-acceso', [IntegrationController::class, 'updateControlAcceso'])->name('integrations.control-acceso.update')->can('integrations.edit');
     Route::post('/integrations/control-acceso/test', [IntegrationController::class, 'controlAccesoTest'])->name('integrations.control-acceso.test')->can('integrations.edit');
 
+    // Pasarelas de Pago Globales (SaaS & Suscripciones)
+    Route::put('/integrations/stripe', [IntegrationController::class, 'updateStripe'])->name('integrations.stripe.update')->can('integrations.edit');
+    Route::post('/integrations/stripe/test', [IntegrationController::class, 'testStripe'])->name('integrations.stripe.test')->can('integrations.edit');
+    Route::put('/integrations/paypal', [IntegrationController::class, 'updatePaypal'])->name('integrations.paypal.update')->can('integrations.edit');
+    Route::put('/integrations/mercadopago', [IntegrationController::class, 'updateMercadoPago'])->name('integrations.mercadopago.update')->can('integrations.edit');
+    Route::put('/integrations/primary-gateway', [IntegrationController::class, 'setPrimaryPaymentGateway'])->name('integrations.primary-gateway.update')->can('integrations.edit');
+
     // WhatsApp Integration Routes
     Route::get('/integrations/whatsapp', [IntegrationController::class, 'whatsappIndex'])->name('integrations.whatsapp.index')->can('integrations.view');
     Route::get('/integrations/whatsapp/docs', [IntegrationController::class, 'whatsappDocs'])->name('integrations.whatsapp.docs')->can('integrations.view');

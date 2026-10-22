@@ -45,6 +45,15 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'preregistro/*',
+            'admin/integrations/stripe/test',
+            'admin/integrations/*/test',
+            '*admin/integrations/stripe/test*',
+            '*admin/integrations/*/test*',
+            '*integrations/stripe/test*',
+            'admin/monitoring/subscription/stripe/*',
+            '*admin/monitoring/subscription/stripe/*',
+            'stripe/*',
+            '*stripe/*',
         ]);
 
         $middleware->alias([

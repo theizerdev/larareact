@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::index
-* @see app/Http/Controllers/Admin/CategoriaController.php:28
-* @route '/admin/categorias'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:28
+ * @route '/admin/categorias'
+ */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -16,28 +16,27 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::index
-* @see app/Http/Controllers/Admin/CategoriaController.php:28
-* @route '/admin/categorias'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:28
+ * @route '/admin/categorias'
+ */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::index
-* @see app/Http/Controllers/Admin/CategoriaController.php:28
-* @route '/admin/categorias'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:28
+ * @route '/admin/categorias'
+ */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::index
-* @see app/Http/Controllers/Admin/CategoriaController.php:28
-* @route '/admin/categorias'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:28
+ * @route '/admin/categorias'
+ */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
@@ -45,9 +44,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::store
-* @see app/Http/Controllers/Admin/CategoriaController.php:57
-* @route '/admin/categorias'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:57
+ * @route '/admin/categorias'
+ */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -60,18 +59,18 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::store
-* @see app/Http/Controllers/Admin/CategoriaController.php:57
-* @route '/admin/categorias'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:57
+ * @route '/admin/categorias'
+ */
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::store
-* @see app/Http/Controllers/Admin/CategoriaController.php:57
-* @route '/admin/categorias'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:57
+ * @route '/admin/categorias'
+ */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -79,9 +78,9 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::show
-* @see app/Http/Controllers/Admin/CategoriaController.php:0
-* @route '/admin/categorias/{categoria}'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:0
+ * @route '/admin/categorias/{categoria}'
+ */
 export const show = (args: { categoria: string | number } | [categoria: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
@@ -94,25 +93,26 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::show
-* @see app/Http/Controllers/Admin/CategoriaController.php:0
-* @route '/admin/categorias/{categoria}'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:0
+ * @route '/admin/categorias/{categoria}'
+ */
 show.url = (args: { categoria: string | number } | [categoria: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { categoria: args }
     }
 
+    
     if (Array.isArray(args)) {
         args = {
-            categoria: args[0],
-        }
+                    categoria: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        categoria: args.categoria,
-    }
+                        categoria: args.categoria,
+                }
 
     return show.definition.url
             .replace('{categoria}', parsedArgs.categoria.toString())
@@ -121,19 +121,18 @@ show.url = (args: { categoria: string | number } | [categoria: string | number ]
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::show
-* @see app/Http/Controllers/Admin/CategoriaController.php:0
-* @route '/admin/categorias/{categoria}'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:0
+ * @route '/admin/categorias/{categoria}'
+ */
 show.get = (args: { categoria: string | number } | [categoria: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::show
-* @see app/Http/Controllers/Admin/CategoriaController.php:0
-* @route '/admin/categorias/{categoria}'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:0
+ * @route '/admin/categorias/{categoria}'
+ */
 show.head = (args: { categoria: string | number } | [categoria: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
@@ -141,9 +140,9 @@ show.head = (args: { categoria: string | number } | [categoria: string | number 
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::update
-* @see app/Http/Controllers/Admin/CategoriaController.php:95
-* @route '/admin/categorias/{categoria}'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:95
+ * @route '/admin/categorias/{categoria}'
+ */
 export const update = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
@@ -156,31 +155,31 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::update
-* @see app/Http/Controllers/Admin/CategoriaController.php:95
-* @route '/admin/categorias/{categoria}'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:95
+ * @route '/admin/categorias/{categoria}'
+ */
 update.url = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { categoria: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { categoria: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { categoria: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            categoria: args[0],
-        }
+                    categoria: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        categoria: typeof args.categoria === 'object'
-        ? args.categoria.id
-        : args.categoria,
-    }
+                        categoria: typeof args.categoria === 'object'
+                ? args.categoria.id
+                : args.categoria,
+                }
 
     return update.definition.url
             .replace('{categoria}', parsedArgs.categoria.toString())
@@ -189,19 +188,18 @@ update.url = (args: { categoria: number | { id: number } } | [categoria: number 
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::update
-* @see app/Http/Controllers/Admin/CategoriaController.php:95
-* @route '/admin/categorias/{categoria}'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:95
+ * @route '/admin/categorias/{categoria}'
+ */
 update.put = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::update
-* @see app/Http/Controllers/Admin/CategoriaController.php:95
-* @route '/admin/categorias/{categoria}'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:95
+ * @route '/admin/categorias/{categoria}'
+ */
 update.patch = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: update.url(args, options),
     method: 'patch',
@@ -209,9 +207,9 @@ update.patch = (args: { categoria: number | { id: number } } | [categoria: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::destroy
-* @see app/Http/Controllers/Admin/CategoriaController.php:119
-* @route '/admin/categorias/{categoria}'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:119
+ * @route '/admin/categorias/{categoria}'
+ */
 export const destroy = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
@@ -224,31 +222,31 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::destroy
-* @see app/Http/Controllers/Admin/CategoriaController.php:119
-* @route '/admin/categorias/{categoria}'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:119
+ * @route '/admin/categorias/{categoria}'
+ */
 destroy.url = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { categoria: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { categoria: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { categoria: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            categoria: args[0],
-        }
+                    categoria: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        categoria: typeof args.categoria === 'object'
-        ? args.categoria.id
-        : args.categoria,
-    }
+                        categoria: typeof args.categoria === 'object'
+                ? args.categoria.id
+                : args.categoria,
+                }
 
     return destroy.definition.url
             .replace('{categoria}', parsedArgs.categoria.toString())
@@ -257,14 +255,13 @@ destroy.url = (args: { categoria: number | { id: number } } | [categoria: number
 
 /**
 * @see \App\Http\Controllers\Admin\CategoriaController::destroy
-* @see app/Http/Controllers/Admin/CategoriaController.php:119
-* @route '/admin/categorias/{categoria}'
-*/
+ * @see app/Http/Controllers/Admin/CategoriaController.php:119
+ * @route '/admin/categorias/{categoria}'
+ */
 destroy.delete = (args: { categoria: number | { id: number } } | [categoria: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
-
 const CategoriaController = { index, store, show, update, destroy }
 
 export default CategoriaController

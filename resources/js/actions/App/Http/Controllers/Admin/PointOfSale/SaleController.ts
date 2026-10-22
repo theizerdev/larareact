@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::terminal
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:42
-* @route '/admin/ventas/terminal'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:43
+ * @route '/admin/ventas/terminal'
+ */
 export const terminal = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: terminal.url(options),
     method: 'get',
@@ -16,28 +16,27 @@ terminal.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::terminal
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:42
-* @route '/admin/ventas/terminal'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:43
+ * @route '/admin/ventas/terminal'
+ */
 terminal.url = (options?: RouteQueryOptions) => {
     return terminal.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::terminal
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:42
-* @route '/admin/ventas/terminal'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:43
+ * @route '/admin/ventas/terminal'
+ */
 terminal.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: terminal.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::terminal
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:42
-* @route '/admin/ventas/terminal'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:43
+ * @route '/admin/ventas/terminal'
+ */
 terminal.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: terminal.url(options),
     method: 'head',
@@ -45,9 +44,9 @@ terminal.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::updateValorDolar
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:180
-* @route '/admin/ventas/valor-dolar'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:207
+ * @route '/admin/ventas/valor-dolar'
+ */
 export const updateValorDolar = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateValorDolar.url(options),
     method: 'post',
@@ -60,18 +59,18 @@ updateValorDolar.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::updateValorDolar
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:180
-* @route '/admin/ventas/valor-dolar'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:207
+ * @route '/admin/ventas/valor-dolar'
+ */
 updateValorDolar.url = (options?: RouteQueryOptions) => {
     return updateValorDolar.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::updateValorDolar
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:180
-* @route '/admin/ventas/valor-dolar'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:207
+ * @route '/admin/ventas/valor-dolar'
+ */
 updateValorDolar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateValorDolar.url(options),
     method: 'post',
@@ -79,9 +78,9 @@ updateValorDolar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> =
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::index
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:213
-* @route '/admin/ventas'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:240
+ * @route '/admin/ventas'
+ */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -94,28 +93,27 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::index
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:213
-* @route '/admin/ventas'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:240
+ * @route '/admin/ventas'
+ */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::index
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:213
-* @route '/admin/ventas'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:240
+ * @route '/admin/ventas'
+ */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::index
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:213
-* @route '/admin/ventas'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:240
+ * @route '/admin/ventas'
+ */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
@@ -123,9 +121,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::store
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:200
-* @route '/admin/ventas'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:227
+ * @route '/admin/ventas'
+ */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -138,18 +136,18 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::store
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:200
-* @route '/admin/ventas'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:227
+ * @route '/admin/ventas'
+ */
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::store
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:200
-* @route '/admin/ventas'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:227
+ * @route '/admin/ventas'
+ */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -157,9 +155,9 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::show
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:280
-* @route '/admin/ventas/{venta}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:312
+ * @route '/admin/ventas/{venta}'
+ */
 export const show = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
@@ -172,31 +170,31 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::show
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:280
-* @route '/admin/ventas/{venta}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:312
+ * @route '/admin/ventas/{venta}'
+ */
 show.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { venta: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { venta: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { venta: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            venta: args[0],
-        }
+                    venta: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        venta: typeof args.venta === 'object'
-        ? args.venta.id
-        : args.venta,
-    }
+                        venta: typeof args.venta === 'object'
+                ? args.venta.id
+                : args.venta,
+                }
 
     return show.definition.url
             .replace('{venta}', parsedArgs.venta.toString())
@@ -205,19 +203,18 @@ show.url = (args: { venta: number | { id: number } } | [venta: number | { id: nu
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::show
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:280
-* @route '/admin/ventas/{venta}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:312
+ * @route '/admin/ventas/{venta}'
+ */
 show.get = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::show
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:280
-* @route '/admin/ventas/{venta}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:312
+ * @route '/admin/ventas/{venta}'
+ */
 show.head = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
@@ -225,9 +222,9 @@ show.head = (args: { venta: number | { id: number } } | [venta: number | { id: n
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::destroy
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:290
-* @route '/admin/ventas/{venta}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:322
+ * @route '/admin/ventas/{venta}'
+ */
 export const destroy = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
@@ -240,31 +237,31 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::destroy
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:290
-* @route '/admin/ventas/{venta}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:322
+ * @route '/admin/ventas/{venta}'
+ */
 destroy.url = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { venta: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { venta: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { venta: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            venta: args[0],
-        }
+                    venta: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        venta: typeof args.venta === 'object'
-        ? args.venta.id
-        : args.venta,
-    }
+                        venta: typeof args.venta === 'object'
+                ? args.venta.id
+                : args.venta,
+                }
 
     return destroy.definition.url
             .replace('{venta}', parsedArgs.venta.toString())
@@ -273,9 +270,9 @@ destroy.url = (args: { venta: number | { id: number } } | [venta: number | { id:
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::destroy
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:290
-* @route '/admin/ventas/{venta}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:322
+ * @route '/admin/ventas/{venta}'
+ */
 destroy.delete = (args: { venta: number | { id: number } } | [venta: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
@@ -283,9 +280,9 @@ destroy.delete = (args: { venta: number | { id: number } } | [venta: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::holdSale
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:349
-* @route '/admin/ventas/hold'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:381
+ * @route '/admin/ventas/hold'
+ */
 export const holdSale = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: holdSale.url(options),
     method: 'post',
@@ -298,18 +295,18 @@ holdSale.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::holdSale
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:349
-* @route '/admin/ventas/hold'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:381
+ * @route '/admin/ventas/hold'
+ */
 holdSale.url = (options?: RouteQueryOptions) => {
     return holdSale.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::holdSale
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:349
-* @route '/admin/ventas/hold'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:381
+ * @route '/admin/ventas/hold'
+ */
 holdSale.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: holdSale.url(options),
     method: 'post',
@@ -317,9 +314,9 @@ holdSale.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::resumeSale
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:374
-* @route '/admin/ventas/resume/{heldSale}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:406
+ * @route '/admin/ventas/resume/{heldSale}'
+ */
 export const resumeSale = (args: { heldSale: number | { id: number } } | [heldSale: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: resumeSale.url(args, options),
     method: 'post',
@@ -332,31 +329,31 @@ resumeSale.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::resumeSale
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:374
-* @route '/admin/ventas/resume/{heldSale}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:406
+ * @route '/admin/ventas/resume/{heldSale}'
+ */
 resumeSale.url = (args: { heldSale: number | { id: number } } | [heldSale: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { heldSale: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { heldSale: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { heldSale: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            heldSale: args[0],
-        }
+                    heldSale: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        heldSale: typeof args.heldSale === 'object'
-        ? args.heldSale.id
-        : args.heldSale,
-    }
+                        heldSale: typeof args.heldSale === 'object'
+                ? args.heldSale.id
+                : args.heldSale,
+                }
 
     return resumeSale.definition.url
             .replace('{heldSale}', parsedArgs.heldSale.toString())
@@ -365,9 +362,9 @@ resumeSale.url = (args: { heldSale: number | { id: number } } | [heldSale: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::resumeSale
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:374
-* @route '/admin/ventas/resume/{heldSale}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:406
+ * @route '/admin/ventas/resume/{heldSale}'
+ */
 resumeSale.post = (args: { heldSale: number | { id: number } } | [heldSale: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: resumeSale.url(args, options),
     method: 'post',
@@ -375,9 +372,9 @@ resumeSale.post = (args: { heldSale: number | { id: number } } | [heldSale: numb
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::deleteHeldSale
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:390
-* @route '/admin/ventas/held/{heldSale}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:422
+ * @route '/admin/ventas/held/{heldSale}'
+ */
 export const deleteHeldSale = (args: { heldSale: number | { id: number } } | [heldSale: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: deleteHeldSale.url(args, options),
     method: 'delete',
@@ -390,31 +387,31 @@ deleteHeldSale.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::deleteHeldSale
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:390
-* @route '/admin/ventas/held/{heldSale}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:422
+ * @route '/admin/ventas/held/{heldSale}'
+ */
 deleteHeldSale.url = (args: { heldSale: number | { id: number } } | [heldSale: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { heldSale: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { heldSale: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { heldSale: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            heldSale: args[0],
-        }
+                    heldSale: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        heldSale: typeof args.heldSale === 'object'
-        ? args.heldSale.id
-        : args.heldSale,
-    }
+                        heldSale: typeof args.heldSale === 'object'
+                ? args.heldSale.id
+                : args.heldSale,
+                }
 
     return deleteHeldSale.definition.url
             .replace('{heldSale}', parsedArgs.heldSale.toString())
@@ -423,14 +420,13 @@ deleteHeldSale.url = (args: { heldSale: number | { id: number } } | [heldSale: n
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\SaleController::deleteHeldSale
-* @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:390
-* @route '/admin/ventas/held/{heldSale}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/SaleController.php:422
+ * @route '/admin/ventas/held/{heldSale}'
+ */
 deleteHeldSale.delete = (args: { heldSale: number | { id: number } } | [heldSale: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: deleteHeldSale.url(args, options),
     method: 'delete',
 })
-
 const SaleController = { terminal, updateValorDolar, index, store, show, destroy, holdSale, resumeSale, deleteHeldSale }
 
 export default SaleController

@@ -1,5 +1,5 @@
 import { Head, useForm, Link } from '@inertiajs/react';
-import { Settings2, Map, ShieldCheck, Save, MessageSquare, CreditCard, ExternalLink } from 'lucide-react';
+import { Settings2, Map, ShieldCheck, Save, MessageSquare, CreditCard, ExternalLink, Star, CheckCircle2, Zap, Loader2 } from 'lucide-react';
 import React, { useState } from 'react';
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -33,6 +33,7 @@ interface PageProps {
     stripe_publishable_key?: string;
     stripe_secret_key?: string;
     stripe_webhook_secret?: string;
+    primary_payment_gateway?: string;
 }
 
 export default function Integrations({ 
@@ -55,9 +56,11 @@ export default function Integrations({
     stripe_mode = 'test',
     stripe_publishable_key = '',
     stripe_secret_key = '',
-    stripe_webhook_secret = ''
+    stripe_webhook_secret = '',
+    primary_payment_gateway = 'stripe'
 }: PageProps) {
     const { __ } = useTranslate();
+    const [testingStripe, setTestingStripe] = useState(false);
 
     const mapboxForm = useForm({
         mapbox_api_key: mapbox_api_key || '',
@@ -89,6 +92,7 @@ export default function Integrations({
         stripe_publishable_key: stripe_publishable_key,
         stripe_secret_key: stripe_secret_key,
         stripe_webhook_secret: stripe_webhook_secret,
+        is_primary: primary_payment_gateway === 'stripe',
     });
 
     const handleSaveMapbox = (e: React.FormEvent) => {
@@ -169,6 +173,61 @@ export default function Integrations({
                 });
             },
         });
+    };
+
+    const handleTestStripe = async () => {
+        if (!stripeForm.data.stripe_secret_key) {
+            Swal.fire({
+                title: __('Clave Secreta Requerida'),
+                text: __('Por favor introduce la Secret Key de Stripe antes de probar la conexión.'),
+                icon: 'warning',
+            });
+            return;
+        }
+
+        setTestingStripe(true);
+        try {
+            const metaToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+            const xsrfToken = cookieMatch ? decodeURIComponent(cookieMatch[1]) : '';
+
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            };
+            if (xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken;
+            if (metaToken) headers['X-CSRF-TOKEN'] = metaToken;
+
+            const res = await fetch('/admin/integrations/stripe/test', {
+                method: 'POST',
+                headers,
+                credentials: 'same-origin',
+                body: JSON.stringify({ stripe_secret_key: stripeForm.data.stripe_secret_key }),
+            });
+
+            const result = await res.json().catch(() => ({ success: false, message: __('Respuesta no válida del servidor.') }));
+            if (result.success) {
+                Swal.fire({
+                    title: __('¡Conexión Exitosa!'),
+                    text: result.message + (result.livemode ? ' (Modo PRODUCCIÓN)' : ' (Modo TEST / PRUEBAS)'),
+                    icon: 'success',
+                });
+            } else {
+                Swal.fire({
+                    title: __('Error de Conexión'),
+                    text: result.message || __('No se pudo validar la clave de Stripe.'),
+                    icon: 'error',
+                });
+            }
+        } catch (e: any) {
+            Swal.fire({
+                title: __('Error de Conexión'),
+                text: e.message || __('No se pudo conectar con el servidor.'),
+                icon: 'error',
+            });
+        } finally {
+            setTestingStripe(false);
+        }
     };
 
     const breadcrumbs = [
@@ -409,7 +468,7 @@ export default function Integrations({
                     <div className="space-y-4 pt-6 border-t">
                         <div>
                             <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
-                                <CreditCard className="h-6 w-6 text-sky-600" />
+                                <CreditCard className="h-6 w-6 text-indigo-600" />
                                 {__('Pasarelas de Pago SaaS (Cobro de Suscripciones)')}
                             </h2>
                             <p className="text-xs text-muted-foreground mt-0.5">
@@ -417,7 +476,177 @@ export default function Integrations({
                             </p>
                         </div>
 
+                        {/* Banner Informativo: Stripe como Método Principal de Suscripción */}
+                        <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-950 bg-gradient-to-r from-indigo-50/90 via-purple-50/50 to-sky-50/50 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-sky-950/20 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                                <div className="p-2.5 rounded-lg bg-indigo-600 text-white shrink-0 shadow-md">
+                                    <Star className="h-5 w-5 fill-white text-white" />
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="font-bold text-sm text-indigo-950 dark:text-indigo-200">
+                                            {__('Stripe: Pasarela de Pago Principal del Sistema')}
+                                        </span>
+                                        <Badge className="bg-indigo-600 text-white font-bold text-[10px]">
+                                            ⭐ {__('Método Principal')}
+                                        </Badge>
+                                        <Badge variant="outline" className="border-indigo-300 text-indigo-700 dark:text-indigo-300 text-[10px]">
+                                            ⚡ {__('Acreditación Instantánea')}
+                                        </Badge>
+                                    </div>
+                                    <p className="text-xs text-indigo-900/80 dark:text-indigo-300/80 leading-relaxed">
+                                        {__('Stripe está configurado como el método principal en todo el sistema para suscripciones SaaS y renovaciones de membresías con tarjetas Visa, Mastercard, American Express, Apple Pay y Google Pay.')}
+                                    </p>
+                                    <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/50 inline-block">
+                                        🔒 {__('Exclusivo para pagos de suscripciones del sistema. No afecta ni interfiere con los métodos de cobro del Punto de Venta (POS).')}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="grid gap-6 md:grid-cols-3">
+                            {/* Stripe Integration - MÉTODO PRINCIPAL */}
+                            <Card className="shadow-md border-2 border-indigo-500/80 dark:border-indigo-500 flex flex-col justify-between relative overflow-hidden bg-white dark:bg-slate-900 ring-2 ring-indigo-500/20">
+                                <div className="bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider py-1 px-3 flex items-center justify-between">
+                                    <span className="flex items-center gap-1.5">
+                                        <Star className="h-3 w-3 fill-white" />
+                                        {__('Método Principal de Suscripción')}
+                                    </span>
+                                    <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded font-mono">RECOMENDADO</span>
+                                </div>
+                                <CardHeader className="pt-3 pb-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 rounded bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 font-extrabold text-sm tracking-tight border border-indigo-200 dark:border-indigo-800">
+                                                ST
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-base flex items-center gap-1.5">
+                                                    {__('Stripe')}
+                                                    <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 text-[10px] border-indigo-200">
+                                                        ⭐ {__('Principal')}
+                                                    </Badge>
+                                                </CardTitle>
+                                                <CardDescription className="text-xs">{__('Tarjetas globales & Checkout SaaS')}</CardDescription>
+                                            </div>
+                                        </div>
+                                        <BadgeStatus active={stripeForm.data.stripe_active} />
+                                    </div>
+                                </CardHeader>
+                                <form onSubmit={handleSaveStripe}>
+                                    <CardContent className="space-y-3 text-xs">
+                                        <div className="flex items-center justify-between p-2.5 border rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-900/40">
+                                            <div>
+                                                <Label className="text-xs font-semibold text-indigo-950 dark:text-indigo-200">{__('Habilitar Stripe')}</Label>
+                                                <p className="text-[11px] text-muted-foreground">{__('Activar cobros con tarjeta para suscripciones')}</p>
+                                            </div>
+                                            <Switch
+                                                checked={stripeForm.data.stripe_active}
+                                                onCheckedChange={(checked) => stripeForm.setData('stripe_active', checked)}
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center justify-between p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                                            <div className="space-y-0.5">
+                                                <Label className="text-xs font-medium flex items-center gap-1">
+                                                    <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                                                    {__('Pasarela Principal')}
+                                                </Label>
+                                                <p className="text-[10px] text-muted-foreground">{__('Seleccionada por defecto en renovaciones')}</p>
+                                            </div>
+                                            <Switch
+                                                checked={stripeForm.data.is_primary}
+                                                onCheckedChange={(checked) => stripeForm.setData('is_primary', checked)}
+                                                disabled={!stripeForm.data.stripe_active}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label className="text-xs">{__('Modo de Entorno')}</Label>
+                                            <Select
+                                                value={stripeForm.data.stripe_mode}
+                                                onValueChange={(val) => stripeForm.setData('stripe_mode', val)}
+                                                disabled={!stripeForm.data.stripe_active}
+                                            >
+                                                <SelectTrigger size="sm" className="h-8 text-xs">
+                                                    <SelectValue placeholder={__('Seleccionar entorno')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="test">🧪 {__('Test (Pruebas)')}</SelectItem>
+                                                    <SelectItem value="live">🚀 {__('Live (Producción)')}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label htmlFor="stripe_publishable_key" className="text-xs">{__('Publishable Key')}</Label>
+                                            <Input
+                                                id="stripe_publishable_key"
+                                                type="text"
+                                                placeholder="pk_test_... o pk_live_..."
+                                                value={stripeForm.data.stripe_publishable_key}
+                                                onChange={(e) => stripeForm.setData('stripe_publishable_key', e.target.value)}
+                                                disabled={!stripeForm.data.stripe_active}
+                                                className="font-mono text-xs h-8"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label htmlFor="stripe_secret_key" className="text-xs">{__('Secret Key')}</Label>
+                                            <Input
+                                                id="stripe_secret_key"
+                                                type="password"
+                                                placeholder="sk_test_... o sk_live_..."
+                                                value={stripeForm.data.stripe_secret_key}
+                                                onChange={(e) => stripeForm.setData('stripe_secret_key', e.target.value)}
+                                                disabled={!stripeForm.data.stripe_active}
+                                                className="font-mono text-xs h-8"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label htmlFor="stripe_webhook_secret" className="text-xs">{__('Webhook Secret (Opcional)')}</Label>
+                                            <Input
+                                                id="stripe_webhook_secret"
+                                                type="password"
+                                                placeholder="whsec_..."
+                                                value={stripeForm.data.stripe_webhook_secret}
+                                                onChange={(e) => stripeForm.setData('stripe_webhook_secret', e.target.value)}
+                                                disabled={!stripeForm.data.stripe_active}
+                                                className="font-mono text-xs h-8"
+                                            />
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter className="border-t bg-slate-50/60 dark:bg-slate-900/20 px-4 py-3 flex items-center justify-between gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleTestStripe}
+                                            disabled={testingStripe || !stripeForm.data.stripe_secret_key}
+                                            className="h-8 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900/50 dark:text-indigo-300"
+                                        >
+                                            {testingStripe ? (
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            ) : (
+                                                <Zap className="h-3.5 w-3.5 text-indigo-600" />
+                                            )}
+                                            {__('Probar Conexión')}
+                                        </Button>
+
+                                        <Button
+                                            type="submit"
+                                            size="sm"
+                                            disabled={stripeForm.processing || !stripeForm.data.stripe_active}
+                                            className="gap-2 text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                                        >
+                                            <Save className="h-3.5 w-3.5" />
+                                            {__('Guardar Stripe')}
+                                        </Button>
+                                    </CardFooter>
+                                </form>
+                            </Card>
+
                             {/* PayPal Integration */}
                             <Card className="shadow-sm border-t-4 border-t-sky-500 flex flex-col justify-between">
                                 <CardHeader>
@@ -444,222 +673,131 @@ export default function Integrations({
                                             />
                                         </div>
 
-                                         <div className="space-y-1">
-                                             <Label className="text-xs">{__('Modo de Entorno')}</Label>
-                                             <Select
-                                                 value={paypalForm.data.paypal_mode}
-                                                 onValueChange={(val) => paypalForm.setData('paypal_mode', val)}
-                                                 disabled={!paypalForm.data.paypal_active}
-                                             >
-                                                 <SelectTrigger size="sm" className="h-8 text-xs">
-                                                     <SelectValue placeholder={__('Seleccionar entorno')} />
-                                                 </SelectTrigger>
-                                                 <SelectContent>
-                                                     <SelectItem value="sandbox">{__('Sandbox (Pruebas)')}</SelectItem>
-                                                     <SelectItem value="live">{__('Live (Producción)')}</SelectItem>
-                                                 </SelectContent>
-                                             </Select>
-                                         </div>
-
-                                         <div className="space-y-1">
-                                             <Label htmlFor="paypal_client_id" className="text-xs">{__('Client ID')}</Label>
-                                             <Input
-                                                 id="paypal_client_id"
-                                                 type="text"
-                                                 placeholder="A..."
-                                                 value={paypalForm.data.paypal_client_id}
-                                                 onChange={(e) => paypalForm.setData('paypal_client_id', e.target.value)}
-                                                 disabled={!paypalForm.data.paypal_active}
-                                                 className="font-mono text-xs h-8"
-                                             />
-                                         </div>
-
-                                         <div className="space-y-1">
-                                             <Label htmlFor="paypal_client_secret" className="text-xs">{__('Client Secret')}</Label>
-                                             <Input
-                                                 id="paypal_client_secret"
-                                                 type="password"
-                                                 placeholder="E..."
-                                                 value={paypalForm.data.paypal_client_secret}
-                                                 onChange={(e) => paypalForm.setData('paypal_client_secret', e.target.value)}
-                                                 disabled={!paypalForm.data.paypal_active}
-                                                 className="font-mono text-xs h-8"
-                                             />
-                                         </div>
-                                     </CardContent>
-                                     <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-4 py-3 flex justify-end">
-                                         <Button type="submit" size="sm" disabled={paypalForm.processing || !paypalForm.data.paypal_active} className="gap-2 text-xs h-8">
-                                             <Save className="h-3.5 w-3.5" />
-                                             {__('Guardar PayPal')}
-                                         </Button>
-                                     </CardFooter>
-                                 </form>
-                             </Card>
-
-                             {/* Mercado Pago Integration */}
-                             <Card className="shadow-sm border-t-4 border-t-cyan-500 flex flex-col justify-between">
-                                 <CardHeader>
-                                     <div className="flex items-center justify-between">
-                                         <div className="flex items-center gap-2">
-                                             <div className="p-2 rounded bg-cyan-50 dark:bg-cyan-950/20 text-cyan-600 font-bold text-xs">
-                                                 MP
-                                             </div>
-                                             <div>
-                                                 <CardTitle className="text-base">{__('Mercado Pago')}</CardTitle>
-                                                 <CardDescription className="text-xs">{__('Cobros en Latinoamérica')}</CardDescription>
-                                             </div>
-                                         </div>
-                                         <BadgeStatus active={mercadopagoForm.data.mercadopago_active} />
-                                     </div>
-                                 </CardHeader>
-                                 <form onSubmit={handleSaveMercadoPago}>
-                                     <CardContent className="space-y-3 text-xs">
-                                         <div className="flex items-center justify-between p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
-                                             <Label className="text-xs font-medium">{__('Habilitar Mercado Pago')}</Label>
-                                             <Switch
-                                                 checked={mercadopagoForm.data.mercadopago_active}
-                                                 onCheckedChange={(checked) => mercadopagoForm.setData('mercadopago_active', checked)}
-                                             />
-                                         </div>
-
-                                         <div className="space-y-1">
-                                             <Label className="text-xs">{__('Modo de Entorno')}</Label>
-                                             <Select
-                                                 value={mercadopagoForm.data.mercadopago_mode}
-                                                 onValueChange={(val) => mercadopagoForm.setData('mercadopago_mode', val)}
-                                                 disabled={!mercadopagoForm.data.mercadopago_active}
-                                             >
-                                                 <SelectTrigger size="sm" className="h-8 text-xs">
-                                                     <SelectValue placeholder={__('Seleccionar entorno')} />
-                                                 </SelectTrigger>
-                                                 <SelectContent>
-                                                     <SelectItem value="sandbox">{__('Sandbox (Pruebas)')}</SelectItem>
-                                                     <SelectItem value="live">{__('Live (Producción)')}</SelectItem>
-                                                 </SelectContent>
-                                             </Select>
-                                         </div>
-
-                                         <div className="space-y-1">
-                                             <Label htmlFor="mercadopago_public_key" className="text-xs">{__('Public Key')}</Label>
-                                             <Input
-                                                 id="mercadopago_public_key"
-                                                 type="text"
-                                                 placeholder="APP_USR-..."
-                                                 value={mercadopagoForm.data.mercadopago_public_key}
-                                                 onChange={(e) => mercadopagoForm.setData('mercadopago_public_key', e.target.value)}
-                                                 disabled={!mercadopagoForm.data.mercadopago_active}
-                                                 className="font-mono text-xs h-8"
-                                             />
-                                         </div>
-
-                                         <div className="space-y-1">
-                                             <Label htmlFor="mercadopago_access_token" className="text-xs">{__('Access Token')}</Label>
-                                             <Input
-                                                 id="mercadopago_access_token"
-                                                 type="password"
-                                                 placeholder="APP_USR-..."
-                                                 value={mercadopagoForm.data.mercadopago_access_token}
-                                                 onChange={(e) => mercadopagoForm.setData('mercadopago_access_token', e.target.value)}
-                                                 disabled={!mercadopagoForm.data.mercadopago_active}
-                                                 className="font-mono text-xs h-8"
-                                             />
-                                         </div>
-                                     </CardContent>
-                                     <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-4 py-3 flex justify-end">
-                                         <Button type="submit" size="sm" disabled={mercadopagoForm.processing || !mercadopagoForm.data.mercadopago_active} className="gap-2 text-xs h-8 bg-cyan-600 hover:bg-cyan-700">
-                                             <Save className="h-3.5 w-3.5" />
-                                             {__('Guardar Mercado Pago')}
-                                         </Button>
-                                     </CardFooter>
-                                 </form>
-                             </Card>
-
-                             {/* Stripe Integration */}
-                             <Card className="shadow-sm border-t-4 border-t-indigo-500 flex flex-col justify-between">
-                                 <CardHeader>
-                                     <div className="flex items-center justify-between">
-                                         <div className="flex items-center gap-2">
-                                             <div className="p-2 rounded bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 font-bold text-xs">
-                                                 ST
-                                             </div>
-                                             <div>
-                                                 <CardTitle className="text-base">{__('Stripe')}</CardTitle>
-                                                 <CardDescription className="text-xs">{__('Tarjetas globales')}</CardDescription>
-                                             </div>
-                                         </div>
-                                         <BadgeStatus active={stripeForm.data.stripe_active} />
-                                     </div>
-                                 </CardHeader>
-                                 <form onSubmit={handleSaveStripe}>
-                                     <CardContent className="space-y-3 text-xs">
-                                         <div className="flex items-center justify-between p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
-                                             <Label className="text-xs font-medium">{__('Habilitar Stripe')}</Label>
-                                             <Switch
-                                                 checked={stripeForm.data.stripe_active}
-                                                 onCheckedChange={(checked) => stripeForm.setData('stripe_active', checked)}
-                                             />
-                                         </div>
-
-                                         <div className="space-y-1">
-                                             <Label className="text-xs">{__('Modo de Entorno')}</Label>
-                                             <Select
-                                                 value={stripeForm.data.stripe_mode}
-                                                 onValueChange={(val) => stripeForm.setData('stripe_mode', val)}
-                                                 disabled={!stripeForm.data.stripe_active}
-                                             >
-                                                 <SelectTrigger size="sm" className="h-8 text-xs">
-                                                     <SelectValue placeholder={__('Seleccionar entorno')} />
-                                                 </SelectTrigger>
-                                                 <SelectContent>
-                                                     <SelectItem value="test">{__('Test (Pruebas)')}</SelectItem>
-                                                     <SelectItem value="live">{__('Live (Producción)')}</SelectItem>
-                                                 </SelectContent>
-                                             </Select>
-                                         </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-xs">{__('Modo de Entorno')}</Label>
+                                            <Select
+                                                value={paypalForm.data.paypal_mode}
+                                                onValueChange={(val) => paypalForm.setData('paypal_mode', val)}
+                                                disabled={!paypalForm.data.paypal_active}
+                                            >
+                                                <SelectTrigger size="sm" className="h-8 text-xs">
+                                                    <SelectValue placeholder={__('Seleccionar entorno')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="sandbox">{__('Sandbox (Pruebas)')}</SelectItem>
+                                                    <SelectItem value="live">{__('Live (Producción)')}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
 
                                         <div className="space-y-1">
-                                            <Label htmlFor="stripe_publishable_key" className="text-xs">{__('Publishable Key')}</Label>
+                                            <Label htmlFor="paypal_client_id" className="text-xs">{__('Client ID')}</Label>
                                             <Input
-                                                id="stripe_publishable_key"
+                                                id="paypal_client_id"
                                                 type="text"
-                                                placeholder="pk_test_..."
-                                                value={stripeForm.data.stripe_publishable_key}
-                                                onChange={(e) => stripeForm.setData('stripe_publishable_key', e.target.value)}
-                                                disabled={!stripeForm.data.stripe_active}
+                                                placeholder="A..."
+                                                value={paypalForm.data.paypal_client_id}
+                                                onChange={(e) => paypalForm.setData('paypal_client_id', e.target.value)}
+                                                disabled={!paypalForm.data.paypal_active}
                                                 className="font-mono text-xs h-8"
                                             />
                                         </div>
 
                                         <div className="space-y-1">
-                                            <Label htmlFor="stripe_secret_key" className="text-xs">{__('Secret Key')}</Label>
+                                            <Label htmlFor="paypal_client_secret" className="text-xs">{__('Client Secret')}</Label>
                                             <Input
-                                                id="stripe_secret_key"
+                                                id="paypal_client_secret"
                                                 type="password"
-                                                placeholder="sk_test_..."
-                                                value={stripeForm.data.stripe_secret_key}
-                                                onChange={(e) => stripeForm.setData('stripe_secret_key', e.target.value)}
-                                                disabled={!stripeForm.data.stripe_active}
-                                                className="font-mono text-xs h-8"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <Label htmlFor="stripe_webhook_secret" className="text-xs">{__('Webhook Secret')}</Label>
-                                            <Input
-                                                id="stripe_webhook_secret"
-                                                type="password"
-                                                placeholder="whsec_..."
-                                                value={stripeForm.data.stripe_webhook_secret}
-                                                onChange={(e) => stripeForm.setData('stripe_webhook_secret', e.target.value)}
-                                                disabled={!stripeForm.data.stripe_active}
+                                                placeholder="E..."
+                                                value={paypalForm.data.paypal_client_secret}
+                                                onChange={(e) => paypalForm.setData('paypal_client_secret', e.target.value)}
+                                                disabled={!paypalForm.data.paypal_active}
                                                 className="font-mono text-xs h-8"
                                             />
                                         </div>
                                     </CardContent>
                                     <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-4 py-3 flex justify-end">
-                                        <Button type="submit" size="sm" disabled={stripeForm.processing || !stripeForm.data.stripe_active} className="gap-2 text-xs h-8 bg-indigo-600 hover:bg-indigo-700">
+                                        <Button type="submit" size="sm" disabled={paypalForm.processing || !paypalForm.data.paypal_active} className="gap-2 text-xs h-8">
                                             <Save className="h-3.5 w-3.5" />
-                                            {__('Guardar Stripe')}
+                                            {__('Guardar PayPal')}
+                                        </Button>
+                                    </CardFooter>
+                                </form>
+                            </Card>
+
+                            {/* Mercado Pago Integration */}
+                            <Card className="shadow-sm border-t-4 border-t-cyan-500 flex flex-col justify-between">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 rounded bg-cyan-50 dark:bg-cyan-950/20 text-cyan-600 font-bold text-xs">
+                                                MP
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-base">{__('Mercado Pago')}</CardTitle>
+                                                <CardDescription className="text-xs">{__('Cobros en Latinoamérica')}</CardDescription>
+                                            </div>
+                                        </div>
+                                        <BadgeStatus active={mercadopagoForm.data.mercadopago_active} />
+                                    </div>
+                                </CardHeader>
+                                <form onSubmit={handleSaveMercadoPago}>
+                                    <CardContent className="space-y-3 text-xs">
+                                        <div className="flex items-center justify-between p-2.5 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                                            <Label className="text-xs font-medium">{__('Habilitar Mercado Pago')}</Label>
+                                            <Switch
+                                                checked={mercadopagoForm.data.mercadopago_active}
+                                                onCheckedChange={(checked) => mercadopagoForm.setData('mercadopago_active', checked)}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label className="text-xs">{__('Modo de Entorno')}</Label>
+                                            <Select
+                                                value={mercadopagoForm.data.mercadopago_mode}
+                                                onValueChange={(val) => mercadopagoForm.setData('mercadopago_mode', val)}
+                                                disabled={!mercadopagoForm.data.mercadopago_active}
+                                            >
+                                                <SelectTrigger size="sm" className="h-8 text-xs">
+                                                    <SelectValue placeholder={__('Seleccionar entorno')} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="sandbox">{__('Sandbox (Pruebas)')}</SelectItem>
+                                                    <SelectItem value="live">{__('Live (Producción)')}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label htmlFor="mercadopago_public_key" className="text-xs">{__('Public Key')}</Label>
+                                            <Input
+                                                id="mercadopago_public_key"
+                                                type="text"
+                                                placeholder="APP_USR-..."
+                                                value={mercadopagoForm.data.mercadopago_public_key}
+                                                onChange={(e) => mercadopagoForm.setData('mercadopago_public_key', e.target.value)}
+                                                disabled={!mercadopagoForm.data.mercadopago_active}
+                                                className="font-mono text-xs h-8"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label htmlFor="mercadopago_access_token" className="text-xs">{__('Access Token')}</Label>
+                                            <Input
+                                                id="mercadopago_access_token"
+                                                type="password"
+                                                placeholder="APP_USR-..."
+                                                value={mercadopagoForm.data.mercadopago_access_token}
+                                                onChange={(e) => mercadopagoForm.setData('mercadopago_access_token', e.target.value)}
+                                                disabled={!mercadopagoForm.data.mercadopago_active}
+                                                className="font-mono text-xs h-8"
+                                            />
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-4 py-3 flex justify-end">
+                                        <Button type="submit" size="sm" disabled={mercadopagoForm.processing || !mercadopagoForm.data.mercadopago_active} className="gap-2 text-xs h-8 bg-cyan-600 hover:bg-cyan-700">
+                                            <Save className="h-3.5 w-3.5" />
+                                            {__('Guardar Mercado Pago')}
                                         </Button>
                                     </CardFooter>
                                 </form>

@@ -68,21 +68,25 @@ class SubscriptionController extends Controller
 
         // Obtener la configuración activa de pasarelas de pago de la plataforma (Empresa ID 1 / Dueño del SaaS)
         $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
+        $primaryGateway = $masterEmpresa->primary_payment_gateway ?? 'stripe';
         $paymentGateways = [
+            'stripe' => [
+                'active' => (bool) $masterEmpresa->stripe_active,
+                'mode' => $masterEmpresa->stripe_mode ?? 'test',
+                'publishable_key' => $masterEmpresa->stripe_publishable_key ?? '',
+                'is_primary' => $primaryGateway === 'stripe',
+            ],
             'paypal' => [
                 'active' => (bool) $masterEmpresa->paypal_active,
                 'mode' => $masterEmpresa->paypal_mode ?? 'sandbox',
                 'client_id' => $masterEmpresa->paypal_client_id ?? '',
+                'is_primary' => $primaryGateway === 'paypal',
             ],
             'mercadopago' => [
                 'active' => (bool) $masterEmpresa->mercadopago_active,
                 'mode' => $masterEmpresa->mercadopago_mode ?? 'sandbox',
                 'public_key' => $masterEmpresa->mercadopago_public_key ?? '',
-            ],
-            'stripe' => [
-                'active' => (bool) $masterEmpresa->stripe_active,
-                'mode' => $masterEmpresa->stripe_mode ?? 'test',
-                'publishable_key' => $masterEmpresa->stripe_publishable_key ?? '',
+                'is_primary' => $primaryGateway === 'mercadopago',
             ],
         ];
 
@@ -384,6 +388,394 @@ class SubscriptionController extends Controller
         }
 
         return response()->json($data, $captureResponse->status());
+    }
+
+    /**
+     * Crear sesión de Checkout en Stripe (Pasarela Principal de Suscripciones SaaS).
+     */
+    public function createStripeCheckoutSession(Request $request)
+    {
+        $request->validate([
+            'plan_id' => 'nullable|exists:subscription_plans,id',
+            'ciclo_meses' => 'nullable|integer|min:1',
+            'sucursales_contratadas' => 'required|integer|min:1',
+        ]);
+
+        $user = $request->user();
+        $empresa = $user->empresa;
+
+        if (! $empresa) {
+            return response()->json(['error' => 'No se encontró la empresa asociada al usuario.'], 404);
+        }
+
+        $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
+        $secretKey = $masterEmpresa->stripe_secret_key;
+
+        if (empty($secretKey)) {
+            return response()->json([
+                'error' => 'Las credenciales de Stripe no están configuradas en el sistema. Contacte al administrador.',
+            ], 400);
+        }
+
+        $cicloMeses = (int) ($request->input('ciclo_meses') ?: 1);
+        $planId = $request->input('plan_id');
+        $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
+        $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
+
+        if ($hasActivePaidSubscription) {
+            $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
+            $diasRestantes = max(1, $empresa->dias_restantes_suscripcion);
+            $monto = $plan
+                ? $plan->calcularProrrateoSucursalExtra($nuevasSucursales, $diasRestantes)
+                : round($nuevasSucursales * (84.72 / 30) * $diasRestantes, 2);
+        } else {
+            $monto = $plan
+                ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas)
+                : (149.00 + (max(0, (int) $request->sucursales_contratadas - 1) * 84.72));
+        }
+
+        if ($monto <= 0) {
+            $monto = 1.00;
+        }
+
+        $nombrePlan = $plan?->nombre ?? "Plan {$cicloMeses} " . ($cicloMeses === 1 ? 'Mes' : 'Meses');
+        $unitAmount = (int) round($monto * 100);
+
+        try {
+            $sessionData = [
+                'mode' => 'payment',
+                'customer_email' => $empresa->email ?: $user->email,
+                'client_reference_id' => (string) $empresa->id,
+                'success_url' => route('admin.subscription.stripe.success') . '?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => route('admin.subscription.stripe.cancel'),
+                'line_items' => [
+                    [
+                        'price_data' => [
+                            'currency' => 'usd',
+                            'unit_amount' => $unitAmount,
+                            'product_data' => [
+                                'name' => "FixSale POS - Suscripción: {$nombrePlan}",
+                                'description' => "Renovación por {$cicloMeses} mes(es) para {$request->sucursales_contratadas} sucursal(es) - {$empresa->razon_social}",
+                            ],
+                        ],
+                        'quantity' => 1,
+                    ],
+                ],
+                'metadata' => [
+                    'empresa_id' => (string) $empresa->id,
+                    'user_id' => (string) $user->id,
+                    'plan_id' => (string) ($plan?->id ?? ''),
+                    'ciclo_meses' => (string) $cicloMeses,
+                    'sucursales_contratadas' => (string) $request->sucursales_contratadas,
+                    'monto' => (string) $monto,
+                ],
+            ];
+
+            $response = \Illuminate\Support\Facades\Http::withToken($secretKey)
+                ->asForm()
+                ->post('https://api.stripe.com/v1/checkout/sessions', $sessionData);
+
+            $data = $response->json();
+
+            if (! $response->successful() || ! isset($data['url'])) {
+                $errorMessage = $data['error']['message'] ?? 'Error desconocido al contactar Stripe API.';
+                return response()->json(['error' => $errorMessage], 400);
+            }
+
+            return response()->json([
+                'success' => true,
+                'checkout_url' => $data['url'],
+                'session_id' => $data['id'],
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Stripe Checkout Error: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al comunicarse con Stripe: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Retorno exitoso de Stripe Checkout: verifica sesión, activa suscripción y notifica ventana principal.
+     */
+    public function stripeSuccess(Request $request)
+    {
+        $sessionId = $request->query('session_id');
+
+        if (! $sessionId) {
+            return $this->renderPopupClose(false, 'Identificador de sesión Stripe no encontrado.');
+        }
+
+        $user = $request->user();
+        $empresa = $user?->empresa;
+        $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
+        $secretKey = $masterEmpresa?->stripe_secret_key;
+
+        if (empty($secretKey)) {
+            return $this->renderPopupClose(false, 'Configuración de Stripe no encontrada.');
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($secretKey)
+                ->get("https://api.stripe.com/v1/checkout/sessions/{$sessionId}");
+
+            if (! $response->successful()) {
+                return $this->renderPopupClose(false, 'No se pudo verificar la sesión con Stripe.');
+            }
+
+            $session = $response->json();
+
+            if (($session['payment_status'] ?? '') === 'paid') {
+                $existing = SubscriptionPayment::where('referencia_pago', $sessionId)->first();
+
+                if (! $existing && $empresa) {
+                    $meta = $session['metadata'] ?? [];
+                    $planId = ! empty($meta['plan_id']) ? (int) $meta['plan_id'] : null;
+                    $cicloMeses = (int) ($meta['ciclo_meses'] ?? 1);
+                    $sucursales = (int) ($meta['sucursales_contratadas'] ?? ($empresa->max_sucursales ?? 1));
+                    $monto = ($session['amount_total'] ?? 0) / 100;
+                    $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
+
+                    $this->activateSubscription(
+                        $empresa,
+                        $plan,
+                        $cicloMeses,
+                        $sucursales,
+                        $monto,
+                        'stripe',
+                        $sessionId,
+                        'Pago automático procesado y acreditado exitosamente vía Stripe Checkout.'
+                    );
+                }
+
+                return $this->renderPopupClose(true, '¡Pago con Stripe completado exitosamente! Tu suscripción ha sido activada y extendida de forma inmediata.', $sessionId);
+            }
+
+            return $this->renderPopupClose(false, 'El pago en Stripe está en proceso de confirmación.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Stripe Success Callback Error: ' . $e->getMessage());
+            return $this->renderPopupClose(false, 'Error al verificar pago de Stripe: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Retorno al cancelar en Stripe Checkout: cierra popup y notifica ventana principal.
+     */
+    public function stripeCancel(Request $request)
+    {
+        return $this->renderPopupClose(false, 'Has cancelado la operación de pago con Stripe.');
+    }
+
+    /**
+     * Renderiza página HTML para comunicar resultado a ventana principal (postMessage) y cerrar ventana flotante.
+     */
+    protected function renderPopupClose(bool $success, string $message, ?string $sessionId = null)
+    {
+        $payload = json_encode([
+            'type' => $success ? 'STRIPE_PAYMENT_SUCCESS' : 'STRIPE_PAYMENT_CANCEL',
+            'success' => $success,
+            'message' => $message,
+            'sessionId' => $sessionId,
+        ]);
+
+        $redirectUrl = route('admin.subscription.index');
+        $statusIcon = $success ? '✅' : 'ℹ️';
+        $statusTitle = $success ? '¡Pago Exitoso!' : 'Pago Cancelado';
+        $accentColor = $success ? '#16a34a' : '#f59e0b';
+
+        $html = <<<HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{$statusTitle}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e2e8f0;
+            padding: 36px 28px;
+            text-align: center;
+            max-width: 440px;
+            width: 100%;
+        }
+        .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            line-height: 1;
+        }
+        h2 {
+            margin: 0 0 10px;
+            font-size: 20px;
+            font-weight: 700;
+            color: {$accentColor};
+        }
+        p {
+            margin: 0 0 16px;
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #e2e8f0;
+            border-top-color: {$accentColor};
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .closing-text {
+            font-size: 13px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">{$statusIcon}</div>
+        <h2>{$statusTitle}</h2>
+        <p>{$message}</p>
+        <div class="closing-text">
+            <span class="spinner"></span> Cerrando ventana y actualizando sistema...
+        </div>
+    </div>
+    <script>
+        const payload = {$payload};
+        try {
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage(payload, '*');
+                setTimeout(() => {
+                    window.close();
+                }, 1200);
+            } else {
+                setTimeout(() => {
+                    window.location.href = "{$redirectUrl}";
+                }, 1500);
+            }
+        } catch (e) {
+            window.location.href = "{$redirectUrl}";
+        }
+    </script>
+</body>
+</html>
+HTML;
+
+        return response($html)->header('Content-Type', 'text/html; charset=utf-8');
+    }
+
+    /**
+     * Helper para activar y extender la suscripción luego de un pago aprobado (Stripe / PayPal / Aprobación manual).
+     */
+    protected function activateSubscription(
+        Empresa $empresa,
+        ?SubscriptionPlan $plan,
+        int $cicloMeses,
+        int $sucursalesContratadas,
+        float $monto,
+        string $metodoPago,
+        string $transactionId,
+        ?string $customNotes = null
+    ): void {
+        \Illuminate\Support\Facades\DB::transaction(function () use (
+            $empresa,
+            $plan,
+            $cicloMeses,
+            $sucursalesContratadas,
+            $monto,
+            $metodoPago,
+            $transactionId,
+            $customNotes
+        ) {
+            $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
+            $latestSub = $empresa->getLatestSubscriptionRecord();
+
+            if ($hasActivePaidSubscription) {
+                $nuevaFechaExpiracion = $latestSub?->fecha_vencimiento ?? $empresa->subscription_expires_at ?? now();
+            } else {
+                $baseDate = now();
+                if ($latestSub?->fecha_vencimiento && $latestSub->fecha_vencimiento->isFuture()) {
+                    $baseDate = $latestSub->fecha_vencimiento->copy();
+                }
+                $nuevaFechaExpiracion = $baseDate->addMonths($cicloMeses);
+            }
+
+            $empresaUpdate = [
+                'subscription_status' => 'active',
+                'subscription_expires_at' => $nuevaFechaExpiracion,
+                'max_sucursales' => max($empresa->max_sucursales ?? 1, $sucursalesContratadas),
+            ];
+            if (! $hasActivePaidSubscription) {
+                $empresaUpdate['billing_cycle'] = (string) $cicloMeses;
+            }
+            $empresa->update($empresaUpdate);
+
+            $nombrePlan = $hasActivePaidSubscription
+                ? ($latestSub?->nombre_plan && $latestSub->nombre_plan !== 'Sucursales Adicionales' ? $latestSub->nombre_plan : ($plan?->nombre ?? 'Plan Mensual'))
+                : ($plan?->nombre ?? Subscription::getNombrePlanByCiclo($cicloMeses));
+
+            if ($latestSub) {
+                $latestSub->update([
+                    'plan_id' => $plan?->id,
+                    'nombre_plan' => $nombrePlan,
+                    'ciclo_meses' => $hasActivePaidSubscription ? ($latestSub->ciclo_meses ?: $cicloMeses) : $cicloMeses,
+                    'max_sucursales' => max($empresa->max_sucursales ?? 1, $sucursalesContratadas),
+                    'monto_total' => $hasActivePaidSubscription ? ($latestSub->monto_total ?: $monto) : $monto,
+                    'fecha_vencimiento' => $nuevaFechaExpiracion,
+                    'estado' => 'active',
+                ]);
+                $subscriptionId = $latestSub->id;
+            } else {
+                $newSub = Subscription::create([
+                    'empresa_id' => $empresa->id,
+                    'plan_id' => $plan?->id,
+                    'nombre_plan' => $nombrePlan,
+                    'ciclo_meses' => $cicloMeses,
+                    'max_sucursales' => $sucursalesContratadas,
+                    'monto_total' => $monto,
+                    'fecha_inicio' => now(),
+                    'fecha_vencimiento' => $nuevaFechaExpiracion,
+                    'estado' => 'active',
+                ]);
+                $subscriptionId = $newSub->id;
+            }
+
+            SubscriptionPayment::create([
+                'subscription_id' => $subscriptionId,
+                'plan_id' => $plan?->id,
+                'empresa_id' => $empresa->id,
+                'user_id' => auth()->id() ?? $empresa->users()->first()?->id ?? 1,
+                'monto' => $monto,
+                'ciclo_meses' => $hasActivePaidSubscription ? 1 : $cicloMeses,
+                'sucursales_contratadas' => $sucursalesContratadas,
+                'metodo_pago' => $metodoPago,
+                'referencia_pago' => $transactionId,
+                'estado' => 'approved',
+                'aprobado_por' => auth()->id() ?? 1,
+                'aprobado_at' => now(),
+                'notas' => $customNotes ?? "Pago procesado exitosamente vía {$metodoPago}.",
+            ]);
+        });
     }
 
     /**

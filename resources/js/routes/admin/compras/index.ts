@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::cxp
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:225
-* @route '/admin/cuentas-por-pagar'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:225
+ * @route '/admin/cuentas-por-pagar'
+ */
 export const cxp = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: cxp.url(options),
     method: 'get',
@@ -16,28 +16,27 @@ cxp.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::cxp
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:225
-* @route '/admin/cuentas-por-pagar'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:225
+ * @route '/admin/cuentas-por-pagar'
+ */
 cxp.url = (options?: RouteQueryOptions) => {
     return cxp.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::cxp
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:225
-* @route '/admin/cuentas-por-pagar'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:225
+ * @route '/admin/cuentas-por-pagar'
+ */
 cxp.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: cxp.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::cxp
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:225
-* @route '/admin/cuentas-por-pagar'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:225
+ * @route '/admin/cuentas-por-pagar'
+ */
 cxp.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: cxp.url(options),
     method: 'head',
@@ -45,9 +44,9 @@ cxp.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::index
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:43
-* @route '/admin/compras'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:43
+ * @route '/admin/compras'
+ */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -60,28 +59,27 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::index
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:43
-* @route '/admin/compras'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:43
+ * @route '/admin/compras'
+ */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::index
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:43
-* @route '/admin/compras'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:43
+ * @route '/admin/compras'
+ */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::index
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:43
-* @route '/admin/compras'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:43
+ * @route '/admin/compras'
+ */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
@@ -89,9 +87,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::create
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:91
-* @route '/admin/compras/crear'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:91
+ * @route '/admin/compras/crear'
+ */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: create.url(options),
     method: 'get',
@@ -104,28 +102,27 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::create
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:91
-* @route '/admin/compras/crear'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:91
+ * @route '/admin/compras/crear'
+ */
 create.url = (options?: RouteQueryOptions) => {
     return create.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::create
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:91
-* @route '/admin/compras/crear'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:91
+ * @route '/admin/compras/crear'
+ */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: create.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::create
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:91
-* @route '/admin/compras/crear'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:91
+ * @route '/admin/compras/crear'
+ */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: create.url(options),
     method: 'head',
@@ -133,9 +130,9 @@ create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::store
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:162
-* @route '/admin/compras'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:162
+ * @route '/admin/compras'
+ */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -148,18 +145,18 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::store
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:162
-* @route '/admin/compras'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:162
+ * @route '/admin/compras'
+ */
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::store
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:162
-* @route '/admin/compras'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:162
+ * @route '/admin/compras'
+ */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -167,9 +164,9 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::show
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:172
-* @route '/admin/compras/{compra}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:172
+ * @route '/admin/compras/{compra}'
+ */
 export const show = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
@@ -182,31 +179,31 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::show
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:172
-* @route '/admin/compras/{compra}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:172
+ * @route '/admin/compras/{compra}'
+ */
 show.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { compra: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { compra: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { compra: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            compra: args[0],
-        }
+                    compra: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        compra: typeof args.compra === 'object'
-        ? args.compra.id
-        : args.compra,
-    }
+                        compra: typeof args.compra === 'object'
+                ? args.compra.id
+                : args.compra,
+                }
 
     return show.definition.url
             .replace('{compra}', parsedArgs.compra.toString())
@@ -215,19 +212,18 @@ show.url = (args: { compra: number | { id: number } } | [compra: number | { id: 
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::show
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:172
-* @route '/admin/compras/{compra}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:172
+ * @route '/admin/compras/{compra}'
+ */
 show.get = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::show
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:172
-* @route '/admin/compras/{compra}'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:172
+ * @route '/admin/compras/{compra}'
+ */
 show.head = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
@@ -235,9 +231,9 @@ show.head = (args: { compra: number | { id: number } } | [compra: number | { id:
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::storePayment
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:263
-* @route '/admin/compras/{compra}/pagos'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:263
+ * @route '/admin/compras/{compra}/pagos'
+ */
 export const storePayment = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storePayment.url(args, options),
     method: 'post',
@@ -250,31 +246,31 @@ storePayment.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::storePayment
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:263
-* @route '/admin/compras/{compra}/pagos'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:263
+ * @route '/admin/compras/{compra}/pagos'
+ */
 storePayment.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { compra: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { compra: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { compra: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            compra: args[0],
-        }
+                    compra: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        compra: typeof args.compra === 'object'
-        ? args.compra.id
-        : args.compra,
-    }
+                        compra: typeof args.compra === 'object'
+                ? args.compra.id
+                : args.compra,
+                }
 
     return storePayment.definition.url
             .replace('{compra}', parsedArgs.compra.toString())
@@ -283,9 +279,9 @@ storePayment.url = (args: { compra: number | { id: number } } | [compra: number 
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::storePayment
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:263
-* @route '/admin/compras/{compra}/pagos'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:263
+ * @route '/admin/compras/{compra}/pagos'
+ */
 storePayment.post = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storePayment.url(args, options),
     method: 'post',
@@ -293,9 +289,9 @@ storePayment.post = (args: { compra: number | { id: number } } | [compra: number
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::cancel
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:218
-* @route '/admin/compras/{compra}/cancel'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:218
+ * @route '/admin/compras/{compra}/cancel'
+ */
 export const cancel = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: cancel.url(args, options),
     method: 'post',
@@ -308,31 +304,31 @@ cancel.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::cancel
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:218
-* @route '/admin/compras/{compra}/cancel'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:218
+ * @route '/admin/compras/{compra}/cancel'
+ */
 cancel.url = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { compra: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { compra: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { compra: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            compra: args[0],
-        }
+                    compra: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        compra: typeof args.compra === 'object'
-        ? args.compra.id
-        : args.compra,
-    }
+                        compra: typeof args.compra === 'object'
+                ? args.compra.id
+                : args.compra,
+                }
 
     return cancel.definition.url
             .replace('{compra}', parsedArgs.compra.toString())
@@ -341,22 +337,21 @@ cancel.url = (args: { compra: number | { id: number } } | [compra: number | { id
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\PurchaseController::cancel
-* @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:218
-* @route '/admin/compras/{compra}/cancel'
-*/
+ * @see app/Http/Controllers/Admin/PointOfSale/PurchaseController.php:218
+ * @route '/admin/compras/{compra}/cancel'
+ */
 cancel.post = (args: { compra: number | { id: number } } | [compra: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: cancel.url(args, options),
     method: 'post',
 })
-
 const compras = {
     cxp: Object.assign(cxp, cxp),
-    index: Object.assign(index, index),
-    create: Object.assign(create, create),
-    store: Object.assign(store, store),
-    show: Object.assign(show, show),
-    storePayment: Object.assign(storePayment, storePayment),
-    cancel: Object.assign(cancel, cancel),
+index: Object.assign(index, index),
+create: Object.assign(create, create),
+store: Object.assign(store, store),
+show: Object.assign(show, show),
+storePayment: Object.assign(storePayment, storePayment),
+cancel: Object.assign(cancel, cancel),
 }
 
 export default compras

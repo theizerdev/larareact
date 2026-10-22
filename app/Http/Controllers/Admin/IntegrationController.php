@@ -74,6 +74,7 @@ class IntegrationController extends Controller
             'stripe_publishable_key' => $empresa->stripe_publishable_key ?? '',
             'stripe_secret_key' => $empresa->stripe_secret_key ?? '',
             'stripe_webhook_secret' => $empresa->stripe_webhook_secret ?? '',
+            'primary_payment_gateway' => $empresa->primary_payment_gateway ?? 'stripe',
         ]);
     }
 
@@ -1501,7 +1502,13 @@ class IntegrationController extends Controller
             'stripe_publishable_key' => 'nullable|string|max:255',
             'stripe_secret_key' => 'nullable|string',
             'stripe_webhook_secret' => 'nullable|string',
+            'is_primary' => 'nullable|boolean',
         ]);
+
+        if (! empty($validated['is_primary'])) {
+            $validated['primary_payment_gateway'] = 'stripe';
+        }
+        unset($validated['is_primary']);
 
         $empresa->update($validated);
 
@@ -1509,5 +1516,83 @@ class IntegrationController extends Controller
             'type' => 'success',
             'message' => __('Stripe integration settings updated successfully.'),
         ]);
+    }
+
+    /**
+     * Define la pasarela de pago principal en todo el sistema (SaaS / Suscripciones).
+     */
+    public function setPrimaryPaymentGateway(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('No active company associated with your user.'),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'primary_payment_gateway' => 'required|in:stripe,paypal,mercadopago',
+        ]);
+
+        $empresa->update($validated);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Método de pago principal actualizado a :gateway.', [
+                'gateway' => strtoupper($validated['primary_payment_gateway']),
+            ]),
+        ]);
+    }
+
+    /**
+     * Prueba la conexión en vivo con la API de Stripe para validar las credenciales.
+     */
+    public function testStripe(Request $request)
+    {
+        $empresa = $request->user()->empresa;
+
+        if (! $empresa) {
+            return response()->json([
+                'success' => false,
+                'message' => __('No active company associated with your user.'),
+            ], 400);
+        }
+
+        $secretKey = $request->input('stripe_secret_key') ?: $empresa->stripe_secret_key;
+
+        if (empty($secretKey)) {
+            return response()->json([
+                'success' => false,
+                'message' => __('No se ha proporcionado la clave secreta de Stripe.'),
+            ], 422);
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($secretKey)
+                ->timeout(10)
+                ->get('https://api.stripe.com/v1/balance');
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return response()->json([
+                    'success' => true,
+                    'message' => __('¡Conexión con Stripe exitosa! Las credenciales son válidas.'),
+                    'livemode' => $data['livemode'] ?? false,
+                ]);
+            }
+
+            $error = $response->json()['error']['message'] ?? __('Error desconocido al contactar con la API de Stripe.');
+            return response()->json([
+                'success' => false,
+                'message' => __('Error de Stripe: ') . $error,
+            ], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => __('Error de conexión: ') . $e->getMessage(),
+            ], 500);
+        }
     }
 }

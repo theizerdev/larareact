@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Settings\SecurityController::edit
-* @see app/Http/Controllers/Settings/SecurityController.php:19
-* @route '/settings/security'
-*/
+ * @see app/Http/Controllers/Settings/SecurityController.php:19
+ * @route '/settings/security'
+ */
 export const edit = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(options),
     method: 'get',
@@ -16,28 +16,27 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\Settings\SecurityController::edit
-* @see app/Http/Controllers/Settings/SecurityController.php:19
-* @route '/settings/security'
-*/
+ * @see app/Http/Controllers/Settings/SecurityController.php:19
+ * @route '/settings/security'
+ */
 edit.url = (options?: RouteQueryOptions) => {
     return edit.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Settings\SecurityController::edit
-* @see app/Http/Controllers/Settings/SecurityController.php:19
-* @route '/settings/security'
-*/
+ * @see app/Http/Controllers/Settings/SecurityController.php:19
+ * @route '/settings/security'
+ */
 edit.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Settings\SecurityController::edit
-* @see app/Http/Controllers/Settings/SecurityController.php:19
-* @route '/settings/security'
-*/
+ * @see app/Http/Controllers/Settings/SecurityController.php:19
+ * @route '/settings/security'
+ */
 edit.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: edit.url(options),
     method: 'head',
@@ -45,9 +44,9 @@ edit.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Settings\SecurityController::update
-* @see app/Http/Controllers/Settings/SecurityController.php:56
-* @route '/settings/password'
-*/
+ * @see app/Http/Controllers/Settings/SecurityController.php:56
+ * @route '/settings/password'
+ */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(options),
     method: 'put',
@@ -60,23 +59,22 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Settings\SecurityController::update
-* @see app/Http/Controllers/Settings/SecurityController.php:56
-* @route '/settings/password'
-*/
+ * @see app/Http/Controllers/Settings/SecurityController.php:56
+ * @route '/settings/password'
+ */
 update.url = (options?: RouteQueryOptions) => {
     return update.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Settings\SecurityController::update
-* @see app/Http/Controllers/Settings/SecurityController.php:56
-* @route '/settings/password'
-*/
+ * @see app/Http/Controllers/Settings/SecurityController.php:56
+ * @route '/settings/password'
+ */
 update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(options),
     method: 'put',
 })
-
 const SecurityController = { edit, update }
 
 export default SecurityController

@@ -1,6 +1,7 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
-import { ShieldAlert, CreditCard, Upload, CheckCircle2, Lock, Zap, Plus, Minus } from 'lucide-react';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
+import { ShieldAlert, CreditCard, Upload, CheckCircle2, Lock, Zap, Plus, Minus, Star, Loader2 } from 'lucide-react';
 import React, { useState } from 'react';
+import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,6 +54,7 @@ interface PaymentGatewayInfo {
     client_id?: string;
     public_key?: string;
     publishable_key?: string;
+    is_primary?: boolean;
 }
 
 interface PageProps {
@@ -105,15 +107,121 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
         return `$${usdAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
     };
 
+    const initialMethod = (paymentGateways?.stripe?.active || paymentGateways?.stripe?.is_primary)
+        ? 'stripe'
+        : (paymentGateways?.paypal?.active ? 'paypal' : 'transferencia');
+
+    const [isStripeLoading, setIsStripeLoading] = useState(false);
+
     const { data, setData, post, processing, errors, reset } = useForm({
         plan_id: selectedPlanId,
         ciclo_meses: 1,
         sucursales_contratadas: extraSucursales,
-        metodo_pago: 'transferencia',
+        metodo_pago: initialMethod,
         referencia_pago: '',
         comprobante: null as File | null,
         notas: '',
     });
+
+    React.useEffect(() => {
+        const handleStripeMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'STRIPE_PAYMENT_SUCCESS') {
+                setIsStripeLoading(false);
+                Swal.fire({
+                    title: __('¡Pago Exitoso!'),
+                    text: event.data.message || __('Tu suscripción con Stripe ha sido procesada y reactivada de forma inmediata.'),
+                    icon: 'success',
+                    timer: 3500,
+                    showConfirmButton: true,
+                }).then(() => {
+                    router.reload();
+                });
+            } else if (event.data?.type === 'STRIPE_PAYMENT_CANCEL') {
+                setIsStripeLoading(false);
+                Swal.fire({
+                    title: __('Operación Cancelada'),
+                    text: event.data.message || __('Has cancelado el proceso de pago con Stripe.'),
+                    icon: 'info',
+                    timer: 2500,
+                    showConfirmButton: false,
+                });
+            }
+        };
+
+        window.addEventListener('message', handleStripeMessage);
+        return () => window.removeEventListener('message', handleStripeMessage);
+    }, []);
+
+    const handleStripeCheckout = async () => {
+        setIsStripeLoading(true);
+        try {
+            const metaToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+            const xsrfToken = cookieMatch ? decodeURIComponent(cookieMatch[1]) : '';
+
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            };
+            if (xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken;
+            if (metaToken) headers['X-CSRF-TOKEN'] = metaToken;
+
+            const res = await fetch('/admin/monitoring/subscription/stripe/create-checkout', {
+                method: 'POST',
+                headers,
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    plan_id: selectedPlanId,
+                    ciclo_meses: 1,
+                    sucursales_contratadas: extraSucursales,
+                }),
+            });
+
+            const result = await res.json();
+            if (result.success && result.checkout_url) {
+                // Abrir checkout de Stripe en ventana emergente/flotante centrada
+                const width = 600;
+                const height = 820;
+                const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+                const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+
+                const popup = window.open(
+                    result.checkout_url,
+                    'StripeCheckoutPopup',
+                    `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes,status=no`
+                );
+
+                if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+                    // Fallback en caso de bloqueo de ventanas emergentes
+                    window.location.href = result.checkout_url;
+                    return;
+                }
+
+                popup.focus();
+
+                const timer = setInterval(() => {
+                    if (popup.closed) {
+                        clearInterval(timer);
+                        setIsStripeLoading(false);
+                    }
+                }, 1000);
+            } else {
+                Swal.fire({
+                    title: __('Error al Iniciar Pago'),
+                    text: result.error || __('No se pudo generar la sesión de pago con Stripe.'),
+                    icon: 'error',
+                });
+                setIsStripeLoading(false);
+            }
+        } catch (e: any) {
+            Swal.fire({
+                title: __('Error'),
+                text: e.message || __('Error de conexión al procesar con Stripe.'),
+                icon: 'error',
+            });
+            setIsStripeLoading(false);
+        }
+    };
 
     const handlePlanChange = (planId: number) => {
         setSelectedPlanId(planId);
@@ -371,18 +479,20 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="transferencia">{__('Transferencia Bancaria (Manual)')}</SelectItem>
-                                            <SelectItem value="pago_movil">{__('Pago Móvil (Bolívares)')}</SelectItem>
-                                            <SelectItem value="zelle">{__('Zelle / Transferencia USD')}</SelectItem>
+                                            {paymentGateways?.stripe?.active && (
+                                                <SelectItem value="stripe" className="font-semibold text-indigo-600 dark:text-indigo-400">
+                                                    🔒 {__('Stripe (Tarjeta de Crédito / Débito)')} - ⭐ {__('Método Principal')}
+                                                </SelectItem>
+                                            )}
                                             {paymentGateways?.paypal?.active && (
                                                 <SelectItem value="paypal">💳 {__('PayPal (Checkout en línea)')}</SelectItem>
                                             )}
                                             {paymentGateways?.mercadopago?.active && (
                                                 <SelectItem value="mercadopago">⚡ {__('Mercado Pago (Tarjeta / Dinero MP)')}</SelectItem>
                                             )}
-                                            {paymentGateways?.stripe?.active && (
-                                                <SelectItem value="stripe">🔒 {__('Stripe (Tarjeta de Crédito / Débito)')}</SelectItem>
-                                            )}
+                                            <SelectItem value="transferencia">{__('Transferencia Bancaria (Manual)')}</SelectItem>
+                                            <SelectItem value="pago_movil">{__('Pago Móvil (Bolívares)')}</SelectItem>
+                                            <SelectItem value="zelle">{__('Zelle / Transferencia USD')}</SelectItem>
                                             <SelectItem value="efectivo">{__('Efectivo / Depósito en Ventanilla')}</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -438,10 +548,61 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                     </div>
                                 )}
 
-                                {['mercadopago', 'stripe'].includes(data.metodo_pago) && (
+                                {data.metodo_pago === 'stripe' && (
+                                    <div className="sm:col-span-2 p-5 bg-gradient-to-br from-indigo-50/90 via-purple-50/50 to-indigo-100/40 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-indigo-900/30 text-slate-900 dark:text-slate-100 rounded-xl border-2 border-indigo-300 dark:border-indigo-800 shadow-sm space-y-4">
+                                        <div className="flex items-center justify-between flex-wrap gap-2">
+                                            <span className="text-xs font-bold uppercase text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                                                <Star className="h-4 w-4 fill-indigo-600 text-indigo-600" />
+                                                {__('Checkout Directo con Stripe (Pasarela Principal)')}
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <Badge className="bg-indigo-600 hover:bg-indigo-700 text-white font-mono font-bold text-xs">
+                                                    Total: ${precioFinalEstimado.toFixed(2)} USD
+                                                </Badge>
+                                                <Badge variant="outline" className="text-[10px] border-indigo-300 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300 bg-indigo-100/50 dark:bg-indigo-950/40 font-semibold">
+                                                    ⚡ {__('Acreditación Instantánea')}
+                                                </Badge>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-xs text-muted-foreground leading-relaxed flex items-center justify-between border-t border-b border-indigo-200/60 dark:border-indigo-900/40 py-2.5 my-1">
+                                            <span>
+                                                {__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{currentPlan?.nombre || __('Plan Mensual')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong>
+                                            </span>
+                                            <span className="font-bold font-mono text-indigo-800 dark:text-indigo-300 text-base">
+                                                ${precioFinalEstimado.toFixed(2)} USD
+                                            </span>
+                                        </div>
+
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                            {__('Paga de forma 100% segura mediante Stripe para desbloquear y reactivar tu cuenta inmediatamente. Acepta tarjetas Visa, Mastercard, AMEX, Apple Pay y Google Pay.')}
+                                        </p>
+
+                                        <div className="pt-1 flex flex-col sm:flex-row items-center gap-3">
+                                            <Button
+                                                type="button"
+                                                onClick={handleStripeCheckout}
+                                                disabled={isStripeLoading}
+                                                className="w-full sm:w-auto h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 text-sm shadow-md transition-all duration-200"
+                                            >
+                                                {isStripeLoading ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Lock className="h-4 w-4" />
+                                                )}
+                                                {__('Reactivar Cuenta con Stripe')} (${precioFinalEstimado.toFixed(2)} USD)
+                                            </Button>
+                                            <span className="text-[11px] text-muted-foreground">
+                                                🔒 {__('Procesamiento cifrado SSL por Stripe')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {data.metodo_pago === 'mercadopago' && (
                                     <div className="sm:col-span-2 p-3 bg-sky-50 dark:bg-sky-950/30 text-sky-900 dark:text-sky-300 rounded-lg border border-sky-200 dark:border-sky-900 text-xs flex items-center gap-2">
                                         <Zap className="h-4 w-4 shrink-0 text-sky-600" />
-                                        <span>{__('Has seleccionado una pasarela de pago en línea. Al enviar la solicitud, serás redirigido o se activará el checkout automático con acreditación instantánea.')}</span>
+                                        <span>{__('Has seleccionado Mercado Pago. Al enviar la solicitud, podrás realizar el pago o adjuntar tu comprobante de operación.')}</span>
                                     </div>
                                 )}
 

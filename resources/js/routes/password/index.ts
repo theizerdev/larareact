@@ -2,9 +2,9 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefa
 import confirmD7e05f from './confirm'
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::request
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
-* @route '/forgot-password'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
+ * @route '/forgot-password'
+ */
 export const request = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: request.url(options),
     method: 'get',
@@ -17,28 +17,27 @@ request.definition = {
 
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::request
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
-* @route '/forgot-password'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
+ * @route '/forgot-password'
+ */
 request.url = (options?: RouteQueryOptions) => {
     return request.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::request
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
-* @route '/forgot-password'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
+ * @route '/forgot-password'
+ */
 request.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: request.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::request
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
-* @route '/forgot-password'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:19
+ * @route '/forgot-password'
+ */
 request.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: request.url(options),
     method: 'head',
@@ -46,9 +45,9 @@ request.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\NewPasswordController::reset
-* @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:45
-* @route '/reset-password/{token}'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:45
+ * @route '/reset-password/{token}'
+ */
 export const reset = (args: { token: string | number } | [token: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: reset.url(args, options),
     method: 'get',
@@ -61,25 +60,26 @@ reset.definition = {
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\NewPasswordController::reset
-* @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:45
-* @route '/reset-password/{token}'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:45
+ * @route '/reset-password/{token}'
+ */
 reset.url = (args: { token: string | number } | [token: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { token: args }
     }
 
+    
     if (Array.isArray(args)) {
         args = {
-            token: args[0],
-        }
+                    token: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        token: args.token,
-    }
+                        token: args.token,
+                }
 
     return reset.definition.url
             .replace('{token}', parsedArgs.token.toString())
@@ -88,19 +88,18 @@ reset.url = (args: { token: string | number } | [token: string | number ] | stri
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\NewPasswordController::reset
-* @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:45
-* @route '/reset-password/{token}'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:45
+ * @route '/reset-password/{token}'
+ */
 reset.get = (args: { token: string | number } | [token: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: reset.url(args, options),
     method: 'get',
 })
-
 /**
 * @see \Laravel\Fortify\Http\Controllers\NewPasswordController::reset
-* @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:45
-* @route '/reset-password/{token}'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:45
+ * @route '/reset-password/{token}'
+ */
 reset.head = (args: { token: string | number } | [token: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: reset.url(args, options),
     method: 'head',
@@ -108,9 +107,9 @@ reset.head = (args: { token: string | number } | [token: string | number ] | str
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\PasswordResetLinkController::email
-* @see vendor/laravel/fortify/src/Http/Controllers/PasswordResetLinkController.php:30
-* @route '/forgot-password'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/PasswordResetLinkController.php:30
+ * @route '/forgot-password'
+ */
 export const email = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: email.url(options),
     method: 'post',
@@ -123,18 +122,18 @@ email.definition = {
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\PasswordResetLinkController::email
-* @see vendor/laravel/fortify/src/Http/Controllers/PasswordResetLinkController.php:30
-* @route '/forgot-password'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/PasswordResetLinkController.php:30
+ * @route '/forgot-password'
+ */
 email.url = (options?: RouteQueryOptions) => {
     return email.definition.url + queryParams(options)
 }
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\PasswordResetLinkController::email
-* @see vendor/laravel/fortify/src/Http/Controllers/PasswordResetLinkController.php:30
-* @route '/forgot-password'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/PasswordResetLinkController.php:30
+ * @route '/forgot-password'
+ */
 email.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: email.url(options),
     method: 'post',
@@ -142,9 +141,9 @@ email.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\NewPasswordController::update
-* @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:56
-* @route '/reset-password'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:56
+ * @route '/reset-password'
+ */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: update.url(options),
     method: 'post',
@@ -157,18 +156,18 @@ update.definition = {
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\NewPasswordController::update
-* @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:56
-* @route '/reset-password'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:56
+ * @route '/reset-password'
+ */
 update.url = (options?: RouteQueryOptions) => {
     return update.definition.url + queryParams(options)
 }
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\NewPasswordController::update
-* @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:56
-* @route '/reset-password'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/NewPasswordController.php:56
+ * @route '/reset-password'
+ */
 update.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: update.url(options),
     method: 'post',
@@ -176,9 +175,9 @@ update.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\ConfirmablePasswordController::confirm
-* @see vendor/laravel/fortify/src/Http/Controllers/ConfirmablePasswordController.php:40
-* @route '/user/confirm-password'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/ConfirmablePasswordController.php:40
+ * @route '/user/confirm-password'
+ */
 export const confirm = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: confirm.url(options),
     method: 'get',
@@ -191,28 +190,27 @@ confirm.definition = {
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\ConfirmablePasswordController::confirm
-* @see vendor/laravel/fortify/src/Http/Controllers/ConfirmablePasswordController.php:40
-* @route '/user/confirm-password'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/ConfirmablePasswordController.php:40
+ * @route '/user/confirm-password'
+ */
 confirm.url = (options?: RouteQueryOptions) => {
     return confirm.definition.url + queryParams(options)
 }
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\ConfirmablePasswordController::confirm
-* @see vendor/laravel/fortify/src/Http/Controllers/ConfirmablePasswordController.php:40
-* @route '/user/confirm-password'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/ConfirmablePasswordController.php:40
+ * @route '/user/confirm-password'
+ */
 confirm.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: confirm.url(options),
     method: 'get',
 })
-
 /**
 * @see \Laravel\Fortify\Http\Controllers\ConfirmablePasswordController::confirm
-* @see vendor/laravel/fortify/src/Http/Controllers/ConfirmablePasswordController.php:40
-* @route '/user/confirm-password'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/ConfirmablePasswordController.php:40
+ * @route '/user/confirm-password'
+ */
 confirm.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: confirm.url(options),
     method: 'head',
@@ -220,9 +218,9 @@ confirm.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\ConfirmedPasswordStatusController::confirmation
-* @see vendor/laravel/fortify/src/Http/Controllers/ConfirmedPasswordStatusController.php:17
-* @route '/user/confirmed-password-status'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/ConfirmedPasswordStatusController.php:17
+ * @route '/user/confirmed-password-status'
+ */
 export const confirmation = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: confirmation.url(options),
     method: 'get',
@@ -235,28 +233,27 @@ confirmation.definition = {
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\ConfirmedPasswordStatusController::confirmation
-* @see vendor/laravel/fortify/src/Http/Controllers/ConfirmedPasswordStatusController.php:17
-* @route '/user/confirmed-password-status'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/ConfirmedPasswordStatusController.php:17
+ * @route '/user/confirmed-password-status'
+ */
 confirmation.url = (options?: RouteQueryOptions) => {
     return confirmation.definition.url + queryParams(options)
 }
 
 /**
 * @see \Laravel\Fortify\Http\Controllers\ConfirmedPasswordStatusController::confirmation
-* @see vendor/laravel/fortify/src/Http/Controllers/ConfirmedPasswordStatusController.php:17
-* @route '/user/confirmed-password-status'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/ConfirmedPasswordStatusController.php:17
+ * @route '/user/confirmed-password-status'
+ */
 confirmation.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: confirmation.url(options),
     method: 'get',
 })
-
 /**
 * @see \Laravel\Fortify\Http\Controllers\ConfirmedPasswordStatusController::confirmation
-* @see vendor/laravel/fortify/src/Http/Controllers/ConfirmedPasswordStatusController.php:17
-* @route '/user/confirmed-password-status'
-*/
+ * @see vendor/laravel/fortify/src/Http/Controllers/ConfirmedPasswordStatusController.php:17
+ * @route '/user/confirmed-password-status'
+ */
 confirmation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: confirmation.url(options),
     method: 'head',
@@ -264,9 +261,9 @@ confirmation.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::sendOtp
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:39
-* @route '/forgot-password/send-otp'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:39
+ * @route '/forgot-password/send-otp'
+ */
 export const sendOtp = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: sendOtp.url(options),
     method: 'post',
@@ -279,18 +276,18 @@ sendOtp.definition = {
 
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::sendOtp
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:39
-* @route '/forgot-password/send-otp'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:39
+ * @route '/forgot-password/send-otp'
+ */
 sendOtp.url = (options?: RouteQueryOptions) => {
     return sendOtp.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::sendOtp
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:39
-* @route '/forgot-password/send-otp'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:39
+ * @route '/forgot-password/send-otp'
+ */
 sendOtp.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: sendOtp.url(options),
     method: 'post',
@@ -298,9 +295,9 @@ sendOtp.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::verifyOtp
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:102
-* @route '/forgot-password/verify-otp'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:102
+ * @route '/forgot-password/verify-otp'
+ */
 export const verifyOtp = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: verifyOtp.url(options),
     method: 'post',
@@ -313,18 +310,18 @@ verifyOtp.definition = {
 
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::verifyOtp
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:102
-* @route '/forgot-password/verify-otp'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:102
+ * @route '/forgot-password/verify-otp'
+ */
 verifyOtp.url = (options?: RouteQueryOptions) => {
     return verifyOtp.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::verifyOtp
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:102
-* @route '/forgot-password/verify-otp'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:102
+ * @route '/forgot-password/verify-otp'
+ */
 verifyOtp.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: verifyOtp.url(options),
     method: 'post',
@@ -332,9 +329,9 @@ verifyOtp.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::otpReset
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:148
-* @route '/forgot-password/reset'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:148
+ * @route '/forgot-password/reset'
+ */
 export const otpReset = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: otpReset.url(options),
     method: 'post',
@@ -347,33 +344,32 @@ otpReset.definition = {
 
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::otpReset
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:148
-* @route '/forgot-password/reset'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:148
+ * @route '/forgot-password/reset'
+ */
 otpReset.url = (options?: RouteQueryOptions) => {
     return otpReset.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Auth\ForgotPasswordOtpController::otpReset
-* @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:148
-* @route '/forgot-password/reset'
-*/
+ * @see app/Http/Controllers/Auth/ForgotPasswordOtpController.php:148
+ * @route '/forgot-password/reset'
+ */
 otpReset.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: otpReset.url(options),
     method: 'post',
 })
-
 const password = {
     request: Object.assign(request, request),
-    reset: Object.assign(reset, reset),
-    email: Object.assign(email, email),
-    update: Object.assign(update, update),
-    confirm: Object.assign(confirm, confirmD7e05f),
-    confirmation: Object.assign(confirmation, confirmation),
-    sendOtp: Object.assign(sendOtp, sendOtp),
-    verifyOtp: Object.assign(verifyOtp, verifyOtp),
-    otpReset: Object.assign(otpReset, otpReset),
+reset: Object.assign(reset, reset),
+email: Object.assign(email, email),
+update: Object.assign(update, update),
+confirm: Object.assign(confirm, confirmD7e05f),
+confirmation: Object.assign(confirmation, confirmation),
+sendOtp: Object.assign(sendOtp, sendOtp),
+verifyOtp: Object.assign(verifyOtp, verifyOtp),
+otpReset: Object.assign(otpReset, otpReset),
 }
 
 export default password

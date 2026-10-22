@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\NominaController::index
-* @see app/Http/Controllers/Admin/NominaController.php:17
-* @route '/admin/nomina'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:17
+ * @route '/admin/nomina'
+ */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -16,28 +16,27 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::index
-* @see app/Http/Controllers/Admin/NominaController.php:17
-* @route '/admin/nomina'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:17
+ * @route '/admin/nomina'
+ */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::index
-* @see app/Http/Controllers/Admin/NominaController.php:17
-* @route '/admin/nomina'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:17
+ * @route '/admin/nomina'
+ */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\NominaController::index
-* @see app/Http/Controllers/Admin/NominaController.php:17
-* @route '/admin/nomina'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:17
+ * @route '/admin/nomina'
+ */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
@@ -45,9 +44,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::generar
-* @see app/Http/Controllers/Admin/NominaController.php:79
-* @route '/admin/nomina/generar'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:79
+ * @route '/admin/nomina/generar'
+ */
 export const generar = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: generar.url(options),
     method: 'post',
@@ -60,18 +59,18 @@ generar.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::generar
-* @see app/Http/Controllers/Admin/NominaController.php:79
-* @route '/admin/nomina/generar'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:79
+ * @route '/admin/nomina/generar'
+ */
 generar.url = (options?: RouteQueryOptions) => {
     return generar.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::generar
-* @see app/Http/Controllers/Admin/NominaController.php:79
-* @route '/admin/nomina/generar'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:79
+ * @route '/admin/nomina/generar'
+ */
 generar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: generar.url(options),
     method: 'post',
@@ -79,9 +78,9 @@ generar.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::updateDetalle
-* @see app/Http/Controllers/Admin/NominaController.php:206
-* @route '/admin/nomina/detalles/{detalle}'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:206
+ * @route '/admin/nomina/detalles/{detalle}'
+ */
 export const updateDetalle = (args: { detalle: number | { id: number } } | [detalle: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: updateDetalle.url(args, options),
     method: 'put',
@@ -94,31 +93,31 @@ updateDetalle.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::updateDetalle
-* @see app/Http/Controllers/Admin/NominaController.php:206
-* @route '/admin/nomina/detalles/{detalle}'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:206
+ * @route '/admin/nomina/detalles/{detalle}'
+ */
 updateDetalle.url = (args: { detalle: number | { id: number } } | [detalle: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { detalle: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { detalle: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { detalle: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            detalle: args[0],
-        }
+                    detalle: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        detalle: typeof args.detalle === 'object'
-        ? args.detalle.id
-        : args.detalle,
-    }
+                        detalle: typeof args.detalle === 'object'
+                ? args.detalle.id
+                : args.detalle,
+                }
 
     return updateDetalle.definition.url
             .replace('{detalle}', parsedArgs.detalle.toString())
@@ -127,9 +126,9 @@ updateDetalle.url = (args: { detalle: number | { id: number } } | [detalle: numb
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::updateDetalle
-* @see app/Http/Controllers/Admin/NominaController.php:206
-* @route '/admin/nomina/detalles/{detalle}'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:206
+ * @route '/admin/nomina/detalles/{detalle}'
+ */
 updateDetalle.put = (args: { detalle: number | { id: number } } | [detalle: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: updateDetalle.url(args, options),
     method: 'put',
@@ -137,9 +136,9 @@ updateDetalle.put = (args: { detalle: number | { id: number } } | [detalle: numb
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::cerrar
-* @see app/Http/Controllers/Admin/NominaController.php:243
-* @route '/admin/nomina/{nomina}/cerrar'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:243
+ * @route '/admin/nomina/{nomina}/cerrar'
+ */
 export const cerrar = (args: { nomina: number | { id: number } } | [nomina: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: cerrar.url(args, options),
     method: 'post',
@@ -152,31 +151,31 @@ cerrar.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::cerrar
-* @see app/Http/Controllers/Admin/NominaController.php:243
-* @route '/admin/nomina/{nomina}/cerrar'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:243
+ * @route '/admin/nomina/{nomina}/cerrar'
+ */
 cerrar.url = (args: { nomina: number | { id: number } } | [nomina: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { nomina: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { nomina: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { nomina: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            nomina: args[0],
-        }
+                    nomina: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        nomina: typeof args.nomina === 'object'
-        ? args.nomina.id
-        : args.nomina,
-    }
+                        nomina: typeof args.nomina === 'object'
+                ? args.nomina.id
+                : args.nomina,
+                }
 
     return cerrar.definition.url
             .replace('{nomina}', parsedArgs.nomina.toString())
@@ -185,9 +184,9 @@ cerrar.url = (args: { nomina: number | { id: number } } | [nomina: number | { id
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::cerrar
-* @see app/Http/Controllers/Admin/NominaController.php:243
-* @route '/admin/nomina/{nomina}/cerrar'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:243
+ * @route '/admin/nomina/{nomina}/cerrar'
+ */
 cerrar.post = (args: { nomina: number | { id: number } } | [nomina: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: cerrar.url(args, options),
     method: 'post',
@@ -195,9 +194,9 @@ cerrar.post = (args: { nomina: number | { id: number } } | [nomina: number | { i
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::pagarDetalle
-* @see app/Http/Controllers/Admin/NominaController.php:265
-* @route '/admin/nomina/detalles/{detalle}/pagar'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:265
+ * @route '/admin/nomina/detalles/{detalle}/pagar'
+ */
 export const pagarDetalle = (args: { detalle: number | { id: number } } | [detalle: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: pagarDetalle.url(args, options),
     method: 'post',
@@ -210,31 +209,31 @@ pagarDetalle.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::pagarDetalle
-* @see app/Http/Controllers/Admin/NominaController.php:265
-* @route '/admin/nomina/detalles/{detalle}/pagar'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:265
+ * @route '/admin/nomina/detalles/{detalle}/pagar'
+ */
 pagarDetalle.url = (args: { detalle: number | { id: number } } | [detalle: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { detalle: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { detalle: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { detalle: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            detalle: args[0],
-        }
+                    detalle: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        detalle: typeof args.detalle === 'object'
-        ? args.detalle.id
-        : args.detalle,
-    }
+                        detalle: typeof args.detalle === 'object'
+                ? args.detalle.id
+                : args.detalle,
+                }
 
     return pagarDetalle.definition.url
             .replace('{detalle}', parsedArgs.detalle.toString())
@@ -243,14 +242,13 @@ pagarDetalle.url = (args: { detalle: number | { id: number } } | [detalle: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\NominaController::pagarDetalle
-* @see app/Http/Controllers/Admin/NominaController.php:265
-* @route '/admin/nomina/detalles/{detalle}/pagar'
-*/
+ * @see app/Http/Controllers/Admin/NominaController.php:265
+ * @route '/admin/nomina/detalles/{detalle}/pagar'
+ */
 pagarDetalle.post = (args: { detalle: number | { id: number } } | [detalle: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: pagarDetalle.url(args, options),
     method: 'post',
 })
-
 const NominaController = { index, generar, updateDetalle, cerrar, pagarDetalle }
 
 export default NominaController

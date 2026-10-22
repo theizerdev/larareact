@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::index
-* @see app/Http/Controllers/Admin/EmpresaController.php:20
-* @route '/admin/empresas'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:20
+ * @route '/admin/empresas'
+ */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -16,28 +16,27 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::index
-* @see app/Http/Controllers/Admin/EmpresaController.php:20
-* @route '/admin/empresas'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:20
+ * @route '/admin/empresas'
+ */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::index
-* @see app/Http/Controllers/Admin/EmpresaController.php:20
-* @route '/admin/empresas'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:20
+ * @route '/admin/empresas'
+ */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::index
-* @see app/Http/Controllers/Admin/EmpresaController.php:20
-* @route '/admin/empresas'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:20
+ * @route '/admin/empresas'
+ */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
@@ -45,9 +44,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::show
-* @see app/Http/Controllers/Admin/EmpresaController.php:76
-* @route '/admin/empresas/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:76
+ * @route '/admin/empresas/{empresa}'
+ */
 export const show = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
@@ -60,31 +59,31 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::show
-* @see app/Http/Controllers/Admin/EmpresaController.php:76
-* @route '/admin/empresas/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:76
+ * @route '/admin/empresas/{empresa}'
+ */
 show.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empresa: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { empresa: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { empresa: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            empresa: args[0],
-        }
+                    empresa: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        empresa: typeof args.empresa === 'object'
-        ? args.empresa.id
-        : args.empresa,
-    }
+                        empresa: typeof args.empresa === 'object'
+                ? args.empresa.id
+                : args.empresa,
+                }
 
     return show.definition.url
             .replace('{empresa}', parsedArgs.empresa.toString())
@@ -93,19 +92,18 @@ show.url = (args: { empresa: number | { id: number } } | [empresa: number | { id
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::show
-* @see app/Http/Controllers/Admin/EmpresaController.php:76
-* @route '/admin/empresas/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:76
+ * @route '/admin/empresas/{empresa}'
+ */
 show.get = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::show
-* @see app/Http/Controllers/Admin/EmpresaController.php:76
-* @route '/admin/empresas/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:76
+ * @route '/admin/empresas/{empresa}'
+ */
 show.head = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
@@ -113,9 +111,9 @@ show.head = (args: { empresa: number | { id: number } } | [empresa: number | { i
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::store
-* @see app/Http/Controllers/Admin/EmpresaController.php:89
-* @route '/admin/empresas'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:89
+ * @route '/admin/empresas'
+ */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -128,18 +126,18 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::store
-* @see app/Http/Controllers/Admin/EmpresaController.php:89
-* @route '/admin/empresas'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:89
+ * @route '/admin/empresas'
+ */
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::store
-* @see app/Http/Controllers/Admin/EmpresaController.php:89
-* @route '/admin/empresas'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:89
+ * @route '/admin/empresas'
+ */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -147,9 +145,9 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::update
-* @see app/Http/Controllers/Admin/EmpresaController.php:147
-* @route '/admin/empresas/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:147
+ * @route '/admin/empresas/{empresa}'
+ */
 export const update = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
@@ -162,31 +160,31 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::update
-* @see app/Http/Controllers/Admin/EmpresaController.php:147
-* @route '/admin/empresas/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:147
+ * @route '/admin/empresas/{empresa}'
+ */
 update.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empresa: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { empresa: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { empresa: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            empresa: args[0],
-        }
+                    empresa: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        empresa: typeof args.empresa === 'object'
-        ? args.empresa.id
-        : args.empresa,
-    }
+                        empresa: typeof args.empresa === 'object'
+                ? args.empresa.id
+                : args.empresa,
+                }
 
     return update.definition.url
             .replace('{empresa}', parsedArgs.empresa.toString())
@@ -195,9 +193,9 @@ update.url = (args: { empresa: number | { id: number } } | [empresa: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::update
-* @see app/Http/Controllers/Admin/EmpresaController.php:147
-* @route '/admin/empresas/{empresa}'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:147
+ * @route '/admin/empresas/{empresa}'
+ */
 update.put = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
@@ -205,9 +203,9 @@ update.put = (args: { empresa: number | { id: number } } | [empresa: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::toggleStatus
-* @see app/Http/Controllers/Admin/EmpresaController.php:170
-* @route '/admin/empresas/{empresa}/toggle-status'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:170
+ * @route '/admin/empresas/{empresa}/toggle-status'
+ */
 export const toggleStatus = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
@@ -220,31 +218,31 @@ toggleStatus.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::toggleStatus
-* @see app/Http/Controllers/Admin/EmpresaController.php:170
-* @route '/admin/empresas/{empresa}/toggle-status'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:170
+ * @route '/admin/empresas/{empresa}/toggle-status'
+ */
 toggleStatus.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empresa: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { empresa: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { empresa: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            empresa: args[0],
-        }
+                    empresa: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        empresa: typeof args.empresa === 'object'
-        ? args.empresa.id
-        : args.empresa,
-    }
+                        empresa: typeof args.empresa === 'object'
+                ? args.empresa.id
+                : args.empresa,
+                }
 
     return toggleStatus.definition.url
             .replace('{empresa}', parsedArgs.empresa.toString())
@@ -253,9 +251,9 @@ toggleStatus.url = (args: { empresa: number | { id: number } } | [empresa: numbe
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::toggleStatus
-* @see app/Http/Controllers/Admin/EmpresaController.php:170
-* @route '/admin/empresas/{empresa}/toggle-status'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:170
+ * @route '/admin/empresas/{empresa}/toggle-status'
+ */
 toggleStatus.patch = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: toggleStatus.url(args, options),
     method: 'patch',
@@ -263,9 +261,9 @@ toggleStatus.patch = (args: { empresa: number | { id: number } } | [empresa: num
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::updateLogos
-* @see app/Http/Controllers/Admin/EmpresaController.php:190
-* @route '/admin/empresas/{empresa}/logos'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:190
+ * @route '/admin/empresas/{empresa}/logos'
+ */
 export const updateLogos = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateLogos.url(args, options),
     method: 'post',
@@ -278,31 +276,31 @@ updateLogos.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::updateLogos
-* @see app/Http/Controllers/Admin/EmpresaController.php:190
-* @route '/admin/empresas/{empresa}/logos'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:190
+ * @route '/admin/empresas/{empresa}/logos'
+ */
 updateLogos.url = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { empresa: args }
     }
 
-    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-        args = { empresa: args.id }
-    }
-
+            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+            args = { empresa: args.id }
+        }
+    
     if (Array.isArray(args)) {
         args = {
-            empresa: args[0],
-        }
+                    empresa: args[0],
+                }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-        empresa: typeof args.empresa === 'object'
-        ? args.empresa.id
-        : args.empresa,
-    }
+                        empresa: typeof args.empresa === 'object'
+                ? args.empresa.id
+                : args.empresa,
+                }
 
     return updateLogos.definition.url
             .replace('{empresa}', parsedArgs.empresa.toString())
@@ -311,14 +309,13 @@ updateLogos.url = (args: { empresa: number | { id: number } } | [empresa: number
 
 /**
 * @see \App\Http\Controllers\Admin\EmpresaController::updateLogos
-* @see app/Http/Controllers/Admin/EmpresaController.php:190
-* @route '/admin/empresas/{empresa}/logos'
-*/
+ * @see app/Http/Controllers/Admin/EmpresaController.php:190
+ * @route '/admin/empresas/{empresa}/logos'
+ */
 updateLogos.post = (args: { empresa: number | { id: number } } | [empresa: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateLogos.url(args, options),
     method: 'post',
 })
-
 const EmpresaController = { index, show, store, update, toggleStatus, updateLogos }
 
 export default EmpresaController

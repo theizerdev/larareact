@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::index
-* @see app/Http/Controllers/Admin/LogMonitoringController.php:15
-* @route '/admin/monitoring/logs'
-*/
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:15
+ * @route '/admin/monitoring/logs'
+ */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -16,28 +16,27 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::index
-* @see app/Http/Controllers/Admin/LogMonitoringController.php:15
-* @route '/admin/monitoring/logs'
-*/
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:15
+ * @route '/admin/monitoring/logs'
+ */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::index
-* @see app/Http/Controllers/Admin/LogMonitoringController.php:15
-* @route '/admin/monitoring/logs'
-*/
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:15
+ * @route '/admin/monitoring/logs'
+ */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::index
-* @see app/Http/Controllers/Admin/LogMonitoringController.php:15
-* @route '/admin/monitoring/logs'
-*/
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:15
+ * @route '/admin/monitoring/logs'
+ */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
@@ -45,9 +44,9 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::clear
-* @see app/Http/Controllers/Admin/LogMonitoringController.php:35
-* @route '/admin/monitoring/logs/clear'
-*/
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:35
+ * @route '/admin/monitoring/logs/clear'
+ */
 export const clear = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: clear.url(options),
     method: 'delete',
@@ -60,18 +59,18 @@ clear.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::clear
-* @see app/Http/Controllers/Admin/LogMonitoringController.php:35
-* @route '/admin/monitoring/logs/clear'
-*/
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:35
+ * @route '/admin/monitoring/logs/clear'
+ */
 clear.url = (options?: RouteQueryOptions) => {
     return clear.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::clear
-* @see app/Http/Controllers/Admin/LogMonitoringController.php:35
-* @route '/admin/monitoring/logs/clear'
-*/
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:35
+ * @route '/admin/monitoring/logs/clear'
+ */
 clear.delete = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: clear.url(options),
     method: 'delete',
@@ -79,9 +78,9 @@ clear.delete = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::download
-* @see app/Http/Controllers/Admin/LogMonitoringController.php:52
-* @route '/admin/monitoring/logs/download'
-*/
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:52
+ * @route '/admin/monitoring/logs/download'
+ */
 export const download = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: download.url(options),
     method: 'get',
@@ -94,33 +93,31 @@ download.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::download
-* @see app/Http/Controllers/Admin/LogMonitoringController.php:52
-* @route '/admin/monitoring/logs/download'
-*/
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:52
+ * @route '/admin/monitoring/logs/download'
+ */
 download.url = (options?: RouteQueryOptions) => {
     return download.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::download
-* @see app/Http/Controllers/Admin/LogMonitoringController.php:52
-* @route '/admin/monitoring/logs/download'
-*/
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:52
+ * @route '/admin/monitoring/logs/download'
+ */
 download.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: download.url(options),
     method: 'get',
 })
-
 /**
 * @see \App\Http\Controllers\Admin\LogMonitoringController::download
-* @see app/Http/Controllers/Admin/LogMonitoringController.php:52
-* @route '/admin/monitoring/logs/download'
-*/
+ * @see app/Http/Controllers/Admin/LogMonitoringController.php:52
+ * @route '/admin/monitoring/logs/download'
+ */
 download.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: download.url(options),
     method: 'head',
 })
-
 const LogMonitoringController = { index, clear, download }
 
 export default LogMonitoringController

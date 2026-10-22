@@ -1,9 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:187
-* @route '/admin/integrations/control-acceso'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:188
+ * @route '/admin/integrations/control-acceso'
+ */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(options),
     method: 'put',
@@ -16,18 +16,18 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:187
-* @route '/admin/integrations/control-acceso'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:188
+ * @route '/admin/integrations/control-acceso'
+ */
 update.url = (options?: RouteQueryOptions) => {
     return update.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::update
-* @see app/Http/Controllers/Admin/IntegrationController.php:187
-* @route '/admin/integrations/control-acceso'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:188
+ * @route '/admin/integrations/control-acceso'
+ */
 update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(options),
     method: 'put',
@@ -35,9 +35,9 @@ update.put = (options?: RouteQueryOptions): RouteDefinition<'put'> => ({
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
-* @see app/Http/Controllers/Admin/IntegrationController.php:221
-* @route '/admin/integrations/control-acceso/test'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:222
+ * @route '/admin/integrations/control-acceso/test'
+ */
 export const test = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: test.url(options),
     method: 'post',
@@ -50,26 +50,25 @@ test.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
-* @see app/Http/Controllers/Admin/IntegrationController.php:221
-* @route '/admin/integrations/control-acceso/test'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:222
+ * @route '/admin/integrations/control-acceso/test'
+ */
 test.url = (options?: RouteQueryOptions) => {
     return test.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\IntegrationController::test
-* @see app/Http/Controllers/Admin/IntegrationController.php:221
-* @route '/admin/integrations/control-acceso/test'
-*/
+ * @see app/Http/Controllers/Admin/IntegrationController.php:222
+ * @route '/admin/integrations/control-acceso/test'
+ */
 test.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: test.url(options),
     method: 'post',
 })
-
 const controlAcceso = {
     update: Object.assign(update, update),
-    test: Object.assign(test, test),
+test: Object.assign(test, test),
 }
 
 export default controlAcceso

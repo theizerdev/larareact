@@ -12,6 +12,11 @@ Route::middleware(['verified'])->group(function () {
     Route::post('/monitoring/subscription/paypal/create-order', [SubscriptionController::class, 'createPaypalOrder'])->name('subscription.paypal.create-order');
     Route::post('/monitoring/subscription/paypal/capture-order/{orderId}', [SubscriptionController::class, 'capturePaypalOrder'])->name('subscription.paypal.capture-order');
 
+    // Rutas específicas de Stripe (Pasarela Principal de Suscripciones SaaS)
+    Route::post('/monitoring/subscription/stripe/create-checkout', [SubscriptionController::class, 'createStripeCheckoutSession'])->name('subscription.stripe.create-checkout');
+    Route::get('/monitoring/subscription/stripe/success', [SubscriptionController::class, 'stripeSuccess'])->name('subscription.stripe.success');
+    Route::get('/monitoring/subscription/stripe/cancel', [SubscriptionController::class, 'stripeCancel'])->name('subscription.stripe.cancel');
+
     // Panel de suscripción de la empresa
     Route::get('/monitoring/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::post('/monitoring/subscription/renew', [SubscriptionController::class, 'renew'])->name('subscription.renew');

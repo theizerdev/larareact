@@ -71,6 +71,7 @@ class Empresa extends Model
         'stripe_publishable_key',
         'stripe_secret_key',
         'stripe_webhook_secret',
+        'primary_payment_gateway',
         'subscription_status',
         'trial_ends_at',
         'subscription_expires_at',
