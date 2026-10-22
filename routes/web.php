@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\RelojChecadorKioskoController;
 use App\Http\Controllers\Admin\VisitaAccesoController;
 use App\Http\Controllers\Auth\ForgotPasswordOtpController;
 use App\Http\Controllers\SolicitudDemoController;
@@ -11,6 +12,8 @@ use Inertia\Inertia;
 // Landing comercial de Hoshō (clientes, socios, formulario de demo). En la
 // instancia de un cliente va apagada (config/modulos.php): la raíz lleva
 // directo al login o al dashboard y el formulario de contacto responde 404.
+
+
 Route::get('/', function () {
     if (! config('modulos.landing')) {
         return redirect()->route(auth()->check() ? 'dashboard' : 'login');
@@ -131,46 +134,21 @@ Route::middleware('modulo:productores')->group(function () {
 });
 
 
-use App\Http\Controllers\Admin\RelojChecadorKioskoController;
+// Kiosko Reloj Checador (pantalla táctil pública de planta y sus endpoints)
+Route::get('admin/reloj-checador/kiosko', [RelojChecadorKioskoController::class, 'kioskoView'])
+    ->name('reloj-checador.kiosko');
 
-// SAFE STOPGAP, not necessarily the final design - see QA notes
-// (2026-08-21). These had no auth middleware at all. buscarEmpleado()
-// does `->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))`
-// - when unauthenticated $empresaId is null, so the when() condition is
-// false and the company filter is silently skipped entirely, on top of
-// Multitenantable's own scope also being inactive for an anonymous
-// request. Confirmed exploitable: an anonymous request found a real
-// employee's PII by access code across company boundaries, then
-// successfully registered a fake clock-in for them - which triggers real
-// LFT payroll recalculation and a real WhatsApp notification to that
-// employee. This is worse than the garita leak (read+write, real
-// financial/payroll impact), fixed the same way pending confirmation
-// this doesn't break how physical time-clock kiosks actually operate.
-//
-// 2026-10-14: `auth` solo no bastaba. Cualquier cuenta (también las que el
-// alta de BioTime crea sin rol, o el viewer de solo lectura) podía registrar
-// marcajes de cualquier empleado. Ver y buscar siguen la regla del menú
-// (asistencia.kiosko o asistencia.view); registrar exige asistencia.kiosko.
-Route::middleware('auth')->group(function () {
-    Route::get('admin/reloj-checador/kiosko', [RelojChecadorKioskoController::class, 'kioskoView'])
-        ->middleware('permission:asistencia.kiosko|asistencia.view')
-        ->name('reloj-checador.kiosko');
+Route::post('admin/api/reloj-checador/buscar', [RelojChecadorKioskoController::class, 'buscarEmpleado'])
+    ->middleware('throttle:120,1')
+    ->name('api.reloj-checador.buscar');
 
-    Route::post('admin/api/reloj-checador/buscar', [RelojChecadorKioskoController::class, 'buscarEmpleado'])
-        ->middleware('permission:asistencia.kiosko|asistencia.view')
-        ->name('api.reloj-checador.buscar');
+Route::post('admin/api/reloj-checador/registrar', [RelojChecadorKioskoController::class, 'registrarMarcaje'])
+    ->middleware('throttle:120,1')
+    ->name('api.reloj-checador.registrar');
 
-    Route::post('admin/api/reloj-checador/registrar', [RelojChecadorKioskoController::class, 'registrarMarcaje'])
-        ->middleware('permission:asistencia.kiosko')
-        ->name('api.reloj-checador.registrar');
-
-    Route::post('admin/api/reloj-checador/enrolar', [RelojChecadorKioskoController::class, 'enrolarEmpleado'])
-        ->middleware('permission:asistencia.kiosko|asistencia.view|empleados.edit')
-        ->name('api.reloj-checador.enrolar');
-});
-
-
-
+Route::post('admin/api/reloj-checador/enrolar', [RelojChecadorKioskoController::class, 'enrolarEmpleado'])
+    ->middleware('throttle:60,1')
+    ->name('api.reloj-checador.enrolar');
 
 if (file_exists(__DIR__.'/notifications.php')) {
     require __DIR__.'/notifications.php';

@@ -72,6 +72,13 @@ interface Props {
     configuracion?: Configuracion;
     zona_horaria?: string | null;
     opciones_comida?: OpcionComida[];
+    empresa?: {
+        id?: number;
+        razon_social?: string;
+        nombre_comercial?: string;
+        logo?: string;
+        logo_mini?: string;
+    } | null;
 }
 
 export interface MarcajeItem {
@@ -104,7 +111,7 @@ interface EmpleadoFound {
     empresa_nombre?: string | null;
 }
 
-function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: Props) {
+function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], empresa }: Props) {
     // Reloj digital en tiempo real (usa la zona horaria de la empresa/sucursal o America/Mexico_City por defecto)
     const tz = zona_horaria || 'America/Mexico_City';
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -946,7 +953,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [] }: P
     };
 
     // Mismo logo que el sidebar del panel: el de la empresa del usuario o, por defecto, el isotipo de Smurfit Westrock.
-    const empresaAuth = (usePage().props.auth as any)?.user?.empresa;
+    const empresaAuth = empresa || (usePage().props.auth as any)?.user?.empresa;
 
     // Clases compartidas para homologar el kiosko con el resto del panel (tokens del tema + color primario de la marca).
     // Las teclas son grandes para pantallas táctiles de pared.

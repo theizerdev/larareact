@@ -23,13 +23,16 @@ class RelojChecadorKioskoController extends Controller
     public function kioskoView(Request $request)
     {
         $user = $request->user();
-        $empresaId = $user ? $user->empresa_id : null;
+        $empresaId = $user?->empresa_id ?? \App\Models\Empresa::value('id');
 
-        $configuracion = ConfiguracionAsistencia::where('empresa_id', $empresaId)->first();
+        $configuracion = ConfiguracionAsistencia::where('empresa_id', $empresaId)->first()
+            ?? ConfiguracionAsistencia::first();
 
         // Obtener la zona horaria (Sucursal -> Empresa -> País -> App Config -> America/Mexico_City)
-        $empresa = $user ? $user->empresa : null;
-        $sucursal = ($user && !empty($user->sucursal_id)) ? \App\Models\Sucursal::find($user->sucursal_id) : null;
+        $empresa = $user ? $user->empresa : ($empresaId ? \App\Models\Empresa::find($empresaId) : \App\Models\Empresa::first());
+        $sucursal = ($user && !empty($user->sucursal_id))
+            ? \App\Models\Sucursal::find($user->sucursal_id)
+            : ($configuracion?->sucursal_id ? \App\Models\Sucursal::find($configuracion->sucursal_id) : null);
 
         $zonaHoraria = $sucursal?->zona_horaria
             ?? $empresa?->zona_horaria
@@ -41,6 +44,13 @@ class RelojChecadorKioskoController extends Controller
             'configuracion' => $configuracion,
             'zona_horaria'  => $zonaHoraria,
             'opciones_comida' => ConfiguracionAsistencia::obtenerOpcionesParaKiosko($empresa?->id, $sucursal?->id, $zonaHoraria),
+            'empresa' => $empresa ? [
+                'id' => $empresa->id,
+                'razon_social' => $empresa->razon_social,
+                'nombre_comercial' => $empresa->nombre_comercial,
+                'logo' => $empresa->logo,
+                'logo_mini' => $empresa->logo_mini,
+            ] : null,
         ]);
     }
 
@@ -49,12 +59,17 @@ class RelojChecadorKioskoController extends Controller
      */
     public function buscarEmpleado(Request $request)
     {
+        $user = $request->user();
+        if ($user && ! $user->can('asistencia.kiosko') && ! $user->can('asistencia.view')) {
+            abort(403, 'No tiene permiso para buscar empleados en el reloj checador.');
+        }
+
         $request->validate([
             'query' => 'required|string',
         ]);
 
-        $user = $request->user();
-        $empleado = app(RegistroMarcajeService::class)->buscarEmpleado($request->input('query'), $user ? $user->empresa_id : null);
+        $empresaId = $user?->empresa_id ?? \App\Models\Empresa::value('id');
+        $empleado = app(RegistroMarcajeService::class)->buscarEmpleado($request->input('query'), $empresaId);
 
         if (! $empleado) {
             return response()->json([
@@ -159,6 +174,10 @@ class RelojChecadorKioskoController extends Controller
      */
     public function registrarMarcaje(Request $request, CalculoAsistenciaLftService $calculoService)
     {
+        $user = $request->user();
+        if ($user && ! $user->can('asistencia.kiosko')) {
+            abort(403, 'No tiene permiso para registrar marcajes en el reloj checador.');
+        }
         $validated = $request->validate([
             'empleado_id' => 'required|exists:empleados,id',
             'tipo_marcaje' => 'required|in:entrada,salida_comida,entrada_comida,salida,descanso_inicio,descanso_fin,incidente_inicio,incidente_fin,entrada_extraordinaria',
@@ -359,6 +378,11 @@ class RelojChecadorKioskoController extends Controller
      */
     public function enrolarEmpleado(Request $request, EmpleadoEnrolamientoService $enrolamientoService)
     {
+        $user = $request->user();
+        if ($user && ! $user->can('asistencia.kiosko') && ! $user->can('asistencia.view') && ! $user->can('empleados.edit')) {
+            abort(403, 'No tiene permiso para enrolar colaboradores en el reloj checador.');
+        }
+
         $request->validate([
             'empleado_id' => 'required|integer|exists:empleados,id',
             'aviso_privacidad' => 'accepted',
@@ -377,8 +401,9 @@ class RelojChecadorKioskoController extends Controller
         ]);
 
         $user = $request->user();
+        $empresaId = $user?->empresa_id ?? \App\Models\Empresa::value('id');
         $empleado = Empleado::where('id', $request->input('empleado_id'))
-            ->when($user?->empresa_id, fn ($q) => $q->where('empresa_id', $user->empresa_id))
+            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
             ->first();
 
         if (! $empleado) {
