@@ -518,7 +518,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             </span>
                                             <div className="flex items-center gap-2">
                                                 <Badge className="bg-amber-600 hover:bg-amber-700 text-white font-mono font-bold text-xs">
-                                                    Total: ${precioFinalEstimado.toFixed(2)} USD
+                                                    Total: ${precioFinalEstimado.toFixed(2)} MXN
                                                 </Badge>
                                                 <Badge variant="outline" className="text-[10px] border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-950/40">
                                                     {__('Acreditación Instantánea')}
@@ -527,10 +527,10 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                         </div>
                                         <div className="text-xs text-muted-foreground leading-relaxed flex items-center justify-between border-t border-b border-amber-200/60 dark:border-amber-900/30 py-2 my-1">
                                             <span>{__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{currentPlan?.nombre || __('Plan Mensual')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong></span>
-                                            <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">${precioFinalEstimado.toFixed(2)} USD</span>
+                                            <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">${precioFinalEstimado.toFixed(2)} MXN</span>
                                         </div>
                                         <p className="text-xs text-muted-foreground leading-relaxed">
-                                            {__('Haz clic en el botón oficial de PayPal a continuación para procesar el cobro exacto de')} <strong>${precioFinalEstimado.toFixed(2)} USD</strong>.
+                                            {__('Haz clic en el botón oficial de PayPal a continuación para procesar el cobro exacto de')} <strong>${precioFinalEstimado.toFixed(2)} MXN</strong>.
                                         </p>
 
                                         {paymentGateways?.paypal?.client_id ? (
@@ -557,7 +557,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                             </span>
                                             <div className="flex items-center gap-2">
                                                 <Badge className="bg-indigo-600 hover:bg-indigo-700 text-white font-mono font-bold text-xs">
-                                                    Total: ${precioFinalEstimado.toFixed(2)} USD
+                                                    Total: ${precioFinalEstimado.toFixed(2)} MXN
                                                 </Badge>
                                                 <Badge variant="outline" className="text-[10px] border-indigo-300 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300 bg-indigo-100/50 dark:bg-indigo-950/40 font-semibold">
                                                     ⚡ {__('Acreditación Instantánea')}
@@ -570,7 +570,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                                 {__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{currentPlan?.nombre || __('Plan Mensual')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong>
                                             </span>
                                             <span className="font-bold font-mono text-indigo-800 dark:text-indigo-300 text-base">
-                                                ${precioFinalEstimado.toFixed(2)} USD
+                                                ${precioFinalEstimado.toFixed(2)} MXN
                                             </span>
                                         </div>
 
@@ -590,7 +590,7 @@ export default function SubscriptionExpired({ empresa, plan, planes = [], opcion
                                                 ) : (
                                                     <Lock className="h-4 w-4" />
                                                 )}
-                                                {__('Reactivar Cuenta con Stripe')} (${precioFinalEstimado.toFixed(2)} USD)
+                                                {__('Reactivar Cuenta con Stripe')} (${precioFinalEstimado.toFixed(2)} MXN)
                                             </Button>
                                             <span className="text-[11px] text-muted-foreground">
                                                 🔒 {__('Procesamiento cifrado SSL por Stripe')}

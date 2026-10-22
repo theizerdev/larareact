@@ -1136,6 +1136,8 @@ class ReparacionController extends Controller
             'contrasena_patron' => 'nullable|string',
             'inspeccion_json' => 'nullable',
             'post_servicio_json' => 'nullable',
+            'notificar_whatsapp' => 'nullable|boolean',
+            'mensaje_whatsapp' => 'nullable|string',
         ]);
 
         $estadoAnterior = $reparacion->estado_orden;
@@ -1228,14 +1230,43 @@ class ReparacionController extends Controller
             ]);
         }
 
+        $waUrl = null;
+        $whatsappNotified = false;
+        $shouldNotifyWhatsApp = $request->has('notificar_whatsapp')
+            ? $request->boolean('notificar_whatsapp')
+            : true;
+
+        if ($shouldNotifyWhatsApp && ($nuevoEstado !== $estadoAnterior || $request->filled('mensaje_whatsapp'))) {
+            $customMessage = $request->input('mensaje_whatsapp');
+            $waUrl = $this->sendWhatsAppNotificationOnStatusChanged(
+                $reparacion,
+                $nuevoEstado,
+                $validated['comentario'] ?? null,
+                $customMessage
+            );
+            $whatsappNotified = true;
+        }
+
         $message = ($nuevoEstado === 'reparado' || $nuevoEstado === 'listo_reparado')
             ? "Estado actualizado a Listo para Entregar Reparado."
             : "Estado actualizado exitosamente.";
 
-        return redirect()->route('admin.reparaciones.show', $reparacion->id)->with('notification', [
+        if ($whatsappNotified) {
+            $message .= $waUrl
+                ? " (Se generó enlace para WhatsApp Web por fallo de conexión directa)"
+                : " (Notificación de WhatsApp enviada al cliente)";
+        }
+
+        $redirect = redirect()->route('admin.reparaciones.show', $reparacion->id)->with('notification', [
             'type' => 'success',
             'message' => $message,
         ]);
+
+        if ($waUrl) {
+            $redirect->with('whatsapp_url', $waUrl);
+        }
+
+        return $redirect;
     }
 
     public function addItem(Request $request, OrdenReparacion $reparacion)
@@ -1646,51 +1677,193 @@ class ReparacionController extends Controller
 
     private function sendWhatsAppNotificationOnPostServicioCompleted(OrdenReparacion $orden): ?string
     {
+        return $this->sendWhatsAppNotificationOnStatusChanged($orden, 'listo_reparado');
+    }
+
+    /**
+     * Envía automáticamente notificación de WhatsApp al cliente cuando cambia el estado de una reparación.
+     */
+    public function sendWhatsAppNotificationOnStatusChanged(
+        OrdenReparacion $orden,
+        string $nuevoEstado,
+        ?string $comentario = null,
+        ?string $customMessage = null
+    ): ?string {
+        $targetPhone = null;
+        $mensaje = null;
+
         try {
             $user = auth()->user();
             $empresaId = $orden->empresa_id ?? ($user ? $user->empresa_id : 1);
-            $whatsappService = (\App\Services\WhatsAppService::forSucursal($orden->sucursal_id ?? $orden->sucursal ?? $empresaId))->setTimeout(3);
-            $currencySymbol = $this->getCurrencySymbol();
+            $sucursalTarget = $orden->sucursal_id ?: ($orden->sucursal ?: $empresaId);
+            $whatsappService = (\App\Services\WhatsAppService::forSucursal($sucursalTarget))->setTimeout(4);
 
-            $orden->loadMissing(['cliente', 'marca', 'modelo', 'tecnico']);
+            $orden->loadMissing(['cliente', 'marca', 'modelo', 'tecnico', 'empresa']);
 
-            $clientePhone = $this->formatPhoneNumber($orden->cliente_telefono, $empresaId);
-            if (!$clientePhone && $orden->cliente_id) {
+            $phone = !empty($orden->cliente_telefono) ? $orden->cliente_telefono : ($orden->cliente?->telefono);
+            if (!$phone && $orden->cliente_id) {
                 $clienteModel = \App\Models\Cliente::find($orden->cliente_id);
                 if ($clienteModel && !empty($clienteModel->telefono)) {
-                    $clientePhone = $this->formatPhoneNumber($clienteModel->telefono, $empresaId);
+                    $phone = $clienteModel->telefono;
                 }
             }
 
-            if ($clientePhone) {
-                $clienteNombre = $orden->cliente ? $orden->cliente->nombre : ($orden->cliente_nombre ?? 'Estimado(a) Cliente');
-                $marcaNombre = $orden->marca ? $orden->marca->nombre : ($orden->marca_nombre ?? '');
-                $modeloNombre = $orden->modelo ? $orden->modelo->nombre_comercial : ($orden->modelo_nombre ?? '');
-                $deviceName = trim("{$marcaNombre} {$modeloNombre}") ?: 'Equipo';
-                $saldoFmt = number_format((float) $orden->saldo_restante, 2);
-                $garantia = $orden->garantia_dias ?: 30;
-                $empresaId = $orden->empresa_id ?? 1;
-                $trackingUrl = url("/reparacion/{$empresaId}/consultar?orden={$orden->numero_orden}");
+            $targetPhone = $this->formatPhoneNumber($phone, $empresaId);
+            if (!$targetPhone) {
+                \Illuminate\Support\Facades\Log::info("No se envió WhatsApp por cambio de estado en orden #{$orden->numero_orden}: el cliente no posee teléfono.");
+                return null;
+            }
 
-                $mensajeCliente = "🟢 ¡Buenas noticias *{$clienteNombre}*! Su equipo *{$deviceName}* (Orden *{$orden->numero_orden}*) ha sido *REPARADO EXITOSAMENTE* y superó las pruebas de calidad.\n\n"
+            $mensaje = !empty($customMessage)
+                ? $customMessage
+                : $this->generateStatusWhatsAppMessage($orden, $nuevoEstado, $comentario);
+
+            $variables = [
+                'cliente' => $orden->cliente?->nombre ?: ($orden->cliente_nombre ?: 'Cliente'),
+                'orden' => $orden->numero_orden,
+                'equipo' => trim(($orden->marca?->nombre ?: ($orden->marca_nombre ?: '')) . ' ' . ($orden->modelo?->nombre_comercial ?: ($orden->modelo_nombre ?: ''))),
+            ];
+
+            $result = $whatsappService->sendText($targetPhone, $mensaje, $variables, false);
+
+            $isSuccess = $result && (
+                (isset($result['success']) && $result['success']) ||
+                isset($result['messageId']) ||
+                isset($result['jobId']) ||
+                isset($result['status']) ||
+                isset($result['key']) ||
+                isset($result['data'])
+            );
+
+            // Registrar en historial el intento/éxito de notificación WhatsApp
+            \App\Models\OrdenReparacionHistorial::create([
+                'orden_id' => $orden->id,
+                'user_id' => auth()->id(),
+                'estado_anterior' => $orden->estado_orden,
+                'estado_nuevo' => $nuevoEstado,
+                'comentario' => $isSuccess
+                    ? "📲 Notificación de WhatsApp enviada automáticamente al cliente ({$targetPhone}) para estado: " . ucfirst(str_replace('_', ' ', $nuevoEstado))
+                    : "⚠️ Intento de envío WhatsApp al cliente ({$targetPhone}). " . (is_array($result) && !empty($result['error']) ? $result['error'] : ''),
+            ]);
+
+            if ($isSuccess) {
+                return null;
+            }
+
+            // Fallback: enlace directo a WhatsApp Web si la API no pudo entregarlo
+            return "https://wa.me/{$targetPhone}?text=" . urlencode($mensaje);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Error enviando WhatsApp por cambio de estado en orden #{$orden->numero_orden}: " . $e->getMessage());
+
+            if (!empty($targetPhone) && !empty($mensaje)) {
+                return "https://wa.me/{$targetPhone}?text=" . urlencode($mensaje);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Genera la plantilla de mensaje de WhatsApp según el estado de la orden.
+     */
+    public function generateStatusWhatsAppMessage(OrdenReparacion $orden, string $estado, ?string $comentario = null): string
+    {
+        $orden->loadMissing(['cliente', 'marca', 'modelo', 'tecnico', 'empresa']);
+        $empresa = $orden->empresa ?? \App\Models\Empresa::find($orden->empresa_id ?? 1);
+        $empresaId = $orden->empresa_id ?? ($empresa?->id ?? 1);
+        $empName = $empresa?->razon_social ?: ($empresa?->nombre ?: ($empresa?->nombre_comercial ?: 'FixSale'));
+
+        $clientName = $orden->cliente?->nombre ?: ($orden->cliente_nombre ?: 'Estimado(a) Cliente');
+        $marcaNombre = $orden->marca?->nombre ?: ($orden->marca_nombre ?: '');
+        $modeloNombre = $orden->modelo?->nombre_comercial ?: ($orden->modelo_nombre ?: '');
+        $deviceName = trim("{$marcaNombre} {$modeloNombre}") ?: 'Equipo';
+        $currSym = $this->getCurrencySymbol();
+        $costoEstimado = number_format((float) ($orden->costo_estimado ?? 0), 2);
+        $anticipo = number_format((float) ($orden->anticipo ?? 0), 2);
+        $saldo = number_format((float) ($orden->saldo_restante ?? 0), 2);
+        $garantia = $orden->garantia_dias ?: 30;
+        $fecha = $orden->fecha_recepcion ? $orden->fecha_recepcion->format('d/m/Y') : now()->format('d/m/Y');
+        $trackingUrl = url("/reparacion/{$empresaId}/consultar?orden={$orden->numero_orden}");
+        $falla = $orden->descripcion_falla ?: 'Revisión técnica general';
+
+        switch ($estado) {
+            case 'recibido':
+                return "👋 Hola *{$clientName}*, le saludamos de *{$empName}*.\n\n"
+                    . "📱 Hemos recibido su equipo *{$deviceName}* (Orden *{$orden->numero_orden}*).\n"
+                    . "*Falla reportada:* {$falla}\n"
+                    . "*Fecha de ingreso:* {$fecha}\n\n"
+                    . "Nuestro equipo técnico iniciará la revisión y diagnóstico a la brevedad.\n\n"
+                    . "🔎 Consulte el avance en vivo aquí:\n{$trackingUrl}";
+
+            case 'en_diagnostico_presupuesto':
+            case 'en_diagnostico':
+                return "🔍 Hola *{$clientName}*, su equipo *{$deviceName}* (Orden *{$orden->numero_orden}*) se encuentra en fase de *DIAGNÓSTICO TÉCNICO Y PRESUPUESTO*.\n\n"
+                    . "🛠️ Estamos evaluando componentes y costos para brindarle una cotización transparente.\n\n"
+                    . "🔎 Seguimiento en vivo:\n{$trackingUrl}";
+
+            case 'confirmacion_presupuesto':
+            case 'presupuestado':
+                return "💵 Hola *{$clientName}*, tenemos listo el presupuesto para su equipo *{$deviceName}* (Orden *{$orden->numero_orden}*).\n\n"
+                    . "💰 *Presupuesto Total:* *{$currSym}{$costoEstimado}*\n"
+                    . "💳 *Anticipo abonado:* *{$currSym}{$anticipo}*\n"
+                    . "🏷️ *Saldo pendiente:* *{$currSym}{$saldo}*\n\n"
+                    . "Por favor revise y apruebe o rechace su presupuesto directamente en nuestro portal web:\n"
+                    . "👉 {$trackingUrl}\n\n"
+                    . "O responda a este mensaje para confirmar y proceder con la reparación.";
+
+            case 'espera_refaccion':
+            case 'esperando_repuesto':
+                return "📦 Hola *{$clientName}*, le informamos sobre su orden *{$orden->numero_orden}* (*{$deviceName}*):\n\n"
+                    . "El equipo se encuentra en *ESPERA DE REFACCIONES / REPUESTOS* para garantizar una reparación con repuestos de óptima calidad.\n\n"
+                    . "En cuanto recibamos las piezas continuaremos con la intervención técnica.\n"
+                    . "🔎 Consulte el estado en vivo: {$trackingUrl}";
+
+            case 'en_reparacion':
+                return "🛠️ Hola *{$clientName}*, le informamos que su equipo *{$deviceName}* (Orden *{$orden->numero_orden}*) está *EN PROCESO DE REPARACIÓN ACTIVA* en nuestro laboratorio técnico.\n\n"
+                    . "Le avisaremos apenas concluyan las pruebas de control de calidad.\n"
+                    . "🔎 Seguimiento: {$trackingUrl}";
+
+            case 'listo_reparado':
+            case 'reparado':
+                return "🟢 ¡Buenas noticias *{$clientName}*! Su equipo *{$deviceName}* (Orden *{$orden->numero_orden}*) ha sido *REPARADO EXITOSAMENTE* y superó las pruebas de calidad.\n\n"
                     . "🎉 Ya puede pasar a retirarlo por nuestra sucursal.\n"
-                    . "💰 *Saldo a liquidar:* *{$currencySymbol}{$saldoFmt}*\n"
+                    . "💰 *Saldo a liquidar:* *{$currSym}{$saldo}*\n"
                     . "🛡️ *Garantía del servicio:* {$garantia} días\n\n"
                     . "📌 Detalles y ubicación: {$trackingUrl}\n"
                     . "¡Le esperamos!";
 
-                $res = $whatsappService->sendMessage($clientePhone, $mensajeCliente);
+            case 'listo_sin_solucion':
+            case 'cancelado':
+                return "📋 Hola *{$clientName}*, le informamos que su equipo *{$deviceName}* (Orden *{$orden->numero_orden}*) se encuentra disponible para retiro en sucursal como *SIN SOLUCIÓN / CANCELADO*.\n\n"
+                    . "🏢 Puede pasar a retirarlo en nuestro horario habitual.\n"
+                    . "💰 *Saldo pendiente:* *{$currSym}{$saldo}*\n\n"
+                    . "📌 Detalles de su orden: {$trackingUrl}";
 
-                if (!$res || (isset($res['success']) && !$res['success'])) {
-                    return "https://wa.me/{$clientePhone}?text=" . urlencode($mensajeCliente);
-                }
+            case 'entregado_reparado':
+            case 'entregado_finalizado':
+            case 'entregado':
+                return "✅ ¡Gracias por su preferencia *{$clientName}*! Su orden *{$orden->numero_orden}* (*{$deviceName}*) ha sido *ENTREGADA REPARADA* con éxito.\n\n"
+                    . "🛡️ Su servicio cuenta con *{$garantia} días de garantía*.\n\n"
+                    . "📄 Puede consultar o descargar su comprobante aquí:\n{$trackingUrl}\n\n"
+                    . "¡Gracias por confiar en *{$empName}*!";
 
-                return null;
-            }
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Error enviando notificación de WhatsApp Post-Servicio: ' . $e->getMessage());
+            case 'entregado_no_reparado':
+                return "📋 Hola *{$clientName}*, le confirmamos la entrega de su equipo *{$deviceName}* (Orden *{$orden->numero_orden}*) con estatus *ENTREGADO NO REPARADO (SIN SOLUCIÓN)*.\n\n"
+                    . "Lamentamos no haber podido darle solución en esta ocasión. Agradecemos su confianza.\n\n"
+                    . "📄 Detalles de su orden: {$trackingUrl}";
+
+            case 'reincidencia_garantia':
+            case 'reincidencia':
+                return "🔄 Hola *{$clientName}*, hemos recibido su equipo *{$deviceName}* (Orden *{$orden->numero_orden}*) por concepto de *REINCIDENCIA / APLICACIÓN DE GARANTÍA*.\n\n"
+                    . "Nuestro equipo técnico dará prioridad a la revisión de su caso para brindarle una solución oportuna.\n\n"
+                    . "🔎 Consulte el estado en vivo: {$trackingUrl}";
+
+            default:
+                $nombreEstado = ucfirst(str_replace('_', ' ', $estado));
+                return "Hola *{$clientName}*, le saludamos de *{$empName}* respecto a su orden *{$orden->numero_orden}* ({$deviceName}).\n\n"
+                    . "Estado actual: *{$nombreEstado}*.\n"
+                    . "Seguimiento: {$trackingUrl}";
         }
-        return null;
     }
 
     private function sendWhatsAppNotificationsOnOrderCreation(OrdenReparacion $orden): ?string

@@ -1827,6 +1827,9 @@ export default function ShowReparacion({
     const [comentarioEstado, setComentarioEstado] = useState('');
     const [tecnicoAsignadoId, setTecnicoAsignadoId] = useState(orden.tecnico?.id ? String(orden.tecnico.id) : '');
     const [notificarWhatsAppOnStatusChange, setNotificarWhatsAppOnStatusChange] = useState(true);
+    const [statusModalMsg, setStatusModalMsg] = useState('');
+    const [isEditingStatusMsg, setIsEditingStatusMsg] = useState(false);
+    const [isUpdatingEstado, setIsUpdatingEstado] = useState(false);
 
     // Modal de WhatsApp con Plantillas por Estado
     const [openWhatsAppModal, setOpenWhatsAppModal] = useState(false);
@@ -1939,24 +1942,41 @@ export default function ShowReparacion({
         window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
     };
 
+    useEffect(() => {
+        if (openStatusModal) {
+            const empName = empresa?.razon_social || empresa?.nombre || empresa?.nombre_comercial || 'FixSale';
+            const msg = generateWhatsAppTemplate(nuevoEstado, orden, currencySymbol, empName, typeof window !== 'undefined' ? window.location.origin : '');
+            setStatusModalMsg(msg);
+            setIsEditingStatusMsg(false);
+        }
+    }, [openStatusModal, nuevoEstado]);
+
     const handleUpdateEstado = () => {
         const targetSt = nuevoEstado;
+        const empName = empresa?.razon_social || empresa?.nombre || empresa?.nombre_comercial || 'FixSale';
+        const msgToSend = statusModalMsg || generateWhatsAppTemplate(targetSt, orden, currencySymbol, empName, typeof window !== 'undefined' ? window.location.origin : '');
+        setIsUpdatingEstado(true);
         router.post(
             `/admin/reparaciones/${orden.id}/estado`,
             {
                 estado_orden: targetSt,
                 comentario: comentarioEstado,
                 tecnico_id: tecnicoAsignadoId || null,
+                notificar_whatsapp: notificarWhatsAppOnStatusChange,
+                mensaje_whatsapp: notificarWhatsAppOnStatusChange ? msgToSend : null,
             },
             {
+                preserveScroll: true,
                 onSuccess: () => {
+                    setIsUpdatingEstado(false);
                     setOpenStatusModal(false);
-                    notifySuccess(__('Estado actualizado exitosamente.'));
-                    if (notificarWhatsAppOnStatusChange && (orden.cliente?.telefono || orden.cliente_telefono)) {
-                        handleOpenWhatsAppModal(targetSt);
-                    }
+                    notifySuccess(__('Estado actualizado y notificación procesada exitosamente.'));
                 },
-                onError: () => notifyError(__('Ocurrió un error al actualizar el estado.')),
+                onError: () => {
+                    setIsUpdatingEstado(false);
+                    notifyError(__('Ocurrió un error al actualizar el estado.'));
+                },
+                onFinish: () => setIsUpdatingEstado(false),
             }
         );
     };
@@ -2302,18 +2322,52 @@ export default function ShowReparacion({
                                         </div>
 
                                         {(orden.cliente?.telefono || orden.cliente_telefono) && (
-                                            <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                                <input
-                                                    type="checkbox"
-                                                    id="notificarWhatsAppOnStatusChange"
-                                                    checked={notificarWhatsAppOnStatusChange}
-                                                    onChange={(e) => setNotificarWhatsAppOnStatusChange(e.target.checked)}
-                                                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                                                />
-                                                <label htmlFor="notificarWhatsAppOnStatusChange" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer flex items-center gap-1.5">
-                                                    <Send className="w-3.5 h-3.5 text-emerald-600" />
-                                                    {__('Abrir plantilla de WhatsApp tras guardar')}
-                                                </label>
+                                            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                                <div className="flex items-center justify-between">
+                                                    <label htmlFor="notificarWhatsAppOnStatusChange" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            id="notificarWhatsAppOnStatusChange"
+                                                            checked={notificarWhatsAppOnStatusChange}
+                                                            onChange={(e) => setNotificarWhatsAppOnStatusChange(e.target.checked)}
+                                                            className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                                                        />
+                                                        <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold">
+                                                            <Send className="w-3.5 h-3.5" />
+                                                            {__('Enviar notificación automática por WhatsApp')}
+                                                        </span>
+                                                    </label>
+                                                    {notificarWhatsAppOnStatusChange && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsEditingStatusMsg(!isEditingStatusMsg)}
+                                                            className="text-[11px] text-purple-600 hover:text-purple-700 dark:text-purple-400 underline font-medium"
+                                                        >
+                                                            {isEditingStatusMsg ? __('Ver plantilla original') : __('Personalizar mensaje')}
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {notificarWhatsAppOnStatusChange && (
+                                                    <div className="p-2.5 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 text-xs">
+                                                        <div className="flex items-center justify-between text-[11px] text-emerald-800 dark:text-emerald-300 mb-1.5 font-medium">
+                                                            <span>Destinatario: <strong>{orden.cliente?.telefono || orden.cliente_telefono}</strong> ({orden.cliente?.nombre || orden.cliente_nombre || 'Cliente'})</span>
+                                                        </div>
+                                                        {isEditingStatusMsg ? (
+                                                            <Textarea
+                                                                value={statusModalMsg}
+                                                                onChange={(e) => setStatusModalMsg(e.target.value)}
+                                                                rows={4}
+                                                                className="text-xs bg-white dark:bg-slate-900 border-emerald-300 dark:border-emerald-700 focus:ring-emerald-500"
+                                                                placeholder={__('Escriba el mensaje para el cliente...')}
+                                                            />
+                                                        ) : (
+                                                            <div className="text-[11px] text-slate-600 dark:text-slate-300 font-mono whitespace-pre-wrap max-h-28 overflow-y-auto bg-white/70 dark:bg-slate-900/60 p-2 rounded border border-emerald-100 dark:border-emerald-900/40">
+                                                                {statusModalMsg}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -2322,8 +2376,8 @@ export default function ShowReparacion({
                                         <Button variant="outline" size="sm" onClick={() => setOpenStatusModal(false)} className="h-8 text-xs">
                                             {__('Cancelar')}
                                         </Button>
-                                        <Button size="sm" onClick={handleUpdateEstado} className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
-                                            {__('Guardar Estado')}
+                                        <Button size="sm" onClick={handleUpdateEstado} disabled={isUpdatingEstado} className="h-8 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white">
+                                            {isUpdatingEstado ? __('Guardando...') : __('Guardar Estado')}
                                         </Button>
                                     </div>
                                 </DialogContent>

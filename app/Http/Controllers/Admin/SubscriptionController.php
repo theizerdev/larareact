@@ -451,7 +451,7 @@ class SubscriptionController extends Controller
                 'line_items' => [
                     [
                         'price_data' => [
-                            'currency' => 'usd',
+                            'currency' => 'mxn',
                             'unit_amount' => $unitAmount,
                             'product_data' => [
                                 'name' => "FixSale POS - Suscripción: {$nombrePlan}",
@@ -468,6 +468,7 @@ class SubscriptionController extends Controller
                     'ciclo_meses' => (string) $cicloMeses,
                     'sucursales_contratadas' => (string) $request->sucursales_contratadas,
                     'monto' => (string) $monto,
+                    'currency' => 'mxn',
                 ],
             ];
 
