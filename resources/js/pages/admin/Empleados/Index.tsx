@@ -237,8 +237,8 @@ const initialForm = {
     jornada_laboral: defaultJornada as any,
     foto_empleado: null as any,
     foto_empleado_2: null as any,
-    foto_documento: null as any,
-    foto_documento_reverso: null as any,
+    foto_documento: '' as any,
+    foto_documento_reverso: '' as any,
     vehiculos: [] as any[],
     empresa_id: '' as string | number,
     sucursal_id: '' as string | number,
@@ -250,6 +250,12 @@ const initialForm = {
 
 /** Botones Importar Excel, Pre-registro y Nuevo empleado: ocultos mientras las altas vengan de BioTime. */
 const MOSTRAR_ALTA_MANUAL = false;
+
+/** Fotos de documento de identidad (frontal y reverso): ocultas; se envían como vacío/nulo al backend. */
+const MOSTRAR_FOTOS_DOCUMENTO = false;
+
+/** Apartado de vehículos: oculto por si más adelante adquieren el módulo de vehículos. */
+const MOSTRAR_VEHICULOS = false;
 
 // ─── Página principal ──────────────────────────────────────────────────────────
 
@@ -449,7 +455,8 @@ export default function EmpleadosIndexPage({
             pais_telefono_id: auth.user?.pais_telefono_id || paises[0]?.id || '',
             jornada_laboral: defaultJornada,
             foto_empleado_2: null,
-            foto_documento_reverso: null,
+            foto_documento: '',
+            foto_documento_reverso: '',
             vehiculos: [],
             permite_app_movil: false,
             intervalo_geolocalizacion_minutos: 15,
@@ -480,9 +487,9 @@ export default function EmpleadosIndexPage({
             jornada_laboral: normalizeJornada(emp.jornada_laboral),
             foto_empleado: emp.foto_empleado || null,
             foto_empleado_2: emp.foto_empleado_2 || null,
-            foto_documento: emp.foto_documento || null,
-            foto_documento_reverso: emp.foto_documento_reverso || null,
-            vehiculos: emp.vehiculos || [],
+            foto_documento: MOSTRAR_FOTOS_DOCUMENTO ? (emp.foto_documento || '') : '',
+            foto_documento_reverso: MOSTRAR_FOTOS_DOCUMENTO ? (emp.foto_documento_reverso || '') : '',
+            vehiculos: MOSTRAR_VEHICULOS ? (emp.vehiculos || []) : [],
             empresa_id: emp.empresa_id || '',
             sucursal_id: emp.sucursal_id || '',
             user_id: emp.user_id || '',
@@ -498,10 +505,17 @@ export default function EmpleadosIndexPage({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        const payload = {
+            ...data,
+            foto_documento: MOSTRAR_FOTOS_DOCUMENTO ? data.foto_documento : '',
+            foto_documento_reverso: MOSTRAR_FOTOS_DOCUMENTO ? data.foto_documento_reverso : '',
+            vehiculos: MOSTRAR_VEHICULOS ? data.vehiculos : [],
+        };
+
         if (editingEmpleado) {
             // Spoofing PUT con POST en Inertia para soportar subidas de archivos
             router.post(`/admin/empleados/${editingEmpleado.id}`, {
-                ...data,
+                ...payload,
                 _method: 'PUT'
             } as any, {
                 onSuccess: () => {
@@ -513,7 +527,7 @@ export default function EmpleadosIndexPage({
                 onError: () => notifyError(__('Please review the highlighted fields.')),
             });
         } else {
-            post('/admin/empleados', {
+            router.post('/admin/empleados', payload as any, {
                 onSuccess: () => {
                     setIsModalOpen(false);
                     reset();
@@ -1051,7 +1065,7 @@ export default function EmpleadosIndexPage({
                         </DialogHeader>
 
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-2">
-                            <TabsList className="grid grid-cols-5 w-full mb-6">
+                            <TabsList className={cn("grid w-full mb-6", MOSTRAR_VEHICULOS ? "grid-cols-5" : "grid-cols-4")}>
                                 <TabsTrigger value="general" className="flex items-center gap-1.5 text-xs sm:text-sm">
                                     <UserIcon className="h-4 w-4" />
                                     {__('General')}
@@ -1068,10 +1082,12 @@ export default function EmpleadosIndexPage({
                                     <Camera className="h-4 w-4" />
                                     {__('Photographs')}
                                 </TabsTrigger>
-                                <TabsTrigger value="vehiculos" className="flex items-center gap-1.5 text-xs sm:text-sm">
-                                    <Car className="h-4 w-4" />
-                                    {__('Vehicles')}
-                                </TabsTrigger>
+                                {MOSTRAR_VEHICULOS && (
+                                    <TabsTrigger value="vehiculos" className="flex items-center gap-1.5 text-xs sm:text-sm">
+                                        <Car className="h-4 w-4" />
+                                        {__('Vehicles')}
+                                    </TabsTrigger>
+                                )}
                             </TabsList>
 
                             {/* ══ Tab 1: General ══════════════════════════════════════════════════ */}
@@ -1814,158 +1830,163 @@ export default function EmpleadosIndexPage({
                                         )}
                                     </div>
 
-                                    {/* Foto del Documento de Identidad */}
-                                    <div className="flex flex-col gap-2">
-                                        <Label className="font-semibold">{__('ID Document Photo')}</Label>
+                                    {MOSTRAR_FOTOS_DOCUMENTO && (
+                                        <>
+                                            {/* Foto del Documento de Identidad */}
+                                            <div className="flex flex-col gap-2">
+                                                <Label className="font-semibold">{__('ID Document Photo')}</Label>
 
-                                        {activeCameraField === 'foto_documento' ? (
-                                            <CameraWidget
-                                                onCapture={(base64) => handleCameraCapture('foto_documento', base64)}
-                                                onCancel={() => setActiveCameraField(null)}
-                                            />
-                                        ) : (
-                                            <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] bg-slate-50/50 dark:bg-slate-900/10">
-                                                {getImageSrc(data.foto_documento) ? (
-                                                    <div className="relative w-44 aspect-[3/2] rounded-md overflow-hidden border border-slate-200 shadow-sm group">
-                                                        <img
-                                                            src={getImageSrc(data.foto_documento)!}
-                                                            alt="Document Preview"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                {activeCameraField === 'foto_documento' ? (
+                                                    <CameraWidget
+                                                        onCapture={(base64) => handleCameraCapture('foto_documento', base64)}
+                                                        onCancel={() => setActiveCameraField(null)}
+                                                    />
+                                                ) : (
+                                                    <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] bg-slate-50/50 dark:bg-slate-900/10">
+                                                        {getImageSrc(data.foto_documento) ? (
+                                                            <div className="relative w-44 aspect-[3/2] rounded-md overflow-hidden border border-slate-200 shadow-sm group">
+                                                                <img
+                                                                    src={getImageSrc(data.foto_documento)!}
+                                                                    alt="Document Preview"
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="xs"
+                                                                        variant="destructive"
+                                                                        onClick={() => setData('foto_documento', '')}
+                                                                    >
+                                                                        {__('Delete')}
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col items-center gap-2 text-center">
+                                                                <FileText className="w-10 h-10 text-slate-300" />
+                                                                <span className="text-xs text-muted-foreground max-w-[200px]">
+                                                                    {__('Upload a photo or capture one using your camera')}
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="flex gap-2">
+                                                            <input
+                                                                type="file"
+                                                                accept="image/*"
+                                                                ref={fileInputDocumentoRef}
+                                                                className="hidden"
+                                                                onChange={(e) => handleFileChange('foto_documento', e.target.files?.[0] || null)}
+                                                            />
                                                             <Button
                                                                 type="button"
+                                                                variant="outline"
                                                                 size="xs"
-                                                                variant="destructive"
-                                                                onClick={() => setData('foto_documento', '')}
+                                                                onClick={() => fileInputDocumentoRef.current?.click()}
+                                                                className="flex items-center gap-1"
                                                             >
-                                                                {__('Delete')}
+                                                                <Upload className="w-3 h-3" />
+                                                                {__('Upload')}
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="xs"
+                                                                onClick={() => setActiveCameraField('foto_documento')}
+                                                                className="flex items-center gap-1"
+                                                            >
+                                                                <Camera className="w-3 h-3" />
+                                                                {__('Take Photo')}
                                                             </Button>
                                                         </div>
                                                     </div>
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-2 text-center">
-                                                        <FileText className="w-10 h-10 text-slate-300" />
-                                                        <span className="text-xs text-muted-foreground max-w-[200px]">
-                                                            {__('Upload a photo or capture one using your camera')}
-                                                        </span>
-                                                    </div>
                                                 )}
-
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        ref={fileInputDocumentoRef}
-                                                        className="hidden"
-                                                        onChange={(e) => handleFileChange('foto_documento', e.target.files?.[0] || null)}
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => fileInputDocumentoRef.current?.click()}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Upload className="w-3 h-3" />
-                                                        {__('Upload')}
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => setActiveCameraField('foto_documento')}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Camera className="w-3 h-3" />
-                                                        {__('Take Photo')}
-                                                    </Button>
-                                                </div>
+                                                {errors.foto_documento && (
+                                                    <p className="text-red-500 text-xs">{errors.foto_documento}</p>
+                                                )}
                                             </div>
-                                        )}
-                                        {errors.foto_documento && (
-                                            <p className="text-red-500 text-xs">{errors.foto_documento}</p>
-                                        )}
-                                    </div>
 
-                                    {/* Foto del Documento de Identidad (Reverso) */}
-                                    <div className="flex flex-col gap-2">
-                                        <Label className="font-semibold">{__('ID Document Photo (Reverse)')}</Label>
+                                            {/* Foto del Documento de Identidad (Reverso) */}
+                                            <div className="flex flex-col gap-2">
+                                                <Label className="font-semibold">{__('ID Document Photo (Reverse)')}</Label>
 
-                                        {activeCameraField === 'foto_documento_reverso' ? (
-                                            <CameraWidget
-                                                onCapture={(base64) => handleCameraCapture('foto_documento_reverso', base64)}
-                                                onCancel={() => setActiveCameraField(null)}
-                                            />
-                                        ) : (
-                                            <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] bg-slate-50/50 dark:bg-slate-900/10">
-                                                {getImageSrc(data.foto_documento_reverso) ? (
-                                                    <div className="relative w-44 aspect-[3/2] rounded-md overflow-hidden border border-slate-200 shadow-sm group">
-                                                        <img
-                                                            src={getImageSrc(data.foto_documento_reverso)!}
-                                                            alt="Document Reverse Preview"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                {activeCameraField === 'foto_documento_reverso' ? (
+                                                    <CameraWidget
+                                                        onCapture={(base64) => handleCameraCapture('foto_documento_reverso', base64)}
+                                                        onCancel={() => setActiveCameraField(null)}
+                                                    />
+                                                ) : (
+                                                    <div className="border border-dashed border-slate-300 dark:border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-3 min-h-[180px] bg-slate-50/50 dark:bg-slate-900/10">
+                                                        {getImageSrc(data.foto_documento_reverso) ? (
+                                                            <div className="relative w-44 aspect-[3/2] rounded-md overflow-hidden border border-slate-200 shadow-sm group">
+                                                                <img
+                                                                    src={getImageSrc(data.foto_documento_reverso)!}
+                                                                    alt="Document Reverse Preview"
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="xs"
+                                                                        variant="destructive"
+                                                                        onClick={() => setData('foto_documento_reverso', '')}
+                                                                    >
+                                                                        {__('Delete')}
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col items-center gap-2 text-center">
+                                                                <FileText className="w-10 h-10 text-slate-300" />
+                                                                <span className="text-xs text-muted-foreground max-w-[200px]">
+                                                                    {__('Upload a photo or capture one using your camera')}
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="flex gap-2">
+                                                            <input
+                                                                type="file"
+                                                                accept="image/*"
+                                                                ref={fileInputDocumentoReversoRef}
+                                                                className="hidden"
+                                                                onChange={(e) => handleFileChange('foto_documento_reverso', e.target.files?.[0] || null)}
+                                                            />
                                                             <Button
                                                                 type="button"
+                                                                variant="outline"
                                                                 size="xs"
-                                                                variant="destructive"
-                                                                onClick={() => setData('foto_documento_reverso', '')}
+                                                                onClick={() => fileInputDocumentoReversoRef.current?.click()}
+                                                                className="flex items-center gap-1"
                                                             >
-                                                                {__('Delete')}
+                                                                <Upload className="w-3 h-3" />
+                                                                {__('Upload')}
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="xs"
+                                                                onClick={() => setActiveCameraField('foto_documento_reverso')}
+                                                                className="flex items-center gap-1"
+                                                            >
+                                                                <Camera className="w-3 h-3" />
+                                                                {__('Take Photo')}
                                                             </Button>
                                                         </div>
                                                     </div>
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-2 text-center">
-                                                        <FileText className="w-10 h-10 text-slate-300" />
-                                                        <span className="text-xs text-muted-foreground max-w-[200px]">
-                                                            {__('Upload a photo or capture one using your camera')}
-                                                        </span>
-                                                    </div>
                                                 )}
-
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        ref={fileInputDocumentoReversoRef}
-                                                        className="hidden"
-                                                        onChange={(e) => handleFileChange('foto_documento_reverso', e.target.files?.[0] || null)}
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => fileInputDocumentoReversoRef.current?.click()}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Upload className="w-3 h-3" />
-                                                        {__('Upload')}
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="xs"
-                                                        onClick={() => setActiveCameraField('foto_documento_reverso')}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Camera className="w-3 h-3" />
-                                                        {__('Take Photo')}
-                                                    </Button>
-                                                </div>
+                                                {errors.foto_documento_reverso && (
+                                                    <p className="text-red-500 text-xs">{errors.foto_documento_reverso}</p>
+                                                )}
                                             </div>
-                                        )}
-                                        {errors.foto_documento_reverso && (
-                                            <p className="text-red-500 text-xs">{errors.foto_documento_reverso}</p>
-                                        )}
-                                    </div>
+                                        </>
+                                    )}
 
                                 </div>
                             </TabsContent>
 
                             {/* ══ Tab 4: Vehículos ══════════════════════════════════════════════════ */}
+                            {MOSTRAR_VEHICULOS && (
                             <TabsContent value="vehiculos" className="space-y-6">
                                 <div className="border-b pb-4 flex justify-between items-center">
                                     <h2 className="text-lg font-bold">{__('Vehicles')}</h2>
@@ -2146,6 +2167,7 @@ export default function EmpleadosIndexPage({
                                     )}
                                 </div>
                             </TabsContent>
+                            )}
                         </Tabs>
 
                         <div className="flex justify-end gap-3 border-t pt-4">

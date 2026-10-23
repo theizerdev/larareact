@@ -310,7 +310,7 @@ class EmpleadoController extends Controller
             }
         } elseif ($request->exists('foto_documento')) {
             $input = $request->input('foto_documento');
-            if ($input === '' || $input === null) {
+            if ($input === '' || $input === null || $input === 'null') {
                 $this->deleteOldImage($empleado->foto_documento);
                 $data['foto_documento'] = null;
             } else {
@@ -331,7 +331,7 @@ class EmpleadoController extends Controller
             }
         } elseif ($request->exists('foto_documento_reverso')) {
             $input = $request->input('foto_documento_reverso');
-            if ($input === '' || $input === null) {
+            if ($input === '' || $input === null || $input === 'null') {
                 $this->deleteOldImage($empleado->foto_documento_reverso);
                 $data['foto_documento_reverso'] = null;
             } else {
@@ -503,7 +503,7 @@ class EmpleadoController extends Controller
             return '/storage/' . $path;
         }
 
-        if (!$input) {
+        if (!$input || $input === 'null') {
             return null;
         }
 

@@ -99,8 +99,8 @@ class EmpleadoRequest extends FormRequest
                 $validator->errors()->add('sucursal_id', __('The selected branch does not belong to the selected company.'));
             }
 
-            if ($departamentoId && $sucursalId
-                && ! Departamento::where('id', $departamentoId)->where('sucursal_id', $sucursalId)->exists()) {
+            if ($departamentoId && $empresaId
+                && ! Departamento::where('id', $departamentoId)->where('empresa_id', $empresaId)->exists()) {
                 $validator->errors()->add('departamento_id', __('The selected department does not belong to the selected branch.'));
             }
 
@@ -109,8 +109,8 @@ class EmpleadoRequest extends FormRequest
                 $validator->errors()->add('cargo_id', __('The selected position does not belong to the selected department.'));
             }
 
-            if ($responsableId && $sucursalId
-                && ! Responsable::where('id', $responsableId)->where('sucursal_id', $sucursalId)->exists()) {
+            if ($responsableId && $empresaId
+                && ! Responsable::where('id', $responsableId)->where('empresa_id', $empresaId)->exists()) {
                 $validator->errors()->add('responsable_id', __('The selected host does not belong to the selected branch.'));
             }
         });
