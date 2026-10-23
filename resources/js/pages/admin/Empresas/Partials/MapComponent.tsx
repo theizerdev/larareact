@@ -13,57 +13,81 @@ interface MapComponentProps {
     onLocationSelected: (lat: number, lng: number, address?: string, timezone?: string) => void;
 }
 
-type TileStyleKey = 'positron' | 'voyager' | 'dark_matter' | 'osm' | 'satellite';
+type TileStyleKey =
+    | 'carto_light'
+    | 'esri_streets'
+    | 'osm_standard'
+    | 'carto_dark'
+    | 'esri_dark'
+    | 'esri_satellite'
+    | 'esri_topo';
 
 interface TileStyleConfig {
     key: TileStyleKey;
     label: string;
     url: string;
     attribution: string;
-    subdomains?: string;
-    maxZoom?: number;
+    subdomains: string;
+    maxZoom: number;
 }
 
 const TILE_STYLES: Record<TileStyleKey, TileStyleConfig> = {
-    positron: {
-        key: 'positron',
+    osm_standard: {
+        key: 'osm_standard',
+        label: 'OpenStreetMap',
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        subdomains: 'abc',
+        maxZoom: 19,
+    },
+    carto_light: {
+        key: 'carto_light',
         label: 'Claro (Carto)',
         url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
         attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains: 'abcd',
         maxZoom: 20,
     },
-    voyager: {
-        key: 'voyager',
-        label: 'Voyager',
-        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20,
-    },
-    dark_matter: {
-        key: 'dark_matter',
-        label: 'Oscuro (Dark)',
-        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20,
-    },
-    osm: {
-        key: 'osm',
-        label: 'OSM Estándar',
-        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    esri_streets: {
+        key: 'esri_streets',
+        label: 'Calles HD',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri &mdash; Sources: Esri, HERE, DeLorme, USGS, Intermap',
+        subdomains: '',
         maxZoom: 19,
     },
-    satellite: {
-        key: 'satellite',
-        label: 'Satélite',
+    carto_dark: {
+        key: 'carto_dark',
+        label: 'Oscuro (Carto)',
+        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20,
+    },
+    esri_dark: {
+        key: 'esri_dark',
+        label: 'Oscuro NOC',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+        subdomains: '',
+        maxZoom: 16,
+    },
+    esri_satellite: {
+        key: 'esri_satellite',
+        label: 'Satélite HD',
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        attribution: 'Tiles &copy; Esri',
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye',
+        subdomains: '',
+        maxZoom: 18,
+    },
+    esri_topo: {
+        key: 'esri_topo',
+        label: 'Topográfico',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri &mdash; Sources: Esri, USGS, NOAA',
+        subdomains: '',
         maxZoom: 19,
     },
 };
@@ -141,13 +165,11 @@ export const getTimezoneFromCoords = async (
     lng: number,
     nominatimAddress?: Record<string, any>
 ): Promise<string | null> => {
-    // 1. Si tenemos estado/municipio de México por Nominatim, aplicamos la regla oficial IANA de México
     const mxByState = resolveMexicanTimezoneFromAddress(nominatimAddress);
     if (mxByState) {
         return mxByState;
     }
 
-    // 2. Consultar Open-Meteo Timezone Auto-Detection (rápido, sin API key y exacto a nivel mundial)
     try {
         const res = await fetch(
             `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&timezone=auto&forecast_days=1`
@@ -162,7 +184,6 @@ export const getTimezoneFromCoords = async (
         // Continúa al siguiente método
     }
 
-    // 3. Respaldo con BigDataCloud
     try {
         const res = await fetch(
             `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`
@@ -177,14 +198,13 @@ export const getTimezoneFromCoords = async (
         // Fallback por cuadrantes geográficos
     }
 
-    // 4. Regla geográfica de respaldo para México por coordenadas (latitud y longitud)
     if (lat >= 14 && lat <= 33 && lng >= -118 && lng <= -86) {
-        if (lng < -114.5 && lat >= 28) return 'America/Tijuana';              // Baja California (Noroeste UTC-8)
-        if (lng >= -114.8 && lng <= -108.5 && lat >= 26.3) return 'America/Hermosillo'; // Sonora (UTC-7 sin DST)
-        if (lng >= -108.5 && lng <= -104.5 && lat >= 30.5) return 'America/Ciudad_Juarez'; // Chihuahua Frontera
-        if (lng < -104.5 && lat >= 21.5) return 'America/Mazatlan';           // Sinaloa, Nayarit, BCS (Pacífico UTC-7)
-        if (lng > -88.2 && lat <= 21.6) return 'America/Cancun';              // Quintana Roo (Sureste UTC-5)
-        return 'America/Mexico_City';                                         // Centro (UTC-6)
+        if (lng < -114.5 && lat >= 28) return 'America/Tijuana';
+        if (lng >= -114.8 && lng <= -108.5 && lat >= 26.3) return 'America/Hermosillo';
+        if (lng >= -108.5 && lng <= -104.5 && lat >= 30.5) return 'America/Ciudad_Juarez';
+        if (lng < -104.5 && lat >= 21.5) return 'America/Mazatlan';
+        if (lng > -88.2 && lat <= 21.6) return 'America/Cancun';
+        return 'America/Mexico_City';
     }
 
     return null;
@@ -203,7 +223,7 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
     const markerRef = useRef<L.Marker | null>(null);
     const onLocationSelectedRef = useRef(onLocationSelected);
 
-    const [tileStyle, setTileStyle] = useState<TileStyleKey>('positron');
+    const [tileStyle, setTileStyle] = useState<TileStyleKey>('osm_standard');
     const [isGeocodingLoading, setIsGeocodingLoading] = useState(false);
     const [isLocatingDevice, setIsLocatingDevice] = useState(false);
 
@@ -215,7 +235,6 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
         const roundedLat = Number(newLat.toFixed(6));
         const roundedLng = Number(newLng.toFixed(6));
 
-        // Actualización inmediata de coordenadas con estimación inicial de zona horaria
         const quickTz = await getTimezoneFromCoords(roundedLat, roundedLng);
         onLocationSelectedRef.current(roundedLat, roundedLng, undefined, quickTz || undefined);
 
@@ -296,7 +315,7 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
         );
     };
 
-    // Inicializar instancia de Leaflet una sola vez al montar
+    // Inicializar instancia de Leaflet una sola vez al montar (mismo patrón que botserver)
     useEffect(() => {
         if (!mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -304,11 +323,13 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
             ? [markerPosition[0], markerPosition[1]]
             : center && center[0] && center[1]
             ? [center[0], center[1]]
-            : [23.6345, -102.5528]; // Centro de México por defecto
+            : [23.6345, -102.5528];
 
         const map = L.map(mapContainerRef.current, {
             center: initialCenter,
             zoom: zoom || 14,
+            minZoom: 2,
+            maxZoom: 20,
             zoomControl: false,
         });
 
@@ -317,14 +338,13 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
         const defaultTile = TILE_STYLES[tileStyle];
         const layer = L.tileLayer(defaultTile.url, {
             attribution: defaultTile.attribution,
-            subdomains: defaultTile.subdomains ?? 'abc',
-            maxZoom: defaultTile.maxZoom ?? 19,
+            subdomains: defaultTile.subdomains,
+            maxZoom: defaultTile.maxZoom,
         }).addTo(map);
 
         tileLayerRef.current = layer;
         mapInstanceRef.current = map;
 
-        // Si ya hay coordenadas iniciales, colocar el marcador
         if (markerPosition && markerPosition[0] && markerPosition[1]) {
             const marker = L.marker([markerPosition[0], markerPosition[1]], {
                 draggable: true,
@@ -339,17 +359,14 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
             markerRef.current = marker;
         }
 
-        // Al hacer clic en el mapa, mover o crear el marcador y calcular zona horaria automáticamente
         map.on('click', (e: L.LeafletMouseEvent) => {
             const { lat, lng } = e.latlng;
             placeOrMoveMarker(lat, lng);
             handleLocationChange(lat, lng);
         });
 
-        // Asegurar renderizado completo dentro del modal/tab
-        const timer = setTimeout(() => {
-            map.invalidateSize();
-        }, 150);
+        const t1 = setTimeout(() => map.invalidateSize(), 100);
+        const t2 = setTimeout(() => map.invalidateSize(), 300);
 
         const resizeObserver = new ResizeObserver(() => {
             map.invalidateSize();
@@ -357,7 +374,8 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
         resizeObserver.observe(mapContainerRef.current);
 
         return () => {
-            clearTimeout(timer);
+            clearTimeout(t1);
+            clearTimeout(t2);
             resizeObserver.disconnect();
             map.remove();
             mapInstanceRef.current = null;
@@ -366,7 +384,7 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
         };
     }, []);
 
-    // Cambiar el estilo del mapa dinámicamente cuando el usuario seleccione otro TileStyle
+    // Cambiar el estilo del mapa dinámicamente
     useEffect(() => {
         const map = mapInstanceRef.current;
         if (!map) return;
@@ -378,10 +396,11 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
         const cfg = TILE_STYLES[tileStyle];
         const newLayer = L.tileLayer(cfg.url, {
             attribution: cfg.attribution,
-            subdomains: cfg.subdomains ?? 'abc',
-            maxZoom: cfg.maxZoom ?? 19,
+            subdomains: cfg.subdomains,
+            maxZoom: cfg.maxZoom,
         }).addTo(map);
 
+        newLayer.bringToBack();
         tileLayerRef.current = newLayer;
     }, [tileStyle]);
 
@@ -406,18 +425,25 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
     }, [markerPosition?.[0], markerPosition?.[1]]);
 
     return (
-        <div className="relative w-full h-full select-none" style={{ minHeight: '340px', ...style }}>
-            {/* Contenedor Leaflet */}
-            <div ref={mapContainerRef} className="w-full h-full z-0" />
+        <div
+            className="relative w-full h-[480px] bg-slate-100 dark:bg-slate-950 overflow-hidden select-none"
+            style={{ height: '480px', width: '100%', ...style }}
+        >
+            {/* Contenedor DOM de Leaflet con dimensiones explícitas */}
+            <div
+                ref={mapContainerRef}
+                className="w-full h-full z-10"
+                style={{ width: '100%', height: style?.height || '480px' }}
+            />
 
             {/* Botón flotante: Usar mi ubicación actual */}
-            <div className="absolute top-3 left-3 z-[1000]">
+            <div className="absolute top-3 left-3 z-20">
                 <button
                     type="button"
                     onClick={handleUseCurrentLocation}
                     disabled={isLocatingDevice}
                     title="Obtener mi ubicación actual y zona horaria"
-                    className="flex items-center gap-1.5 rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 py-1.5 text-xs font-semibold text-violet-700 dark:text-violet-300 shadow-md border border-slate-200/80 dark:border-slate-700/80 hover:bg-violet-50 dark:hover:bg-slate-800 transition-all cursor-pointer disabled:opacity-60"
+                    className="flex items-center gap-1.5 rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 py-1.5 text-xs font-semibold text-violet-700 dark:text-violet-300 shadow-lg border border-slate-200/80 dark:border-slate-700/80 hover:bg-violet-50 dark:hover:bg-slate-800 transition-all cursor-pointer disabled:opacity-60"
                 >
                     {isLocatingDevice ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-600" />
@@ -428,8 +454,8 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
                 </button>
             </div>
 
-            {/* Selector flotante de estilo de mapa (CartoDB Claro por defecto) */}
-            <div className="absolute top-3 right-3 z-[1000] flex items-center gap-1 rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-1 shadow-md border border-slate-200/80 dark:border-slate-700/80">
+            {/* Selector flotante de estilo de mapa (CartoDB Claro por defecto + Capas de botserver) */}
+            <div className="absolute top-3 right-3 z-20 flex flex-wrap items-center gap-1 rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-1 shadow-lg border border-slate-200/80 dark:border-slate-700/80 max-w-[70%] justify-end">
                 <div className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700">
                     <Layers className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
                     <span className="hidden sm:inline">Estilo:</span>
@@ -442,7 +468,7 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
                             type="button"
                             onClick={() => setTileStyle(item.key)}
                             className={cn(
-                                'px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer',
+                                'px-2 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer',
                                 isActive
                                     ? 'bg-violet-600 text-white shadow-xs'
                                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -456,7 +482,7 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
 
             {/* Indicador de geocodificación inversa y zona horaria */}
             {(isGeocodingLoading || isLocatingDevice) && (
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900/85 text-white px-3.5 py-1.5 rounded-full text-xs font-medium shadow-lg pointer-events-none flex items-center gap-2">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-slate-900/85 text-white px-3.5 py-1.5 rounded-full text-xs font-medium shadow-lg pointer-events-none flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-violet-400 animate-ping" />
                     {isLocatingDevice
                         ? 'Obteniendo coordenadas GPS del dispositivo...'

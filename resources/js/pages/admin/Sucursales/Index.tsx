@@ -59,13 +59,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
-import { getTimezoneFromCoords } from '../Empresas/Partials/MapComponent';
+import SucursalMapComponent, { getTimezoneFromCoords } from '../Empresas/Partials/MapComponent';
 import { usePermission } from '@/hooks/use-permission';
 import { Can } from '@/components/can';
-
-const SucursalMapComponent = lazy(() => {
-    return import('../Empresas/Partials/MapComponent').then((mod) => ({ default: mod.default }));
-});
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -654,7 +650,7 @@ return;
 
             {/* ── Modal Creación / Edición ────────────────────────────────────────────── */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-[720px] lg:max-w-[900px] max-h-[90vh] overflow-y-auto">
+                <DialogContent className="w-[95vw] sm:max-w-[95vw] lg:max-w-[1150px] xl:max-w-[1240px] max-h-[92vh] overflow-y-auto">
                     <form onSubmit={handleSubmit}>
                         <DialogHeader>
                             <DialogTitle>
@@ -936,30 +932,24 @@ return;
                                     </div>
                                 </div>
 
-                                {/* Mapa Leaflet + CartoDB (Claro por defecto + Selector de Estilo) */}
+                                {/* Mapa Leaflet (OpenStreetMap por defecto + Selector de Estilo) */}
                                 <div
-                                    style={{ height: '380px', width: '100%' }}
-                                    className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-center bg-slate-100 dark:bg-slate-800"
+                                    style={{ height: '480px', width: '100%' }}
+                                    className="relative w-full h-[480px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xs bg-slate-100 dark:bg-slate-900"
                                 >
-                                    <Suspense
-                                        fallback={
-                                            <p className="text-slate-500 text-sm">{__('Loading map...')}</p>
-                                        }
-                                    >
-                                        {isModalOpen && activeTab === 'ubicacion' && (
-                                            <SucursalMapComponent
-                                                center={mapCenter}
-                                                zoom={mapZoom}
-                                                style={{ height: '100%', width: '100%' }}
-                                                markerPosition={
-                                                    data.latitud && data.longitud
-                                                        ? [data.latitud, data.longitud]
-                                                        : null
-                                                }
-                                                onLocationSelected={handleLocationSelected}
-                                            />
-                                        )}
-                                    </Suspense>
+                                    {isModalOpen && activeTab === 'ubicacion' && (
+                                        <SucursalMapComponent
+                                            center={mapCenter}
+                                            zoom={mapZoom}
+                                            style={{ height: '480px', width: '100%' }}
+                                            markerPosition={
+                                                data.latitud && data.longitud
+                                                    ? [data.latitud, data.longitud]
+                                                    : null
+                                            }
+                                            onLocationSelected={handleLocationSelected}
+                                        />
+                                    )}
                                 </div>
 
                                 <p className="text-xs text-muted-foreground flex items-center gap-1.5">

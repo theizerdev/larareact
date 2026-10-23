@@ -802,18 +802,18 @@ formData.append('logo_mini', logoMiniFile);
                                 {/* Mapa Leaflet */}
                                 <div
                                     style={{ height: '380px', width: '100%' }}
-                                    className="rounded-md overflow-hidden border flex items-center justify-center bg-slate-100 dark:bg-slate-800"
+                                    className="relative w-full h-[380px] rounded-xl overflow-hidden border bg-slate-100 dark:bg-slate-900"
                                 >
                                     <Suspense
                                         fallback={
-                                            <p className="text-slate-500 text-sm">{__('Loading map...')}</p>
+                                            <p className="text-slate-500 text-sm p-4">{__('Loading map...')}</p>
                                         }
                                     >
                                         {isModalOpen && activeTab === 'ubicacion' && (
                                             <EmpresaMapComponent
                                                 center={mapCenter}
                                                 zoom={mapZoom}
-                                                style={{ height: '100%', width: '100%' }}
+                                                style={{ height: '380px', width: '100%' }}
                                                 markerPosition={
                                                     data.latitud && data.longitud
                                                         ? [data.latitud, data.longitud]
