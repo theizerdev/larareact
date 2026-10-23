@@ -837,6 +837,7 @@ HTML;
             'plan' => SubscriptionPlan::getPlanRenovacionDefault() ?? $planes->first(),
             'planes' => $planes,
             'stats' => $stats,
+            'stripeBalance' => app(\App\Services\StripeBalanceService::class)->getBalance(),
         ]);
     }
 

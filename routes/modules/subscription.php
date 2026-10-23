@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\SubscriptionController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
+use App\Http\Controllers\Admin\SuperAdminDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['verified'])->group(function () {
@@ -16,6 +17,7 @@ Route::middleware(['verified'])->group(function () {
     Route::post('/monitoring/subscription/stripe/create-checkout', [SubscriptionController::class, 'createStripeCheckoutSession'])->name('subscription.stripe.create-checkout');
     Route::get('/monitoring/subscription/stripe/success', [SubscriptionController::class, 'stripeSuccess'])->name('subscription.stripe.success');
     Route::get('/monitoring/subscription/stripe/cancel', [SubscriptionController::class, 'stripeCancel'])->name('subscription.stripe.cancel');
+    Route::get('/superadministrador/stripe-balance/refresh', [SuperAdminDashboardController::class, 'refreshStripeBalance'])->name('superadmin.stripe.refresh-balance');
 
     // Panel de suscripción de la empresa
     Route::get('/monitoring/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');

@@ -7,6 +7,7 @@ use App\Models\Empresa;
 use App\Models\SubscriptionPayment;
 use App\Services\BcvRateService;
 use App\Services\EmpresaActivityService;
+use App\Services\StripeBalanceService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -16,7 +17,7 @@ class SuperAdminDashboardController extends Controller
      * Dashboard exclusivo para el Super Administrador centrado únicamente
      * en suscripciones actuales, próximas a vencer y alertas sin métricas de caja.
      */
-    public function index(Request $request, BcvRateService $bcvService, EmpresaActivityService $activityService)
+    public function index(Request $request, BcvRateService $bcvService, EmpresaActivityService $activityService, StripeBalanceService $stripeBalanceService)
     {
         $user = auth()->user();
 
@@ -163,6 +164,89 @@ class SuperAdminDashboardController extends Controller
                 ];
             });
 
+        // 7. Balance en vivo de Stripe y cálculo en USD
+        $stripeBalance = $stripeBalanceService->getBalance();
+
+        // 8. Comparativa mensual y series para Sparklines en Cards (Últimos 6 meses)
+        $sparklineMonths = [];
+        $activeTrend = [];
+        $registrationsTrend = [];
+        $renewalsTrend = [];
+        $renewalsCountTrend = [];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $monthDate = Carbon::now()->subMonths($i);
+            $monthKey = $monthDate->format('Y-m');
+            $sparklineMonths[] = rtrim(ucfirst($monthDate->translatedFormat('M')), '.');
+
+            // Ingresos de renovaciones en ese mes
+            $monthPayments = SubscriptionPayment::where('estado', 'approved')
+                ->whereRaw("DATE_FORMAT(aprobado_at, '%Y-%m') = ?", [$monthKey]);
+            $monthRev = (float) $monthPayments->sum('monto');
+            $renewalsTrend[] = round($monthRev, 2);
+            $renewalsCountTrend[] = $monthPayments->count();
+
+            // Nuevas empresas registradas en ese mes
+            $monthReg = $empresas->filter(function ($e) use ($monthKey) {
+                return $e->created_at && $e->created_at->format('Y-m') === $monthKey;
+            })->count();
+            $registrationsTrend[] = $monthReg;
+
+            // Histórico de empresas activas
+            $endOfMonth = $monthDate->copy()->endOfMonth();
+            $monthAct = $empresas->filter(function ($e) use ($endOfMonth) {
+                return ! $e->isExemptFromSubscription() 
+                    && $e->subscription_status === 'active' 
+                    && $e->created_at 
+                    && $e->created_at <= $endOfMonth;
+            })->count();
+            if ($i === 0) {
+                $monthAct = max($monthAct, $activas);
+            }
+            $activeTrend[] = max(1, $monthAct);
+        }
+
+        $prevAct = $activeTrend[4] ?? 1;
+        $currAct = $activeTrend[5] ?? 1;
+        $activeDiffPct = $prevAct > 0 ? round((($currAct - $prevAct) / $prevAct) * 100, 1) : 0;
+
+        $prevReg = $registrationsTrend[4] ?? 0;
+        $currReg = $registrationsTrend[5] ?? 0;
+        $regDiff = $currReg - $prevReg;
+
+        $prevRev = $renewalsTrend[4] ?? 0;
+        $currRev = $renewalsTrend[5] ?? 0;
+        $revDiffPct = $prevRev > 0 ? round((($currRev - $prevRev) / $prevRev) * 100, 1) : ($currRev > 0 ? 100 : 0);
+
+        $prevRevCount = $renewalsCountTrend[4] ?? 0;
+        $currRevCount = $renewalsCountTrend[5] ?? 0;
+
+        $monthlySparklines = [
+            'months' => $sparklineMonths,
+            'active' => [
+                'data' => $activeTrend,
+                'diff_pct' => $activeDiffPct,
+                'diff_count' => $currAct - $prevAct,
+                'prev_value' => $prevAct,
+                'curr_value' => $currAct,
+            ],
+            'registrations' => [
+                'data' => $registrationsTrend,
+                'diff' => $regDiff,
+                'prev_value' => $prevReg,
+                'curr_value' => $currReg,
+            ],
+            'renewals' => [
+                'data' => $renewalsTrend,
+                'count_data' => $renewalsCountTrend,
+                'diff_pct' => $revDiffPct,
+                'prev_value' => $prevRev,
+                'curr_value' => $currRev,
+                'prev_count' => $prevRevCount,
+                'curr_count' => $currRevCount,
+            ],
+        ];
+
         return inertia('superadmin/dashboard0', [
             'filters' => [
                 'start_date' => $startDate->format('Y-m-d'),
@@ -181,6 +265,8 @@ class SuperAdminDashboardController extends Controller
                 'activas_semana' => collect($activityMetrics)->whereIn('activity_status', ['online', 'active_today', 'recent'])->count(),
                 'inactivas' => collect($activityMetrics)->whereIn('activity_status', ['inactive', 'never'])->count(),
             ],
+            'stripeBalance' => $stripeBalance,
+            'monthlySparklines' => $monthlySparklines,
             'revenueChart' => [
                 'categories' => $revenueChartCategories,
                 'data' => $revenueChartData,
@@ -197,5 +283,18 @@ class SuperAdminDashboardController extends Controller
             'renovacionesRecientes' => $renovacionesRecientes,
             'bcvRate' => $bcvRate,
         ]);
+    }
+
+    /**
+     * Endpoint API para refrescar el balance de Stripe sin recargar la página completa.
+     */
+    public function refreshStripeBalance(StripeBalanceService $stripeBalanceService)
+    {
+        $user = auth()->user();
+        if ($user->empresa_id !== 1 && ! $user->hasRole('Super Administrador') && ! $user->hasRole('super-admin')) {
+            abort(403, 'No autorizado.');
+        }
+
+        return response()->json($stripeBalanceService->getBalance(true));
     }
 }

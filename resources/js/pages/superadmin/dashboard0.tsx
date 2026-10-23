@@ -19,6 +19,8 @@ import {
     Users,
     Search,
     TrendingUp,
+    TrendingDown,
+    Minus,
     Filter,
     DollarSign,
     BarChart2,
@@ -37,6 +39,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTranslate } from '@/hooks/use-translate';
+import { StripeBalanceCard, StripeBalanceData } from '@/components/stripe-balance-card';
 
 interface SuperAdminStats {
     total_empresas: number;
@@ -99,6 +102,32 @@ interface RenovacionReciente {
     aprobado_at: string;
 }
 
+interface MonthlySparklines {
+    months: string[];
+    active: {
+        data: number[];
+        diff_pct: number;
+        diff_count?: number;
+        prev_value: number;
+        curr_value?: number;
+    };
+    registrations: {
+        data: number[];
+        diff: number;
+        prev_value: number;
+        curr_value?: number;
+    };
+    renewals: {
+        data: number[];
+        count_data?: number[];
+        diff_pct: number;
+        prev_value: number;
+        curr_value?: number;
+        prev_count?: number;
+        curr_count?: number;
+    };
+}
+
 interface PageProps {
     filters: {
         start_date: string;
@@ -120,6 +149,8 @@ interface PageProps {
     empresasResumen: EmpresaResumen[];
     renovacionesRecientes: RenovacionReciente[];
     bcvRate?: number;
+    stripeBalance?: StripeBalanceData;
+    monthlySparklines?: MonthlySparklines;
 }
 
 export default function SuperAdminDashboard({
@@ -132,6 +163,8 @@ export default function SuperAdminDashboard({
     empresasResumen,
     renovacionesRecientes,
     bcvRate = 36.50,
+    stripeBalance,
+    monthlySparklines,
 }: PageProps) {
     const { __ } = useTranslate();
     const pageProps = usePage().props as any;
@@ -270,6 +303,127 @@ export default function SuperAdminDashboard({
         tooltip: { theme: 'dark' }
     };
 
+    // Series y Opciones para Sparklines de Métricas SaaS (Últimos 6 meses)
+    const months = useMemo(() => monthlySparklines?.months || ['May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct'], [monthlySparklines]);
+    const activeData = useMemo(() => monthlySparklines?.active?.data || [1, 1, 1, 1, 1, stats.activas || 1], [monthlySparklines, stats.activas]);
+    const regData = useMemo(() => monthlySparklines?.registrations?.data || [0, 0, 0, 0, 0, stats.trial || 0], [monthlySparklines, stats.trial]);
+    const revData = useMemo(() => monthlySparklines?.renewals?.data || [0, 0, 0, 0, 0, 0], [monthlySparklines]);
+
+    const activeSparklineOptions: ApexCharts.ApexOptions = useMemo(() => ({
+        chart: {
+            type: 'area',
+            height: 44,
+            sparkline: { enabled: true },
+            animations: { enabled: true, easing: 'easeinout', speed: 400 },
+        },
+        stroke: {
+            curve: 'smooth',
+            width: 2,
+        },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.35,
+                opacityTo: 0.05,
+                stops: [0, 95, 100],
+            },
+        },
+        colors: ['#10b981'],
+        tooltip: {
+            theme: 'dark',
+            fixed: { enabled: false },
+            x: {
+                show: true,
+                formatter: (_val, opts) => months[opts?.dataPointIndex] || '',
+            },
+            y: {
+                title: {
+                    formatter: () => 'Activas: ',
+                },
+            },
+            marker: { show: false },
+        },
+        xaxis: {
+            categories: months,
+            crosshairs: { width: 1 },
+        },
+    }), [months]);
+
+    const registrationsSparklineOptions: ApexCharts.ApexOptions = useMemo(() => ({
+        chart: {
+            type: 'bar',
+            height: 44,
+            sparkline: { enabled: true },
+            animations: { enabled: true, easing: 'easeinout', speed: 400 },
+        },
+        plotOptions: {
+            bar: {
+                columnWidth: '55%',
+                borderRadius: 2,
+            },
+        },
+        colors: ['#f59e0b'],
+        tooltip: {
+            theme: 'dark',
+            fixed: { enabled: false },
+            x: {
+                show: true,
+                formatter: (_val, opts) => months[opts?.dataPointIndex] || '',
+            },
+            y: {
+                title: {
+                    formatter: () => 'Altas: ',
+                },
+            },
+            marker: { show: false },
+        },
+        xaxis: {
+            categories: months,
+        },
+    }), [months]);
+
+    const renewalsSparklineOptions: ApexCharts.ApexOptions = useMemo(() => ({
+        chart: {
+            type: 'area',
+            height: 44,
+            sparkline: { enabled: true },
+            animations: { enabled: true, easing: 'easeinout', speed: 400 },
+        },
+        stroke: {
+            curve: 'smooth',
+            width: 2,
+        },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.35,
+                opacityTo: 0.05,
+                stops: [0, 95, 100],
+            },
+        },
+        colors: ['#8b5cf6'],
+        tooltip: {
+            theme: 'dark',
+            fixed: { enabled: false },
+            x: {
+                show: true,
+                formatter: (_val, opts) => months[opts?.dataPointIndex] || '',
+            },
+            y: {
+                title: {
+                    formatter: () => 'Cobrado: $',
+                },
+            },
+            marker: { show: false },
+        },
+        xaxis: {
+            categories: months,
+            crosshairs: { width: 1 },
+        },
+    }), [months]);
+
     return (
         <>
             <Head title={__('Dashboard Super Administrador - Analítica SaaS')} />
@@ -319,88 +473,184 @@ export default function SuperAdminDashboard({
                     </form>
                 </div>
 
-                {/* Métricas Resumidas Neutras (Color solo en Iconos) */}
+                {/* Métricas Resumidas SaaS */}
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                    {/* Card 1: Ingresos por Renovación */}
-                    <Card className="shadow-sm border border-border hover:shadow-md transition-shadow">
-                        <CardContent className="p-5 flex items-start justify-between">
-                            <div className="space-y-1.5">
-                                <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
-                                    <TrendingUp className="h-3.5 w-3.5 text-indigo-600" />
-                                    {__('Ingresos Renovación')}
-                                </span>
-                                <p className="text-2xl sm:text-3xl font-black text-foreground">
-                                    {formatPrice(stats.total_revenue_in_range)}
-                                </p>
-                                <p className="text-[11px] text-muted-foreground font-medium">
-                                    {__('En los últimos 7 días')}
-                                </p>
+                    {/* Card 1: Balance Real Stripe (Neto, Comisiones y Conversión USD) */}
+                    <StripeBalanceCard initialData={stripeBalance} variant="compact" />
+
+                    {/* Card 2: Cuentas Activas con Sparkline y Comparativa MoM */}
+                    <Card className="shadow-sm border border-border hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between h-full bg-card">
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
+                        <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="space-y-1">
+                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                        {__('Suscripciones Activas')}
+                                    </span>
+                                    <p className="text-2xl sm:text-3xl font-black text-foreground font-mono tracking-tight">
+                                        {stats.activas}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground font-medium">
+                                        {stats.total_empresas > 0 ? `${((stats.activas / stats.total_empresas) * 100).toFixed(0)}% ${__('del total de empresas')}` : __('Sin empresas')}
+                                    </p>
+                                </div>
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50 shadow-xs">
+                                    <Building2 className="h-5 w-5" />
+                                </div>
                             </div>
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50">
-                                <DollarSign className="h-6 w-6" />
+
+                            <div className="pt-2 border-t border-border/60">
+                                <div className="flex items-center justify-between text-[11px] mb-1.5 flex-wrap gap-1">
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        (monthlySparklines?.active?.diff_count ?? 0) > 0 
+                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300' 
+                                            : (monthlySparklines?.active?.diff_count ?? 0) < 0 
+                                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300'
+                                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                    }`}>
+                                        {(monthlySparklines?.active?.diff_count ?? 0) > 0 ? (
+                                            <TrendingUp className="w-3 h-3" />
+                                        ) : (monthlySparklines?.active?.diff_count ?? 0) < 0 ? (
+                                            <TrendingDown className="w-3 h-3" />
+                                        ) : (
+                                            <Minus className="w-3 h-3" />
+                                        )}
+                                        {(monthlySparklines?.active?.diff_count ?? 0) > 0 ? `+${monthlySparklines?.active?.diff_count}` : monthlySparklines?.active?.diff_count ?? 0} {__('vs mes ant.')}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground font-mono">
+                                        {__('Mes ant:')} <strong className="text-foreground">{monthlySparklines?.active?.prev_value ?? 0}</strong>
+                                    </span>
+                                </div>
+
+                                <div className="h-[44px] -mx-2 -mb-2 overflow-hidden">
+                                    <Chart
+                                        options={activeSparklineOptions}
+                                        series={[{ name: __('Activas'), data: activeData }]}
+                                        type="area"
+                                        height={44}
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center px-1 text-[9px] text-muted-foreground font-mono pt-1">
+                                    <span>{months[0]}</span>
+                                    <span>{months[2]}</span>
+                                    <span>{months[4]}</span>
+                                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{months[5]}</span>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Card 2: Cuentas Activas */}
-                    <Card className="shadow-sm border border-border hover:shadow-md transition-shadow">
-                        <CardContent className="p-5 flex items-start justify-between">
-                            <div className="space-y-1.5">
-                                <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
-                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                                    {__('Suscripciones Activas')}
-                                </span>
-                                <p className="text-2xl sm:text-3xl font-black text-foreground">
-                                    {stats.activas}
-                                </p>
-                                <p className="text-[11px] text-muted-foreground font-medium">
-                                    {stats.total_empresas > 0 ? `${((stats.activas / stats.total_empresas) * 100).toFixed(0)}% ${__('del total de empresas')}` : __('Sin empresas')}
-                                </p>
+                    {/* Card 3: Prueba Gratis y Nuevas Altas con Sparkline */}
+                    <Card className="shadow-sm border border-border hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between h-full bg-card">
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-yellow-400" />
+                        <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="space-y-1">
+                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                                        <Gift className="h-3.5 w-3.5 text-amber-600" />
+                                        {__('En Prueba Gratis')}
+                                    </span>
+                                    <p className="text-2xl sm:text-3xl font-black text-foreground font-mono tracking-tight">
+                                        {stats.trial}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground font-medium">
+                                        {__('Clientes en evaluación')}
+                                    </p>
+                                </div>
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/50 shadow-xs">
+                                    <Sparkles className="h-5 w-5" />
+                                </div>
                             </div>
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50">
-                                <Building2 className="h-6 w-6" />
+
+                            <div className="pt-2 border-t border-border/60">
+                                <div className="flex items-center justify-between text-[11px] mb-1.5 flex-wrap gap-1">
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        (monthlySparklines?.registrations?.diff ?? 0) > 0 
+                                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300' 
+                                            : (monthlySparklines?.registrations?.diff ?? 0) < 0 
+                                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300'
+                                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                    }`}>
+                                        {(monthlySparklines?.registrations?.diff ?? 0) > 0 ? (
+                                            <TrendingUp className="w-3 h-3" />
+                                        ) : (monthlySparklines?.registrations?.diff ?? 0) < 0 ? (
+                                            <TrendingDown className="w-3 h-3" />
+                                        ) : (
+                                            <Minus className="w-3 h-3" />
+                                        )}
+                                        {(monthlySparklines?.registrations?.diff ?? 0) > 0 ? `+${monthlySparklines?.registrations?.diff}` : monthlySparklines?.registrations?.diff ?? 0} {__('altas vs mes ant.')}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground font-mono">
+                                        {__('Mes:')} <strong className="text-foreground">{monthlySparklines?.registrations?.curr_value ?? 0}</strong>
+                                    </span>
+                                </div>
+
+                                <div className="h-[44px] -mx-2 -mb-2 overflow-hidden">
+                                    <Chart
+                                        options={registrationsSparklineOptions}
+                                        series={[{ name: __('Nuevas Altas'), data: regData }]}
+                                        type="bar"
+                                        height={44}
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center px-1 text-[9px] text-muted-foreground font-mono pt-1">
+                                    <span>{months[0]}</span>
+                                    <span>{months[2]}</span>
+                                    <span>{months[4]}</span>
+                                    <span className="font-bold text-amber-600 dark:text-amber-400">{months[5]}</span>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Card 3: Prueba Gratis (Trial) */}
-                    <Card className="shadow-sm border border-border hover:shadow-md transition-shadow">
-                        <CardContent className="p-5 flex items-start justify-between">
-                            <div className="space-y-1.5">
-                                <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
-                                    <Gift className="h-3.5 w-3.5 text-amber-600" />
-                                    {__('En Prueba Gratis')}
-                                </span>
-                                <p className="text-2xl sm:text-3xl font-black text-foreground">
-                                    {stats.trial}
-                                </p>
-                                <p className="text-[11px] text-muted-foreground font-medium">
-                                    {__('Clientes en periodo de evaluación')}
-                                </p>
+                    {/* Card 4: Próximas a Vencer y Tendencia de Renovación */}
+                    <Card className="shadow-sm border border-border hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between h-full bg-card">
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-purple-500" />
+                        <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="space-y-1">
+                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                                        <Clock className="h-3.5 w-3.5 text-rose-600" />
+                                        {__('Por Vencer (≤ 7 días)')}
+                                    </span>
+                                    <p className="text-2xl sm:text-3xl font-black text-foreground font-mono tracking-tight">
+                                        {stats.proximas_vencer}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground font-medium">
+                                        {__('Requieren atención inmediata')}
+                                    </p>
+                                </div>
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/50 shadow-xs">
+                                    <AlertTriangle className="h-5 w-5" />
+                                </div>
                             </div>
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/50">
-                                <Sparkles className="h-6 w-6" />
-                            </div>
-                        </CardContent>
-                    </Card>
 
-                    {/* Card 4: Próximas a Vencer */}
-                    <Card className="shadow-sm border border-border hover:shadow-md transition-shadow">
-                        <CardContent className="p-5 flex items-start justify-between">
-                            <div className="space-y-1.5">
-                                <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
-                                    <Clock className="h-3.5 w-3.5 text-rose-600" />
-                                    {__('Por Vencer (≤ 7 días)')}
-                                </span>
-                                <p className="text-2xl sm:text-3xl font-black text-foreground">
-                                    {stats.proximas_vencer}
-                                </p>
-                                <p className="text-[11px] text-muted-foreground font-medium">
-                                    {__('Requieren atención inmediata')}
-                                </p>
-                            </div>
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/50">
-                                <AlertTriangle className="h-6 w-6" />
+                            <div className="pt-2 border-t border-border/60">
+                                <div className="flex items-center justify-between text-[11px] mb-1.5 flex-wrap gap-1">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300">
+                                        <TrendingUp className="w-3 h-3" />
+                                        {monthlySparklines?.renewals?.curr_count ?? 0} {__('renovadas este mes')}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground font-mono">
+                                        {__('Mes ant:')} <strong className="text-foreground">{monthlySparklines?.renewals?.prev_count ?? 0}</strong>
+                                    </span>
+                                </div>
+
+                                <div className="h-[44px] -mx-2 -mb-2 overflow-hidden">
+                                    <Chart
+                                        options={renewalsSparklineOptions}
+                                        series={[{ name: __('Cobros ($)'), data: revData }]}
+                                        type="area"
+                                        height={44}
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center px-1 text-[9px] text-muted-foreground font-mono pt-1">
+                                    <span>{months[0]}</span>
+                                    <span>{months[2]}</span>
+                                    <span>{months[4]}</span>
+                                    <span className="font-bold text-purple-600 dark:text-purple-400">{months[5]}</span>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

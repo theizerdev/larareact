@@ -35,6 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslate } from '@/hooks/use-translate';
+import { StripeBalanceCard, StripeBalanceData } from '@/components/stripe-balance-card';
 
 interface EmpresaItem {
     id: number;
@@ -80,9 +81,10 @@ interface PageProps {
     empresas: EmpresaItem[];
     pagosPendientes: PagoPendiente[];
     stats?: SaaSStats;
+    stripeBalance?: StripeBalanceData;
 }
 
-export default function SubscriptionManage({ empresas, pagosPendientes, stats }: PageProps) {
+export default function SubscriptionManage({ empresas, pagosPendientes, stats, stripeBalance }: PageProps) {
     const { __ } = useTranslate();
     const { currencySymbol = '$' } = usePage().props as any;
 
@@ -233,6 +235,9 @@ export default function SubscriptionManage({ empresas, pagosPendientes, stats }:
                         </div>
                     )}
                 </div>
+
+                {/* Balance Real en Cuenta Stripe con Equivalente USD */}
+                <StripeBalanceCard initialData={stripeBalance} variant="full" />
 
                 {/* KPI Metrics Dashboard */}
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
