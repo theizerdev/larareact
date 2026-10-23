@@ -210,6 +210,8 @@ class EquiposUbicacionesImportService
                     'actual_gateway' => $this->cleanText($bRow['actual_gateway'] ?? '') ?: null,
                     'actual_instalado' => $this->parseBoolean($bRow['actual_instalado'] ?? false),
                     'actual_comentario' => $this->cleanText($bRow['actual_comentario'] ?? '') ?: null,
+                    'nuevo_marca' => $this->cleanText($bRow['nuevo_marca'] ?? '') ?: ($existingEquipo?->nuevo_marca ?? null),
+                    'nuevo_modelo' => $this->cleanText($bRow['nuevo_modelo'] ?? '') ?: ($existingEquipo?->nuevo_modelo ?? null),
                     'nuevo_no_serie' => $this->cleanText($bRow['nuevo_no_serie'] ?? '') ?: null,
                     'nuevo_ip' => $this->cleanText($bRow['nuevo_ip'] ?? '') ?: null,
                     'nuevo_mascara' => $this->cleanText($bRow['nuevo_mascara'] ?? '') ?: null,

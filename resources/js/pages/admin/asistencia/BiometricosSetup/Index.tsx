@@ -82,6 +82,8 @@ interface RelojEquipoBiometrico {
     actual_gateway: string | null;
     actual_instalado: boolean;
     actual_comentario: string | null;
+    nuevo_marca: string | null;
+    nuevo_modelo: string | null;
     nuevo_no_serie: string | null;
     nuevo_ip: string | null;
     nuevo_mascara: string | null;
@@ -131,6 +133,8 @@ const initialForm = {
     actual_gateway: '',
     actual_instalado: true,
     actual_comentario: '',
+    nuevo_marca: '',
+    nuevo_modelo: '',
     nuevo_no_serie: '',
     nuevo_ip: '',
     nuevo_mascara: '',
@@ -241,6 +245,8 @@ export default function BiometricosSetupIndexPage({
             actual_gateway: item.actual_gateway || '',
             actual_instalado: Boolean(item.actual_instalado),
             actual_comentario: item.actual_comentario || '',
+            nuevo_marca: item.nuevo_marca || '',
+            nuevo_modelo: item.nuevo_modelo || '',
             nuevo_no_serie: item.nuevo_no_serie || '',
             nuevo_ip: item.nuevo_ip || '',
             nuevo_mascara: item.nuevo_mascara || '',
@@ -422,7 +428,13 @@ export default function BiometricosSetupIndexPage({
             header: 'Nuevo Biométrico (Cols K–Q)',
             cell: (item) => {
                 const hasNuevoData =
-                    item.nuevo_no_serie || item.nuevo_ip || item.nuevo_mac_address || item.nuevo_gateway || item.nuevo_comentario;
+                    item.nuevo_marca ||
+                    item.nuevo_modelo ||
+                    item.nuevo_no_serie ||
+                    item.nuevo_ip ||
+                    item.nuevo_mac_address ||
+                    item.nuevo_gateway ||
+                    item.nuevo_comentario;
                 return (
                     <div
                         className={cn(
@@ -452,6 +464,11 @@ export default function BiometricosSetupIndexPage({
 
                         {hasNuevoData ? (
                             <div className="space-y-0.5 text-xs">
+                                {(item.nuevo_marca || item.nuevo_modelo) && (
+                                    <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
+                                        {[item.nuevo_marca, item.nuevo_modelo].filter(Boolean).join(' • ')}
+                                    </p>
+                                )}
                                 <p className="font-mono text-[11px]">
                                     <span className="text-muted-foreground">S/N:</span>{' '}
                                     <strong className="text-foreground">{item.nuevo_no_serie || '—'}</strong>
@@ -896,6 +913,26 @@ export default function BiometricosSetupIndexPage({
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="nuevo_marca">Marca (Opcional)</Label>
+                                        <Input
+                                            id="nuevo_marca"
+                                            placeholder="Ej. ZKTeco, Suprema, GTI..."
+                                            value={data.nuevo_marca}
+                                            onChange={(e) => setData('nuevo_marca', e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="nuevo_modelo">Modelo (Opcional)</Label>
+                                        <Input
+                                            id="nuevo_modelo"
+                                            placeholder="Ej. SpeedFace V5L, SFace900..."
+                                            value={data.nuevo_modelo}
+                                            onChange={(e) => setData('nuevo_modelo', e.target.value)}
+                                        />
+                                    </div>
+
                                     <div className="space-y-1.5">
                                         <Label htmlFor="nuevo_no_serie">No. Serie Nuevo (Col K)</Label>
                                         <Input

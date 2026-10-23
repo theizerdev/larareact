@@ -38,6 +38,8 @@ class RelojEquipoBiometricoController extends Controller
                     ->orWhere('actual_ip', 'like', "%{$search}%")
                     ->orWhere('actual_gateway', 'like', "%{$search}%")
                     ->orWhere('actual_comentario', 'like', "%{$search}%")
+                    ->orWhere('nuevo_marca', 'like', "%{$search}%")
+                    ->orWhere('nuevo_modelo', 'like', "%{$search}%")
                     ->orWhere('nuevo_no_serie', 'like', "%{$search}%")
                     ->orWhere('nuevo_ip', 'like', "%{$search}%")
                     ->orWhere('nuevo_mac_address', 'like', "%{$search}%")
@@ -147,6 +149,8 @@ class RelojEquipoBiometricoController extends Controller
             'actual_gateway' => 'nullable|string|max:60',
             'actual_instalado' => 'boolean',
             'actual_comentario' => 'nullable|string|max:1000',
+            'nuevo_marca' => 'nullable|string|max:120',
+            'nuevo_modelo' => 'nullable|string|max:120',
             'nuevo_no_serie' => 'nullable|string|max:120',
             'nuevo_ip' => 'nullable|string|max:60',
             'nuevo_mascara' => 'nullable|string|max:60',
@@ -201,6 +205,8 @@ class RelojEquipoBiometricoController extends Controller
             'actual_gateway' => 'nullable|string|max:60',
             'actual_instalado' => 'boolean',
             'actual_comentario' => 'nullable|string|max:1000',
+            'nuevo_marca' => 'nullable|string|max:120',
+            'nuevo_modelo' => 'nullable|string|max:120',
             'nuevo_no_serie' => 'nullable|string|max:120',
             'nuevo_ip' => 'nullable|string|max:60',
             'nuevo_mascara' => 'nullable|string|max:60',
