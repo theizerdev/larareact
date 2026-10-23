@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Cédula de Definición de Zonas Horarias - Smurfit Westrock México</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm 10mm 12mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: "DejaVu Sans", "Liberation Sans", Arial, Helvetica, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      font-size: 8.3pt;
+      line-height: 1.38;
+    }
+
+    .doc-page {
+      page-break-after: always;
+      width: 100%;
+    }
+
+    .doc-page:last-child {
+      page-break-after: avoid;
+    }
+
+    /* Encabezado superior de página */
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-bottom: 2px solid #0f294a;
+      margin-bottom: 10px;
+      padding-bottom: 4px;
+    }
+
+    .header-table td {
+      padding: 0 0 5px 0;
+      vertical-align: bottom;
+    }
+
+    .header-title {
+      font-size: 7.5pt;
+      font-weight: bold;
+      color: #0f294a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .header-meta {
+      font-size: 7.4pt;
+      color: #64748b;
+      font-weight: bold;
+      text-align: right;
+      padding-right: 6px;
+      white-space: nowrap;
+    }
+
+    /* Banner Principal (Portada / Encabezado Ejecutivo) */
+    .hero-banner {
+      border: 1.5px solid #0f294a;
+      border-radius: 6px;
+      background-color: #f8fafc;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+
+    .company-tag {
+      font-size: 8.5pt;
+      font-weight: bold;
+      color: #008075;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 4px;
+    }
+
+    .doc-badge {
+      display: inline-block;
+      background-color: #e0f2fe;
+      color: #0369a1;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 7.5pt;
+      font-weight: bold;
+      margin-bottom: 8px;
+      border: 1px solid #bae6fd;
+    }
+
+    .main-title {
+      font-size: 15pt;
+      font-weight: bold;
+      color: #0f294a;
+      line-height: 1.2;
+      margin-bottom: 5px;
+    }
+
+    .main-subtitle {
+      font-size: 9.5pt;
+      color: #334155;
+      font-weight: bold;
+      line-height: 1.3;
+    }
+
+    /* Tabla de Metadatos Documentales */
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .meta-table td {
+      width: 25%;
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      padding: 6px 8px;
+      vertical-align: top;
+    }
+
+    .meta-label {
+      font-size: 6.5pt;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    .meta-val {
+      font-size: 8pt;
+      font-weight: bold;
+      color: #0f294a;
+    }
+
+    /* Títulos de sección */
+    h1.sec-title {
+      font-size: 11pt;
+      color: #0f294a;
+      font-weight: bold;
+      margin: 10px 0 6px 0;
+      border-bottom: 1.5px solid #cbd5e1;
+      padding-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    h2.sub-title {
+      font-size: 9.2pt;
+      color: #0f294a;
+      font-weight: bold;
+      margin: 7px 0 4px 0;
+    }
+
+    p {
+      margin-bottom: 6px;
+      text-align: justify;
+    }
+
+    /* Cajas informativas */
+    .alert-box {
+      padding: 8px 11px;
+      border-radius: 4px;
+      margin-bottom: 9px;
+      font-size: 8pt;
+      line-height: 1.35;
+    }
+
+    .alert-teal {
+      background-color: #f0fdfa;
+      border: 1px solid #99f6e4;
+      border-left: 4px solid #008075;
+      color: #134e4a;
+    }
+
+    .alert-navy {
+      background-color: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-left: 4px solid #0f294a;
+      color: #1e3a8a;
+    }
+
+    /* Tablas de datos */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 5px 0 9px 0;
+      font-size: 7.5pt;
+    }
+
+    table.data-table th {
+      background-color: #0f294a;
+      color: #ffffff;
+      text-align: left;
+      padding: 5px 6px;
+      font-weight: bold;
+      border: 1px solid #0f294a;
+      font-size: 7.4pt;
+    }
+
+    table.data-table td {
+      padding: 4.5px 6px;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+      line-height: 1.28;
+    }
+
+    table.data-table tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 1.5px 6px;
+      border-radius: 8px;
+      font-size: 6.7pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge-ok {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+
+    .badge-tz {
+      background-color: #e0f2fe;
+      color: #075985;
+      border: 1px solid #7dd3fc;
+      font-family: "DejaVu Sans Mono", monospace;
+    }
+
+    .badge-warn {
+      background-color: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+    }
+
+    .badge-navy {
+      background-color: #e0e7ff;
+      color: #1e3a8a;
+      border: 1px solid #a5b4fc;
+    }
+
+    /* Tarjetas de Canal (2x2 o apiladas) */
+    .channel-card {
+      border: 1px solid #cbd5e1;
+      border-left: 4px solid #0f294a;
+      border-radius: 4px;
+      background-color: #ffffff;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+    }
+
+    .channel-card.teal {
+      border-left-color: #008075;
+    }
+
+    .channel-header {
+      font-size: 8.8pt;
+      font-weight: bold;
+      color: #0f294a;
+      margin-bottom: 4px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 3px;
+    }
+
+    .channel-list {
+      margin-left: 14px;
+      margin-top: 3px;
+    }
+
+    .channel-list li {
+      margin-bottom: 2.5px;
+      font-size: 7.7pt;
+    }
+
+    code {
+      font-family: "DejaVu Sans Mono", "Courier New", monospace;
+      font-size: 7.1pt;
+      background-color: #f1f5f9;
+      padding: 1px 4px;
+      border-radius: 3px;
+      color: #0f172a;
+    }
+
+    /* Pie de página */
+    .footer-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-top: 1px solid #cbd5e1;
+      margin-top: 10px;
+      padding-top: 5px;
+      font-size: 7pt;
+      color: #64748b;
+    }
+
+    .sign-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+    }
+
+    .sign-table td {
+      width: 33.3%;
+      text-align: center;
+      padding: 18px 10px 4px 10px;
+      vertical-align: bottom;
+    }
+
+    .sign-line {
+      border-top: 1px solid #334155;
+      padding-top: 4px;
+      font-size: 7.5pt;
+      font-weight: bold;
+      color: #0f294a;
+    }
+
+    .sign-role {
+      font-size: 6.8pt;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PÁGINA 1 ==================== -->
+  <div class="doc-page">
+    <table class="header-table">
+      <tr>
+        <td class="header-title">SMURFIT WESTROCK MÉXICO — SISTEMA INTEGRAL HOSHŌ &amp; MIDDLEWARE BIOTIME</td>
+        <td class="header-meta">CÉDULA TÉCNICA DE ZONAS HORARIAS | PÁGINA 1 DE 3</td>
+      </tr>
+    </table>
+
+    <div class="hero-banner">
+      <div class="company-tag">SMURFIT WESTROCK MÉXICO • CONTROL DE ASISTENCIA, COMEDOR Y ACCESOS</div>
+      <div class="doc-badge">ENTREGABLE TÉCNICO DE ARQUITECTURA Y CONFIGURACIÓN</div>
+      <div class="main-title">CÉDULA DE DEFINICIÓN DE ZONAS HORARIAS</div>
+      <div class="main-subtitle">Configuración y Sincronización Multizona para Plataforma WEB, App Móvil, Kiosko PWA y Relojes Checadores Biométricos</div>
+
+      <table class="meta-table">
+        <tr>
+          <td>
+            <div class="meta-label">ORGANIZACIÓN / CLIENTE</div>
+            <div class="meta-val">Smurfit Westrock México</div>
+          </td>
+          <td>
+            <div class="meta-label">ALCANCE DE CANALES</div>
+            <div class="meta-val">WEB • App • PWA • Biométricos</div>
+          </td>
+          <td>
+            <div class="meta-label">ESTÁNDAR DE TIEMPO</div>
+            <div class="meta-val">IANA Time Zone DB / UTC</div>
+          </td>
+          <td>
+            <div class="meta-label">FECHA Y ESTADO</div>
+            <div class="meta-val">Octubre 2026 — Activo</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <h1 class="sec-title">1. Objetivo y Alcance de la Cédula</h1>
+    <p>
+      La presente cédula establece la definición técnica, funcional y operativa para el manejo de <strong>múltiples zonas horarias</strong> dentro del ecosistema de Control de Asistencia y Comedor de <strong>Smurfit Westrock México</strong>. Dado que la organización opera plantas industriales y sucursales distribuidas en distintos husos horarios de la República Mexicana (Centro, Noreste, Pacífico, Sonora sin horario de verano, Frontera Norte, Noroeste y Sureste), el sistema garantiza que:
+    </p>
+    <div class="alert-box alert-teal">
+      <strong>Principio Rector de Hora Local por Planta:</strong> Todo marcaje de entrada, salida, inicio/fin de descanso o consumo de comedor se registra, almacena y evalúa conforme a la <strong>zona horaria local de la Sucursal/Planta</strong> donde ocurre el evento, asegurando que el cálculo de puntualidad, tolerancias, retardos y horas extra (LFT) sea 100% exacto sin importar la ubicación física del servidor central.
+    </div>
+
+    <h1 class="sec-title">2. Jerarquía y Precedencia de Resolución de Zona Horaria</h1>
+    <p>
+      El motor backend del sistema resuelve dinámicamente el huso horario aplicable a cada transacción mediante una cascada determinista de 4 niveles implementada en los controladores de marcaje y servicios de cálculo:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 11%;">Prioridad</th>
+          <th style="width: 25%;">Nivel de Configuración</th>
+          <th style="width: 24%;">Entidad / Campo en BD</th>
+          <th style="width: 40%;">Regla de Aplicación en el Sistema</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-ok">NIVEL 1</span></td>
+          <td><strong>Sucursal del Punto de Marcaje</strong></td>
+          <td><code>sucursales.zona_horaria</code><br>(vía <code>sucursal_id</code> del Kiosko/Reloj)</td>
+          <td>Si el marcaje proviene de un Kiosko PWA fijo o terminal biométrica asociada a una planta específica, prevalece la zona horaria de dicha planta.</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-navy">NIVEL 2</span></td>
+          <td><strong>Sucursal Asignada al Colaborador</strong></td>
+          <td><code>empleados.sucursal_id</code> &rarr;<br><code>sucursales.zona_horaria</code></td>
+          <td>Para marcajes en App Móvil o cuando el punto de marcaje no fuerza otra sucursal, se utiliza la zona horaria de la planta base del colaborador.</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-warn">NIVEL 3</span></td>
+          <td><strong>Zona Horaria de la Empresa</strong></td>
+          <td><code>empresas.zona_horaria</code></td>
+          <td>Si un colaborador corporativo no tiene sucursal específica asignada, hereda el huso horario matriz de la razón social (<code>America/Mexico_City</code>).</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-tz">NIVEL 4</span></td>
+          <td><strong> País / Fallback del Sistema</strong></td>
+          <td><code>paises.zona_horaria</code> /<br><code>config('app.timezone')</code></td>
+          <td>Respaldo general de seguridad configurado en <code>America/Mexico_City</code> (UTC-6) para garantizar que ninguna operación carezca de contexto horario.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h1 class="sec-title">3. Resumen Ejecutivo por Canal Operativo</h1>
+    <p>
+      A continuación se sintetiza la matriz de responsabilidad horaria para los cuatro canales que integran la plataforma:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 18%;">Canal</th>
+          <th style="width: 22%;">Fuente de Zona Horaria</th>
+          <th style="width: 22%;">Origen del Reloj (Timestamp)</th>
+          <th style="width: 23%;">Soporte Offline / Contingencia</th>
+          <th style="width: 15%;">Seguridad Horaria</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Plataforma WEB</strong><br>(Admin y Reportes)</td>
+          <td>Catálogo de Sucursales (Detección GPS/Mapa + selector IANA).</td>
+          <td>Servidor convertido a la zona horaria de cada Sucursal.</td>
+          <td>No aplica (administración centralizada en línea).</td>
+          <td>Control por roles y bitácora de auditoría.</td>
+        </tr>
+        <tr>
+          <td><strong>2. App Móvil</strong><br>(Android / iOS)</td>
+          <td>Sucursal asignada al colaborador (<code>empleado.sucursal</code>).</td>
+          <td><strong>Reloj del Servidor</strong> convertido a <code>Carbon::now($tz)</code>.</td>
+          <td>Validación en línea con geocerca y coordenadas GPS.</td>
+          <td><strong>Ignora hora del celular</strong> (evita manipulación).</td>
+        </tr>
+        <tr>
+          <td><strong>3. PWA Kiosko</strong><br>(Planta / Comedor)</td>
+          <td>Sucursal activa en el Kiosko o sucursal del empleado.</td>
+          <td>Online: <code>Carbon::now($tz)</code>.<br>Offline: <code>timestamp_cliente</code>.</td>
+          <td>Cola local IndexedDB sincronizada con <code>setTimezone($tz)</code>.</td>
+          <td>Token de sucursal + normalización horaria.</td>
+        </tr>
+        <tr>
+          <td><strong>4. Biométricos</strong><br>(ZKTeco / BioTime)</td>
+          <td>Zona horaria configurada en el dispositivo/área BioTime.</td>
+          <td><code>punch_time</code> sellado por el reloj biométrico en planta.</td>
+          <td>Memoria interna del reloj físico (pull automático al reconectar).</td>
+          <td>Sincronización NTP del biométrico por planta.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table class="footer-table">
+      <tr>
+        <td>Smurfit Westrock México — Cédula de Definición de Zonas Horarias (WEB, App, PWA y Relojes Biométricos)</td>
+        <td style="text-align: right;">Documento Técnico Confidencial • Página 1 de 3</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ==================== PÁGINA 2 ==================== -->
+  <div class="doc-page">
+    <table class="header-table">
+      <tr>
+        <td class="header-title">SMURFIT WESTROCK MÉXICO — SISTEMA INTEGRAL HOSHŌ &amp; MIDDLEWARE BIOTIME</td>
+        <td class="header-meta">ESPECIFICACIÓN POR CANAL OPERATIVO | PÁGINA 2 DE 3</td>
+      </tr>
+    </table>
+
+    <h1 class="sec-title">4. Especificación Técnica Detallada por Canal</h1>
+
+    <div class="channel-card">
+      <div class="channel-header">4.1. Canal WEB (Panel Administrativo, Catálogo de Sucursales y Motor LFT)</div>
+      <ul class="channel-list">
+        <li><strong>Configuración Georreferenciada de Sucursales (<code>resources/js/pages/admin/Sucursales/Index.tsx</code>):</strong> Al dar de alta o editar una planta en el mapa interactivo Leaflet (<code>MapComponent.tsx</code>), el sistema realiza geocodificación inversa (Nominatim) y ejecuta el detector automático <code>detectMexicoTimezone(state, lat, lng)</code>, asignando el identificador IANA exacto (ej. <code>America/Tijuana</code>, <code>America/Hermosillo</code>, <code>America/Ciudad_Juarez</code>, <code>America/Mazatlan</code>, <code>America/Monterrey</code>, <code>America/Mexico_City</code> o <code>America/Cancun</code>).</li>
+        <li><strong>Asignación y Visualización en Colaboradores (<code>Empleados/Index.tsx</code>):</strong> Cada colaborador se vincula a su planta operativa (<code>sucursal_id</code>). La interfaz administrativa muestra explícitamente la zona horaria activa de la sucursal seleccionada y permite filtrar la plantilla por planta.</li>
+        <li><strong>Cálculo Diario conforme a la LFT (<code>CalculoAsistenciaLftService.php</code>):</strong> El motor interpreta las horas de entrada y salida del turno laboral en la zona horaria de la sucursal del empleado (<code>$tz = $empleado-&gt;sucursal?-&gt;zona_horaria ?? $empleado-&gt;empresa?-&gt;zona_horaria ?? 'America/Mexico_City'</code>). De este modo, un turno matutino de <code>07:00 a 15:00</code> en Tijuana se evalúa a las 07:00 hora local de Tijuana y no a las 07:00 de CDMX.</li>
+      </ul>
+    </div>
+
+    <div class="channel-card teal">
+      <div class="channel-header">4.2. Canal APP MÓVIL (Marcaje con Geocerca, Fotografía y GPS en Android / iOS)</div>
+      <ul class="channel-list">
+        <li><strong>Endpoint de Marcaje (<code>POST /api/asistencia/marcar</code> — <code>RelojChecadorApiController.php</code>):</strong> Cuando el colaborador registra su asistencia desde la aplicación móvil, la petición incluye sus coordenadas GPS (<code>latitud</code>, <code>longitud</code>), fotografía de evidencia y código de verificación.</li>
+        <li><strong>Protección contra Alteración de Hora en el Dispositivo:</strong> El backend <strong>no utiliza la hora reportada por el sistema operativo del teléfono</strong>. En su lugar, obtiene la zona horaria oficial de la sucursal asignada al colaborador y genera la estampa de tiempo directamente en el servidor mediante <code>$ahora = Carbon::now($tz)</code>.</li>
+        <li><strong>Validación de Geocerca y Turno Local:</strong> El sistema verifica la distancia en metros (fórmula de Haversine) contra las coordenadas de la sucursal configurada y evalúa si el marcaje es puntual, retardo o anticipado comparando <code>$ahora</code> contra la hora local del turno de esa planta.</li>
+      </ul>
+    </div>
+
+    <div class="channel-card">
+      <div class="channel-header">4.3. Canal PWA (Kiosko Checador y Comedor en Planta — Operación Online y Offline)</div>
+      <ul class="channel-list">
+        <li><strong>Operación en Línea (<code>POST /reloj-checador/kiosko/marcar</code> — <code>RelojChecadorKioskoController.php</code>):</strong> El Kiosko PWA instalado en recepción, caseta o comedor identifica la sucursal activa y registra el marcaje de asistencia o comida con <code>Carbon::now($tz)</code> en la zona horaria de la planta, devolviendo en pantalla la hora local formateada (<code>H:i:s</code>) y la confirmación de puntualidad.</li>
+        <li><strong>Operación Fuera de Línea / Contingencia de Red (<code>POST /reloj-checador/kiosko/sincronizar-offline</code>):</strong> Si la planta pierde conexión a internet, la PWA almacena los marcajes en almacenamiento local (IndexedDB) junto con el <code>timestamp_cliente</code> exacto del momento del marcaje. Al restablecerse la red, el endpoint de sincronización procesa el lote convirtiendo cada marca de tiempo a la zona horaria de la sucursal: <code>Carbon::parse($item['timestamp_cliente'])-&gt;setTimezone($tz)</code>.</li>
+        <li><strong>Enrolamiento Biométrico desde Kiosko:</strong> El registro de descriptor facial, huella y fotografía desde el Kiosko PWA opera bajo el mismo contexto de empresa y sucursal local.</li>
+      </ul>
+    </div>
+
+    <div class="channel-card teal">
+      <div class="channel-header">4.4. Canal RELOJES CHECADORES BIOMÉTRICOS (Terminales ZKTeco / Middleware BioTime)</div>
+      <ul class="channel-list">
+        <li><strong>Configuración de Huso Horario en Terminal y BioTime:</strong> Cada reloj biométrico físico instalado en planta se asigna en BioTime al Área/Zona correspondiente a su localidad, configurando en el dispositivo el <strong>UTC Offset local de la planta</strong> (p. ej., <code>UTC-8/UTC-7</code> en Tijuana y Mexicali, <code>UTC-7</code> fijo en Nogales, <code>UTC-6</code> en plantas del Centro/Noreste, <code>UTC-5</code> en Cancún).</li>
+        <li><strong>Sincronización de Transacciones (<code>BioTimeService::sincronizarTransacciones</code>):</strong> El servicio consulta los eventos de marcaje (<code>iclock/api/transactions/</code>) donde cada transacción contiene el campo <code>punch_time</code> generado en la hora local del reloj biométrico.</li>
+        <li><strong>Persistencia Homologada en <code>asistencia_marcajes</code>:</strong> Al importar los marcajes hacia el módulo de asistencia LFT, el sistema vincula el registro con el <code>empleado_id</code> y su <code>sucursal_id</code>, conservando la hora local de la planta (<code>fecha_hora</code>) y ejecutando automáticamente <code>calcularHorasDiarias()</code> bajo las reglas del turno local.</li>
+      </ul>
+    </div>
+
+    <div class="alert-box alert-navy">
+      <strong>Nota de Auditoría y Trazabilidad:</strong> Todos los marcajes almacenados en la tabla <code>asistencia_marcajes</code> registran explícitamente el canal de origen en la columna <code>origen</code> (<code>web</code>, <code>app</code>, <code>kiosko</code>, <code>kiosko_offline</code>, <code>biotime</code>) junto con la referencia de <code>sucursal_id</code>, permitiendo auditar en cualquier momento bajo qué huso horario y dispositivo se originó cada registro.
+    </div>
+
+    <table class="footer-table">
+      <tr>
+        <td>Smurfit Westrock México — Cédula de Definición de Zonas Horarias (WEB, App, PWA y Relojes Biométricos)</td>
+        <td style="text-align: right;">Documento Técnico Confidencial • Página 2 de 3</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ==================== PÁGINA 3 ==================== -->
+  <div class="doc-page">
+    <table class="header-table">
+      <tr>
+        <td class="header-title">SMURFIT WESTROCK MÉXICO — SISTEMA INTEGRAL HOSHŌ &amp; MIDDLEWARE BIOTIME</td>
+        <td class="header-meta">CATÁLOGO DE PLANTAS Y VALIDACIÓN | PÁGINA 3 DE 3</td>
+      </tr>
+    </table>
+
+    <h1 class="sec-title">5. Catálogo Configurado de Plantas Smurfit Westrock y Zonas Horarias</h1>
+    <p>
+      En la base de datos del contenedor productivo (<code>hosho_smurfit_app</code>) se encuentran dadas de alta y sincronizadas las siguientes 10 plantas representativas de <strong>Smurfit Westrock México</strong>, cubriendo la totalidad de las zonas horarias vigentes en el país:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 6%;">Cód.</th>
+          <th style="width: 24%;">Planta / Sucursal</th>
+          <th style="width: 20%;">Ubicación</th>
+          <th style="width: 22%;">Zona Horaria IANA</th>
+          <th style="width: 11%;">UTC Estándar</th>
+          <th style="width: 17%;">Regla Horario Verano</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>01</strong></td>
+          <td>Planta Cerro Gordo (LSKM)</td>
+          <td>Ecatepec, Edo. Méx.</td>
+          <td><span class="badge badge-tz">America/Mexico_City</span></td>
+          <td>UTC -06:00</td>
+          <td>Sin cambio (Fijo UTC-6)</td>
+        </tr>
+        <tr>
+          <td><strong>02</strong></td>
+          <td>Planta Tijuana (LSKNA)</td>
+          <td>Tijuana, B.C.</td>
+          <td><span class="badge badge-tz">America/Tijuana</span></td>
+          <td>UTC -08:00</td>
+          <td>Aplica DST Frontera (UTC-7)</td>
+        </tr>
+        <tr>
+          <td><strong>03</strong></td>
+          <td>Planta Mexicali (LSKNA)</td>
+          <td>Mexicali, B.C.</td>
+          <td><span class="badge badge-tz">America/Tijuana</span></td>
+          <td>UTC -08:00</td>
+          <td>Aplica DST Frontera (UTC-7)</td>
+        </tr>
+        <tr>
+          <td><strong>04</strong></td>
+          <td>Planta Ciudad Juárez (LSKNA)</td>
+          <td>Cd. Juárez, Chih.</td>
+          <td><span class="badge badge-tz">America/Ciudad_Juarez</span></td>
+          <td>UTC -07:00</td>
+          <td>Aplica DST Frontera (UTC-6)</td>
+        </tr>
+        <tr>
+          <td><strong>05</strong></td>
+          <td>Planta Nogales (LSKNA)</td>
+          <td>Nogales, Son.</td>
+          <td><span class="badge badge-tz">America/Hermosillo</span></td>
+          <td>UTC -07:00</td>
+          <td>Sin cambio (Sonora Fijo UTC-7)</td>
+        </tr>
+        <tr>
+          <td><strong>06</strong></td>
+          <td>Planta Culiacán (LSKM)</td>
+          <td>Culiacán, Sin.</td>
+          <td><span class="badge badge-tz">America/Mazatlan</span></td>
+          <td>UTC -07:00</td>
+          <td>Sin cambio (Pacífico UTC-7)</td>
+        </tr>
+        <tr>
+          <td><strong>07</strong></td>
+          <td>Planta Guadalajara (LSKM)</td>
+          <td>Tala, Jal.</td>
+          <td><span class="badge badge-tz">America/Mexico_City</span></td>
+          <td>UTC -06:00</td>
+          <td>Sin cambio (Centro UTC-6)</td>
+        </tr>
+        <tr>
+          <td><strong>08</strong></td>
+          <td>Planta Monterrey (LSKM)</td>
+          <td>Guadalupe, N.L.</td>
+          <td><span class="badge badge-tz">America/Monterrey</span></td>
+          <td>UTC -06:00</td>
+          <td>Sin cambio (Noreste UTC-6)</td>
+        </tr>
+        <tr>
+          <td><strong>09</strong></td>
+          <td>Planta San Luis Potosí (LWRK)</td>
+          <td>San Luis Potosí, S.L.P.</td>
+          <td><span class="badge badge-tz">America/Mexico_City</span></td>
+          <td>UTC -06:00</td>
+          <td>Sin cambio (Centro UTC-6)</td>
+        </tr>
+        <tr>
+          <td><strong>10</strong></td>
+          <td>Sucursal Cancún (LSKM)</td>
+          <td>Cancún, Q.R.</td>
+          <td><span class="badge badge-tz">America/Cancun</span></td>
+          <td>UTC -05:00</td>
+          <td>Sin cambio (Sureste Fijo UTC-5)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h1 class="sec-title">6. Evidencia de Evaluación de Marcajes por Zona Horaria Local</h1>
+    <p>
+      Todos los turnos matutinos de prueba están configurados con entrada a las <strong>07:00:00 hrs (hora local de cada planta)</strong> y una tolerancia de 10 minutos. La siguiente tabla muestra cómo el sistema registra y califica los marcajes respetando el huso horario de cada sucursal:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 24%;">Planta / Sucursal</th>
+          <th style="width: 20%;">Huso Horario Aplicado</th>
+          <th style="width: 14%;">Turno Local</th>
+          <th style="width: 16%;">Hora Marcaje Local</th>
+          <th style="width: 12%;">Diferencia</th>
+          <th style="width: 14%;">Dictamen LFT</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Planta Cerro Gordo (01)</td>
+          <td><code>America/Mexico_City</code></td>
+          <td>07:00 - 15:00</td>
+          <td><strong>07:03:00</strong> (CDMX)</td>
+          <td>+3 min</td>
+          <td><span class="badge badge-ok">PUNTUAL</span></td>
+        </tr>
+        <tr>
+          <td>Planta Tijuana (02)</td>
+          <td><code>America/Tijuana</code></td>
+          <td>07:00 - 15:00</td>
+          <td><strong>07:01:00</strong> (Tijuana)</td>
+          <td>+1 min</td>
+          <td><span class="badge badge-ok">PUNTUAL</span></td>
+        </tr>
+        <tr>
+          <td>Planta Ciudad Juárez (04)</td>
+          <td><code>America/Ciudad_Juarez</code></td>
+          <td>07:00 - 15:00</td>
+          <td><strong>07:18:00</strong> (Juárez)</td>
+          <td>+18 min</td>
+          <td><span class="badge badge-warn">RETARDO (18m)</span></td>
+        </tr>
+        <tr>
+          <td>Planta Nogales (05)</td>
+          <td><code>America/Hermosillo</code></td>
+          <td>07:00 - 15:00</td>
+          <td><strong>07:00:00</strong> (Sonora)</td>
+          <td>0 min</td>
+          <td><span class="badge badge-ok">PUNTUAL EXACTO</span></td>
+        </tr>
+        <tr>
+          <td>Planta Culiacán (06)</td>
+          <td><code>America/Mazatlan</code></td>
+          <td>07:00 - 15:00</td>
+          <td><strong>07:04:00</strong> (Pacífico)</td>
+          <td>+4 min</td>
+          <td><span class="badge badge-ok">PUNTUAL</span></td>
+        </tr>
+        <tr>
+          <td>Planta Monterrey (08)</td>
+          <td><code>America/Monterrey</code></td>
+          <td>07:00 - 15:00</td>
+          <td><strong>07:06:00</strong> (MTY)</td>
+          <td>+6 min</td>
+          <td><span class="badge badge-ok">PUNTUAL</span></td>
+        </tr>
+        <tr>
+          <td>Sucursal Cancún (10)</td>
+          <td><code>America/Cancun</code></td>
+          <td>07:00 - 15:00</td>
+          <td><strong>07:02:00</strong> (Cancún)</td>
+          <td>+2 min</td>
+          <td><span class="badge badge-ok">PUNTUAL</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h1 class="sec-title">7. Validación y Conformidad de Definición</h1>
+    <p>
+      Con la presente cédula queda validada la arquitectura de configuración y sincronización de zonas horarias para los ambientes WEB, Aplicación Móvil, Kiosko PWA y Relojes Biométricos del proyecto Smurfit Westrock México.
+    </p>
+
+    <table class="sign-table">
+      <tr>
+        <td>
+          <div class="sign-line">Arquitectura y Desarrollo Hoshō</div>
+          <div class="sign-role">Entrega Técnica de Plataforma</div>
+        </td>
+        <td>
+          <div class="sign-line">Administración de Proyecto / TI</div>
+          <div class="sign-role">Revisión y Validación Funcional</div>
+        </td>
+        <td>
+          <div class="sign-line">Smurfit Westrock México</div>
+          <div class="sign-role">Visto Bueno y Aprobación</div>
+        </td>
+      </tr>
+    </table>
+
+    <table class="footer-table" style="margin-top: 16px;">
+      <tr>
+        <td>Smurfit Westrock México — Cédula de Definición de Zonas Horarias (WEB, App, PWA y Relojes Biométricos)</td>
+        <td style="text-align: right;">Documento Técnico Confidencial • Página 3 de 3</td>
+      </tr>
+    </table>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Entregable de Definiciones de Fecha y Horarios por Sucursal y Centro de Trabajo - Smurfit Westrock</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm 10mm 12mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: "DejaVu Sans", "Liberation Sans", Arial, Helvetica, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      font-size: 8.2pt;
+      line-height: 1.36;
+    }
+
+    .doc-page {
+      page-break-after: always;
+      width: 100%;
+    }
+
+    .doc-page:last-child {
+      page-break-after: avoid;
+    }
+
+    /* Encabezado superior de página */
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-bottom: 2px solid #0f294a;
+      margin-bottom: 9px;
+      padding-bottom: 4px;
+    }
+
+    .header-table td {
+      padding: 0 0 5px 0;
+      vertical-align: bottom;
+    }
+
+    .header-title {
+      font-size: 7.4pt;
+      font-weight: bold;
+      color: #0f294a;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .header-meta {
+      font-size: 7.3pt;
+      color: #64748b;
+      font-weight: bold;
+      text-align: right;
+      padding-right: 6px;
+      white-space: nowrap;
+    }
+
+    /* Banner Principal */
+    .hero-banner {
+      border: 1.5px solid #0f294a;
+      border-radius: 6px;
+      background-color: #f8fafc;
+      padding: 13px 15px;
+      margin-bottom: 10px;
+    }
+
+    .company-tag {
+      font-size: 8.3pt;
+      font-weight: bold;
+      color: #008075;
+      text-transform: uppercase;
+      letter-spacing: 1.1px;
+      margin-bottom: 4px;
+    }
+
+    .doc-badge {
+      display: inline-block;
+      background-color: #e0f2fe;
+      color: #0369a1;
+      padding: 2.5px 10px;
+      border-radius: 12px;
+      font-size: 7.3pt;
+      font-weight: bold;
+      margin-bottom: 7px;
+      border: 1px solid #bae6fd;
+    }
+
+    .main-title {
+      font-size: 13.8pt;
+      font-weight: bold;
+      color: #0f294a;
+      line-height: 1.2;
+      margin-bottom: 5px;
+    }
+
+    .main-subtitle {
+      font-size: 9pt;
+      color: #334155;
+      font-weight: bold;
+      line-height: 1.3;
+    }
+
+    /* Tabla de Metadatos Documentales */
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 9px;
+    }
+
+    .meta-table td {
+      width: 25%;
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      padding: 5.5px 8px;
+      vertical-align: top;
+    }
+
+    .meta-label {
+      font-size: 6.4pt;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    .meta-val {
+      font-size: 7.8pt;
+      font-weight: bold;
+      color: #0f294a;
+    }
+
+    /* Títulos de sección */
+    h1.sec-title {
+      font-size: 10.5pt;
+      color: #0f294a;
+      font-weight: bold;
+      margin: 9px 0 5px 0;
+      border-bottom: 1.5px solid #cbd5e1;
+      padding-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    p {
+      margin-bottom: 5px;
+      text-align: justify;
+    }
+
+    /* Cajas informativas */
+    .alert-box {
+      padding: 7px 10px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      font-size: 7.8pt;
+      line-height: 1.34;
+    }
+
+    .alert-teal {
+      background-color: #f0fdfa;
+      border: 1px solid #99f6e4;
+      border-left: 4px solid #008075;
+      color: #134e4a;
+    }
+
+    .alert-navy {
+      background-color: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-left: 4px solid #0f294a;
+      color: #1e3a8a;
+    }
+
+    /* Tablas de datos */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 4px 0 8px 0;
+      font-size: 7.3pt;
+    }
+
+    table.data-table th {
+      background-color: #0f294a;
+      color: #ffffff;
+      text-align: left;
+      padding: 4.5px 6px;
+      font-weight: bold;
+      border: 1px solid #0f294a;
+      font-size: 7.2pt;
+    }
+
+    table.data-table td {
+      padding: 4px 5.5px;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+      line-height: 1.26;
+    }
+
+    table.data-table tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 1.5px 5.5px;
+      border-radius: 8px;
+      font-size: 6.5pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge-ok {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+
+    .badge-tz {
+      background-color: #e0f2fe;
+      color: #075985;
+      border: 1px solid #7dd3fc;
+      font-family: "DejaVu Sans Mono", monospace;
+    }
+
+    .badge-warn {
+      background-color: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+    }
+
+    .badge-navy {
+      background-color: #e0e7ff;
+      color: #1e3a8a;
+      border: 1px solid #a5b4fc;
+    }
+
+    /* Tarjetas de Reglas */
+    .rule-card {
+      border: 1px solid #cbd5e1;
+      border-left: 4px solid #0f294a;
+      border-radius: 4px;
+      background-color: #ffffff;
+      padding: 7px 10px;
+      margin-bottom: 7px;
+    }
+
+    .rule-card.teal {
+      border-left-color: #008075;
+    }
+
+    .rule-header {
+      font-size: 8.5pt;
+      font-weight: bold;
+      color: #0f294a;
+      margin-bottom: 3px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 2px;
+    }
+
+    .rule-list {
+      margin-left: 14px;
+      margin-top: 3px;
+    }
+
+    .rule-list li {
+      margin-bottom: 2px;
+      font-size: 7.5pt;
+    }
+
+    code {
+      font-family: "DejaVu Sans Mono", "Courier New", monospace;
+      font-size: 6.9pt;
+      background-color: #f1f5f9;
+      padding: 1px 3.5px;
+      border-radius: 3px;
+      color: #0f172a;
+    }
+
+    /* Pie de página */
+    .footer-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-top: 1px solid #cbd5e1;
+      margin-top: 8px;
+      padding-top: 4px;
+      font-size: 6.9pt;
+      color: #64748b;
+    }
+
+    .sign-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+
+    .sign-table td {
+      width: 33.3%;
+      text-align: center;
+      padding: 16px 10px 4px 10px;
+      vertical-align: bottom;
+    }
+
+    .sign-line {
+      border-top: 1px solid #334155;
+      padding-top: 4px;
+      font-size: 7.4pt;
+      font-weight: bold;
+      color: #0f294a;
+    }
+
+    .sign-role {
+      font-size: 6.7pt;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PÁGINA 1 ==================== -->
+  <div class="doc-page">
+    <table class="header-table">
+      <tr>
+        <td class="header-title">SMURFIT WESTROCK MÉXICO — SISTEMA INTEGRAL HOSHŌ &amp; MIDDLEWARE BIOTIME</td>
+        <td class="header-meta">DEFINICIONES DE FECHA Y HORARIOS | PÁGINA 1 DE 3</td>
+      </tr>
+    </table>
+
+    <div class="hero-banner">
+      <div class="company-tag">SMURFIT WESTROCK MÉXICO • GESTIÓN DE TIEMPO, ASISTENCIA Y COMEDOR</div>
+      <div class="doc-badge">ENTREGABLE FUNCIONAL Y DE PARAMETRIZACIÓN OPERATIVA</div>
+      <div class="main-title">DEFINICIONES DE FECHA Y HORARIOS CON BASE A LA SUCURSAL Y CENTRO DE TRABAJO</div>
+      <div class="main-subtitle">Estructura de Calendario Local, Turnos Laborales (LFT), Tolerancias, Descansos y Ventanas de Comedor por Planta</div>
+
+      <table class="meta-table">
+        <tr>
+          <td>
+            <div class="meta-label">ORGANIZACIÓN / CLIENTE</div>
+            <div class="meta-val">Smurfit Westrock México</div>
+          </td>
+          <td>
+            <div class="meta-label">MARCO NORMATIVO</div>
+            <div class="meta-val">LFT Arts. 58–74 / Reforma</div>
+          </td>
+          <td>
+            <div class="meta-label">UNIDAD DE CONFIGURACIÓN</div>
+            <div class="meta-val">Sucursal / Centro de Trabajo</div>
+          </td>
+          <td>
+            <div class="meta-label">FECHA Y ESTADO</div>
+            <div class="meta-val">Octubre 2026 — Vigente</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <h1 class="sec-title">1. Propósito y Alcance del Entregable</h1>
+    <p>
+      El presente entregable documenta el modelo de parametrización y las reglas de negocio mediante las cuales el sistema <strong>Hoshō</strong> determina la <strong>Fecha operativa</strong>, los <strong>Horarios de entrada/salida (Turnos Laborales)</strong>, los <strong>Tiempos de descanso/comida</strong> y los <strong>Cálculos de incidencia y nómina (LFT)</strong> en función de la <strong>Sucursal / Centro de Trabajo</strong> al que pertenece cada colaborador o donde realiza su marcaje.
+    </p>
+    <div class="alert-box alert-teal">
+      <strong>Autonomía Horaria por Centro de Trabajo:</strong> Cada Sucursal o Planta industrial constituye un Centro de Trabajo independiente con su propio huso horario IANA, su catálogo de turnos laborales, sus parámetros de geocerca y sus ventanas de servicio de comedor. La fecha y hora de cualquier evento se evalúa siempre respecto al calendario y reloj local de dicho Centro de Trabajo.
+    </div>
+
+    <h1 class="sec-title">2. Modelo de Entidades para Fechas y Horarios por Centro de Trabajo</h1>
+    <p>
+      La arquitectura de base de datos relaciona de forma jerárquica la configuración regional, la sucursal (centro de trabajo), los turnos laborales y las reglas de asistencia y comedor:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 19%;">Nivel / Entidad</th>
+          <th style="width: 21%;">Tabla / Modelo</th>
+          <th style="width: 26%;">Atributos de Fecha y Hora</th>
+          <th style="width: 34%;">Función en el Centro de Trabajo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. País / Región</strong></td>
+          <td><code>paises</code><br>(<code>App\Models\Pais</code>)</td>
+          <td><code>formato_fecha</code> (<code>dd/mm/yyyy</code>), <code>zona_horaria</code> base.</td>
+          <td>Define el estándar visual de fechas, moneda (MXN) y huso horario predeterminado nacional.</td>
+        </tr>
+        <tr>
+          <td><strong>2. Empresa</strong></td>
+          <td><code>empresas</code><br>(<code>App\Models\Empresa</code>)</td>
+          <td><code>zona_horaria</code> corporativa, <code>pais_id</code>.</td>
+          <td>Agrupa las plantas de la razón social Smurfit Westrock y provee el huso horario corporativo de respaldo.</td>
+        </tr>
+        <tr>
+          <td><strong>3. Sucursal / Centro de Trabajo</strong></td>
+          <td><code>sucursales</code><br>(<code>App\Models\Sucursal</code>)</td>
+          <td><code>codigo_numeral</code>, <code>zona_horaria</code>, <code>latitud</code>, <code>longitud</code>, <code>radio_geocerca_metros</code>.</td>
+          <td>Establece el huso horario local de la planta física y el perímetro autorizado para marcajes móviles y fijos.</td>
+        </tr>
+        <tr>
+          <td><strong>4. Turno Laboral</strong></td>
+          <td><code>turnos_laborales</code><br>(<code>App\Models\TurnoLaboral</code>)</td>
+          <td><code>sucursal_id</code>, <code>tipo_jornada</code>, <code>hora_entrada</code>, <code>hora_salida</code>, <code>horas_diarias_ley</code>, <code>dias_laborables</code>.</td>
+          <td>Define los horarios de ingreso/egreso, duración legal de la jornada, minutos de comida y días hábiles de la planta.</td>
+        </tr>
+        <tr>
+          <td><strong>5. Reglas LFT y Tolerancias</strong></td>
+          <td><code>configuraciones_asistencia</code><br>(<code>ConfiguracionAsistencia</code>)</td>
+          <td><code>tolerancia_retardo_minutos</code>, <code>tolerancia_falta_minutos</code>, <code>redondeo_marcaje_minutos</code>.</td>
+          <td>Controla los minutos de gracia antes de calificar retardo o falta, Ley Silla y límites semanales de horas extra.</td>
+        </tr>
+        <tr>
+          <td><strong>6. Calendario de Festivos</strong></td>
+          <td><code>dias_festivos</code><br>(<code>App\Models\DiaFestivo</code>)</td>
+          <td><code>fecha</code> (<code>YYYY-MM-DD</code>), <code>nombre</code>, <code>obligatorio_lft</code>.</td>
+          <td>Identifica fechas de descanso obligatorio (Art. 74 LFT) para cálculo automático de pago triple en día festivo laborado.</td>
+        </tr>
+        <tr>
+          <td><strong>7. Ventanas de Comedor</strong></td>
+          <td><code>ventanas_comida</code> /<br><code>opciones_comida</code></td>
+          <td><code>tipo_comida</code>, <code>hora_inicio</code>, <code>hora_fin</code>, <code>dias_activos</code>.</td>
+          <td>Delimita los horarios locales válidos en planta para el registro de Desayuno, Comida, Cena y Colación Nocturna.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h1 class="sec-title">3. Tipología de Jornadas Laborales por Centro de Trabajo (LFT)</h1>
+    <p>
+      Cada Centro de Trabajo puede operar uno o varios turnos configurados en <code>turnos_laborales</code> apegados a los Artículos 60, 61, 63 y 64 de la Ley Federal del Trabajo:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 16%;">Tipo de Jornada</th>
+          <th style="width: 20%;">Franja Horaria LFT</th>
+          <th style="width: 14%;">Máximo Diario</th>
+          <th style="width: 16%;">Horario Tipo Planta</th>
+          <th style="width: 15%;">Descanso / Comida</th>
+          <th style="width: 19%;">Criterio de Aplicación</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-ok">DIURNA</span></td>
+          <td>Entre las <code>06:00</code> y las <code>20:00</code> hrs locales.</td>
+          <td><strong>8.00 horas</strong><br>(48h sem.)</td>
+          <td><code>07:00:00</code> a <code>15:00:00</code><br>(Matutino)</td>
+          <td>30 a 60 min<br>(Pagado / No pagado)</td>
+          <td>Turnos matutinos y administrativos en planta o corporativo.</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-navy">MIXTA</span></td>
+          <td>Periodos diurnos y nocturnos (&lt; 3.5h nocturnas).</td>
+          <td><strong>7.50 horas</strong><br>(45h sem.)</td>
+          <td><code>14:30:00</code> a <code>22:00:00</code><br>(Vespertino)</td>
+          <td>30 a 60 min<br>(Pagado / No pagado)</td>
+          <td>Segundos turnos industriales que concluyen antes de las 23:30 hrs.</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-warn">NOCTURNA</span></td>
+          <td>Entre las <code>20:00</code> y las <code>06:00</code> hrs locales.</td>
+          <td><strong>7.00 horas</strong><br>(42h sem.)</td>
+          <td><code>22:30:00</code> a <code>05:30:00</code><br>(Nocturno)</td>
+          <td>30 a 60 min<br>(Pagado / No pagado)</td>
+          <td>Terceros turnos de operación continua o vigilancia en planta.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table class="footer-table">
+      <tr>
+        <td>Smurfit Westrock México — Entregable de Definiciones de Fecha y Horarios por Sucursal y Centro de Trabajo</td>
+        <td style="text-align: right;">Documento Técnico Confidencial • Página 1 de 3</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ==================== PÁGINA 2 ==================== -->
+  <div class="doc-page">
+    <table class="header-table">
+      <tr>
+        <td class="header-title">SMURFIT WESTROCK MÉXICO — SISTEMA INTEGRAL HOSHŌ &amp; MIDDLEWARE BIOTIME</td>
+        <td class="header-meta">REGLAS DE FECHA, TOLERANCIAS Y COMEDOR | PÁGINA 2 DE 3</td>
+      </tr>
+    </table>
+
+    <h1 class="sec-title">4. Reglas de Determinación de Fecha Operativa y Calendario Local</h1>
+
+    <div class="rule-card">
+      <div class="rule-header">4.1. Determinación de la Fecha Operativa Local (<code>YYYY-MM-DD</code>) por Sucursal</div>
+      <ul class="rule-list">
+        <li><strong>Corte de Día Basado en Huso Horario del Centro de Trabajo:</strong> La fecha calendario asignada a cada marcaje y resumen diario (<code>asistencia_resumenes_diarios.fecha</code>) se obtiene a partir del instante local de la sucursal (<code>Carbon::now($tzSucursal)-&gt;toDateString()</code>).</li>
+        <li><strong>Eliminación de Desfases por Cambio de Día UTC:</strong> Cuando un colaborador de un turno vespertino o nocturno en <strong>Planta Tijuana (UTC-8)</strong> registra su salida a las <code>22:00 hrs</code> locales del lunes (que equivale a las <code>06:00 UTC</code> del martes), el sistema conserva la fecha operativa local del <strong>lunes</strong> en Tijuana, impidiendo que el marcaje se fragmente en el día siguiente.</li>
+        <li><strong>Formato Estándar de Visualización y Exportación:</strong> En base de datos y APIs se utiliza el estándar ISO-8601 (<code>YYYY-MM-DD HH:mm:ss</code>), mientras que en pantallas operativas, reportes gerenciales y liquidaciones de comedor se presenta en formato regional mexicano (<code>dd/mm/yyyy HH:mm</code>).</li>
+      </ul>
+    </div>
+
+    <div class="rule-card teal">
+      <div class="rule-header">4.2. Días Laborables, Descanso Semanal, Prima Dominical y Festivos Oficiales</div>
+      <ul class="rule-list">
+        <li><strong>Días Laborables por Turno (<code>dias_laborables</code>):</strong> Cada turno define su matriz semanal de días hábiles (por ejemplo, <code>["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]</code> para operación industrial de 6 días, o <code>Lunes a Viernes</code> para centros administrativos).</li>
+        <li><strong>Detección Automática de Día de Descanso (<code>es_dia_descanso</code>):</strong> Si el colaborador registra asistencia en un día de la semana no incluido en <code>dias_laborables</code> de su turno, el motor <code>CalculoAsistenciaLftService</code> marca automáticamente el indicador <code>es_dia_descanso = true</code> conforme al Art. 73 de la LFT.</li>
+        <li><strong>Prima Dominical (Art. 71 LFT — <code>aplica_prima_dominical</code>):</strong> Cuando la fecha local de la sucursal corresponde a domingo (<code>$fecha-&gt;isSunday()</code>) y existen horas netas laboradas, se activa automáticamente el cálculo de Prima Dominical (parametrizado por defecto al <strong>25.00%</strong> adicional sobre el salario diario ordinario).</li>
+        <li><strong>Días Festivos Oficiales (Art. 74 LFT — <code>es_festivo</code>):</strong> El servicio cruza la fecha local contra el catálogo <code>dias_festivos</code> (tanto globales como específicos de la empresa) para aplicar el tratamiento de día feriado laborado.</li>
+      </ul>
+    </div>
+
+    <h1 class="sec-title">5. Parametrización de Horarios, Tolerancias y Límites Semanales</h1>
+    <p>
+      El comportamiento de evaluación horaria al momento en que el colaborador ficha su entrada, descanso o salida se rige por los siguientes parámetros configurables en <code>ConfiguracionAsistencia</code>:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 24%;">Parámetro de Horario</th>
+          <th style="width: 18%;">Campo Técnico</th>
+          <th style="width: 14%;">Valor Base</th>
+          <th style="width: 44%;">Regla de Cálculo y Efecto en el Marcaje</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Tolerancia de Retardo</strong></td>
+          <td><code>tolerancia_retardo_minutos</code></td>
+          <td><strong>10 minutos</strong></td>
+          <td>Margen posterior a <code>hora_entrada</code> donde la asistencia se califica como <strong>Puntual</strong> (ej. entrada de <code>07:00</code> a <code>07:10</code> = 0 min de retardo).</td>
+        </tr>
+        <tr>
+          <td><strong>Cómputo de Retardo</strong></td>
+          <td><code>minutos_retraso</code></td>
+          <td><strong>&gt; 10 minutos</strong></td>
+          <td>Si el colaborador marca a las <code>07:18</code> (superando los 10m de tolerancia), se registran los minutos de diferencia respecto a la hora de entrada (<code>18 min</code>) y estatus <strong>Retardo</strong>.</td>
+        </tr>
+        <tr>
+          <td><strong>Tolerancia de Falta</strong></td>
+          <td><code>tolerancia_falta_minutos</code></td>
+          <td><strong>30 – 60 min</strong></td>
+          <td>Umbral configurable a partir del cual un ingreso tardío puede bloquearse en torniquete o requerir autorización expresa del supervisor.</td>
+        </tr>
+        <tr>
+          <td><strong>Descanso Intermedio</strong></td>
+          <td><code>minutos_descanso</code> /<br><code>descanso_pagado</code></td>
+          <td><strong>60 minutos</strong><br>(Pagado)</td>
+          <td>Registra los marcajes <code>salida_comida</code> y <code>entrada_comida</code>. Si <code>descanso_es_tiempo_efectivo = false</code>, el tiempo consumido se descuenta de las horas brutas.</td>
+        </tr>
+        <tr>
+          <td><strong>Pausas Activas (Ley Silla)</strong></td>
+          <td><code>ley_silla_intervalo_horas</code> / <code>descanso_minutos</code></td>
+          <td><strong>Cada 4.0 hrs</strong><br>(15 min)</td>
+          <td>Parametrización de descansos periódicos obligatorios con opción de recordatorio automatizado post-entrada.</td>
+        </tr>
+        <tr>
+          <td><strong>Límite Semanal y Reforma (48h &rarr; 40h)</strong></td>
+          <td><code>reforma_laboral_ano</code> /<br><code>limite_tex_doble</code></td>
+          <td><strong>Año 2026: 48h</strong><br>(2027: 46h...)</td>
+          <td>Soporta el cronograma gradual 2026–2030 (48h, 46h, 44h, 42h, 40h) clasificando el excedente en horas extra dobles y triples con semáforo preventivo.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h1 class="sec-title">6. Definición de Ventanas Horarias de Comedor por Planta</h1>
+    <p>
+      En el módulo de <strong>Asistencia y Comedor</strong>, la validación de platillos y liquidación a proveedores alimentarios evalúa la hora local de la planta contra las siguientes franjas horarias:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 20%;">Servicio de Comedor</th>
+          <th style="width: 20%;">Ventana Horaria Local</th>
+          <th style="width: 22%;">Turnos que Atiende</th>
+          <th style="width: 38%;">Regla de Validación en Kiosko / Comedor</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Desayuno</strong></td>
+          <td><code>06:00:00</code> a <code>09:30:00</code></td>
+          <td>Matutino / Saliente Nocturno</td>
+          <td>Habilita las opciones de desayuno activas en la planta según la hora local de la sucursal.</td>
+        </tr>
+        <tr>
+          <td><strong>Comida (Almuerzo)</strong></td>
+          <td><code>12:00:00</code> a <code>16:00:00</code></td>
+          <td>Matutino / Administrativo / Mixto</td>
+          <td>Valida un consumo por colaborador en la fecha operativa local y asocia el costo/subsidio del proveedor de la planta.</td>
+        </tr>
+        <tr>
+          <td><strong>Cena / Colación</strong></td>
+          <td><code>19:00:00</code> a <code>23:30:00</code></td>
+          <td>Vespertino (Mixto) / Nocturno</td>
+          <td>Registra el consumo nocturno bajo la fecha local del turno sin duplicar con el almuerzo diurno.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table class="footer-table">
+      <tr>
+        <td>Smurfit Westrock México — Entregable de Definiciones de Fecha y Horarios por Sucursal y Centro de Trabajo</td>
+        <td style="text-align: right;">Documento Técnico Confidencial • Página 2 de 3</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ==================== PÁGINA 3 ==================== -->
+  <div class="doc-page">
+    <table class="header-table">
+      <tr>
+        <td class="header-title">SMURFIT WESTROCK MÉXICO — SISTEMA INTEGRAL HOSHŌ &amp; MIDDLEWARE BIOTIME</td>
+        <td class="header-meta">MATRIZ DE CENTROS DE TRABAJO Y TURNOS | PÁGINA 3 DE 3</td>
+      </tr>
+    </table>
+
+    <h1 class="sec-title">7. Matriz de Centros de Trabajo (Sucursales) y Horarios Configurados</h1>
+    <p>
+      A continuación se detalla la configuración vigente en base de datos para los <strong>10 Centros de Trabajo (Sucursales)</strong> de Smurfit Westrock México, incluyendo su zona horaria oficial, su turno laboral base y sus parámetros de jornada:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 5%;">Cód.</th>
+          <th style="width: 23%;">Centro de Trabajo / Sucursal</th>
+          <th style="width: 19%;">Zona Horaria Local</th>
+          <th style="width: 17%;">Turno Asignado</th>
+          <th style="width: 13%;">Horario Local</th>
+          <th style="width: 11%;">Jornada LFT</th>
+          <th style="width: 12%;">Días Hábiles</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>01</strong></td>
+          <td>Planta Cerro Gordo (LSKM)<br><span style="color:#64748b;font-size:6.6pt;">Ecatepec, Edo. Méx.</span></td>
+          <td><span class="badge badge-tz">America/Mexico_City</span><br><span style="font-size:6.5pt;color:#475569;">Centro (UTC-6)</span></td>
+          <td>Turno Matutino 01</td>
+          <td><strong>07:00 – 15:00</strong></td>
+          <td>Diurna (8.0h)<br>60m descanso</td>
+          <td>Lun a Sáb</td>
+        </tr>
+        <tr>
+          <td><strong>02</strong></td>
+          <td>Planta Tijuana (LSKNA)<br><span style="color:#64748b;font-size:6.6pt;">Tijuana, B.C.</span></td>
+          <td><span class="badge badge-tz">America/Tijuana</span><br><span style="font-size:6.5pt;color:#475569;">Noroeste (UTC-8 / -7)</span></td>
+          <td>Turno Matutino 02</td>
+          <td><strong>07:00 – 15:00</strong></td>
+          <td>Diurna (8.0h)<br>60m descanso</td>
+          <td>Lun a Sáb</td>
+        </tr>
+        <tr>
+          <td><strong>03</strong></td>
+          <td>Planta Mexicali (LSKNA)<br><span style="color:#64748b;font-size:6.6pt;">Mexicali, B.C.</span></td>
+          <td><span class="badge badge-tz">America/Tijuana</span><br><span style="font-size:6.5pt;color:#475569;">Noroeste (UTC-8 / -7)</span></td>
+          <td>Turno Matutino 03</td>
+          <td><strong>07:00 – 15:00</strong></td>
+          <td>Diurna (8.0h)<br>60m descanso</td>
+          <td>Lun a Sáb</td>
+        </tr>
+        <tr>
+          <td><strong>04</strong></td>
+          <td>Planta Ciudad Juárez (LSKNA)<br><span style="color:#64748b;font-size:6.6pt;">Cd. Juárez, Chih.</span></td>
+          <td><span class="badge badge-tz">America/Ciudad_Juarez</span><br><span style="font-size:6.5pt;color:#475569;">Frontera (UTC-7 / -6)</span></td>
+          <td>Turno Matutino 04</td>
+          <td><strong>07:00 – 15:00</strong></td>
+          <td>Diurna (8.0h)<br>60m descanso</td>
+          <td>Lun a Sáb</td>
+        </tr>
+        <tr>
+          <td><strong>05</strong></td>
+          <td>Planta Nogales (LSKNA)<br><span style="color:#64748b;font-size:6.6pt;">Nogales, Son.</span></td>
+          <td><span class="badge badge-tz">America/Hermosillo</span><br><span style="font-size:6.5pt;color:#475569;">Sonora Fijo (UTC-7)</span></td>
+          <td>Turno Matutino 05</td>
+          <td><strong>07:00 – 15:00</strong></td>
+          <td>Diurna (8.0h)<br>60m descanso</td>
+          <td>Lun a Sáb</td>
+        </tr>
+        <tr>
+          <td><strong>06</strong></td>
+          <td>Planta Culiacán (LSKM)<br><span style="color:#64748b;font-size:6.6pt;">Culiacán, Sin.</span></td>
+          <td><span class="badge badge-tz">America/Mazatlan</span><br><span style="font-size:6.5pt;color:#475569;">Pacífico (UTC-7)</span></td>
+          <td>Turno Matutino 06</td>
+          <td><strong>07:00 – 15:00</strong></td>
+          <td>Diurna (8.0h)<br>60m descanso</td>
+          <td>Lun a Sáb</td>
+        </tr>
+        <tr>
+          <td><strong>07</strong></td>
+          <td>Planta Guadalajara (LSKM)<br><span style="color:#64748b;font-size:6.6pt;">Tala, Jal.</span></td>
+          <td><span class="badge badge-tz">America/Mexico_City</span><br><span style="font-size:6.5pt;color:#475569;">Centro (UTC-6)</span></td>
+          <td>Turno Matutino 07</td>
+          <td><strong>07:00 – 15:00</strong></td>
+          <td>Diurna (8.0h)<br>60m descanso</td>
+          <td>Lun a Sáb</td>
+        </tr>
+        <tr>
+          <td><strong>08</strong></td>
+          <td>Planta Monterrey (LSKM)<br><span style="color:#64748b;font-size:6.6pt;">Guadalupe, N.L.</span></td>
+          <td><span class="badge badge-tz">America/Monterrey</span><br><span style="font-size:6.5pt;color:#475569;">Noreste (UTC-6)</span></td>
+          <td>Turno Matutino 08</td>
+          <td><strong>07:00 – 15:00</strong></td>
+          <td>Diurna (8.0h)<br>60m descanso</td>
+          <td>Lun a Sáb</td>
+        </tr>
+        <tr>
+          <td><strong>09</strong></td>
+          <td>Planta San Luis Potosí (LWRK)<br><span style="color:#64748b;font-size:6.6pt;">San Luis Potosí, S.L.P.</span></td>
+          <td><span class="badge badge-tz">America/Mexico_City</span><br><span style="font-size:6.5pt;color:#475569;">Centro (UTC-6)</span></td>
+          <td>Turno Matutino 09</td>
+          <td><strong>07:00 – 15:00</strong></td>
+          <td>Diurna (8.0h)<br>60m descanso</td>
+          <td>Lun a Sáb</td>
+        </tr>
+        <tr>
+          <td><strong>10</strong></td>
+          <td>Sucursal Cancún (LSKM)<br><span style="color:#64748b;font-size:6.6pt;">Cancún, Q.R.</span></td>
+          <td><span class="badge badge-tz">America/Cancun</span><br><span style="font-size:6.5pt;color:#475569;">Sureste Fijo (UTC-5)</span></td>
+          <td>Turno Matutino 10</td>
+          <td><strong>07:00 – 15:00</strong></td>
+          <td>Diurna (8.0h)<br>60m descanso</td>
+          <td>Lun a Sáb</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h1 class="sec-title">8. Escenario Demostrativo de Simultaneidad Horaria entre Centros de Trabajo</h1>
+    <p>
+      La siguiente tabla ilustra cómo ante un mismo instante físico (por ejemplo, cuando el reloj UTC marca las <strong>14:00:00 UTC</strong> en horario estándar de invierno), cada Centro de Trabajo opera en su propia hora local y aplica la regla de horario correspondiente a su planta:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 24%;">Región / Centros de Trabajo</th>
+          <th style="width: 19%;">Huso Horario IANA</th>
+          <th style="width: 13%;">Hora UTC</th>
+          <th style="width: 16%;">Hora Local Planta</th>
+          <th style="width: 28%;">Estado Operativo del Turno (07:00 - 15:00)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Noroeste:</strong> Tijuana (02), Mexicali (03)</td>
+          <td><code>America/Tijuana</code></td>
+          <td>14:00:00 UTC</td>
+          <td><strong>06:00:00 hrs</strong></td>
+          <td><span class="badge badge-navy">PRE-ENTRADA</span> (1 hora antes del inicio de turno local)</td>
+        </tr>
+        <tr>
+          <td><strong>Pacífico / Sonora / Frontera:</strong><br>Juárez (04), Nogales (05), Culiacán (06)</td>
+          <td><code>America/Hermosillo</code><br><code>America/Mazatlan</code></td>
+          <td>14:00:00 UTC</td>
+          <td><strong>07:00:00 hrs</strong></td>
+          <td><span class="badge badge-ok">APERTURA DE TURNO</span> (Hora exacta de entrada local)</td>
+        </tr>
+        <tr>
+          <td><strong>Centro y Noreste:</strong> Cerro Gordo (01),<br>GDL (07), Monterrey (08), SLP (09)</td>
+          <td><code>America/Mexico_City</code><br><code>America/Monterrey</code></td>
+          <td>14:00:00 UTC</td>
+          <td><strong>08:00:00 hrs</strong></td>
+          <td><span class="badge badge-tz">EN JORNADA</span> (1 hora de labores cumplida en planta)</td>
+        </tr>
+        <tr>
+          <td><strong>Sureste:</strong> Sucursal Cancún (10)</td>
+          <td><code>America/Cancun</code></td>
+          <td>14:00:00 UTC</td>
+          <td><strong>09:00:00 hrs</strong></td>
+          <td><span class="badge badge-tz">EN JORNADA</span> (2 horas de labores cumplidas en planta)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h1 class="sec-title">9. Aprobación y Conformidad del Entregable</h1>
+    <p>
+      Se valida que las definiciones de fecha operativa, turnos laborales, tolerancias y ventanas de comedor basadas en la Sucursal y Centro de Trabajo cumplen con los requerimientos operativos y normativos de Smurfit Westrock México.
+    </p>
+
+    <table class="sign-table">
+      <tr>
+        <td>
+          <div class="sign-line">Arquitectura y Desarrollo Hoshō</div>
+          <div class="sign-role">Responsable Técnico de Implementación</div>
+        </td>
+        <td>
+          <div class="sign-line">Líder de Proyecto / TI</div>
+          <div class="sign-role">Validación Funcional y de Procesos</div>
+        </td>
+        <td>
+          <div class="sign-line">Smurfit Westrock México</div>
+          <div class="sign-role">Conformidad de Usuario / RH / Operaciones</div>
+        </td>
+      </tr>
+    </table>
+
+    <table class="footer-table" style="margin-top: 14px;">
+      <tr>
+        <td>Smurfit Westrock México — Entregable de Definiciones de Fecha y Horarios por Sucursal y Centro de Trabajo</td>
+        <td style="text-align: right;">Documento Técnico Confidencial • Página 3 de 3</td>
+      </tr>
+    </table>
+  </div>
+
+</body>
+</html>
+
