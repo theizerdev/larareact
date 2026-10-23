@@ -386,8 +386,9 @@ export default function EmpleadosIndexPage({
     const filteredResponsables = responsables.filter(r => r.departamento_id == null || r.departamento_id === Number(data.departamento_id));
     const filteredCargos = cargos.filter(c => c.departamento_id === Number(data.departamento_id));
 
-    // Obtener información del responsable seleccionado
+    // Obtener información del responsable y sucursal seleccionados
     const selectedResponsable = responsables.find(r => r.id === Number(data.responsable_id));
+    const selectedSucursal = sucursales.find(s => s.id === Number(data.sucursal_id));
 
     // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -1366,7 +1367,7 @@ export default function EmpleadosIndexPage({
                                             <SelectContent>
                                                 {filteredSucursales.map((suc) => (
                                                     <SelectItem key={suc.id} value={String(suc.id)}>
-                                                        {suc.nombre} {suc.zona_horaria ? `(${suc.zona_horaria})` : ''}
+                                                        {suc.nombre}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -1374,6 +1375,26 @@ export default function EmpleadosIndexPage({
                                         {errors.sucursal_id && (
                                             <p className="text-red-500 text-xs mt-1">{errors.sucursal_id}</p>
                                         )}
+                                    </div>
+
+                                    {/* Zona Horaria de la Sucursal (Solo lectura) */}
+                                    <div className="md:col-span-2">
+                                        <Label htmlFor="zona_horaria_sucursal" className="flex items-center gap-1.5">
+                                            <Clock className="w-3.5 h-3.5 text-indigo-500" />
+                                            Zona Horaria (según Sucursal)
+                                        </Label>
+                                        <Input
+                                            id="zona_horaria_sucursal"
+                                            type="text"
+                                            readOnly
+                                            value={
+                                                selectedSucursal
+                                                    ? (selectedSucursal.zona_horaria || 'America/Mexico_City (Por defecto)')
+                                                    : ''
+                                            }
+                                            placeholder="Seleccione una sucursal para ver su zona horaria"
+                                            className="mt-1 font-mono text-sm bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 cursor-default focus-visible:ring-0"
+                                        />
                                     </div>
 
                                     {/* Departamento */}
