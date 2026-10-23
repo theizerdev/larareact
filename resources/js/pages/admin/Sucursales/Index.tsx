@@ -244,23 +244,32 @@ export default function SucursalesIndexPage({
 
     const handleCreateClick = () => {
         setEditingSucursal(null);
-        reset();
+        const defaultPais = paises.find((p) => p.codigo_iso2 === 'MX') || paises[0];
+        const defaultEmpresa = auth.user?.empresa_id || empresas[0]?.id || '';
+        setData({
+            ...initialForm,
+            empresa_id: defaultEmpresa,
+            pais_telefono_id: defaultPais?.id ?? '',
+            zona_horaria: 'America/Mexico_City',
+            status: true,
+        });
         setActiveTab('general');
         setIsModalOpen(true);
     };
 
     const handleEditClick = (sucursal: Sucursal) => {
         setEditingSucursal(sucursal);
+        const cleanPhone = (sucursal.telefono || '').replace(/^\+?52\s*/, '');
         setData({
             empresa_id:       sucursal.empresa_id,
             nombre:           sucursal.nombre || '',
             codigo_numeral:   sucursal.codigo_numeral || '01',
             pais_telefono_id: sucursal.pais_telefono_id ?? '',
-            telefono:         sucursal.telefono || '',
+            telefono:         cleanPhone,
             direccion:        sucursal.direccion || '',
             latitud:          sucursal.latitud ?? null,
             longitud:         sucursal.longitud ?? null,
-            zona_horaria:     sucursal.zona_horaria || '',
+            zona_horaria:     sucursal.zona_horaria || 'America/Mexico_City',
             status:           sucursal.status,
         });
         setActiveTab('general');
@@ -606,17 +615,17 @@ return;
                             </TabsList>
 
                             {/* ══ Tab 1: General ══════════════════════════════════════════════════ */}
-                            <TabsContent value="general" className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <TabsContent value="general" className="space-y-5">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
 
-                                    {/* Empresa */}
-                                    <div>
+                                    {/* Fila 1, Col 1: Empresa */}
+                                    <div className="space-y-1.5">
                                         <Label htmlFor="empresa_id">{__('Company')} *</Label>
                                         <Select
                                             value={String(data.empresa_id)}
                                             onValueChange={(v) => setData('empresa_id', v)}
                                         >
-                                            <SelectTrigger id="empresa_id" className="w-full h-10 text-sm">
+                                            <SelectTrigger id="empresa_id" className="w-full text-sm">
                                                 <SelectValue placeholder={__('Select a company')} />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -643,39 +652,44 @@ return;
                                         )}
                                     </div>
 
-                                    {/* Nombre */}
-                                    <div>
+                                    {/* Fila 1, Col 2: Nombre de Sucursal */}
+                                    <div className="space-y-1.5">
                                         <Label htmlFor="nombre">{__('Branch Name')} *</Label>
                                         <Input
                                             id="nombre"
                                             value={data.nombre}
                                             onChange={(e) => setData('nombre', e.target.value)}
-                                            placeholder="Ej: Sucursal Centro"
-                                            className="h-10 text-sm"
+                                            placeholder="Ej: Planta Cerro Gordo (LSKM)"
+                                            className="text-sm"
                                         />
                                         {errors.nombre && (
                                             <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
                                         )}
                                     </div>
 
-                                    {/* Numeral Planta (Código de Acceso) */}
-                                    <div>
-                                        <Label htmlFor="codigo_numeral">Numeral Planta (Ej: 01 Purépero, 02 Tuxcueca) *</Label>
+                                    {/* Fila 2, Col 1: Numeral Planta (Código de Acceso) */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="codigo_numeral">Numeral de Planta *</Label>
+                                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                                Ej: 01, 02 (Prefijo de acceso)
+                                            </span>
+                                        </div>
                                         <Input
                                             id="codigo_numeral"
                                             value={data.codigo_numeral}
                                             onChange={(e) => setData('codigo_numeral', e.target.value)}
                                             placeholder="01"
                                             maxLength={2}
-                                            className="h-10 text-sm font-semibold text-emerald-700 dark:text-emerald-400"
+                                            className="text-sm font-mono font-semibold text-emerald-700 dark:text-emerald-400"
                                         />
                                         {errors.codigo_numeral && (
                                             <p className="text-red-500 text-xs mt-1">{errors.codigo_numeral}</p>
                                         )}
                                     </div>
 
-                                    {/* Teléfono */}
-                                    <div className="md:col-span-2">
+                                    {/* Fila 2, Col 2: Teléfono (alineado en la misma fila que Numeral Planta) */}
+                                    <div className="space-y-1.5">
                                         <Label htmlFor="telefono">{__('Phone')}</Label>
                                         <PhoneInputGroup
                                             paises={paises}
@@ -683,23 +697,56 @@ return;
                                             phoneValue={data.telefono || ''}
                                             onPaisChange={(v) => setData('pais_telefono_id', v)}
                                             onPhoneChange={(v) => setData('telefono', v)}
-                                            placeholder="000-0000000"
+                                            placeholder="55 5899 1200"
                                             error={errors.telefono}
                                         />
                                     </div>
 
-                                    {/* Status */}
-                                    <div className="md:col-span-2">
+                                    {/* Fila 3, Col 1: Zona Horaria Asignada (solo lectura con acceso a pestaña Ubicación) */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="zona_horaria_preview" className="flex items-center gap-1.5">
+                                                <Clock className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                                                {__('Time Zone')}
+                                            </Label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveTab('ubicacion')}
+                                                className="text-[11px] text-violet-600 dark:text-violet-400 hover:underline font-medium cursor-pointer"
+                                            >
+                                                Cambiar en Ubicación →
+                                            </button>
+                                        </div>
+                                        <Input
+                                            id="zona_horaria_preview"
+                                            readOnly
+                                            value={data.zona_horaria || 'America/Mexico_City'}
+                                            className="font-mono text-xs bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 cursor-default focus-visible:ring-0"
+                                        />
+                                    </div>
+
+                                    {/* Fila 3, Col 2: Estado Operativo (Tarjeta estilizada) */}
+                                    <div className="space-y-1.5">
                                         <Label htmlFor="status">{__('Status')}</Label>
-                                        <div className="flex items-center space-x-2 pt-2">
-                                            <Switch
-                                                id="status"
-                                                checked={data.status}
-                                                onCheckedChange={(checked) => setData('status', checked)}
-                                            />
-                                            <span className="text-sm text-muted-foreground">
-                                                {data.status ? __('Active') : __('Inactive')}
+                                        <div className="h-9 px-3.5 rounded-md border border-input bg-slate-50/70 dark:bg-slate-900/50 flex items-center justify-between">
+                                            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                                                {data.status ? 'Sucursal Activa y Operando' : 'Sucursal Inactiva'}
                                             </span>
+                                            <div className="flex items-center gap-2">
+                                                <Switch
+                                                    id="status"
+                                                    checked={data.status}
+                                                    onCheckedChange={(checked) => setData('status', checked)}
+                                                />
+                                                <span className={cn(
+                                                    'text-[11px] font-semibold px-2 py-0.5 rounded-full',
+                                                    data.status
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
+                                                        : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                                )}>
+                                                    {data.status ? __('Active') : __('Inactive')}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -707,40 +754,41 @@ return;
 
                             {/* ══ Tab 2: Ubicación ══════════════════════════════════════════════════ */}
                             <TabsContent value="ubicacion" className="space-y-4">
-                                {/* Dirección */}
-                                <div>
-                                    <Label htmlFor="direccion">{__('Address')}</Label>
+                                {/* Dirección con botón de geocodificación integrado en la barra superior */}
+                                <div className="space-y-1.5">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                        <Label htmlFor="direccion" className="flex items-center gap-1.5">
+                                            <MapPin className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                                            {__('Address')}
+                                        </Label>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleForceGeocode}
+                                            disabled={geocoding}
+                                            className="h-7 text-xs px-2.5 self-start sm:self-auto"
+                                        >
+                                            <MapPin className="mr-1.5 h-3.5 w-3.5 text-violet-600" />
+                                            {geocoding ? __('Locating...') : __('Locate address on map')}
+                                        </Button>
+                                    </div>
                                     <Textarea
                                         id="direccion"
                                         value={data.direccion || ''}
                                         onChange={(e) => setData('direccion', e.target.value)}
                                         placeholder={__('Street and number, or click on the map...')}
                                         rows={2}
+                                        className="text-sm resize-none"
                                     />
                                     {errors.direccion && (
                                         <p className="text-red-500 text-xs mt-1">{errors.direccion}</p>
                                     )}
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleForceGeocode}
-                                        disabled={geocoding}
-                                    >
-                                        <MapPin className="mr-2 h-4 w-4" />
-                                        {geocoding ? __('Locating...') : __('Locate address on map')}
-                                    </Button>
-                                    <span className="text-xs text-muted-foreground">
-                                        {__('Or click / drag the marker on the map for precise coordinates.')}
-                                    </span>
-                                </div>
-
-                                {/* Coordenadas (prevalecen sobre la dirección) */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
+                                {/* Coordenadas y Zona Horaria en proporción 3 / 3 / 6 */}
+                                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                    <div className="md:col-span-3 space-y-1.5">
                                         <Label htmlFor="latitud">{__('Latitude')}</Label>
                                         <Input
                                             id="latitud"
@@ -751,11 +799,12 @@ return;
                                                 coordsSourceRef.current = 'manual';
                                                 setData('latitud', e.target.value ? parseFloat(e.target.value) : null);
                                             }}
-                                            placeholder="19.92"
+                                            placeholder="19.5512"
+                                            className="font-mono text-xs"
                                         />
                                         {errors.latitud && <p className="text-red-500 text-xs mt-1">{errors.latitud}</p>}
                                     </div>
-                                    <div>
+                                    <div className="md:col-span-3 space-y-1.5">
                                         <Label htmlFor="longitud">{__('Longitude')}</Label>
                                         <Input
                                             id="longitud"
@@ -766,13 +815,14 @@ return;
                                                 coordsSourceRef.current = 'manual';
                                                 setData('longitud', e.target.value ? parseFloat(e.target.value) : null);
                                             }}
-                                            placeholder="-102.01"
+                                            placeholder="-99.0485"
+                                            className="font-mono text-xs"
                                         />
                                         {errors.longitud && (
                                             <p className="text-red-500 text-xs mt-1">{errors.longitud}</p>
                                         )}
                                     </div>
-                                    <div>
+                                    <div className="md:col-span-6 space-y-1.5">
                                         <Label htmlFor="zona_horaria">{__('Time Zone')}</Label>
                                         <Select
                                             value={data.zona_horaria || 'America/Mexico_City'}
@@ -782,14 +832,14 @@ return;
                                                 <SelectValue placeholder="Seleccionar zona horaria" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="America/Mexico_City">America/Mexico_City (Centro: CDMX, GDL, MTY)</SelectItem>
+                                                <SelectItem value="America/Mexico_City">America/Mexico_City (Centro: CDMX, GDL, SLP)</SelectItem>
+                                                <SelectItem value="America/Monterrey">America/Monterrey (Noreste: Nuevo León, Coahuila)</SelectItem>
+                                                <SelectItem value="America/Mazatlan">America/Mazatlan (Pacífico: Sinaloa, BCS, Nayarit)</SelectItem>
+                                                <SelectItem value="America/Hermosillo">America/Hermosillo (Sonora - Sin horario de verano)</SelectItem>
                                                 <SelectItem value="America/Tijuana">America/Tijuana (Noroeste: BC - Tijuana, Mexicali)</SelectItem>
-                                                <SelectItem value="America/Hermosillo">America/Hermosillo (Sonora - Sin horario estacional)</SelectItem>
                                                 <SelectItem value="America/Ciudad_Juarez">America/Ciudad_Juarez (Chihuahua Frontera)</SelectItem>
                                                 <SelectItem value="America/Chihuahua">America/Chihuahua (Chihuahua Estatal)</SelectItem>
-                                                <SelectItem value="America/Mazatlan">America/Mazatlan (Pacífico: Sinaloa, BCS, Nayarit)</SelectItem>
                                                 <SelectItem value="America/Cancun">America/Cancun (Sureste: Quintana Roo)</SelectItem>
-                                                <SelectItem value="America/Monterrey">America/Monterrey (Nuevo León)</SelectItem>
                                                 <SelectItem value="America/Bogota">America/Bogota (Colombia / UTC-5)</SelectItem>
                                                 <SelectItem value="America/Lima">America/Lima (Perú / UTC-5)</SelectItem>
                                                 <SelectItem value="America/New_York">America/New_York (US Eastern / UTC-5)</SelectItem>
@@ -803,10 +853,10 @@ return;
                                     </div>
                                 </div>
 
-                                {/* Mapa */}
+                                {/* Mapa Leaflet + CartoDB (Claro por defecto + Selector de Estilo) */}
                                 <div
                                     style={{ height: '380px', width: '100%' }}
-                                    className="rounded-md overflow-hidden border flex items-center justify-center bg-slate-100 dark:bg-slate-800"
+                                    className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-center bg-slate-100 dark:bg-slate-800"
                                 >
                                     <Suspense
                                         fallback={
@@ -829,8 +879,11 @@ return;
                                     </Suspense>
                                 </div>
 
-                                <p className="text-xs text-muted-foreground">
-                                    {__('Click on the map to set the exact location. The address will be obtained automatically.')}
+                                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                    <span>
+                                        Haz clic en el mapa o arrastra el marcador para ajustar la ubicación exacta; la dirección y la zona horaria se actualizarán automáticamente. Puedes cambiar el estilo visual en la esquina superior derecha del mapa.
+                                    </span>
                                 </p>
                             </TabsContent>
                         </Tabs>
