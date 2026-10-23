@@ -12,6 +12,8 @@ import {
     MapPin,
     Building2,
     Clock,
+    LocateFixed,
+    Loader2,
 } from 'lucide-react';
 import React, { useRef, useState, Suspense, lazy } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -57,6 +59,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
+import { getTimezoneFromCoords } from '../Empresas/Partials/MapComponent';
 import { usePermission } from '@/hooks/use-permission';
 import { Can } from '@/components/can';
 
@@ -203,6 +206,7 @@ export default function SucursalesIndexPage({
     const mapZoom = data.latitud && data.longitud ? 14 : paisSeleccionado ? 6 : 4;
 
     const [geocoding, setGeocoding] = useState(false);
+    const [locatingCurrent, setLocatingCurrent] = useState(false);
     // Origen de las coordenadas (se asigna al teclearlas); estaba sin declarar y rompía la edición manual.
     const coordsSourceRef = useRef<'manual' | 'map' | 'geocode'>('manual');
 
@@ -215,19 +219,21 @@ export default function SucursalesIndexPage({
         setGeocoding(true);
         try {
             const query = encodeURIComponent(data.direccion.trim());
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`, {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${query}&limit=1`, {
                 headers: {
                     'Accept-Language': 'es',
                 },
             });
             const results = await response.json();
             if (results && results.length > 0) {
-                const lat = parseFloat(results[0].lat);
-                const lon = parseFloat(results[0].lon);
+                const lat = Number(parseFloat(results[0].lat).toFixed(6));
+                const lon = Number(parseFloat(results[0].lon).toFixed(6));
+                const tz = await getTimezoneFromCoords(lat, lon, results[0].address);
                 setData((prev) => ({
                     ...prev,
                     latitud: lat,
                     longitud: lon,
+                    ...(tz ? { zona_horaria: tz } : {}),
                 }));
                 notifySuccess(__('Address located on map.'));
             } else {
@@ -238,6 +244,63 @@ export default function SucursalesIndexPage({
         } finally {
             setGeocoding(false);
         }
+    };
+
+    const handleGetCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            notifyError('Tu navegador no soporta geolocalización.');
+            return;
+        }
+
+        setLocatingCurrent(true);
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = Number(position.coords.latitude.toFixed(6));
+                const lon = Number(position.coords.longitude.toFixed(6));
+
+                const tz = await getTimezoneFromCoords(lat, lon);
+                let detectedAddress = '';
+                let finalTz = tz;
+
+                try {
+                    const res = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=es`,
+                        { headers: { 'Accept-Language': 'es' } }
+                    );
+                    if (res.ok) {
+                        const geoData = await res.json();
+                        detectedAddress = geoData.display_name ?? '';
+                        finalTz = (await getTimezoneFromCoords(lat, lon, geoData.address)) || tz;
+                    }
+                } catch {
+                    // Ignorar error de dirección inversa
+                }
+
+                setData((prev) => ({
+                    ...prev,
+                    latitud: lat,
+                    longitud: lon,
+                    ...(detectedAddress ? { direccion: detectedAddress } : {}),
+                    ...(finalTz ? { zona_horaria: finalTz } : {}),
+                }));
+
+                setLocatingCurrent(false);
+                notifySuccess('Ubicación actual y zona horaria detectadas automáticamente.');
+            },
+            (err) => {
+                setLocatingCurrent(false);
+                if (err.code === err.PERMISSION_DENIED) {
+                    notifyError('Permiso de ubicación denegado. Actívalo en el navegador para usar tu ubicación actual.');
+                } else {
+                    notifyError('No fue posible obtener la ubicación actual del dispositivo.');
+                }
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0,
+            }
+        );
     };
 
     // ── Handlers ───────────────────────────────────────────────────────────────
@@ -754,24 +817,41 @@ return;
 
                             {/* ══ Tab 2: Ubicación ══════════════════════════════════════════════════ */}
                             <TabsContent value="ubicacion" className="space-y-4">
-                                {/* Dirección con botón de geocodificación integrado en la barra superior */}
+                                {/* Dirección con botones de geocodificación y ubicación actual en la barra superior */}
                                 <div className="space-y-1.5">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                         <Label htmlFor="direccion" className="flex items-center gap-1.5">
                                             <MapPin className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
                                             {__('Address')}
                                         </Label>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleForceGeocode}
-                                            disabled={geocoding}
-                                            className="h-7 text-xs px-2.5 self-start sm:self-auto"
-                                        >
-                                            <MapPin className="mr-1.5 h-3.5 w-3.5 text-violet-600" />
-                                            {geocoding ? __('Locating...') : __('Locate address on map')}
-                                        </Button>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleGetCurrentLocation}
+                                                disabled={locatingCurrent}
+                                                className="h-7 text-xs px-2.5 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/40"
+                                            >
+                                                {locatingCurrent ? (
+                                                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin text-violet-600" />
+                                                ) : (
+                                                    <LocateFixed className="mr-1.5 h-3.5 w-3.5 text-violet-600" />
+                                                )}
+                                                {locatingCurrent ? 'Obteniendo GPS...' : 'Usar mi ubicación actual'}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleForceGeocode}
+                                                disabled={geocoding}
+                                                className="h-7 text-xs px-2.5"
+                                            >
+                                                <MapPin className="mr-1.5 h-3.5 w-3.5 text-violet-600" />
+                                                {geocoding ? __('Locating...') : __('Locate address on map')}
+                                            </Button>
+                                        </div>
                                     </div>
                                     <Textarea
                                         id="direccion"
@@ -786,7 +866,7 @@ return;
                                     )}
                                 </div>
 
-                                {/* Coordenadas y Zona Horaria en proporción 3 / 3 / 6 */}
+                                {/* Coordenadas y Zona Horaria Automática en proporción 3 / 3 / 6 */}
                                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                                     <div className="md:col-span-3 space-y-1.5">
                                         <Label htmlFor="latitud">{__('Latitude')}</Label>
@@ -795,9 +875,14 @@ return;
                                             type="number"
                                             step="any"
                                             value={data.latitud ?? ''}
-                                            onChange={(e) => {
+                                            onChange={async (e) => {
                                                 coordsSourceRef.current = 'manual';
-                                                setData('latitud', e.target.value ? parseFloat(e.target.value) : null);
+                                                const newLat = e.target.value ? parseFloat(e.target.value) : null;
+                                                setData('latitud', newLat);
+                                                if (newLat !== null && data.longitud !== null) {
+                                                    const tz = await getTimezoneFromCoords(newLat, data.longitud);
+                                                    if (tz) setData((prev) => ({ ...prev, latitud: newLat, zona_horaria: tz }));
+                                                }
                                             }}
                                             placeholder="19.5512"
                                             className="font-mono text-xs"
@@ -811,9 +896,14 @@ return;
                                             type="number"
                                             step="any"
                                             value={data.longitud ?? ''}
-                                            onChange={(e) => {
+                                            onChange={async (e) => {
                                                 coordsSourceRef.current = 'manual';
-                                                setData('longitud', e.target.value ? parseFloat(e.target.value) : null);
+                                                const newLng = e.target.value ? parseFloat(e.target.value) : null;
+                                                setData('longitud', newLng);
+                                                if (data.latitud !== null && newLng !== null) {
+                                                    const tz = await getTimezoneFromCoords(data.latitud, newLng);
+                                                    if (tz) setData((prev) => ({ ...prev, longitud: newLng, zona_horaria: tz }));
+                                                }
                                             }}
                                             placeholder="-99.0485"
                                             className="font-mono text-xs"
@@ -823,30 +913,23 @@ return;
                                         )}
                                     </div>
                                     <div className="md:col-span-6 space-y-1.5">
-                                        <Label htmlFor="zona_horaria">{__('Time Zone')}</Label>
-                                        <Select
-                                            value={data.zona_horaria || 'America/Mexico_City'}
-                                            onValueChange={(v) => setData('zona_horaria', v)}
-                                        >
-                                            <SelectTrigger id="zona_horaria" className="w-full text-xs font-mono">
-                                                <SelectValue placeholder="Seleccionar zona horaria" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="America/Mexico_City">America/Mexico_City (Centro: CDMX, GDL, SLP)</SelectItem>
-                                                <SelectItem value="America/Monterrey">America/Monterrey (Noreste: Nuevo León, Coahuila)</SelectItem>
-                                                <SelectItem value="America/Mazatlan">America/Mazatlan (Pacífico: Sinaloa, BCS, Nayarit)</SelectItem>
-                                                <SelectItem value="America/Hermosillo">America/Hermosillo (Sonora - Sin horario de verano)</SelectItem>
-                                                <SelectItem value="America/Tijuana">America/Tijuana (Noroeste: BC - Tijuana, Mexicali)</SelectItem>
-                                                <SelectItem value="America/Ciudad_Juarez">America/Ciudad_Juarez (Chihuahua Frontera)</SelectItem>
-                                                <SelectItem value="America/Chihuahua">America/Chihuahua (Chihuahua Estatal)</SelectItem>
-                                                <SelectItem value="America/Cancun">America/Cancun (Sureste: Quintana Roo)</SelectItem>
-                                                <SelectItem value="America/Bogota">America/Bogota (Colombia / UTC-5)</SelectItem>
-                                                <SelectItem value="America/Lima">America/Lima (Perú / UTC-5)</SelectItem>
-                                                <SelectItem value="America/New_York">America/New_York (US Eastern / UTC-5)</SelectItem>
-                                                <SelectItem value="America/Los_Angeles">America/Los_Angeles (US Pacific / UTC-8)</SelectItem>
-                                                <SelectItem value="UTC">UTC (Universal Coordinated Time)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="zona_horaria" className="flex items-center gap-1.5">
+                                                <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                                {__('Time Zone')}
+                                            </Label>
+                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
+                                                Detectada automáticamente por mapa
+                                            </span>
+                                        </div>
+                                        <Input
+                                            id="zona_horaria"
+                                            type="text"
+                                            readOnly
+                                            value={data.zona_horaria || ''}
+                                            placeholder="Haz clic en el mapa o usa tu ubicación actual..."
+                                            className="font-mono text-xs font-semibold bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 cursor-default focus-visible:ring-0"
+                                        />
                                         {errors.zona_horaria && (
                                             <p className="text-red-500 text-xs mt-1">{errors.zona_horaria}</p>
                                         )}
