@@ -304,7 +304,7 @@ export default function SucursalesIndexPage({
     const handleCreateClick = () => {
         setEditingSucursal(null);
         const defaultPais = paises.find((p) => p.codigo_iso2 === 'MX') || paises[0];
-        const defaultEmpresa = auth.user?.empresa_id || empresas[0]?.id || '';
+        const defaultEmpresa = (auth.user?.empresa_id as string | number | undefined) || empresas[0]?.id || '';
         setData({
             ...initialForm,
             empresa_id: defaultEmpresa,
