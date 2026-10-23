@@ -98,6 +98,7 @@ interface Sucursal {
     id: number;
     nombre: string;
     empresa_id: number;
+    zona_horaria?: string | null;
 }
 
 interface Departamento {
@@ -188,6 +189,7 @@ interface EmpleadosPageProps {
         status?: string;
         perPage?: string;
         departamento_id?: string;
+        sucursal_id?: string;
         enrolado?: string;
     };
     empresa?: {
@@ -323,6 +325,7 @@ export default function EmpleadosIndexPage({
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [depFilter, setDepFilter] = useState(filters.departamento_id || '');
+    const [sucursalFilter, setSucursalFilter] = useState(filters.sucursal_id || '');
     const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '10');
     const [enroladoFilter, setEnroladoFilter] = useState(filters.enrolado || '');
 
@@ -353,6 +356,7 @@ export default function EmpleadosIndexPage({
                     search: searchTerm,
                     status: statusFilter,
                     departamento_id: depFilter,
+                    sucursal_id: sucursalFilter,
                     perPage: perPageFilter,
                     enrolado: enroladoFilter === 'none' ? '' : enroladoFilter,
                 }),
@@ -361,14 +365,17 @@ export default function EmpleadosIndexPage({
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [searchTerm, statusFilter, depFilter, perPageFilter, enroladoFilter]);
+    }, [searchTerm, statusFilter, depFilter, sucursalFilter, perPageFilter, enroladoFilter]);
 
     // ── Formulario Inertia ─────────────────────────────────────────────────────
     const { data, setData, post, reset, errors, processing } = useForm(initialForm);
 
     // ── Filtro de dependencias según selección ──────────────────────────────────
     const filteredSucursales = sucursales.filter(s => s.empresa_id === Number(data.empresa_id));
-    const filteredDepartamentos = departamentos.filter(d => d.empresa_id === Number(data.empresa_id) && d.sucursal_id === Number(data.sucursal_id));
+    const deptosDeSucursal = departamentos.filter(d => d.empresa_id === Number(data.empresa_id) && d.sucursal_id === Number(data.sucursal_id));
+    const filteredDepartamentos = deptosDeSucursal.length > 0
+        ? deptosDeSucursal
+        : departamentos.filter(d => d.empresa_id === Number(data.empresa_id));
     // Un responsable sin departamento es general: se ofrece en cualquier departamento.
     const filteredResponsables = responsables.filter(r => r.departamento_id == null || r.departamento_id === Number(data.departamento_id));
     const filteredCargos = cargos.filter(c => c.departamento_id === Number(data.departamento_id));
@@ -655,7 +662,21 @@ export default function EmpleadosIndexPage({
             header: __('Department / Position'),
             hideOn: 'mobile',
             cell: (emp) => (
-                <div className="space-y-0.5 text-xs text-slate-700 dark:text-slate-300">
+                <div className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
+                    {emp.sucursal && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] border border-emerald-200 dark:border-emerald-800">
+                                <Building2 className="w-3 h-3 shrink-0" />
+                                {emp.sucursal.nombre}
+                            </span>
+                            {emp.sucursal.zona_horaria && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono text-[10px] border border-slate-200 dark:border-slate-700">
+                                    <Clock className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                                    {emp.sucursal.zona_horaria}
+                                </span>
+                            )}
+                        </div>
+                    )}
                     <div className="flex items-center gap-1.5 font-medium">
                         <Layers className="w-3.5 h-3.5 text-indigo-500" />
                         <span>{emp.departamento?.nombre || '—'}</span>
@@ -924,6 +945,21 @@ export default function EmpleadosIndexPage({
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
+                        </FilterField>
+                        <FilterField label={__('Branch')}>
+                            <Select value={sucursalFilter} onValueChange={setSucursalFilter}>
+                                <SelectTrigger className="w-full md:w-56">
+                                    <SelectValue placeholder={__('All Branches')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">{__('All')}</SelectItem>
+                                    {sucursales.map((suc) => (
+                                        <SelectItem key={suc.id} value={String(suc.id)}>
+                                            {suc.nombre} {suc.zona_horaria ? `(${suc.zona_horaria})` : ''}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </FilterField>
                         <FilterField label={__('Department')}>
                             <Select value={depFilter} onValueChange={setDepFilter}>
@@ -1304,12 +1340,9 @@ export default function EmpleadosIndexPage({
                                                 setData(prev => ({
                                                     ...prev,
                                                     sucursal_id: v,
-                                                    departamento_id: '',
-                                                    responsable_id: '',
-                                                    cargo_id: '',
                                                 }));
                                             }}
-                                            disabled={!!auth.user?.sucursal_id}
+                                            disabled={!!auth.user?.sucursal_id && !auth.user?.is_super_admin}
                                         >
                                             <SelectTrigger id="sucursal_id" className="w-full">
                                                 <SelectValue placeholder={__('Select Branch')} />
@@ -1317,7 +1350,7 @@ export default function EmpleadosIndexPage({
                                             <SelectContent>
                                                 {filteredSucursales.map((suc) => (
                                                     <SelectItem key={suc.id} value={String(suc.id)}>
-                                                        {suc.nombre}
+                                                        {suc.nombre} {suc.zona_horaria ? `(${suc.zona_horaria})` : ''}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>

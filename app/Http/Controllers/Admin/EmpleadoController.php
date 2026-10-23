@@ -47,6 +47,10 @@ class EmpleadoController extends Controller
             $query->where('departamento_id', $request->departamento_id);
         }
 
+        if ($request->filled('sucursal_id')) {
+            $query->where('sucursal_id', $request->sucursal_id);
+        }
+
         if ($request->filled('enrolado')) {
             if ($request->enrolado === '1' || $request->enrolado === 'si') {
                 $query->whereNotNull('enrolado_en');
@@ -71,13 +75,13 @@ class EmpleadoController extends Controller
             'empleados' => $empleados,
             'stats' => $stats,
             'empresas' => Empresa::where('status', true)->orderBy('razon_social', 'asc')->get(['id', 'razon_social']),
-            'sucursales' => Sucursal::where('status', true)->orderBy('nombre', 'asc')->get(['id', 'nombre', 'empresa_id']),
+            'sucursales' => Sucursal::where('status', true)->orderBy('nombre', 'asc')->get(['id', 'nombre', 'empresa_id', 'zona_horaria']),
             'usuarios' => User::orderBy('name', 'asc')->get(['id', 'name', 'email']),
             'departamentos' => Departamento::where('status', true)->orderBy('nombre', 'asc')->get(['id', 'nombre', 'empresa_id', 'sucursal_id']),
             'responsables' => Responsable::where('status', true)->with('cargo:id,nombre')->orderBy('nombres', 'asc')->get(['id', 'nombres', 'apellidos', 'departamento_id', 'cargo_id']),
             'cargos' => Cargo::where('status', true)->orderBy('nombre', 'asc')->get(['id', 'nombre', 'departamento_id']),
             'paises' => Pais::where('activo', true)->orderBy('nombre', 'asc')->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
-            'filters' => $request->only('search', 'status', 'perPage', 'departamento_id', 'enrolado'),
+            'filters' => $request->only('search', 'status', 'perPage', 'departamento_id', 'sucursal_id', 'enrolado'),
             'empresa' => $empresa ? [
                 'id' => $empresa->id,
                 'razon_social' => $empresa->razon_social,

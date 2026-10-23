@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             UsersSeeder::class,
             TipoServicioSeeder::class,
             SmurfitWestrockSeeder::class,
+            SucursalesSmurfitSeeder::class,
             ProveedorSeeder::class,
             ComedorMexicoSeeder::class,
             GroupSeeder::class,
