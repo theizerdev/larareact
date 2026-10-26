@@ -10,6 +10,7 @@ export interface SearchableOption {
     value: string;
     label: string;
     description?: string;
+    disabled?: boolean;
 }
 
 interface SearchableSelectProps {
@@ -123,26 +124,32 @@ export default function SearchableSelect({
                     {filteredOptions.length > 0 ? (
                         filteredOptions.map((opt) => {
                             const isSelected = String(opt.value) === String(value);
+                            const isDisabled = Boolean(opt.disabled);
                             return (
                                 <div
                                     key={opt.value}
                                     role="option"
                                     aria-selected={isSelected}
+                                    aria-disabled={isDisabled}
                                     onPointerDown={(e) => {
+                                        if (isDisabled) return;
                                         e.preventDefault();
                                         e.stopPropagation();
                                         handleSelect(opt.value);
                                     }}
                                     onClick={(e) => {
+                                        if (isDisabled) return;
                                         e.preventDefault();
                                         e.stopPropagation();
                                         handleSelect(opt.value);
                                     }}
                                     className={cn(
-                                        'flex items-center justify-between px-2.5 py-1.5 text-xs rounded-sm cursor-pointer transition-colors select-none',
-                                        isSelected
-                                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-medium'
-                                            : 'hover:bg-accent hover:text-accent-foreground text-slate-700 dark:text-slate-300'
+                                        'flex items-center justify-between px-2.5 py-1.5 text-xs rounded-sm transition-colors select-none',
+                                        isDisabled
+                                            ? 'opacity-40 cursor-not-allowed text-muted-foreground pointer-events-none'
+                                            : isSelected
+                                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-medium cursor-pointer'
+                                                : 'hover:bg-accent hover:text-accent-foreground text-slate-700 dark:text-slate-300 cursor-pointer'
                                     )}
                                 >
                                     <div className="flex flex-col truncate pr-2">
