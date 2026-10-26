@@ -1,9 +1,9 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
- * @see app/Http/Controllers/Admin/ReparacionController.php:926
- * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:954
+* @route '/admin/reparaciones/{reparacion}/reporte-pdf'
+*/
 export const reportePdf = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: reportePdf.url(args, options),
     method: 'get',
@@ -16,31 +16,31 @@ reportePdf.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
- * @see app/Http/Controllers/Admin/ReparacionController.php:926
- * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:954
+* @route '/admin/reparaciones/{reparacion}/reporte-pdf'
+*/
 reportePdf.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reparacion: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { reparacion: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                }
+            reparacion: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: typeof args.reparacion === 'object'
-                ? args.reparacion.id
-                : args.reparacion,
-                }
+        reparacion: typeof args.reparacion === 'object'
+        ? args.reparacion.id
+        : args.reparacion,
+    }
 
     return reportePdf.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -49,28 +49,66 @@ reportePdf.url = (args: { reparacion: number | { id: number } } | [reparacion: n
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
- * @see app/Http/Controllers/Admin/ReparacionController.php:926
- * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:954
+* @route '/admin/reparaciones/{reparacion}/reporte-pdf'
+*/
 reportePdf.get = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: reportePdf.url(args, options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
- * @see app/Http/Controllers/Admin/ReparacionController.php:926
- * @route '/admin/reparaciones/{reparacion}/reporte-pdf'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:954
+* @route '/admin/reparaciones/{reparacion}/reporte-pdf'
+*/
 reportePdf.head = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: reportePdf.url(args, options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
+* @see app/Http/Controllers/Admin/ReparacionController.php:954
+* @route '/admin/reparaciones/{reparacion}/reporte-pdf'
+*/
+const reportePdfForm = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: reportePdf.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
+* @see app/Http/Controllers/Admin/ReparacionController.php:954
+* @route '/admin/reparaciones/{reparacion}/reporte-pdf'
+*/
+reportePdfForm.get = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: reportePdf.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::reportePdf
+* @see app/Http/Controllers/Admin/ReparacionController.php:954
+* @route '/admin/reparaciones/{reparacion}/reporte-pdf'
+*/
+reportePdfForm.head = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: reportePdf.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+reportePdf.form = reportePdfForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeCliente
- * @see app/Http/Controllers/Admin/ReparacionController.php:366
- * @route '/admin/reparaciones/quick-cliente'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:394
+* @route '/admin/reparaciones/quick-cliente'
+*/
 export const storeCliente = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storeCliente.url(options),
     method: 'post',
@@ -83,28 +121,50 @@ storeCliente.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeCliente
- * @see app/Http/Controllers/Admin/ReparacionController.php:366
- * @route '/admin/reparaciones/quick-cliente'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:394
+* @route '/admin/reparaciones/quick-cliente'
+*/
 storeCliente.url = (options?: RouteQueryOptions) => {
     return storeCliente.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeCliente
- * @see app/Http/Controllers/Admin/ReparacionController.php:366
- * @route '/admin/reparaciones/quick-cliente'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:394
+* @route '/admin/reparaciones/quick-cliente'
+*/
 storeCliente.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storeCliente.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeCliente
+* @see app/Http/Controllers/Admin/ReparacionController.php:394
+* @route '/admin/reparaciones/quick-cliente'
+*/
+const storeClienteForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: storeCliente.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeCliente
+* @see app/Http/Controllers/Admin/ReparacionController.php:394
+* @route '/admin/reparaciones/quick-cliente'
+*/
+storeClienteForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: storeCliente.url(options),
+    method: 'post',
+})
+
+storeCliente.form = storeClienteForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeCategoria
- * @see app/Http/Controllers/Admin/ReparacionController.php:1409
- * @route '/admin/reparaciones/quick-categoria'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1457
+* @route '/admin/reparaciones/quick-categoria'
+*/
 export const storeCategoria = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storeCategoria.url(options),
     method: 'post',
@@ -117,28 +177,50 @@ storeCategoria.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeCategoria
- * @see app/Http/Controllers/Admin/ReparacionController.php:1409
- * @route '/admin/reparaciones/quick-categoria'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1457
+* @route '/admin/reparaciones/quick-categoria'
+*/
 storeCategoria.url = (options?: RouteQueryOptions) => {
     return storeCategoria.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeCategoria
- * @see app/Http/Controllers/Admin/ReparacionController.php:1409
- * @route '/admin/reparaciones/quick-categoria'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1457
+* @route '/admin/reparaciones/quick-categoria'
+*/
 storeCategoria.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storeCategoria.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeCategoria
+* @see app/Http/Controllers/Admin/ReparacionController.php:1457
+* @route '/admin/reparaciones/quick-categoria'
+*/
+const storeCategoriaForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: storeCategoria.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeCategoria
+* @see app/Http/Controllers/Admin/ReparacionController.php:1457
+* @route '/admin/reparaciones/quick-categoria'
+*/
+storeCategoriaForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: storeCategoria.url(options),
+    method: 'post',
+})
+
+storeCategoria.form = storeCategoriaForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeMarca
- * @see app/Http/Controllers/Admin/ReparacionController.php:1442
- * @route '/admin/reparaciones/quick-marca'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1490
+* @route '/admin/reparaciones/quick-marca'
+*/
 export const storeMarca = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storeMarca.url(options),
     method: 'post',
@@ -151,28 +233,50 @@ storeMarca.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeMarca
- * @see app/Http/Controllers/Admin/ReparacionController.php:1442
- * @route '/admin/reparaciones/quick-marca'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1490
+* @route '/admin/reparaciones/quick-marca'
+*/
 storeMarca.url = (options?: RouteQueryOptions) => {
     return storeMarca.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeMarca
- * @see app/Http/Controllers/Admin/ReparacionController.php:1442
- * @route '/admin/reparaciones/quick-marca'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1490
+* @route '/admin/reparaciones/quick-marca'
+*/
 storeMarca.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storeMarca.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeMarca
+* @see app/Http/Controllers/Admin/ReparacionController.php:1490
+* @route '/admin/reparaciones/quick-marca'
+*/
+const storeMarcaForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: storeMarca.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeMarca
+* @see app/Http/Controllers/Admin/ReparacionController.php:1490
+* @route '/admin/reparaciones/quick-marca'
+*/
+storeMarcaForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: storeMarca.url(options),
+    method: 'post',
+})
+
+storeMarca.form = storeMarcaForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeModelo
- * @see app/Http/Controllers/Admin/ReparacionController.php:1473
- * @route '/admin/reparaciones/quick-modelo'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1521
+* @route '/admin/reparaciones/quick-modelo'
+*/
 export const storeModelo = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storeModelo.url(options),
     method: 'post',
@@ -185,28 +289,50 @@ storeModelo.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeModelo
- * @see app/Http/Controllers/Admin/ReparacionController.php:1473
- * @route '/admin/reparaciones/quick-modelo'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1521
+* @route '/admin/reparaciones/quick-modelo'
+*/
 storeModelo.url = (options?: RouteQueryOptions) => {
     return storeModelo.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeModelo
- * @see app/Http/Controllers/Admin/ReparacionController.php:1473
- * @route '/admin/reparaciones/quick-modelo'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1521
+* @route '/admin/reparaciones/quick-modelo'
+*/
 storeModelo.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storeModelo.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeModelo
+* @see app/Http/Controllers/Admin/ReparacionController.php:1521
+* @route '/admin/reparaciones/quick-modelo'
+*/
+const storeModeloForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: storeModelo.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeModelo
+* @see app/Http/Controllers/Admin/ReparacionController.php:1521
+* @route '/admin/reparaciones/quick-modelo'
+*/
+storeModeloForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: storeModelo.url(options),
+    method: 'post',
+})
+
+storeModelo.form = storeModeloForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeServicio
- * @see app/Http/Controllers/Admin/ReparacionController.php:391
- * @route '/admin/reparaciones/quick-servicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:419
+* @route '/admin/reparaciones/quick-servicio'
+*/
 export const storeServicio = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storeServicio.url(options),
     method: 'post',
@@ -219,28 +345,50 @@ storeServicio.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeServicio
- * @see app/Http/Controllers/Admin/ReparacionController.php:391
- * @route '/admin/reparaciones/quick-servicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:419
+* @route '/admin/reparaciones/quick-servicio'
+*/
 storeServicio.url = (options?: RouteQueryOptions) => {
     return storeServicio.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::storeServicio
- * @see app/Http/Controllers/Admin/ReparacionController.php:391
- * @route '/admin/reparaciones/quick-servicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:419
+* @route '/admin/reparaciones/quick-servicio'
+*/
 storeServicio.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: storeServicio.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeServicio
+* @see app/Http/Controllers/Admin/ReparacionController.php:419
+* @route '/admin/reparaciones/quick-servicio'
+*/
+const storeServicioForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: storeServicio.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::storeServicio
+* @see app/Http/Controllers/Admin/ReparacionController.php:419
+* @route '/admin/reparaciones/quick-servicio'
+*/
+storeServicioForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: storeServicio.url(options),
+    method: 'post',
+})
+
+storeServicio.form = storeServicioForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::checkImei
- * @see app/Http/Controllers/Admin/ReparacionController.php:441
- * @route '/admin/reparaciones/check-imei'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:469
+* @route '/admin/reparaciones/check-imei'
+*/
 export const checkImei = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: checkImei.url(options),
     method: 'post',
@@ -253,28 +401,50 @@ checkImei.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::checkImei
- * @see app/Http/Controllers/Admin/ReparacionController.php:441
- * @route '/admin/reparaciones/check-imei'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:469
+* @route '/admin/reparaciones/check-imei'
+*/
 checkImei.url = (options?: RouteQueryOptions) => {
     return checkImei.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::checkImei
- * @see app/Http/Controllers/Admin/ReparacionController.php:441
- * @route '/admin/reparaciones/check-imei'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:469
+* @route '/admin/reparaciones/check-imei'
+*/
 checkImei.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: checkImei.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::checkImei
+* @see app/Http/Controllers/Admin/ReparacionController.php:469
+* @route '/admin/reparaciones/check-imei'
+*/
+const checkImeiForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: checkImei.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::checkImei
+* @see app/Http/Controllers/Admin/ReparacionController.php:469
+* @route '/admin/reparaciones/check-imei'
+*/
+checkImeiForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: checkImei.url(options),
+    method: 'post',
+})
+
+checkImei.form = checkImeiForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::apiFind
- * @see app/Http/Controllers/Admin/ReparacionController.php:1801
- * @route '/admin/reparaciones/api-find'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1990
+* @route '/admin/reparaciones/api-find'
+*/
 export const apiFind = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: apiFind.url(options),
     method: 'get',
@@ -287,37 +457,75 @@ apiFind.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::apiFind
- * @see app/Http/Controllers/Admin/ReparacionController.php:1801
- * @route '/admin/reparaciones/api-find'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1990
+* @route '/admin/reparaciones/api-find'
+*/
 apiFind.url = (options?: RouteQueryOptions) => {
     return apiFind.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::apiFind
- * @see app/Http/Controllers/Admin/ReparacionController.php:1801
- * @route '/admin/reparaciones/api-find'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1990
+* @route '/admin/reparaciones/api-find'
+*/
 apiFind.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: apiFind.url(options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::apiFind
- * @see app/Http/Controllers/Admin/ReparacionController.php:1801
- * @route '/admin/reparaciones/api-find'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1990
+* @route '/admin/reparaciones/api-find'
+*/
 apiFind.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: apiFind.url(options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::apiFind
+* @see app/Http/Controllers/Admin/ReparacionController.php:1990
+* @route '/admin/reparaciones/api-find'
+*/
+const apiFindForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: apiFind.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::apiFind
+* @see app/Http/Controllers/Admin/ReparacionController.php:1990
+* @route '/admin/reparaciones/api-find'
+*/
+apiFindForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: apiFind.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::apiFind
+* @see app/Http/Controllers/Admin/ReparacionController.php:1990
+* @route '/admin/reparaciones/api-find'
+*/
+apiFindForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: apiFind.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+apiFind.form = apiFindForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::index
- * @see app/Http/Controllers/Admin/ReparacionController.php:41
- * @route '/admin/reparaciones'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:41
+* @route '/admin/reparaciones'
+*/
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -330,37 +538,75 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::index
- * @see app/Http/Controllers/Admin/ReparacionController.php:41
- * @route '/admin/reparaciones'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:41
+* @route '/admin/reparaciones'
+*/
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::index
- * @see app/Http/Controllers/Admin/ReparacionController.php:41
- * @route '/admin/reparaciones'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:41
+* @route '/admin/reparaciones'
+*/
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::index
- * @see app/Http/Controllers/Admin/ReparacionController.php:41
- * @route '/admin/reparaciones'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:41
+* @route '/admin/reparaciones'
+*/
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::index
+* @see app/Http/Controllers/Admin/ReparacionController.php:41
+* @route '/admin/reparaciones'
+*/
+const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::index
+* @see app/Http/Controllers/Admin/ReparacionController.php:41
+* @route '/admin/reparaciones'
+*/
+indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::index
+* @see app/Http/Controllers/Admin/ReparacionController.php:41
+* @route '/admin/reparaciones'
+*/
+indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+index.form = indexForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::create
- * @see app/Http/Controllers/Admin/ReparacionController.php:288
- * @route '/admin/reparaciones/create'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:316
+* @route '/admin/reparaciones/create'
+*/
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: create.url(options),
     method: 'get',
@@ -373,37 +619,75 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::create
- * @see app/Http/Controllers/Admin/ReparacionController.php:288
- * @route '/admin/reparaciones/create'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:316
+* @route '/admin/reparaciones/create'
+*/
 create.url = (options?: RouteQueryOptions) => {
     return create.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::create
- * @see app/Http/Controllers/Admin/ReparacionController.php:288
- * @route '/admin/reparaciones/create'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:316
+* @route '/admin/reparaciones/create'
+*/
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: create.url(options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::create
- * @see app/Http/Controllers/Admin/ReparacionController.php:288
- * @route '/admin/reparaciones/create'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:316
+* @route '/admin/reparaciones/create'
+*/
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: create.url(options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::create
+* @see app/Http/Controllers/Admin/ReparacionController.php:316
+* @route '/admin/reparaciones/create'
+*/
+const createForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: create.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::create
+* @see app/Http/Controllers/Admin/ReparacionController.php:316
+* @route '/admin/reparaciones/create'
+*/
+createForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: create.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::create
+* @see app/Http/Controllers/Admin/ReparacionController.php:316
+* @route '/admin/reparaciones/create'
+*/
+createForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: create.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+create.form = createForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::store
- * @see app/Http/Controllers/Admin/ReparacionController.php:604
- * @route '/admin/reparaciones'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:632
+* @route '/admin/reparaciones'
+*/
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -416,28 +700,50 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::store
- * @see app/Http/Controllers/Admin/ReparacionController.php:604
- * @route '/admin/reparaciones'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:632
+* @route '/admin/reparaciones'
+*/
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::store
- * @see app/Http/Controllers/Admin/ReparacionController.php:604
- * @route '/admin/reparaciones'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:632
+* @route '/admin/reparaciones'
+*/
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::store
+* @see app/Http/Controllers/Admin/ReparacionController.php:632
+* @route '/admin/reparaciones'
+*/
+const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: store.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::store
+* @see app/Http/Controllers/Admin/ReparacionController.php:632
+* @route '/admin/reparaciones'
+*/
+storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: store.url(options),
+    method: 'post',
+})
+
+store.form = storeForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::show
- * @see app/Http/Controllers/Admin/ReparacionController.php:845
- * @route '/admin/reparaciones/{reparacione}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:873
+* @route '/admin/reparaciones/{reparacione}'
+*/
 export const show = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
@@ -450,26 +756,25 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::show
- * @see app/Http/Controllers/Admin/ReparacionController.php:845
- * @route '/admin/reparaciones/{reparacione}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:873
+* @route '/admin/reparaciones/{reparacione}'
+*/
 show.url = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacione: args }
     }
 
-    
     if (Array.isArray(args)) {
         args = {
-                    reparacione: args[0],
-                }
+            reparacione: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacione: args.reparacione,
-                }
+        reparacione: args.reparacione,
+    }
 
     return show.definition.url
             .replace('{reparacione}', parsedArgs.reparacione.toString())
@@ -478,28 +783,66 @@ show.url = (args: { reparacione: string | number } | [reparacione: string | numb
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::show
- * @see app/Http/Controllers/Admin/ReparacionController.php:845
- * @route '/admin/reparaciones/{reparacione}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:873
+* @route '/admin/reparaciones/{reparacione}'
+*/
 show.get = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::show
- * @see app/Http/Controllers/Admin/ReparacionController.php:845
- * @route '/admin/reparaciones/{reparacione}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:873
+* @route '/admin/reparaciones/{reparacione}'
+*/
 show.head = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::show
+* @see app/Http/Controllers/Admin/ReparacionController.php:873
+* @route '/admin/reparaciones/{reparacione}'
+*/
+const showForm = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: show.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::show
+* @see app/Http/Controllers/Admin/ReparacionController.php:873
+* @route '/admin/reparaciones/{reparacione}'
+*/
+showForm.get = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: show.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::show
+* @see app/Http/Controllers/Admin/ReparacionController.php:873
+* @route '/admin/reparaciones/{reparacione}'
+*/
+showForm.head = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: show.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+show.form = showForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::edit
- * @see app/Http/Controllers/Admin/ReparacionController.php:0
- * @route '/admin/reparaciones/{reparacione}/edit'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}/edit'
+*/
 export const edit = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
@@ -512,26 +855,25 @@ edit.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::edit
- * @see app/Http/Controllers/Admin/ReparacionController.php:0
- * @route '/admin/reparaciones/{reparacione}/edit'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}/edit'
+*/
 edit.url = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacione: args }
     }
 
-    
     if (Array.isArray(args)) {
         args = {
-                    reparacione: args[0],
-                }
+            reparacione: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacione: args.reparacione,
-                }
+        reparacione: args.reparacione,
+    }
 
     return edit.definition.url
             .replace('{reparacione}', parsedArgs.reparacione.toString())
@@ -540,28 +882,66 @@ edit.url = (args: { reparacione: string | number } | [reparacione: string | numb
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::edit
- * @see app/Http/Controllers/Admin/ReparacionController.php:0
- * @route '/admin/reparaciones/{reparacione}/edit'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}/edit'
+*/
 edit.get = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: edit.url(args, options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::edit
- * @see app/Http/Controllers/Admin/ReparacionController.php:0
- * @route '/admin/reparaciones/{reparacione}/edit'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}/edit'
+*/
 edit.head = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: edit.url(args, options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::edit
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}/edit'
+*/
+const editForm = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: edit.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::edit
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}/edit'
+*/
+editForm.get = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: edit.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::edit
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}/edit'
+*/
+editForm.head = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: edit.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+edit.form = editForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::update
- * @see app/Http/Controllers/Admin/ReparacionController.php:1388
- * @route '/admin/reparaciones/{reparacione}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1436
+* @route '/admin/reparaciones/{reparacione}'
+*/
 export const update = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
@@ -574,26 +954,25 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::update
- * @see app/Http/Controllers/Admin/ReparacionController.php:1388
- * @route '/admin/reparaciones/{reparacione}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1436
+* @route '/admin/reparaciones/{reparacione}'
+*/
 update.url = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacione: args }
     }
 
-    
     if (Array.isArray(args)) {
         args = {
-                    reparacione: args[0],
-                }
+            reparacione: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacione: args.reparacione,
-                }
+        reparacione: args.reparacione,
+    }
 
     return update.definition.url
             .replace('{reparacione}', parsedArgs.reparacione.toString())
@@ -602,28 +981,76 @@ update.url = (args: { reparacione: string | number } | [reparacione: string | nu
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::update
- * @see app/Http/Controllers/Admin/ReparacionController.php:1388
- * @route '/admin/reparaciones/{reparacione}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1436
+* @route '/admin/reparaciones/{reparacione}'
+*/
 update.put = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::update
- * @see app/Http/Controllers/Admin/ReparacionController.php:1388
- * @route '/admin/reparaciones/{reparacione}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1436
+* @route '/admin/reparaciones/{reparacione}'
+*/
 update.patch = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: update.url(args, options),
     method: 'patch',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::update
+* @see app/Http/Controllers/Admin/ReparacionController.php:1436
+* @route '/admin/reparaciones/{reparacione}'
+*/
+const updateForm = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: update.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PUT',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::update
+* @see app/Http/Controllers/Admin/ReparacionController.php:1436
+* @route '/admin/reparaciones/{reparacione}'
+*/
+updateForm.put = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: update.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PUT',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::update
+* @see app/Http/Controllers/Admin/ReparacionController.php:1436
+* @route '/admin/reparaciones/{reparacione}'
+*/
+updateForm.patch = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: update.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PATCH',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+update.form = updateForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::destroy
- * @see app/Http/Controllers/Admin/ReparacionController.php:0
- * @route '/admin/reparaciones/{reparacione}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}'
+*/
 export const destroy = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
@@ -636,26 +1063,25 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::destroy
- * @see app/Http/Controllers/Admin/ReparacionController.php:0
- * @route '/admin/reparaciones/{reparacione}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}'
+*/
 destroy.url = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacione: args }
     }
 
-    
     if (Array.isArray(args)) {
         args = {
-                    reparacione: args[0],
-                }
+            reparacione: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacione: args.reparacione,
-                }
+        reparacione: args.reparacione,
+    }
 
     return destroy.definition.url
             .replace('{reparacione}', parsedArgs.reparacione.toString())
@@ -664,19 +1090,51 @@ destroy.url = (args: { reparacione: string | number } | [reparacione: string | n
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::destroy
- * @see app/Http/Controllers/Admin/ReparacionController.php:0
- * @route '/admin/reparaciones/{reparacione}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}'
+*/
 destroy.delete = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::destroy
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}'
+*/
+const destroyForm = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: destroy.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::destroy
+* @see app/Http/Controllers/Admin/ReparacionController.php:0
+* @route '/admin/reparaciones/{reparacione}'
+*/
+destroyForm.delete = (args: { reparacione: string | number } | [reparacione: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: destroy.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+destroy.form = destroyForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
- * @see app/Http/Controllers/Admin/ReparacionController.php:1079
- * @route '/admin/reparaciones/{reparacion}/estado'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1107
+* @route '/admin/reparaciones/{reparacion}/estado'
+*/
 const updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url(args, options),
     method: 'post',
@@ -689,26 +1147,25 @@ updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
- * @see app/Http/Controllers/Admin/ReparacionController.php:1079
- * @route '/admin/reparaciones/{reparacion}/estado'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1107
+* @route '/admin/reparaciones/{reparacion}/estado'
+*/
 updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
     }
 
-    
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                }
+            reparacion: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: args.reparacion,
-                }
+        reparacion: args.reparacion,
+    }
 
     return updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -717,19 +1174,40 @@ updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url = (args: { reparacion: string |
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
- * @see app/Http/Controllers/Admin/ReparacionController.php:1079
- * @route '/admin/reparaciones/{reparacion}/estado'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1107
+* @route '/admin/reparaciones/{reparacion}/estado'
+*/
 updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url(args, options),
     method: 'post',
 })
 
-    /**
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
- * @see app/Http/Controllers/Admin/ReparacionController.php:1079
- * @route '/admin/reparaciones/{reparacion}/update-estado'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1107
+* @route '/admin/reparaciones/{reparacion}/estado'
+*/
+const updateEstadob5d9c7cddbb9ecb19b82b8920c2b93afForm = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
+* @see app/Http/Controllers/Admin/ReparacionController.php:1107
+* @route '/admin/reparaciones/{reparacion}/estado'
+*/
+updateEstadob5d9c7cddbb9ecb19b82b8920c2b93afForm.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.url(args, options),
+    method: 'post',
+})
+
+updateEstadob5d9c7cddbb9ecb19b82b8920c2b93af.form = updateEstadob5d9c7cddbb9ecb19b82b8920c2b93afForm
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
+* @see app/Http/Controllers/Admin/ReparacionController.php:1107
+* @route '/admin/reparaciones/{reparacion}/update-estado'
+*/
 const updateEstado29b560c301d92324e41f156a1e4e8d5f = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateEstado29b560c301d92324e41f156a1e4e8d5f.url(args, options),
     method: 'post',
@@ -742,26 +1220,25 @@ updateEstado29b560c301d92324e41f156a1e4e8d5f.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
- * @see app/Http/Controllers/Admin/ReparacionController.php:1079
- * @route '/admin/reparaciones/{reparacion}/update-estado'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1107
+* @route '/admin/reparaciones/{reparacion}/update-estado'
+*/
 updateEstado29b560c301d92324e41f156a1e4e8d5f.url = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
     }
 
-    
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                }
+            reparacion: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: args.reparacion,
-                }
+        reparacion: args.reparacion,
+    }
 
     return updateEstado29b560c301d92324e41f156a1e4e8d5f.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -770,13 +1247,35 @@ updateEstado29b560c301d92324e41f156a1e4e8d5f.url = (args: { reparacion: string |
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
- * @see app/Http/Controllers/Admin/ReparacionController.php:1079
- * @route '/admin/reparaciones/{reparacion}/update-estado'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1107
+* @route '/admin/reparaciones/{reparacion}/update-estado'
+*/
 updateEstado29b560c301d92324e41f156a1e4e8d5f.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateEstado29b560c301d92324e41f156a1e4e8d5f.url(args, options),
     method: 'post',
 })
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
+* @see app/Http/Controllers/Admin/ReparacionController.php:1107
+* @route '/admin/reparaciones/{reparacion}/update-estado'
+*/
+const updateEstado29b560c301d92324e41f156a1e4e8d5fForm = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: updateEstado29b560c301d92324e41f156a1e4e8d5f.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::updateEstado
+* @see app/Http/Controllers/Admin/ReparacionController.php:1107
+* @route '/admin/reparaciones/{reparacion}/update-estado'
+*/
+updateEstado29b560c301d92324e41f156a1e4e8d5fForm.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: updateEstado29b560c301d92324e41f156a1e4e8d5f.url(args, options),
+    method: 'post',
+})
+
+updateEstado29b560c301d92324e41f156a1e4e8d5f.form = updateEstado29b560c301d92324e41f156a1e4e8d5fForm
 
 /**
 * Multiple routes resolve to \App\Http\Controllers\Admin\ReparacionController::updateEstado, so this export is a
@@ -790,9 +1289,9 @@ export const updateEstado = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateDatos
- * @see app/Http/Controllers/Admin/ReparacionController.php:962
- * @route '/admin/reparaciones/{reparacion}/update-datos'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:990
+* @route '/admin/reparaciones/{reparacion}/update-datos'
+*/
 export const updateDatos = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateDatos.url(args, options),
     method: 'post',
@@ -805,31 +1304,31 @@ updateDatos.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateDatos
- * @see app/Http/Controllers/Admin/ReparacionController.php:962
- * @route '/admin/reparaciones/{reparacion}/update-datos'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:990
+* @route '/admin/reparaciones/{reparacion}/update-datos'
+*/
 updateDatos.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reparacion: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { reparacion: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                }
+            reparacion: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: typeof args.reparacion === 'object'
-                ? args.reparacion.id
-                : args.reparacion,
-                }
+        reparacion: typeof args.reparacion === 'object'
+        ? args.reparacion.id
+        : args.reparacion,
+    }
 
     return updateDatos.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -838,19 +1337,41 @@ updateDatos.url = (args: { reparacion: number | { id: number } } | [reparacion: 
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateDatos
- * @see app/Http/Controllers/Admin/ReparacionController.php:962
- * @route '/admin/reparaciones/{reparacion}/update-datos'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:990
+* @route '/admin/reparaciones/{reparacion}/update-datos'
+*/
 updateDatos.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateDatos.url(args, options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::updateDatos
+* @see app/Http/Controllers/Admin/ReparacionController.php:990
+* @route '/admin/reparaciones/{reparacion}/update-datos'
+*/
+const updateDatosForm = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: updateDatos.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::updateDatos
+* @see app/Http/Controllers/Admin/ReparacionController.php:990
+* @route '/admin/reparaciones/{reparacion}/update-datos'
+*/
+updateDatosForm.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: updateDatos.url(args, options),
+    method: 'post',
+})
+
+updateDatos.form = updateDatosForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::uploadFotoProceso
- * @see app/Http/Controllers/Admin/ReparacionController.php:1017
- * @route '/admin/reparaciones/{reparacion}/add-foto'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1045
+* @route '/admin/reparaciones/{reparacion}/add-foto'
+*/
 export const uploadFotoProceso = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: uploadFotoProceso.url(args, options),
     method: 'post',
@@ -863,31 +1384,31 @@ uploadFotoProceso.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::uploadFotoProceso
- * @see app/Http/Controllers/Admin/ReparacionController.php:1017
- * @route '/admin/reparaciones/{reparacion}/add-foto'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1045
+* @route '/admin/reparaciones/{reparacion}/add-foto'
+*/
 uploadFotoProceso.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reparacion: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { reparacion: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                }
+            reparacion: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: typeof args.reparacion === 'object'
-                ? args.reparacion.id
-                : args.reparacion,
-                }
+        reparacion: typeof args.reparacion === 'object'
+        ? args.reparacion.id
+        : args.reparacion,
+    }
 
     return uploadFotoProceso.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -896,19 +1417,41 @@ uploadFotoProceso.url = (args: { reparacion: number | { id: number } } | [repara
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::uploadFotoProceso
- * @see app/Http/Controllers/Admin/ReparacionController.php:1017
- * @route '/admin/reparaciones/{reparacion}/add-foto'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1045
+* @route '/admin/reparaciones/{reparacion}/add-foto'
+*/
 uploadFotoProceso.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: uploadFotoProceso.url(args, options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::uploadFotoProceso
+* @see app/Http/Controllers/Admin/ReparacionController.php:1045
+* @route '/admin/reparaciones/{reparacion}/add-foto'
+*/
+const uploadFotoProcesoForm = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: uploadFotoProceso.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::uploadFotoProceso
+* @see app/Http/Controllers/Admin/ReparacionController.php:1045
+* @route '/admin/reparaciones/{reparacion}/add-foto'
+*/
+uploadFotoProcesoForm.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: uploadFotoProceso.url(args, options),
+    method: 'post',
+})
+
+uploadFotoProceso.form = uploadFotoProcesoForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::deleteFoto
- * @see app/Http/Controllers/Admin/ReparacionController.php:1066
- * @route '/admin/reparaciones/{reparacion}/fotos/{foto}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1094
+* @route '/admin/reparaciones/{reparacion}/fotos/{foto}'
+*/
 export const deleteFoto = (args: { reparacion: number | { id: number }, foto: number | { id: number } } | [reparacion: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: deleteFoto.url(args, options),
     method: 'delete',
@@ -921,27 +1464,27 @@ deleteFoto.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::deleteFoto
- * @see app/Http/Controllers/Admin/ReparacionController.php:1066
- * @route '/admin/reparaciones/{reparacion}/fotos/{foto}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1094
+* @route '/admin/reparaciones/{reparacion}/fotos/{foto}'
+*/
 deleteFoto.url = (args: { reparacion: number | { id: number }, foto: number | { id: number } } | [reparacion: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions) => {
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                    foto: args[1],
-                }
+            reparacion: args[0],
+            foto: args[1],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: typeof args.reparacion === 'object'
-                ? args.reparacion.id
-                : args.reparacion,
-                                foto: typeof args.foto === 'object'
-                ? args.foto.id
-                : args.foto,
-                }
+        reparacion: typeof args.reparacion === 'object'
+        ? args.reparacion.id
+        : args.reparacion,
+        foto: typeof args.foto === 'object'
+        ? args.foto.id
+        : args.foto,
+    }
 
     return deleteFoto.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -951,19 +1494,51 @@ deleteFoto.url = (args: { reparacion: number | { id: number }, foto: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::deleteFoto
- * @see app/Http/Controllers/Admin/ReparacionController.php:1066
- * @route '/admin/reparaciones/{reparacion}/fotos/{foto}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1094
+* @route '/admin/reparaciones/{reparacion}/fotos/{foto}'
+*/
 deleteFoto.delete = (args: { reparacion: number | { id: number }, foto: number | { id: number } } | [reparacion: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: deleteFoto.url(args, options),
     method: 'delete',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::deleteFoto
+* @see app/Http/Controllers/Admin/ReparacionController.php:1094
+* @route '/admin/reparaciones/{reparacion}/fotos/{foto}'
+*/
+const deleteFotoForm = (args: { reparacion: number | { id: number }, foto: number | { id: number } } | [reparacion: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: deleteFoto.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::deleteFoto
+* @see app/Http/Controllers/Admin/ReparacionController.php:1094
+* @route '/admin/reparaciones/{reparacion}/fotos/{foto}'
+*/
+deleteFotoForm.delete = (args: { reparacion: number | { id: number }, foto: number | { id: number } } | [reparacion: number | { id: number }, foto: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: deleteFoto.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+deleteFoto.form = deleteFotoForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::addItem
- * @see app/Http/Controllers/Admin/ReparacionController.php:1225
- * @route '/admin/reparaciones/{reparacion}/items'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1272
+* @route '/admin/reparaciones/{reparacion}/items'
+*/
 export const addItem = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: addItem.url(args, options),
     method: 'post',
@@ -976,31 +1551,31 @@ addItem.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::addItem
- * @see app/Http/Controllers/Admin/ReparacionController.php:1225
- * @route '/admin/reparaciones/{reparacion}/items'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1272
+* @route '/admin/reparaciones/{reparacion}/items'
+*/
 addItem.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reparacion: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { reparacion: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                }
+            reparacion: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: typeof args.reparacion === 'object'
-                ? args.reparacion.id
-                : args.reparacion,
-                }
+        reparacion: typeof args.reparacion === 'object'
+        ? args.reparacion.id
+        : args.reparacion,
+    }
 
     return addItem.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -1009,19 +1584,41 @@ addItem.url = (args: { reparacion: number | { id: number } } | [reparacion: numb
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::addItem
- * @see app/Http/Controllers/Admin/ReparacionController.php:1225
- * @route '/admin/reparaciones/{reparacion}/items'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1272
+* @route '/admin/reparaciones/{reparacion}/items'
+*/
 addItem.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: addItem.url(args, options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::addItem
+* @see app/Http/Controllers/Admin/ReparacionController.php:1272
+* @route '/admin/reparaciones/{reparacion}/items'
+*/
+const addItemForm = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: addItem.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::addItem
+* @see app/Http/Controllers/Admin/ReparacionController.php:1272
+* @route '/admin/reparaciones/{reparacion}/items'
+*/
+addItemForm.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: addItem.url(args, options),
+    method: 'post',
+})
+
+addItem.form = addItemForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::removeItem
- * @see app/Http/Controllers/Admin/ReparacionController.php:1269
- * @route '/admin/reparaciones/{reparacion}/items/{item}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1316
+* @route '/admin/reparaciones/{reparacion}/items/{item}'
+*/
 export const removeItem = (args: { reparacion: number | { id: number }, item: number | { id: number } } | [reparacion: number | { id: number }, item: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: removeItem.url(args, options),
     method: 'delete',
@@ -1034,27 +1631,27 @@ removeItem.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::removeItem
- * @see app/Http/Controllers/Admin/ReparacionController.php:1269
- * @route '/admin/reparaciones/{reparacion}/items/{item}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1316
+* @route '/admin/reparaciones/{reparacion}/items/{item}'
+*/
 removeItem.url = (args: { reparacion: number | { id: number }, item: number | { id: number } } | [reparacion: number | { id: number }, item: number | { id: number } ], options?: RouteQueryOptions) => {
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                    item: args[1],
-                }
+            reparacion: args[0],
+            item: args[1],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: typeof args.reparacion === 'object'
-                ? args.reparacion.id
-                : args.reparacion,
-                                item: typeof args.item === 'object'
-                ? args.item.id
-                : args.item,
-                }
+        reparacion: typeof args.reparacion === 'object'
+        ? args.reparacion.id
+        : args.reparacion,
+        item: typeof args.item === 'object'
+        ? args.item.id
+        : args.item,
+    }
 
     return removeItem.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -1064,19 +1661,51 @@ removeItem.url = (args: { reparacion: number | { id: number }, item: number | { 
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::removeItem
- * @see app/Http/Controllers/Admin/ReparacionController.php:1269
- * @route '/admin/reparaciones/{reparacion}/items/{item}'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1316
+* @route '/admin/reparaciones/{reparacion}/items/{item}'
+*/
 removeItem.delete = (args: { reparacion: number | { id: number }, item: number | { id: number } } | [reparacion: number | { id: number }, item: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: removeItem.url(args, options),
     method: 'delete',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::removeItem
+* @see app/Http/Controllers/Admin/ReparacionController.php:1316
+* @route '/admin/reparaciones/{reparacion}/items/{item}'
+*/
+const removeItemForm = (args: { reparacion: number | { id: number }, item: number | { id: number } } | [reparacion: number | { id: number }, item: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: removeItem.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::removeItem
+* @see app/Http/Controllers/Admin/ReparacionController.php:1316
+* @route '/admin/reparaciones/{reparacion}/items/{item}'
+*/
+removeItemForm.delete = (args: { reparacion: number | { id: number }, item: number | { id: number } } | [reparacion: number | { id: number }, item: number | { id: number } ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: removeItem.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+removeItem.form = removeItemForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateCostos
- * @see app/Http/Controllers/Admin/ReparacionController.php:1289
- * @route '/admin/reparaciones/{reparacion}/costos'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1336
+* @route '/admin/reparaciones/{reparacion}/costos'
+*/
 export const updateCostos = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateCostos.url(args, options),
     method: 'post',
@@ -1089,31 +1718,31 @@ updateCostos.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateCostos
- * @see app/Http/Controllers/Admin/ReparacionController.php:1289
- * @route '/admin/reparaciones/{reparacion}/costos'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1336
+* @route '/admin/reparaciones/{reparacion}/costos'
+*/
 updateCostos.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reparacion: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { reparacion: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                }
+            reparacion: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: typeof args.reparacion === 'object'
-                ? args.reparacion.id
-                : args.reparacion,
-                }
+        reparacion: typeof args.reparacion === 'object'
+        ? args.reparacion.id
+        : args.reparacion,
+    }
 
     return updateCostos.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -1122,19 +1751,41 @@ updateCostos.url = (args: { reparacion: number | { id: number } } | [reparacion:
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::updateCostos
- * @see app/Http/Controllers/Admin/ReparacionController.php:1289
- * @route '/admin/reparaciones/{reparacion}/costos'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1336
+* @route '/admin/reparaciones/{reparacion}/costos'
+*/
 updateCostos.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: updateCostos.url(args, options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::updateCostos
+* @see app/Http/Controllers/Admin/ReparacionController.php:1336
+* @route '/admin/reparaciones/{reparacion}/costos'
+*/
+const updateCostosForm = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: updateCostos.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::updateCostos
+* @see app/Http/Controllers/Admin/ReparacionController.php:1336
+* @route '/admin/reparaciones/{reparacion}/costos'
+*/
+updateCostosForm.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: updateCostos.url(args, options),
+    method: 'post',
+})
+
+updateCostos.form = updateCostosForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::savePreservicio
- * @see app/Http/Controllers/Admin/ReparacionController.php:1084
- * @route '/admin/reparaciones/{reparacion}/preservicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1112
+* @route '/admin/reparaciones/{reparacion}/preservicio'
+*/
 export const savePreservicio = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: savePreservicio.url(args, options),
     method: 'post',
@@ -1147,26 +1798,25 @@ savePreservicio.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::savePreservicio
- * @see app/Http/Controllers/Admin/ReparacionController.php:1084
- * @route '/admin/reparaciones/{reparacion}/preservicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1112
+* @route '/admin/reparaciones/{reparacion}/preservicio'
+*/
 savePreservicio.url = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
     }
 
-    
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                }
+            reparacion: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: args.reparacion,
-                }
+        reparacion: args.reparacion,
+    }
 
     return savePreservicio.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -1175,19 +1825,41 @@ savePreservicio.url = (args: { reparacion: string | number } | [reparacion: stri
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::savePreservicio
- * @see app/Http/Controllers/Admin/ReparacionController.php:1084
- * @route '/admin/reparaciones/{reparacion}/preservicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1112
+* @route '/admin/reparaciones/{reparacion}/preservicio'
+*/
 savePreservicio.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: savePreservicio.url(args, options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::savePreservicio
+* @see app/Http/Controllers/Admin/ReparacionController.php:1112
+* @route '/admin/reparaciones/{reparacion}/preservicio'
+*/
+const savePreservicioForm = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: savePreservicio.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::savePreservicio
+* @see app/Http/Controllers/Admin/ReparacionController.php:1112
+* @route '/admin/reparaciones/{reparacion}/preservicio'
+*/
+savePreservicioForm.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: savePreservicio.url(args, options),
+    method: 'post',
+})
+
+savePreservicio.form = savePreservicioForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::postServicioForm
- * @see app/Http/Controllers/Admin/ReparacionController.php:1532
- * @route '/admin/reparaciones/{reparacion}/post-servicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1580
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
 export const postServicioForm = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: postServicioForm.url(args, options),
     method: 'get',
@@ -1200,31 +1872,31 @@ postServicioForm.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::postServicioForm
- * @see app/Http/Controllers/Admin/ReparacionController.php:1532
- * @route '/admin/reparaciones/{reparacion}/post-servicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1580
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
 postServicioForm.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reparacion: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { reparacion: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                }
+            reparacion: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: typeof args.reparacion === 'object'
-                ? args.reparacion.id
-                : args.reparacion,
-                }
+        reparacion: typeof args.reparacion === 'object'
+        ? args.reparacion.id
+        : args.reparacion,
+    }
 
     return postServicioForm.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -1233,28 +1905,66 @@ postServicioForm.url = (args: { reparacion: number | { id: number } } | [reparac
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::postServicioForm
- * @see app/Http/Controllers/Admin/ReparacionController.php:1532
- * @route '/admin/reparaciones/{reparacion}/post-servicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1580
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
 postServicioForm.get = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: postServicioForm.url(args, options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::postServicioForm
- * @see app/Http/Controllers/Admin/ReparacionController.php:1532
- * @route '/admin/reparaciones/{reparacion}/post-servicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1580
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
 postServicioForm.head = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: postServicioForm.url(args, options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::postServicioForm
+* @see app/Http/Controllers/Admin/ReparacionController.php:1580
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
+const postServicioFormForm = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: postServicioForm.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::postServicioForm
+* @see app/Http/Controllers/Admin/ReparacionController.php:1580
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
+postServicioFormForm.get = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: postServicioForm.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::postServicioForm
+* @see app/Http/Controllers/Admin/ReparacionController.php:1580
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
+postServicioFormForm.head = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: postServicioForm.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+postServicioForm.form = postServicioFormForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::savePostServicio
- * @see app/Http/Controllers/Admin/ReparacionController.php:1566
- * @route '/admin/reparaciones/{reparacion}/post-servicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1614
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
 export const savePostServicio = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: savePostServicio.url(args, options),
     method: 'post',
@@ -1267,31 +1977,31 @@ savePostServicio.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::savePostServicio
- * @see app/Http/Controllers/Admin/ReparacionController.php:1566
- * @route '/admin/reparaciones/{reparacion}/post-servicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1614
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
 savePostServicio.url = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { reparacion: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { reparacion: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                }
+            reparacion: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: typeof args.reparacion === 'object'
-                ? args.reparacion.id
-                : args.reparacion,
-                }
+        reparacion: typeof args.reparacion === 'object'
+        ? args.reparacion.id
+        : args.reparacion,
+    }
 
     return savePostServicio.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -1300,19 +2010,41 @@ savePostServicio.url = (args: { reparacion: number | { id: number } } | [reparac
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::savePostServicio
- * @see app/Http/Controllers/Admin/ReparacionController.php:1566
- * @route '/admin/reparaciones/{reparacion}/post-servicio'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1614
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
 savePostServicio.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: savePostServicio.url(args, options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionController::savePostServicio
+* @see app/Http/Controllers/Admin/ReparacionController.php:1614
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
+const savePostServicioForm = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: savePostServicio.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::savePostServicio
+* @see app/Http/Controllers/Admin/ReparacionController.php:1614
+* @route '/admin/reparaciones/{reparacion}/post-servicio'
+*/
+savePostServicioForm.post = (args: { reparacion: number | { id: number } } | [reparacion: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: savePostServicio.url(args, options),
+    method: 'post',
+})
+
+savePostServicio.form = savePostServicioForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionController::notificarWhatsApp
- * @see app/Http/Controllers/Admin/ReparacionController.php:1317
- * @route '/admin/reparaciones/{reparacion}/notificar-whatsapp'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1364
+* @route '/admin/reparaciones/{reparacion}/notificar-whatsapp'
+*/
 export const notificarWhatsApp = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: notificarWhatsApp.url(args, options),
     method: 'post',
@@ -1325,26 +2057,25 @@ notificarWhatsApp.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::notificarWhatsApp
- * @see app/Http/Controllers/Admin/ReparacionController.php:1317
- * @route '/admin/reparaciones/{reparacion}/notificar-whatsapp'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1364
+* @route '/admin/reparaciones/{reparacion}/notificar-whatsapp'
+*/
 notificarWhatsApp.url = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { reparacion: args }
     }
 
-    
     if (Array.isArray(args)) {
         args = {
-                    reparacion: args[0],
-                }
+            reparacion: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        reparacion: args.reparacion,
-                }
+        reparacion: args.reparacion,
+    }
 
     return notificarWhatsApp.definition.url
             .replace('{reparacion}', parsedArgs.reparacion.toString())
@@ -1353,13 +2084,36 @@ notificarWhatsApp.url = (args: { reparacion: string | number } | [reparacion: st
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionController::notificarWhatsApp
- * @see app/Http/Controllers/Admin/ReparacionController.php:1317
- * @route '/admin/reparaciones/{reparacion}/notificar-whatsapp'
- */
+* @see app/Http/Controllers/Admin/ReparacionController.php:1364
+* @route '/admin/reparaciones/{reparacion}/notificar-whatsapp'
+*/
 notificarWhatsApp.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: notificarWhatsApp.url(args, options),
     method: 'post',
 })
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::notificarWhatsApp
+* @see app/Http/Controllers/Admin/ReparacionController.php:1364
+* @route '/admin/reparaciones/{reparacion}/notificar-whatsapp'
+*/
+const notificarWhatsAppForm = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: notificarWhatsApp.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionController::notificarWhatsApp
+* @see app/Http/Controllers/Admin/ReparacionController.php:1364
+* @route '/admin/reparaciones/{reparacion}/notificar-whatsapp'
+*/
+notificarWhatsAppForm.post = (args: { reparacion: string | number } | [reparacion: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: notificarWhatsApp.url(args, options),
+    method: 'post',
+})
+
+notificarWhatsApp.form = notificarWhatsAppForm
+
 const ReparacionController = { reportePdf, storeCliente, storeCategoria, storeMarca, storeModelo, storeServicio, checkImei, apiFind, index, create, store, show, edit, update, destroy, updateEstado, updateDatos, uploadFotoProceso, deleteFoto, addItem, removeItem, updateCostos, savePreservicio, postServicioForm, savePostServicio, notificarWhatsApp }
 
 export default ReparacionController

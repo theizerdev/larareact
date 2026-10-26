@@ -198,6 +198,9 @@ function printViaIframe(
         `;
     }
 
+    const isThermalRoll80 = pageWidthMm === 80 && pageHeightMm === 'auto';
+    const effectiveContentWidthMm = isThermalRoll80 ? 72 : pageWidthMm;
+
     const fullHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -217,7 +220,8 @@ function printViaIframe(
             padding: 0 !important;
             background: #ffffff !important;
             color: #000000 !important;
-            width: ${pageWidthMm}mm !important;
+            width: ${effectiveContentWidthMm}mm !important;
+            max-width: ${effectiveContentWidthMm}mm !important;
         }
         @page {
             size: ${pageSizeCss} !important;
@@ -240,7 +244,8 @@ function printViaIframe(
             }
         }
         .fixsale-print-page {
-            width: ${pageWidthMm}mm;
+            width: ${effectiveContentWidthMm}mm;
+            max-width: ${effectiveContentWidthMm}mm;
             ${pageHeightMm !== 'auto' ? `height: ${pageHeightMm}mm; max-height: ${pageHeightMm}mm;` : ''}
             overflow: hidden;
             display: flex;
@@ -638,27 +643,44 @@ export default function ImprimirComprobantesModal({
     };
 
     // ─────────────────────────────────────────────────────────────
-    // RENDERIZADO DEL TICKET DE CLIENTE (80MM POS)
+    // RENDERIZADO DEL TICKET DE CLIENTE (80MM POS - ALTA LEGIBILIDAD EN NEGRITA)
     // ─────────────────────────────────────────────────────────────
     const renderTicketClienteContent = (isForPrint = false) => (
-        <div style={{ fontFamily: 'Courier New, Courier, monospace, Arial, sans-serif', color: '#000000', fontSize: '11px', lineHeight: 1.25, padding: isForPrint ? '0' : '12px', background: '#ffffff', userSelect: 'none' }}>
+        <div
+            style={{
+                fontFamily: 'Arial, "Helvetica Neue", Helvetica, sans-serif',
+                color: '#000000',
+                fontWeight: 700,
+                fontSize: '11px',
+                lineHeight: 1.3,
+                width: isForPrint ? '72mm' : '100%',
+                maxWidth: isForPrint ? '72mm' : '100%',
+                padding: isForPrint ? '1.5mm 2.5mm 3mm 2.5mm' : '12px',
+                boxSizing: 'border-box',
+                background: '#ffffff',
+                userSelect: 'none',
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
+            }}
+        >
             {/* HEADER EMPRESA CON LOGO */}
-            <div style={{ textAlign: 'center', marginBottom: '4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ textAlign: 'center', marginBottom: '5px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                 {empresaInfo?.logo || empresaInfo?.logo_mini ? (
                     <img
                         src={empresaInfo.logo || empresaInfo.logo_mini}
                         alt={empresaInfo.razon_social || empresaInfo.nombre_comercial || 'Logo'}
                         style={{
-                            width: `${Number(empresaInfo?.logo_ticket_size || 200)}px`,
-                            maxWidth: '100%',
+                            width: `${Number(empresaInfo?.logo_ticket_size || 190)}px`,
+                            maxWidth: '92%',
                             height: 'auto',
-                            maxHeight: '160px',
+                            maxHeight: '150px',
                             margin: '0 auto 4px auto',
                             objectFit: 'contain',
+                            filter: 'contrast(1.25)',
                         }}
                     />
                 ) : (
-                    <div style={{ fontWeight: 900, fontSize: '15px', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
+                    <div style={{ fontWeight: 900, fontSize: '16px', textTransform: 'uppercase', letterSpacing: '-0.02em', color: '#000000' }}>
                         {empresaNombreDisplay}
                     </div>
                 )}
@@ -666,83 +688,104 @@ export default function ImprimirComprobantesModal({
 
             {/* DIRECCIÓN Y TELÉFONO */}
             {empresaInfo?.direccion && (
-                <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9px', textTransform: 'uppercase', padding: '0 4px', lineHeight: 1.2 }}>
+                <div style={{ textAlign: 'center', fontWeight: 800, fontSize: '10px', textTransform: 'uppercase', padding: '0 2px', lineHeight: 1.25, color: '#000000' }}>
                     {empresaInfo.direccion}
                 </div>
             )}
-            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '10.5px', marginTop: '2px' }}>
+            <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '11.5px', marginTop: '3px', color: '#000000' }}>
                 TEL: {empresaInfo?.telefono || empresaInfo?.whatsapp_phone || 'S/T'}
             </div>
 
             {/* BANNER NEGRO ORDEN N° */}
-            <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '13px', padding: '4px 0', margin: '8px 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '13.5px', padding: '4.5px 4px', margin: '8px 0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 ORDEN N° {orden.numero_orden}
             </div>
 
             {/* DATOS DEL CLIENTE */}
-            <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '11px', textTransform: 'uppercase', marginBottom: '4px' }}>
+            <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '11.5px', textTransform: 'uppercase', marginBottom: '4px', borderBottom: '1.5px solid #000000', paddingBottom: '2px', color: '#000000' }}>
                 DATOS DEL CLIENTE
             </div>
-            <div style={{ fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '2px', fontWeight: 'bold', textTransform: 'uppercase', padding: '0 4px' }}>
-                <div>NOMBRE: <span style={{ fontWeight: 'normal' }}>{clienteNombre}</span></div>
-                <div>TELEFONO: <span style={{ fontWeight: 'normal' }}>{clienteTelefono || '-'}</span></div>
+            <div style={{ fontSize: '10.5px', display: 'flex', flexDirection: 'column', gap: '3px', fontWeight: 800, textTransform: 'uppercase', padding: '0 2px', color: '#000000' }}>
+                <div>
+                    <span style={{ fontWeight: 900 }}>NOMBRE: </span>
+                    <span style={{ fontWeight: 700 }}>{clienteNombre}</span>
+                </div>
+                <div>
+                    <span style={{ fontWeight: 900 }}>TELEFONO: </span>
+                    <span style={{ fontWeight: 800 }}>{clienteTelefono || '-'}</span>
+                </div>
             </div>
 
             {/* DATOS DEL EQUIPO */}
-            <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '11px', textTransform: 'uppercase', marginTop: '10px', marginBottom: '4px' }}>
+            <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '11.5px', textTransform: 'uppercase', marginTop: '10px', marginBottom: '4px', borderBottom: '1.5px solid #000000', paddingBottom: '2px', color: '#000000' }}>
                 DATOS DEL EQUIPO
             </div>
-            <div style={{ fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '2px', fontWeight: 'bold', textTransform: 'uppercase', padding: '0 4px' }}>
-                <div>EQUIPO: <span style={{ fontWeight: 'normal' }}>{equipoDisplay}</span></div>
-                <div>IMEI/SN: <span style={{ fontWeight: 'normal' }}>{orden.imei_serie || 'nv'}</span></div>
-                <div>OBSERVACIONES: <span style={{ fontWeight: 'normal' }}>{orden.observaciones_fisicas || 'equipo sin observaciones'}</span></div>
-                <div>REPARACION: <span style={{ fontWeight: 'normal' }}>{fallaDisplay}</span></div>
-                <div>ACCESORIOS: <span style={{ fontWeight: 'normal' }}>{orden.accesorios_incluidos || 'no deja'}</span></div>
+            <div style={{ fontSize: '10.5px', display: 'flex', flexDirection: 'column', gap: '3px', fontWeight: 800, textTransform: 'uppercase', padding: '0 2px', color: '#000000' }}>
+                <div>
+                    <span style={{ fontWeight: 900 }}>EQUIPO: </span>
+                    <span style={{ fontWeight: 700 }}>{equipoDisplay}</span>
+                </div>
+                <div>
+                    <span style={{ fontWeight: 900 }}>IMEI/SN: </span>
+                    <span style={{ fontWeight: 800, letterSpacing: '0.02em' }}>{orden.imei_serie || 'NV'}</span>
+                </div>
+                <div>
+                    <span style={{ fontWeight: 900 }}>OBSERVACIONES: </span>
+                    <span style={{ fontWeight: 700 }}>{orden.observaciones_fisicas || 'EQUIPO SIN OBSERVACIONES'}</span>
+                </div>
+                <div>
+                    <span style={{ fontWeight: 900 }}>REPARACION: </span>
+                    <span style={{ fontWeight: 700 }}>{fallaDisplay}</span>
+                </div>
+                <div>
+                    <span style={{ fontWeight: 900 }}>ACCESORIOS: </span>
+                    <span style={{ fontWeight: 700 }}>{orden.accesorios_incluidos || 'NO DEJA'}</span>
+                </div>
             </div>
 
             {/* COSTO REPARACION */}
-            <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10px', padding: '3px 0', marginTop: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10.5px', padding: '3.5px 4px', marginTop: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 COSTO REPARACION
             </div>
-            <div style={{ fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '2px', padding: '4px', fontWeight: 'bold' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>SUBTOTAL =</span>
-                    <span>${formatNum(orden.costo_estimado)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
+            <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '3px', padding: '5px 2px', fontWeight: 800, color: '#000000' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px' }}>
+                    <span style={{ fontWeight: 900 }}>SUBTOTAL =</span>
+                    <span style={{ fontWeight: 800 }}>${formatNum(orden.costo_estimado)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>ANTICIPO =</span>
-                    <span>${formatNum(orden.anticipo)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px' }}>
+                    <span style={{ fontWeight: 900 }}>ANTICIPO =</span>
+                    <span style={{ fontWeight: 800 }}>${formatNum(orden.anticipo)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dotted #000000', paddingTop: '2px', fontWeight: 900 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px', borderTop: '2px dashed #000000', paddingTop: '3px', marginTop: '1px', fontWeight: 900, fontSize: '12px' }}>
                     <span>TOTAL =</span>
                     <span>${formatNum(orden.saldo_restante)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
                 </div>
             </div>
 
             {/* FECHAS */}
-            <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10px', padding: '3px 0', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10.5px', padding: '3.5px 4px', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 FECHA DE RECEPCION
             </div>
-            <div style={{ textAlign: 'center', fontSize: '10px', fontWeight: 'bold', padding: '3px 0' }}>
+            <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: 800, padding: '4px 2px', color: '#000000' }}>
                 {formatDate(orden.fecha_recepcion)}
             </div>
 
-            <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10px', padding: '3px 0', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10.5px', padding: '3.5px 4px', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 FECHA APROX DE ENTREGA
             </div>
-            <div style={{ textAlign: 'center', fontSize: '10px', fontWeight: 'bold', padding: '3px 0' }}>
+            <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: 800, padding: '4px 2px', color: '#000000' }}>
                 {formatFullSpanishDate(orden.fecha_estimada_entrega || orden.fecha_prometida || orden.fecha_recepcion)}
             </div>
 
             {/* CONTRASEÑA O PATRÓN */}
-            <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10px', padding: '3px 0', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <div style={{ background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 900, fontSize: '10.5px', padding: '3.5px 4px', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 CONTRASEÑA
             </div>
             <div style={{ padding: '6px 0' }}>
                 {extractPatternNumbers(orden.contrasena_patron).length > 0 ? (
                     <PrintablePatternLock pattern={extractPatternNumbers(orden.contrasena_patron)} />
                 ) : (
-                    <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '12px', padding: '4px 0' }}>
+                    <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '12.5px', padding: '4px 0', color: '#000000' }}>
                         {orden.contrasena_patron || 'Sin contraseña'}
                     </div>
                 )}
@@ -750,37 +793,37 @@ export default function ImprimirComprobantesModal({
 
             {/* TÉCNICO */}
             {tecnicoNombre && (
-                <div style={{ borderTop: '1px dashed #000000', marginTop: '6px', paddingTop: '4px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '8.5px', textTransform: 'uppercase', fontWeight: 'bold', color: '#4b5563' }}>TÉCNICO ASIGNADO:</div>
-                    <div style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 900 }}>{tecnicoNombre}</div>
+                <div style={{ borderTop: '1.5px dashed #000000', marginTop: '6px', paddingTop: '5px', textAlign: 'center', color: '#000000' }}>
+                    <div style={{ fontSize: '9.5px', textTransform: 'uppercase', fontWeight: 800, color: '#000000' }}>TÉCNICO ASIGNADO:</div>
+                    <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 900, color: '#000000', marginTop: '1px' }}>{tecnicoNombre}</div>
                 </div>
             )}
 
             {/* CÓDIGO DE BARRAS */}
-            <div style={{ textAlign: 'center', padding: '8px 0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: '100%', maxWidth: '240px', overflow: 'hidden', display: 'flex', justifyContent: 'center', padding: '2px 0' }}>
+            <div style={{ textAlign: 'center', padding: '8px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#000000' }}>
+                <div style={{ width: '100%', maxWidth: '62mm', overflow: 'hidden', display: 'flex', justifyContent: 'center', padding: '2px 0' }}>
                     <BarcodeSVG
                         value={orden.numero_orden}
-                        width={1.6}
+                        width={1.55}
                         height={46}
                         displayValue={false}
                     />
                 </div>
-                <div style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', marginTop: '4px', letterSpacing: '0.05em' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 900, textTransform: 'uppercase', marginTop: '4px', letterSpacing: '0.04em', color: '#000000' }}>
                     CÓDIGO DE REPARACIÓN: {orden.numero_orden}
                 </div>
-                <div style={{ fontSize: '7.5px', color: '#374151', fontWeight: 600 }}>
+                <div style={{ fontSize: '8.5px', color: '#000000', fontWeight: 700, marginTop: '1px' }}>
                     Escanee el código para consultar estado o cobrar en POS
                 </div>
             </div>
 
             {/* TÉRMINOS Y FIRMA */}
-            <div style={{ paddingTop: '6px' }}>
-                <div style={{ fontSize: '9px', fontWeight: 'bold', textAlign: 'left', marginBottom: '4px' }}>
+            <div style={{ paddingTop: '6px', color: '#000000' }}>
+                <div style={{ fontSize: '9.5px', fontWeight: 800, textAlign: 'left', marginBottom: '4px', color: '#000000' }}>
                     Términos y Condiciones de Garantía:
                 </div>
-                <div style={{ border: '2px solid #000000', height: '46px', width: '100%', marginBottom: '4px', background: '#ffffff' }}></div>
-                <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '10px', textTransform: 'uppercase' }}>
+                <div style={{ border: '2px solid #000000', height: '46px', width: '100%', boxSizing: 'border-box', marginBottom: '4px', background: '#ffffff' }}></div>
+                <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '10.5px', textTransform: 'uppercase', color: '#000000' }}>
                     FIRMA DE CONFORMIDAD
                 </div>
             </div>
@@ -793,28 +836,44 @@ export default function ImprimirComprobantesModal({
     const renderTicketTecnicoContent = (isForPrint = false) => {
         if (tipoTicketTecnico === 'ficha_80mm') {
             return (
-                <div style={{ fontFamily: 'Courier New, Courier, monospace, Arial, sans-serif', color: '#000000', fontSize: '10.5px', lineHeight: 1.25, padding: isForPrint ? '0' : '12px', background: '#ffffff', userSelect: 'none' }}>
-                    <div style={{ textAlign: 'center', fontWeight: 900, textTransform: 'uppercase', fontSize: '11.5px', background: '#000000', color: '#ffffff', padding: '3px 0' }}>
+                <div
+                    style={{
+                        fontFamily: 'Arial, "Helvetica Neue", Helvetica, sans-serif',
+                        color: '#000000',
+                        fontWeight: 700,
+                        fontSize: '10.5px',
+                        lineHeight: 1.3,
+                        width: isForPrint ? '72mm' : '100%',
+                        maxWidth: isForPrint ? '72mm' : '100%',
+                        padding: isForPrint ? '1.5mm 2.5mm 3mm 2.5mm' : '12px',
+                        boxSizing: 'border-box',
+                        background: '#ffffff',
+                        userSelect: 'none',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'anywhere',
+                    }}
+                >
+                    <div style={{ textAlign: 'center', fontWeight: 900, textTransform: 'uppercase', fontSize: '12px', background: '#000000', color: '#ffffff', padding: '4px 4px' }}>
                         FICHA DE TRABAJO TÉCNICO DE TALLER
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginTop: '6px' }}>
-                        <span>ORDEN: <strong>{orden.numero_orden}</strong></span>
-                        <span>RECIBIDO: <strong>{formatDate(orden.fecha_recepcion)}</strong></span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', marginTop: '6px', fontWeight: 800 }}>
+                        <span><strong style={{ fontWeight: 900 }}>ORDEN:</strong> {orden.numero_orden}</span>
+                        <span><strong style={{ fontWeight: 900 }}>RECIBIDO:</strong> {formatDate(orden.fecha_recepcion)}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginTop: '2px' }}>
-                        <span>CLIENTE: <strong>{clienteNombre}</strong></span>
-                        <span>TEL: <strong>{clienteTelefono}</strong></span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', marginTop: '2px', fontWeight: 800 }}>
+                        <span><strong style={{ fontWeight: 900 }}>CLIENTE:</strong> {clienteNombre}</span>
+                        <span><strong style={{ fontWeight: 900 }}>TEL:</strong> {clienteTelefono}</span>
                     </div>
-                    <div style={{ borderBottom: '1px solid #000000', margin: '4px 0' }}></div>
+                    <div style={{ borderBottom: '1.5px solid #000000', margin: '5px 0' }}></div>
 
-                    <div style={{ fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <div>EQUIPO: <strong>{equipoDisplay}</strong></div>
-                        <div>IMEI/SERIE: <strong>{orden.imei_serie || 'nv'}</strong></div>
-                        <div>ENTREGA ESTIMADA: <strong>{formatDate(orden.fecha_prometida || orden.fecha_estimada_entrega) || 'No especificada'}</strong></div>
-                        <div>FALLA REPORTADA: <strong>{fallaDisplay}</strong></div>
-                        <div>DETALLE TALLER / OBS: <strong>{obsDisplay || 'Sin observaciones'}</strong></div>
-                        <div>SEGURIDAD / PIN: <strong>{pinDisplay || orden.contrasena_patron || 'Sin contraseña'}</strong></div>
-                        {tecnicoNombre && <div>TÉCNICO ASIGNADO: <strong>{tecnicoNombre}</strong></div>}
+                    <div style={{ fontSize: '10.5px', display: 'flex', flexDirection: 'column', gap: '3px', fontWeight: 700 }}>
+                        <div><strong style={{ fontWeight: 900 }}>EQUIPO:</strong> {equipoDisplay}</div>
+                        <div><strong style={{ fontWeight: 900 }}>IMEI/SERIE:</strong> {orden.imei_serie || 'NV'}</div>
+                        <div><strong style={{ fontWeight: 900 }}>ENTREGA ESTIMADA:</strong> {formatDate(orden.fecha_prometida || orden.fecha_estimada_entrega) || 'No especificada'}</div>
+                        <div><strong style={{ fontWeight: 900 }}>FALLA REPORTADA:</strong> {fallaDisplay}</div>
+                        <div><strong style={{ fontWeight: 900 }}>DETALLE TALLER / OBS:</strong> {obsDisplay || 'Sin observaciones'}</div>
+                        <div><strong style={{ fontWeight: 900 }}>SEGURIDAD / PIN:</strong> {pinDisplay || orden.contrasena_patron || 'Sin contraseña'}</div>
+                        {tecnicoNombre && <div><strong style={{ fontWeight: 900 }}>TÉCNICO ASIGNADO:</strong> {tecnicoNombre}</div>}
                     </div>
 
                     {extractPatternNumbers(orden.contrasena_patron).length > 0 && (
@@ -823,10 +882,10 @@ export default function ImprimirComprobantesModal({
                         </div>
                     )}
 
-                    <div style={{ borderBottom: '1px dashed #000000', margin: '6px 0' }}></div>
+                    <div style={{ borderBottom: '1.5px dashed #000000', margin: '6px 0' }}></div>
 
                     <div style={{ textAlign: 'center', padding: '6px 0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ width: '100%', maxWidth: '240px', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
+                        <div style={{ width: '100%', maxWidth: '62mm', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
                             <BarcodeSVG
                                 value={orden.numero_orden}
                                 width={1.5}
@@ -834,7 +893,7 @@ export default function ImprimirComprobantesModal({
                                 displayValue={false}
                             />
                         </div>
-                        <div style={{ fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', marginTop: '4px' }}>
+                        <div style={{ fontSize: '9.5px', fontWeight: 900, textTransform: 'uppercase', marginTop: '4px', color: '#000000' }}>
                             CÓDIGO DE REPARACIÓN: {orden.numero_orden}
                         </div>
                     </div>

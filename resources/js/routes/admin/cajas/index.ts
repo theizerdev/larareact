@@ -1,9 +1,9 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::bcvRate
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:37
- * @route '/admin/cajas/bcv-rate'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:37
+* @route '/admin/cajas/bcv-rate'
+*/
 export const bcvRate = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: bcvRate.url(options),
     method: 'get',
@@ -16,37 +16,75 @@ bcvRate.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::bcvRate
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:37
- * @route '/admin/cajas/bcv-rate'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:37
+* @route '/admin/cajas/bcv-rate'
+*/
 bcvRate.url = (options?: RouteQueryOptions) => {
     return bcvRate.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::bcvRate
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:37
- * @route '/admin/cajas/bcv-rate'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:37
+* @route '/admin/cajas/bcv-rate'
+*/
 bcvRate.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: bcvRate.url(options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::bcvRate
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:37
- * @route '/admin/cajas/bcv-rate'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:37
+* @route '/admin/cajas/bcv-rate'
+*/
 bcvRate.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: bcvRate.url(options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::bcvRate
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:37
+* @route '/admin/cajas/bcv-rate'
+*/
+const bcvRateForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: bcvRate.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::bcvRate
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:37
+* @route '/admin/cajas/bcv-rate'
+*/
+bcvRateForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: bcvRate.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::bcvRate
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:37
+* @route '/admin/cajas/bcv-rate'
+*/
+bcvRateForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: bcvRate.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+bcvRate.form = bcvRateForm
+
+/**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::index
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:54
- * @route '/admin/cajas'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:54
+* @route '/admin/cajas'
+*/
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -59,37 +97,75 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::index
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:54
- * @route '/admin/cajas'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:54
+* @route '/admin/cajas'
+*/
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::index
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:54
- * @route '/admin/cajas'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:54
+* @route '/admin/cajas'
+*/
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::index
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:54
- * @route '/admin/cajas'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:54
+* @route '/admin/cajas'
+*/
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::index
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:54
+* @route '/admin/cajas'
+*/
+const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::index
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:54
+* @route '/admin/cajas'
+*/
+indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::index
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:54
+* @route '/admin/cajas'
+*/
+indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+index.form = indexForm
+
+/**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::store
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:84
- * @route '/admin/cajas'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:84
+* @route '/admin/cajas'
+*/
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -102,28 +178,50 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::store
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:84
- * @route '/admin/cajas'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:84
+* @route '/admin/cajas'
+*/
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::store
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:84
- * @route '/admin/cajas'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:84
+* @route '/admin/cajas'
+*/
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::store
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:84
+* @route '/admin/cajas'
+*/
+const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: store.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::store
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:84
+* @route '/admin/cajas'
+*/
+storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: store.url(options),
+    method: 'post',
+})
+
+store.form = storeForm
+
+/**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::show
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:115
- * @route '/admin/cajas/{caja}'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:115
+* @route '/admin/cajas/{caja}'
+*/
 export const show = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
@@ -136,31 +234,31 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::show
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:115
- * @route '/admin/cajas/{caja}'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:115
+* @route '/admin/cajas/{caja}'
+*/
 show.url = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { caja: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { caja: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { caja: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    caja: args[0],
-                }
+            caja: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        caja: typeof args.caja === 'object'
-                ? args.caja.id
-                : args.caja,
-                }
+        caja: typeof args.caja === 'object'
+        ? args.caja.id
+        : args.caja,
+    }
 
     return show.definition.url
             .replace('{caja}', parsedArgs.caja.toString())
@@ -169,28 +267,66 @@ show.url = (args: { caja: number | { id: number } } | [caja: number | { id: numb
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::show
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:115
- * @route '/admin/cajas/{caja}'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:115
+* @route '/admin/cajas/{caja}'
+*/
 show.get = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::show
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:115
- * @route '/admin/cajas/{caja}'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:115
+* @route '/admin/cajas/{caja}'
+*/
 show.head = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::show
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:115
+* @route '/admin/cajas/{caja}'
+*/
+const showForm = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: show.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::show
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:115
+* @route '/admin/cajas/{caja}'
+*/
+showForm.get = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: show.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::show
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:115
+* @route '/admin/cajas/{caja}'
+*/
+showForm.head = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: show.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+show.form = showForm
+
+/**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::movement
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:162
- * @route '/admin/cajas/{caja}/movement'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:162
+* @route '/admin/cajas/{caja}/movement'
+*/
 export const movement = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: movement.url(args, options),
     method: 'post',
@@ -203,31 +339,31 @@ movement.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::movement
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:162
- * @route '/admin/cajas/{caja}/movement'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:162
+* @route '/admin/cajas/{caja}/movement'
+*/
 movement.url = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { caja: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { caja: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { caja: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    caja: args[0],
-                }
+            caja: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        caja: typeof args.caja === 'object'
-                ? args.caja.id
-                : args.caja,
-                }
+        caja: typeof args.caja === 'object'
+        ? args.caja.id
+        : args.caja,
+    }
 
     return movement.definition.url
             .replace('{caja}', parsedArgs.caja.toString())
@@ -236,19 +372,41 @@ movement.url = (args: { caja: number | { id: number } } | [caja: number | { id: 
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::movement
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:162
- * @route '/admin/cajas/{caja}/movement'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:162
+* @route '/admin/cajas/{caja}/movement'
+*/
 movement.post = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: movement.url(args, options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::movement
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:162
+* @route '/admin/cajas/{caja}/movement'
+*/
+const movementForm = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: movement.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::movement
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:162
+* @route '/admin/cajas/{caja}/movement'
+*/
+movementForm.post = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: movement.url(args, options),
+    method: 'post',
+})
+
+movement.form = movementForm
+
+/**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::close
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:199
- * @route '/admin/cajas/{caja}/close'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:199
+* @route '/admin/cajas/{caja}/close'
+*/
 export const close = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: close.url(args, options),
     method: 'post',
@@ -261,31 +419,31 @@ close.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::close
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:199
- * @route '/admin/cajas/{caja}/close'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:199
+* @route '/admin/cajas/{caja}/close'
+*/
 close.url = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { caja: args }
     }
 
-            if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
-            args = { caja: args.id }
-        }
-    
+    if (typeof args === 'object' && !Array.isArray(args) && 'id' in args) {
+        args = { caja: args.id }
+    }
+
     if (Array.isArray(args)) {
         args = {
-                    caja: args[0],
-                }
+            caja: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        caja: typeof args.caja === 'object'
-                ? args.caja.id
-                : args.caja,
-                }
+        caja: typeof args.caja === 'object'
+        ? args.caja.id
+        : args.caja,
+    }
 
     return close.definition.url
             .replace('{caja}', parsedArgs.caja.toString())
@@ -294,20 +452,43 @@ close.url = (args: { caja: number | { id: number } } | [caja: number | { id: num
 
 /**
 * @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::close
- * @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:199
- * @route '/admin/cajas/{caja}/close'
- */
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:199
+* @route '/admin/cajas/{caja}/close'
+*/
 close.post = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: close.url(args, options),
     method: 'post',
 })
+
+/**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::close
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:199
+* @route '/admin/cajas/{caja}/close'
+*/
+const closeForm = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: close.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\PointOfSale\CashRegisterController::close
+* @see app/Http/Controllers/Admin/PointOfSale/CashRegisterController.php:199
+* @route '/admin/cajas/{caja}/close'
+*/
+closeForm.post = (args: { caja: number | { id: number } } | [caja: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: close.url(args, options),
+    method: 'post',
+})
+
+close.form = closeForm
+
 const cajas = {
     bcvRate: Object.assign(bcvRate, bcvRate),
-index: Object.assign(index, index),
-store: Object.assign(store, store),
-show: Object.assign(show, show),
-movement: Object.assign(movement, movement),
-close: Object.assign(close, close),
+    index: Object.assign(index, index),
+    store: Object.assign(store, store),
+    show: Object.assign(show, show),
+    movement: Object.assign(movement, movement),
+    close: Object.assign(close, close),
 }
 
 export default cajas

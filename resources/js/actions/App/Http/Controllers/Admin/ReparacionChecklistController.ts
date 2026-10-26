@@ -1,9 +1,9 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::indexPage
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:20
- * @route '/admin/reparaciones/post-reparacion'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:20
+* @route '/admin/reparaciones/post-reparacion'
+*/
 export const indexPage = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: indexPage.url(options),
     method: 'get',
@@ -16,37 +16,75 @@ indexPage.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::indexPage
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:20
- * @route '/admin/reparaciones/post-reparacion'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:20
+* @route '/admin/reparaciones/post-reparacion'
+*/
 indexPage.url = (options?: RouteQueryOptions) => {
     return indexPage.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::indexPage
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:20
- * @route '/admin/reparaciones/post-reparacion'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:20
+* @route '/admin/reparaciones/post-reparacion'
+*/
 indexPage.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: indexPage.url(options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::indexPage
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:20
- * @route '/admin/reparaciones/post-reparacion'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:20
+* @route '/admin/reparaciones/post-reparacion'
+*/
 indexPage.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: indexPage.url(options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::indexPage
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:20
+* @route '/admin/reparaciones/post-reparacion'
+*/
+const indexPageForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: indexPage.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::indexPage
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:20
+* @route '/admin/reparaciones/post-reparacion'
+*/
+indexPageForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: indexPage.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::indexPage
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:20
+* @route '/admin/reparaciones/post-reparacion'
+*/
+indexPageForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: indexPage.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+indexPage.form = indexPageForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::index
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:81
- * @route '/admin/reparaciones/checklist'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:81
+* @route '/admin/reparaciones/checklist'
+*/
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
@@ -59,37 +97,75 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::index
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:81
- * @route '/admin/reparaciones/checklist'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:81
+* @route '/admin/reparaciones/checklist'
+*/
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::index
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:81
- * @route '/admin/reparaciones/checklist'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:81
+* @route '/admin/reparaciones/checklist'
+*/
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
     method: 'get',
 })
+
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::index
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:81
- * @route '/admin/reparaciones/checklist'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:81
+* @route '/admin/reparaciones/checklist'
+*/
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
     method: 'head',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::index
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:81
+* @route '/admin/reparaciones/checklist'
+*/
+const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::index
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:81
+* @route '/admin/reparaciones/checklist'
+*/
+indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::index
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:81
+* @route '/admin/reparaciones/checklist'
+*/
+indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+index.form = indexForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::store
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:147
- * @route '/admin/reparaciones/checklist'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:147
+* @route '/admin/reparaciones/checklist'
+*/
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
@@ -102,28 +178,50 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::store
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:147
- * @route '/admin/reparaciones/checklist'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:147
+* @route '/admin/reparaciones/checklist'
+*/
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::store
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:147
- * @route '/admin/reparaciones/checklist'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:147
+* @route '/admin/reparaciones/checklist'
+*/
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::store
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:147
+* @route '/admin/reparaciones/checklist'
+*/
+const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: store.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::store
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:147
+* @route '/admin/reparaciones/checklist'
+*/
+storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: store.url(options),
+    method: 'post',
+})
+
+store.form = storeForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::update
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:190
- * @route '/admin/reparaciones/checklist/{item}'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:190
+* @route '/admin/reparaciones/checklist/{item}'
+*/
 export const update = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
@@ -136,26 +234,25 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::update
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:190
- * @route '/admin/reparaciones/checklist/{item}'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:190
+* @route '/admin/reparaciones/checklist/{item}'
+*/
 update.url = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { item: args }
     }
 
-    
     if (Array.isArray(args)) {
         args = {
-                    item: args[0],
-                }
+            item: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        item: args.item,
-                }
+        item: args.item,
+    }
 
     return update.definition.url
             .replace('{item}', parsedArgs.item.toString())
@@ -164,19 +261,51 @@ update.url = (args: { item: string | number } | [item: string | number ] | strin
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::update
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:190
- * @route '/admin/reparaciones/checklist/{item}'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:190
+* @route '/admin/reparaciones/checklist/{item}'
+*/
 update.put = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
     url: update.url(args, options),
     method: 'put',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::update
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:190
+* @route '/admin/reparaciones/checklist/{item}'
+*/
+const updateForm = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: update.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PUT',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::update
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:190
+* @route '/admin/reparaciones/checklist/{item}'
+*/
+updateForm.put = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: update.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PUT',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+update.form = updateForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::destroy
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:219
- * @route '/admin/reparaciones/checklist/{item}'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:219
+* @route '/admin/reparaciones/checklist/{item}'
+*/
 export const destroy = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
@@ -189,26 +318,25 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::destroy
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:219
- * @route '/admin/reparaciones/checklist/{item}'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:219
+* @route '/admin/reparaciones/checklist/{item}'
+*/
 destroy.url = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { item: args }
     }
 
-    
     if (Array.isArray(args)) {
         args = {
-                    item: args[0],
-                }
+            item: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        item: args.item,
-                }
+        item: args.item,
+    }
 
     return destroy.definition.url
             .replace('{item}', parsedArgs.item.toString())
@@ -217,19 +345,51 @@ destroy.url = (args: { item: string | number } | [item: string | number ] | stri
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::destroy
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:219
- * @route '/admin/reparaciones/checklist/{item}'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:219
+* @route '/admin/reparaciones/checklist/{item}'
+*/
 destroy.delete = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::destroy
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:219
+* @route '/admin/reparaciones/checklist/{item}'
+*/
+const destroyForm = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: destroy.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::destroy
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:219
+* @route '/admin/reparaciones/checklist/{item}'
+*/
+destroyForm.delete = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: destroy.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+destroy.form = destroyForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::reorder
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:316
- * @route '/admin/reparaciones/checklist/reorder'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:316
+* @route '/admin/reparaciones/checklist/reorder'
+*/
 export const reorder = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: reorder.url(options),
     method: 'post',
@@ -242,28 +402,50 @@ reorder.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::reorder
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:316
- * @route '/admin/reparaciones/checklist/reorder'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:316
+* @route '/admin/reparaciones/checklist/reorder'
+*/
 reorder.url = (options?: RouteQueryOptions) => {
     return reorder.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::reorder
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:316
- * @route '/admin/reparaciones/checklist/reorder'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:316
+* @route '/admin/reparaciones/checklist/reorder'
+*/
 reorder.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: reorder.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::reorder
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:316
+* @route '/admin/reparaciones/checklist/reorder'
+*/
+const reorderForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: reorder.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::reorder
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:316
+* @route '/admin/reparaciones/checklist/reorder'
+*/
+reorderForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: reorder.url(options),
+    method: 'post',
+})
+
+reorder.form = reorderForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::batchToggle
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:344
- * @route '/admin/reparaciones/checklist/batch-toggle'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:344
+* @route '/admin/reparaciones/checklist/batch-toggle'
+*/
 export const batchToggle = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: batchToggle.url(options),
     method: 'post',
@@ -276,28 +458,50 @@ batchToggle.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::batchToggle
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:344
- * @route '/admin/reparaciones/checklist/batch-toggle'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:344
+* @route '/admin/reparaciones/checklist/batch-toggle'
+*/
 batchToggle.url = (options?: RouteQueryOptions) => {
     return batchToggle.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::batchToggle
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:344
- * @route '/admin/reparaciones/checklist/batch-toggle'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:344
+* @route '/admin/reparaciones/checklist/batch-toggle'
+*/
 batchToggle.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: batchToggle.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::batchToggle
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:344
+* @route '/admin/reparaciones/checklist/batch-toggle'
+*/
+const batchToggleForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: batchToggle.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::batchToggle
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:344
+* @route '/admin/reparaciones/checklist/batch-toggle'
+*/
+batchToggleForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: batchToggle.url(options),
+    method: 'post',
+})
+
+batchToggle.form = batchToggleForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::duplicate
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:390
- * @route '/admin/reparaciones/checklist/{item}/duplicate'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:390
+* @route '/admin/reparaciones/checklist/{item}/duplicate'
+*/
 export const duplicate = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: duplicate.url(args, options),
     method: 'post',
@@ -310,26 +514,25 @@ duplicate.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::duplicate
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:390
- * @route '/admin/reparaciones/checklist/{item}/duplicate'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:390
+* @route '/admin/reparaciones/checklist/{item}/duplicate'
+*/
 duplicate.url = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { item: args }
     }
 
-    
     if (Array.isArray(args)) {
         args = {
-                    item: args[0],
-                }
+            item: args[0],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        item: args.item,
-                }
+        item: args.item,
+    }
 
     return duplicate.definition.url
             .replace('{item}', parsedArgs.item.toString())
@@ -338,19 +541,41 @@ duplicate.url = (args: { item: string | number } | [item: string | number ] | st
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::duplicate
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:390
- * @route '/admin/reparaciones/checklist/{item}/duplicate'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:390
+* @route '/admin/reparaciones/checklist/{item}/duplicate'
+*/
 duplicate.post = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: duplicate.url(args, options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::duplicate
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:390
+* @route '/admin/reparaciones/checklist/{item}/duplicate'
+*/
+const duplicateForm = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: duplicate.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::duplicate
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:390
+* @route '/admin/reparaciones/checklist/{item}/duplicate'
+*/
+duplicateForm.post = (args: { item: string | number } | [item: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: duplicate.url(args, options),
+    method: 'post',
+})
+
+duplicate.form = duplicateForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::resetDefaults
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:240
- * @route '/admin/reparaciones/checklist/reset-defaults'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:240
+* @route '/admin/reparaciones/checklist/reset-defaults'
+*/
 export const resetDefaults = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: resetDefaults.url(options),
     method: 'post',
@@ -363,28 +588,50 @@ resetDefaults.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::resetDefaults
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:240
- * @route '/admin/reparaciones/checklist/reset-defaults'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:240
+* @route '/admin/reparaciones/checklist/reset-defaults'
+*/
 resetDefaults.url = (options?: RouteQueryOptions) => {
     return resetDefaults.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::resetDefaults
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:240
- * @route '/admin/reparaciones/checklist/reset-defaults'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:240
+* @route '/admin/reparaciones/checklist/reset-defaults'
+*/
 resetDefaults.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: resetDefaults.url(options),
     method: 'post',
 })
 
 /**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::resetDefaults
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:240
+* @route '/admin/reparaciones/checklist/reset-defaults'
+*/
+const resetDefaultsForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: resetDefaults.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::resetDefaults
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:240
+* @route '/admin/reparaciones/checklist/reset-defaults'
+*/
+resetDefaultsForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: resetDefaults.url(options),
+    method: 'post',
+})
+
+resetDefaults.form = resetDefaultsForm
+
+/**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::copyToBranch
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:262
- * @route '/admin/reparaciones/checklist/copy-to-branch'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:262
+* @route '/admin/reparaciones/checklist/copy-to-branch'
+*/
 export const copyToBranch = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: copyToBranch.url(options),
     method: 'post',
@@ -397,22 +644,45 @@ copyToBranch.definition = {
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::copyToBranch
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:262
- * @route '/admin/reparaciones/checklist/copy-to-branch'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:262
+* @route '/admin/reparaciones/checklist/copy-to-branch'
+*/
 copyToBranch.url = (options?: RouteQueryOptions) => {
     return copyToBranch.definition.url + queryParams(options)
 }
 
 /**
 * @see \App\Http\Controllers\Admin\ReparacionChecklistController::copyToBranch
- * @see app/Http/Controllers/Admin/ReparacionChecklistController.php:262
- * @route '/admin/reparaciones/checklist/copy-to-branch'
- */
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:262
+* @route '/admin/reparaciones/checklist/copy-to-branch'
+*/
 copyToBranch.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: copyToBranch.url(options),
     method: 'post',
 })
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::copyToBranch
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:262
+* @route '/admin/reparaciones/checklist/copy-to-branch'
+*/
+const copyToBranchForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: copyToBranch.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\Admin\ReparacionChecklistController::copyToBranch
+* @see app/Http/Controllers/Admin/ReparacionChecklistController.php:262
+* @route '/admin/reparaciones/checklist/copy-to-branch'
+*/
+copyToBranchForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: copyToBranch.url(options),
+    method: 'post',
+})
+
+copyToBranch.form = copyToBranchForm
+
 const ReparacionChecklistController = { indexPage, index, store, update, destroy, reorder, batchToggle, duplicate, resetDefaults, copyToBranch }
 
 export default ReparacionChecklistController

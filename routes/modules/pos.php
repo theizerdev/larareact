@@ -54,4 +54,5 @@ Route::middleware(['verified'])->group(function () {
     // Alertas de Stock
     Route::get('stock-alerts', [StockAlertController::class, 'index'])->name('stock-alerts.index');
     Route::get('stock-alerts/count', [StockAlertController::class, 'count'])->name('stock-alerts.count');
+    Route::get('stock-alerts/export-pdf', [StockAlertController::class, 'exportPdf'])->name('stock-alerts.export-pdf');
 });

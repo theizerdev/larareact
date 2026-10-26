@@ -1,9 +1,9 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::presupuesto
- * @see app/Http/Controllers/PublicReparacionTrackingController.php:208
- * @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
- */
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:208
+* @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
+*/
 export const presupuesto = (args: { empresa: string | number, numero_orden: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: presupuesto.url(args, options),
     method: 'post',
@@ -16,23 +16,23 @@ presupuesto.definition = {
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::presupuesto
- * @see app/Http/Controllers/PublicReparacionTrackingController.php:208
- * @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
- */
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:208
+* @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
+*/
 presupuesto.url = (args: { empresa: string | number, numero_orden: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions) => {
     if (Array.isArray(args)) {
         args = {
-                    empresa: args[0],
-                    numero_orden: args[1],
-                }
+            empresa: args[0],
+            numero_orden: args[1],
+        }
     }
 
     args = applyUrlDefaults(args)
 
     const parsedArgs = {
-                        empresa: args.empresa,
-                                numero_orden: args.numero_orden,
-                }
+        empresa: args.empresa,
+        numero_orden: args.numero_orden,
+    }
 
     return presupuesto.definition.url
             .replace('{empresa}', parsedArgs.empresa.toString())
@@ -42,13 +42,36 @@ presupuesto.url = (args: { empresa: string | number, numero_orden: string | numb
 
 /**
 * @see \App\Http\Controllers\PublicReparacionTrackingController::presupuesto
- * @see app/Http/Controllers/PublicReparacionTrackingController.php:208
- * @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
- */
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:208
+* @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
+*/
 presupuesto.post = (args: { empresa: string | number, numero_orden: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: presupuesto.url(args, options),
     method: 'post',
 })
+
+/**
+* @see \App\Http\Controllers\PublicReparacionTrackingController::presupuesto
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:208
+* @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
+*/
+const presupuestoForm = (args: { empresa: string | number, numero_orden: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: presupuesto.url(args, options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\PublicReparacionTrackingController::presupuesto
+* @see app/Http/Controllers/PublicReparacionTrackingController.php:208
+* @route '/reparacion/{empresa}/consultar/{numero_orden}/presupuesto'
+*/
+presupuestoForm.post = (args: { empresa: string | number, numero_orden: string | number } | [empresa: string | number, numero_orden: string | number ], options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: presupuesto.url(args, options),
+    method: 'post',
+})
+
+presupuesto.form = presupuestoForm
+
 const consultar = {
     presupuesto: Object.assign(presupuesto, presupuesto),
 }

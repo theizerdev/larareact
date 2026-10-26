@@ -1441,15 +1441,24 @@ export default function IndexReparaciones({
                     </DialogContent>
                 </Dialog>
 
-                {/* PLANTILLA DE IMPRESIÓN OFICIAL TICKET 80MM (REPARACIÓN: CLIENTE) */}
+                {/* PLANTILLA DE IMPRESIÓN OFICIAL TICKET 80MM (REPARACIÓN: CLIENTE - ALTA LEGIBILIDAD EN NEGRITA) */}
                 {printOrden && (
-                    <div id="printable-ticket-reparacion-index" className="hidden print:block text-black bg-white font-sans p-4 text-xs w-[80mm] max-w-[80mm] mx-auto">
+                    <div id="printable-ticket-reparacion-index" className="hidden print:block text-black bg-white font-sans p-4 text-xs w-[72mm] max-w-[72mm] mx-auto box-border">
                         <style>{`
                             @media print {
                                 * {
+                                    box-sizing: border-box !important;
                                     -webkit-print-color-adjust: exact !important;
                                     print-color-adjust: exact !important;
                                     color-adjust: exact !important;
+                                }
+                                html, body {
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                    width: 72mm !important;
+                                    max-width: 72mm !important;
+                                    background: #ffffff !important;
+                                    color: #000000 !important;
                                 }
                                 body * {
                                     visibility: hidden !important;
@@ -1461,14 +1470,19 @@ export default function IndexReparaciones({
                                     position: absolute !important;
                                     left: 0 !important;
                                     top: 0 !important;
-                                    width: 80mm !important;
-                                    max-width: 80mm !important;
+                                    width: 72mm !important;
+                                    max-width: 72mm !important;
                                     margin: 0 !important;
-                                    padding: 2mm !important;
-                                    background: white !important;
-                                    color: black !important;
-                                    font-family: 'Courier New', Courier, monospace, Arial, sans-serif !important;
+                                    padding: 1.5mm 2.5mm 3mm 2.5mm !important;
+                                    box-sizing: border-box !important;
+                                    background: #ffffff !important;
+                                    color: #000000 !important;
+                                    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+                                    font-weight: 700 !important;
                                     font-size: 11px !important;
+                                    line-height: 1.3 !important;
+                                    word-break: break-word !important;
+                                    overflow-wrap: anywhere !important;
                                 }
                                 @page {
                                     size: 80mm auto;
@@ -1478,136 +1492,168 @@ export default function IndexReparaciones({
                         `}</style>
 
                         {/* ================= TICKET PARA EL CLIENTE ================= */}
-                        <div className="font-mono text-black text-xs leading-tight p-0 bg-white">
+                        <div
+                            style={{
+                                fontFamily: 'Arial, "Helvetica Neue", Helvetica, sans-serif',
+                                color: '#000000',
+                                fontWeight: 700,
+                                fontSize: '11px',
+                                lineHeight: 1.3,
+                                wordBreak: 'break-word',
+                                overflowWrap: 'anywhere',
+                            }}
+                            className="text-black bg-white p-0"
+                        >
                             {/* HEADER EMPRESA CON LOGO */}
-                            <div className="text-center mb-1 flex flex-col items-center justify-center">
+                            <div className="text-center mb-1.5 flex flex-col items-center justify-center">
                                 {empresaInfo?.logo || empresaInfo?.logo_mini ? (
                                     <img
                                         src={empresaInfo.logo || empresaInfo.logo_mini}
                                         alt={empresaInfo.razon_social || empresaInfo.nombre_comercial || 'Logo'}
                                         style={{
-                                            width: `${Number(empresaInfo?.logo_ticket_size || 200)}px`,
-                                            maxWidth: '100%',
+                                            width: `${Number(empresaInfo?.logo_ticket_size || 190)}px`,
+                                            maxWidth: '92%',
                                             height: 'auto',
-                                            maxHeight: '160px',
+                                            maxHeight: '150px',
+                                            filter: 'contrast(1.25)',
                                         }}
                                         className="mx-auto object-contain mb-1"
                                     />
                                 ) : (
-                                    <div className="font-black text-base uppercase tracking-tight">{empresaInfo?.nombre_comercial || empresaInfo?.razon_social || 'SERVITEC'}</div>
+                                    <div className="font-black text-base uppercase tracking-tight text-black">{empresaInfo?.nombre_comercial || empresaInfo?.razon_social || 'SERVITEC'}</div>
                                 )}
                             </div>
 
                             {/* DIRECCIÓN Y TELÉFONO CENTRADOS */}
                             {empresaInfo?.direccion && (
-                                <div className="text-center font-bold text-[9px] uppercase px-1 leading-snug font-mono">
+                                <div className="text-center font-extrabold text-[10px] uppercase px-0.5 leading-snug text-black">
                                     {empresaInfo.direccion}
                                 </div>
                             )}
-                            <div className="text-center font-bold text-[10.5px] mt-0.5 font-mono">
+                            <div className="text-center font-black text-[11.5px] mt-0.5 text-black">
                                 TEL: {empresaInfo?.telefono || empresaInfo?.whatsapp_phone || 'S/T'}
                             </div>
 
                             {/* BANNER NEGRO ORDEN N° */}
-                            <div className="bg-black text-white text-center font-black text-sm py-1 my-2 uppercase tracking-wider">
+                            <div className="bg-black text-white text-center font-black text-[13.5px] py-1 my-2 uppercase tracking-wider">
                                 ORDEN N° {printOrden.numero_orden}
                             </div>
 
                             {/* DATOS DEL CLIENTE */}
-                            <div className="text-center font-black text-[11px] uppercase mb-1">
+                            <div
+                                style={{ borderBottom: '1.5px solid #000000' }}
+                                className="text-center font-black text-[11.5px] uppercase mb-1 pb-0.5 text-black"
+                            >
                                 DATOS DEL CLIENTE
                             </div>
-                            <div className="text-[10px] space-y-0.5 font-bold uppercase px-1">
-                                <div>NOMBRE: <span className="font-normal">{printOrden.cliente?.nombre || printOrden.cliente_nombre}</span></div>
-                                <div>TELEFONO: <span className="font-normal">{printOrden.cliente?.telefono || printOrden.cliente_telefono || '-'}</span></div>
+                            <div className="text-[10.5px] space-y-0.5 font-extrabold uppercase px-0.5 text-black">
+                                <div><span className="font-black">NOMBRE: </span><span className="font-bold">{printOrden.cliente?.nombre || printOrden.cliente_nombre}</span></div>
+                                <div><span className="font-black">TELEFONO: </span><span className="font-extrabold">{printOrden.cliente?.telefono || printOrden.cliente_telefono || '-'}</span></div>
                             </div>
 
                             {/* DATOS DEL EQUIPO */}
-                            <div className="text-center font-black text-[11px] uppercase mt-3 mb-1">
+                            <div
+                                style={{ borderBottom: '1.5px solid #000000' }}
+                                className="text-center font-black text-[11.5px] uppercase mt-2.5 mb-1 pb-0.5 text-black"
+                            >
                                 DATOS DEL EQUIPO
                             </div>
-                            <div className="text-[10px] space-y-0.5 font-bold uppercase px-1">
-                                <div>EQUIPO: <span className="font-normal">{printOrden.marca?.nombre || printOrden.marca_nombre} {printOrden.modelo?.nombre_comercial || printOrden.modelo_nombre}</span></div>
-                                <div>IMEI/SN: <span className="font-normal">{printOrden.imei_serie || 'nv'}</span></div>
-                                <div>OBSERVACIONES: <span className="font-normal">{printOrden.observaciones_fisicas || 'equipo sin observaciones'}</span></div>
-                                <div>REPARACION: <span className="font-normal">{printOrden.descripcion_falla || (printOrden.items && printOrden.items.length > 0 ? printOrden.items.map((i: any) => i.descripcion || i.servicio?.nombre || i.producto?.nombre).join(', ') : 'Revisión y diagnóstico')}</span></div>
-                                <div>ACCESORIOS: <span className="font-normal">{printOrden.accesorios_incluidos || 'no deja'}</span></div>
+                            <div className="text-[10.5px] space-y-0.5 font-extrabold uppercase px-0.5 text-black">
+                                <div><span className="font-black">EQUIPO: </span><span className="font-bold">{printOrden.marca?.nombre || printOrden.marca_nombre} {printOrden.modelo?.nombre_comercial || printOrden.modelo_nombre}</span></div>
+                                <div><span className="font-black">IMEI/SN: </span><span className="font-extrabold tracking-wide">{printOrden.imei_serie || 'NV'}</span></div>
+                                <div><span className="font-black">OBSERVACIONES: </span><span className="font-bold">{printOrden.observaciones_fisicas || 'EQUIPO SIN OBSERVACIONES'}</span></div>
+                                <div><span className="font-black">REPARACION: </span><span className="font-bold">{printOrden.descripcion_falla || (printOrden.items && printOrden.items.length > 0 ? printOrden.items.map((i: any) => i.descripcion || i.servicio?.nombre || i.producto?.nombre).join(', ') : 'REVISIÓN Y DIAGNÓSTICO')}</span></div>
+                                <div><span className="font-black">ACCESORIOS: </span><span className="font-bold">{printOrden.accesorios_incluidos || 'NO DEJA'}</span></div>
                             </div>
 
                             {/* BANNER COSTO REPARACION */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-3 uppercase tracking-wide">
+                            <div className="bg-black text-white text-center font-black text-[10.5px] py-1 mt-2.5 uppercase tracking-wide">
                                 COSTO REPARACION
                             </div>
-                            <div className="text-[10px] space-y-0.5 py-1 px-1 font-bold">
-                                <div className="flex justify-between">
-                                    <span>SUBTOTAL =</span>
-                                    <span>${formatNum(printOrden.costo_estimado)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
+                            <div className="text-[11px] space-y-0.5 py-1 px-0.5 font-extrabold text-black">
+                                <div className="flex justify-between gap-1.5">
+                                    <span className="font-black">SUBTOTAL =</span>
+                                    <span className="font-extrabold">${formatNum(printOrden.costo_estimado)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span>ANTICIPO =</span>
-                                    <span>${formatNum(printOrden.anticipo)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
+                                <div className="flex justify-between gap-1.5">
+                                    <span className="font-black">ANTICIPO =</span>
+                                    <span className="font-extrabold">${formatNum(printOrden.anticipo)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
                                 </div>
-                                <div className="flex justify-between border-t border-dotted border-black pt-0.5 font-black">
+                                <div
+                                    style={{ borderTop: '2px dashed #000000' }}
+                                    className="flex justify-between gap-1.5 pt-1 mt-0.5 font-black text-[12px] text-black"
+                                >
                                     <span>TOTAL =</span>
                                     <span>${formatNum(printOrden.saldo_restante)} {currencySymbol !== '$' ? currencySymbol : 'MXN'}</span>
                                 </div>
                             </div>
 
                             {/* BANNER FECHA DE RECEPCION */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide">
+                            <div className="bg-black text-white text-center font-black text-[10.5px] py-1 mt-1 uppercase tracking-wide">
                                 FECHA DE RECEPCION
                             </div>
-                            <div className="text-center text-[10px] font-bold py-1">
+                            <div className="text-center text-[11px] font-extrabold py-1 text-black">
                                 {formatDate(printOrden.fecha_recepcion)}
                             </div>
 
                             {/* BANNER FECHA APROX DE ENTREGA */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide">
+                            <div className="bg-black text-white text-center font-black text-[10.5px] py-1 mt-1 uppercase tracking-wide">
                                 FECHA APROX DE ENTREGA
                             </div>
-                            <div className="text-center text-[10px] font-bold py-1">
-                                {formatFullSpanishDate(printOrden.fecha_estimada_entrega || printOrden.fecha_recepcion)}
+                            <div className="text-center text-[11px] font-extrabold py-1 text-black">
+                                {formatFullSpanishDate(printOrden.fecha_estimada_entrega || printOrden.fecha_prometida || printOrden.fecha_recepcion)}
                             </div>
 
                             {/* BANNER CONTRASEÑA */}
-                            <div className="bg-black text-white text-center font-black text-[10px] py-0.5 mt-1 uppercase tracking-wide">
+                            <div className="bg-black text-white text-center font-black text-[10.5px] py-1 mt-1 uppercase tracking-wide">
                                 CONTRASEÑA
                             </div>
-                            <div className="py-2">
+                            <div className="py-1.5">
                                 {extractPatternNumbers(printOrden.contrasena_patron).length > 0 ? (
                                     <PrintablePatternLock pattern={extractPatternNumbers(printOrden.contrasena_patron)} />
                                 ) : (
-                                    <div className="text-center font-bold text-xs py-1">
+                                    <div className="text-center font-black text-[12.5px] py-1 text-black">
                                         {printOrden.contrasena_patron || 'Sin contraseña'}
                                     </div>
                                 )}
                             </div>
 
+                            {/* TÉCNICO ASIGNADO */}
+                            {printOrden.tecnico?.name && (
+                                <div
+                                    style={{ borderTop: '1.5px dashed #000000' }}
+                                    className="mt-1.5 pt-1.5 text-center text-black"
+                                >
+                                    <div className="text-[9.5px] uppercase font-extrabold text-black">TÉCNICO ASIGNADO:</div>
+                                    <div className="text-[11px] uppercase font-black text-black mt-0.5">{printOrden.tecnico.name}</div>
+                                </div>
+                            )}
+
                             {/* CÓDIGO DE BARRAS Y CÓDIGO DE REPARACIÓN */}
-                            <div className="text-center py-2.5 flex flex-col items-center">
-                                <div className="w-full max-w-[250px] overflow-hidden flex justify-center py-1">
+                            <div className="text-center py-2 flex flex-col items-center text-black">
+                                <div className="w-full max-w-[62mm] overflow-hidden flex justify-center py-0.5">
                                     <BarcodeSVG
                                         value={printOrden.numero_orden}
-                                        width={1.6}
-                                        height={48}
+                                        width={1.55}
+                                        height={46}
                                         displayValue={false}
                                     />
                                 </div>
-                                <div className="text-[10px] font-black uppercase mt-1 font-mono tracking-wider">
+                                <div className="text-[10.5px] font-black uppercase mt-1 tracking-wider text-black">
                                     CÓDIGO DE REPARACIÓN: {printOrden.numero_orden}
                                 </div>
-                                <div className="text-[7.5px] text-gray-700 font-semibold font-mono">
+                                <div className="text-[8.5px] text-black font-bold mt-0.5">
                                     Escanee el código para consultar estado o cobrar en POS
                                 </div>
                             </div>
 
                             {/* TÉRMINOS Y GARANTÍA CON RECUADRO DE FIRMA */}
-                            <div className="pt-2">
-                                <div className="text-[9px] font-bold text-left mb-1 font-mono">
+                            <div className="pt-1.5 text-black">
+                                <div className="text-[9.5px] font-extrabold text-left mb-1 text-black">
                                     Términos y Condiciones de Garantía:
                                 </div>
-                                <div className="border-2 border-black h-12 w-full mb-1 bg-white"></div>
-                                <div className="text-center font-black text-[10px] uppercase font-mono">
+                                <div className="border-2 border-black h-12 w-full box-border mb-1 bg-white"></div>
+                                <div className="text-center font-black text-[10.5px] uppercase text-black">
                                     FIRMA DE CONFORMIDAD
                                 </div>
                             </div>
