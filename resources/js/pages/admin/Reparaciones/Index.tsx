@@ -231,7 +231,7 @@ export default function IndexReparaciones({
         },
         {
             value: 'reincidencia_garantia',
-            label: `10-REINCIDENCIA/GARANTIA (${counts?.['reincidencia_garantia'] ?? 0})`,
+            label: `8-REINCIDENCIA/GARANTIA (${counts?.['reincidencia_garantia'] ?? 0})`,
             disabled: (counts?.['reincidencia_garantia'] ?? 0) === 0,
         },
     ], [counts, __]);
@@ -971,185 +971,158 @@ export default function IndexReparaciones({
                         </span>
                     </button>
 
-                    {statusOptions.filter(o => o.value !== 'all').map((opt) => {
-                        const count = counts?.[opt.value] ?? 0;
-                        const isSelected = status === opt.value;
-                        const isDisabled = Boolean(opt.disabled);
-                        const labelText = opt.label.replace(/^\d+-/, '').replace(/\s*\(\d+\)$/, '');
-                        return (
-                            <button
-                                key={opt.value}
-                                type="button"
-                                disabled={isDisabled}
-                                onClick={() => {
-                                    if (isDisabled) return;
-                                    setStatus(isSelected ? 'all' : opt.value);
-                                }}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 border shrink-0 select-none",
-                                    isSelected
-                                        ? "bg-purple-600 text-white border-purple-600 shadow-sm"
-                                        : isDisabled
-                                            ? "bg-slate-100/60 dark:bg-slate-900/40 text-slate-400 dark:text-slate-600 border-slate-200/50 dark:border-slate-800/50 opacity-40 cursor-not-allowed"
-                                            : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border cursor-pointer"
-                                )}
-                                title={isDisabled ? __('Sin órdenes en este estado (inhabilitado)') : undefined}
-                            >
-                                <span>{labelText}</span>
-                                <span className={cn(
-                                    "px-1.5 py-0.5 rounded-full text-[10px] font-mono",
-                                    isSelected
-                                        ? "bg-purple-700/80 text-white"
-                                        : isDisabled
-                                            ? "bg-slate-200/50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600"
+                    {statusOptions
+                        .filter((opt) => opt.value !== 'all' && ((counts?.[opt.value] ?? 0) > 0 || status === opt.value))
+                        .map((opt) => {
+                            const count = counts?.[opt.value] ?? 0;
+                            const isSelected = status === opt.value;
+                            const labelText = opt.label.replace(/^\d+-/, '').replace(/\s*\(\d+\)$/, '');
+                            return (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setStatus(isSelected ? 'all' : opt.value)}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 border shrink-0 select-none cursor-pointer",
+                                        isSelected
+                                            ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                                            : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border"
+                                    )}
+                                >
+                                    <span>{labelText}</span>
+                                    <span className={cn(
+                                        "px-1.5 py-0.5 rounded-full text-[10px] font-mono",
+                                        isSelected
+                                            ? "bg-purple-700/80 text-white"
                                             : "bg-muted text-foreground"
-                                )}>
-                                    {count}
-                                </span>
-                            </button>
-                        );
-                    })}
+                                    )}>
+                                        {count}
+                                    </span>
+                                </button>
+                            );
+                        })}
                 </div>
 
-                {/* BARRA DE FILTROS PROFESIONAL CON RANGO DE FECHAS Y DISTRIBUCIÓN RESPONSIVA */}
+                {/* BARRA DE FILTROS PROFESIONAL Y ALINEADA */}
                 <FilterBar className="bg-card text-card-foreground shadow-sm rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-                    <div className="w-full space-y-4">
-                        {/* FILA 1: BÚSQUEDA Y CAMPOS PRINCIPALES DE CLASIFICACIÓN */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
-                            {/* BUSCAR */}
-                            <div className={sucursales && sucursales.length > 0 ? "col-span-1 sm:col-span-2 lg:col-span-4" : "col-span-1 sm:col-span-2 lg:col-span-5"}>
-                                <FilterField label={__('Buscar')}>
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                                        <Input
-                                            placeholder={__('Folio (ej. REP-0001), Cliente, IMEI, Modelo...')}
-                                            value={search}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                const normalized = val.replace(/REP['´`]/gi, 'REP-');
-                                                setSearch(normalized);
-                                            }}
-                                            className="pl-9 pr-8 h-9 text-xs"
-                                        />
-                                        {search && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setSearch('')}
-                                                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                                                title={__('Borrar búsqueda')}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </button>
-                                        )}
-                                    </div>
-                                </FilterField>
-                            </div>
-
-                            {/* SUCURSAL */}
-                            {sucursales && sucursales.length > 0 && (
-                                <div className="col-span-1 sm:col-span-1 lg:col-span-2">
-                                    <FilterField label={__('Sucursal')}>
-                                        <SearchableSelect
-                                            options={sucursalOptions}
-                                            value={sucursalId}
-                                            onChange={setSucursalId}
-                                            placeholder={__('Todas')}
-                                            searchPlaceholder={__('Buscar sucursal...')}
-                                        />
-                                    </FilterField>
-                                </div>
-                            )}
-
-                            {/* ESTADO */}
-                            <div className="col-span-1 sm:col-span-1 lg:col-span-3">
-                                <FilterField label={__('Estado')}>
-                                    <SearchableSelect
-                                        options={statusOptions}
-                                        value={status}
-                                        onChange={setStatus}
-                                        placeholder={__('Todos los estados')}
-                                        searchPlaceholder={__('Buscar estado...')}
-                                    />
-                                </FilterField>
-                            </div>
-
-                            {/* TÉCNICO ASIGNADO */}
-                            <div className={sucursales && sucursales.length > 0 ? "col-span-1 sm:col-span-2 lg:col-span-3" : "col-span-1 sm:col-span-2 lg:col-span-4"}>
-                                <FilterField label={__('Técnico Asignado')}>
-                                    <SearchableSelect
-                                        options={tecnicoOptions}
-                                        value={tecnicoId}
-                                        onChange={setTecnicoId}
-                                        placeholder={__('Todos los técnicos')}
-                                        searchPlaceholder={__('Buscar técnico...')}
-                                        disabled={isTecnicoOnly}
-                                    />
-                                </FilterField>
-                            </div>
-                        </div>
-
-                        {/* FILA 2: FILTROS DE PERÍODO (AÑO / MES), PAGINACIÓN Y ACCIONES */}
-                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-                            {/* LADO IZQUIERDO: SELECTORES DE AÑO Y MES */}
-                            <div className="flex items-center gap-2">
-                                <div className="w-28">
-                                    <FilterField label={__('Año')}>
-                                        <SearchableSelect
-                                            options={yearOptions}
-                                            value={year}
-                                            onChange={setYear}
-                                            placeholder={__('Todos')}
-                                            searchPlaceholder={__('Año...')}
-                                        />
-                                    </FilterField>
-                                </div>
-                                <div className="w-32">
-                                    <FilterField label={__('Mes')}>
-                                        <SearchableSelect
-                                            options={monthOptions}
-                                            value={month}
-                                            onChange={setMonth}
-                                            placeholder={__('Todos')}
-                                            searchPlaceholder={__('Mes...')}
-                                        />
-                                    </FilterField>
-                                </div>
-                            </div>
-
-                            {/* LADO DERECHO: REGISTROS POR PÁGINA + BOTÓN LIMPIAR */}
-                            <div className="flex items-end justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0">
-                                <div className="w-24">
-                                    <FilterField label={__('Mostrar')}>
-                                        <SearchableSelect
-                                            options={perPageOptions}
-                                            value={perPage}
-                                            onChange={setPerPage}
-                                            placeholder="10"
-                                            searchPlaceholder={__('Cantidad...')}
-                                        />
-                                    </FilterField>
-                                </div>
-
-                                {hasActiveFilters && (
-                                    <Button
+                    <div className="flex flex-wrap items-end gap-3 w-full">
+                        {/* BUSCAR */}
+                        <FilterField label={__('Buscar')} className="flex-1 min-w-[220px]">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                                <Input
+                                    placeholder={__('Folio (ej. REP-0001), Cliente, IMEI, Modelo...')}
+                                    value={search}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        const normalized = val.replace(/REP['´`]/gi, 'REP-');
+                                        setSearch(normalized);
+                                    }}
+                                    className="pl-9 pr-8 h-9 text-xs"
+                                />
+                                {search && (
+                                    <button
                                         type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={handleResetFilters}
-                                        className="h-9 px-3 gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/60 rounded-lg transition-colors"
-                                        title={__('Restablecer todos los filtros')}
+                                        onClick={() => setSearch('')}
+                                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                        title={__('Borrar búsqueda')}
                                     >
-                                        <RefreshCw className="h-3.5 w-3.5" />
-                                        <span>{__('Limpiar Filtros')}</span>
-                                        {activeFilterCount > 0 && (
-                                            <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200 font-bold ml-0.5">
-                                                {activeFilterCount}
-                                            </Badge>
-                                        )}
-                                    </Button>
+                                        <X className="h-4 w-4" />
+                                    </button>
                                 )}
                             </div>
-                        </div>
+                        </FilterField>
+
+                        {/* SUCURSAL */}
+                        {sucursales && sucursales.length > 0 && (
+                            <FilterField label={__('Sucursal')} className="w-full sm:w-36 lg:w-40 shrink-0">
+                                <SearchableSelect
+                                    options={sucursalOptions}
+                                    value={sucursalId}
+                                    onChange={setSucursalId}
+                                    placeholder={__('Todas')}
+                                    searchPlaceholder={__('Buscar sucursal...')}
+                                />
+                            </FilterField>
+                        )}
+
+                        {/* ESTADO */}
+                        <FilterField label={__('Estado')} className="w-full sm:w-44 lg:w-52 shrink-0">
+                            <SearchableSelect
+                                options={statusOptions}
+                                value={status}
+                                onChange={setStatus}
+                                placeholder={__('Todos los estados')}
+                                searchPlaceholder={__('Buscar estado...')}
+                            />
+                        </FilterField>
+
+                        {/* TÉCNICO ASIGNADO */}
+                        <FilterField label={__('Técnico Asignado')} className="w-full sm:w-40 lg:w-44 shrink-0">
+                            <SearchableSelect
+                                options={tecnicoOptions}
+                                value={tecnicoId}
+                                onChange={setTecnicoId}
+                                placeholder={__('Todos los técnicos')}
+                                searchPlaceholder={__('Buscar técnico...')}
+                                disabled={isTecnicoOnly}
+                            />
+                        </FilterField>
+
+                        {/* AÑO */}
+                        <FilterField label={__('Año')} className="w-24 sm:w-28 shrink-0">
+                            <SearchableSelect
+                                options={yearOptions}
+                                value={year}
+                                onChange={setYear}
+                                placeholder={__('Todos')}
+                                searchPlaceholder={__('Año...')}
+                            />
+                        </FilterField>
+
+                        {/* MES */}
+                        <FilterField label={__('Mes')} className="w-28 sm:w-32 shrink-0">
+                            <SearchableSelect
+                                options={monthOptions}
+                                value={month}
+                                onChange={setMonth}
+                                placeholder={__('Todos')}
+                                searchPlaceholder={__('Mes...')}
+                            />
+                        </FilterField>
+
+                        {/* MOSTRAR */}
+                        <FilterField label={__('Mostrar')} className="w-20 sm:w-24 shrink-0">
+                            <SearchableSelect
+                                options={perPageOptions}
+                                value={perPage}
+                                onChange={setPerPage}
+                                placeholder="10"
+                                searchPlaceholder={__('Cantidad...')}
+                            />
+                        </FilterField>
+
+                        {/* BOTÓN LIMPIAR FILTROS */}
+                        {hasActiveFilters && (
+                            <div className="shrink-0">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleResetFilters}
+                                    className="h-9 px-3 gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/60 rounded-lg transition-colors cursor-pointer"
+                                    title={__('Restablecer todos los filtros')}
+                                >
+                                    <RefreshCw className="h-3.5 w-3.5" />
+                                    <span>{__('Limpiar Filtros')}</span>
+                                    {activeFilterCount > 0 && (
+                                        <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200 font-bold ml-0.5">
+                                            {activeFilterCount}
+                                        </Badge>
+                                    )}
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </FilterBar>
 

@@ -162,8 +162,17 @@ class ReparacionController extends Controller
             });
         }
 
+        $deliveredStates = [
+            OrdenReparacion::ESTADO_ENTREGADO_REPARADO,
+            OrdenReparacion::ESTADO_ENTREGADO_NO_REPARADO,
+            OrdenReparacion::ESTADO_ENTREGADO_FINALIZADO,
+            'entregado',
+        ];
+
         if ($status && $status !== 'all') {
             $query->where('estado_orden', $status);
+        } else {
+            $query->whereNotIn('estado_orden', $deliveredStates);
         }
 
         if ($marcaId && $marcaId !== 'all') {
@@ -201,6 +210,7 @@ class ReparacionController extends Controller
         if ($isTecnicoOnly && !$isAdmin) {
             $countsQuery->where('tecnico_id', $user->id);
         }
+        $countsQuery->whereNotIn('estado_orden', $deliveredStates);
 
         $counts = $countsQuery->select('estado_orden', DB::raw('count(*) as total'))
             ->groupBy('estado_orden')

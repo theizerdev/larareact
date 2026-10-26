@@ -146,7 +146,7 @@ export default function SearchableSelect({
                                     className={cn(
                                         'flex items-center justify-between px-2.5 py-1.5 text-xs rounded-sm transition-colors select-none',
                                         isDisabled
-                                            ? 'opacity-40 cursor-not-allowed text-muted-foreground pointer-events-none'
+                                            ? 'opacity-40 cursor-not-allowed text-muted-foreground bg-muted/20 hover:bg-muted/20'
                                             : isSelected
                                                 ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-medium cursor-pointer'
                                                 : 'hover:bg-accent hover:text-accent-foreground text-slate-700 dark:text-slate-300 cursor-pointer'
