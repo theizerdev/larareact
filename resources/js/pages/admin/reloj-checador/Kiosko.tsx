@@ -36,7 +36,11 @@ import {
     RefreshCw,
     Circle,
     FastForward,
-    Timer
+    Timer,
+    ArrowLeft,
+    ChevronRight,
+    UserPlus,
+    Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -193,6 +197,20 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
 
     // Temporizador de Inactividad (Auto-Reset tras 15s de abandono)
     const [inactivityCountdown, setInactivityCountdown] = useState<number>(15);
+
+    // Modo de vista del Kiosko en la misma ventana:
+    // 'selector' -> Visualización previa (Hub de selección táctil con 2 botones principales)
+    // 'marcaje' -> Flujo de checado de asistencia (numpad, QR, botones de marcaje)
+    // 'enrolamiento' -> Flujo de enrolamiento biométrico facial (búsqueda y BioTime)
+    type ModoKiosko = 'selector' | 'marcaje' | 'enrolamiento';
+    const [modoVista, setModoVista] = useState<ModoKiosko>('selector');
+
+    const volverAlSelector = () => {
+        handleNumpadClear();
+        setSuccessMessage(null);
+        setSuccessExtraData(null);
+        setModoVista('selector');
+    };
 
     // Mapeo legible de tipos de marcaje para el usuario final del kiosko
     const getNombreMarcaje = (tipoMarcaje: string): string => {
@@ -478,7 +496,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
         };
     }, [empleado, isComidaModalOpen, isDescansoModalOpen, isIncidenteModalOpen, isEnrolamientoModalOpen, successMessage]);
 
-    // Temporizador de Cuenta Regresiva de Éxito (4s para siguiente colaborador)
+    // Temporizador de Cuenta Regresiva de Éxito (4s para volver al selector)
     useEffect(() => {
         if (!successMessage) return;
 
@@ -490,6 +508,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                     handleNumpadClear();
                     setSuccessMessage(null);
                     setSuccessExtraData(null);
+                    setModoVista('selector');
                     return 4;
                 }
                 return prev - 1;
@@ -498,6 +517,37 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
 
         return () => clearInterval(timer);
     }, [successMessage]);
+
+    // Temporizador de inactividad general para volver al Selector (Hub de bienvenida)
+    useEffect(() => {
+        if (modoVista === 'selector' || isComidaModalOpen || isDescansoModalOpen || isIncidenteModalOpen || isEnrolamientoModalOpen || isAdminPinModalOpen || successMessage) {
+            return;
+        }
+
+        const tiempoMaximo = modoVista === 'enrolamiento' ? 45 : 30;
+        let segundosRestantes = tiempoMaximo;
+
+        const timer = setInterval(() => {
+            segundosRestantes -= 1;
+            if (segundosRestantes <= 0) {
+                clearInterval(timer);
+                volverAlSelector();
+            }
+        }, 1000);
+
+        const resetTimer = () => {
+            segundosRestantes = tiempoMaximo;
+        };
+
+        window.addEventListener('pointerdown', resetTimer);
+        window.addEventListener('keydown', resetTimer);
+
+        return () => {
+            clearInterval(timer);
+            window.removeEventListener('pointerdown', resetTimer);
+            window.removeEventListener('keydown', resetTimer);
+        };
+    }, [modoVista, isComidaModalOpen, isDescansoModalOpen, isIncidenteModalOpen, isEnrolamientoModalOpen, isAdminPinModalOpen, successMessage]);
 
     // Reproducir tono de confirmación tipo escáner pos
     const playBeepSound = () => {
@@ -517,7 +567,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
         }
     };
 
-    const necesitaCamara = (modoEntrada === 'camara' || Boolean(configuracion?.requiere_foto_marcaje)) && !isEnrolamientoModalOpen;
+    const necesitaCamara = modoVista === 'marcaje' && (modoEntrada === 'camara' || Boolean(configuracion?.requiere_foto_marcaje)) && !isEnrolamientoModalOpen;
 
     useEffect(() => {
         if (!necesitaCamara) return;
@@ -571,12 +621,15 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Enter' && !empleado && !loadingSearch && documentInput.trim()) {
                 e.preventDefault();
+                if (modoVista === 'selector') {
+                    setModoVista('marcaje');
+                }
                 performSearch(documentInput);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [documentInput, empleado, loadingSearch]);
+    }, [documentInput, empleado, loadingSearch, modoVista]);
 
     // Cargar jsQR dinámicamente si el navegador no tiene BarcodeDetector nativo (idéntico a Garita Control)
     useEffect(() => {
@@ -1028,26 +1081,188 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
             </header>
 
             {/* CONTENIDO CENTRAL */}
-            <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 flex flex-col">
-                <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                    <div>
-                        <h2 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
-                            <img
-                                src={empresaAuth?.logo_mini || empresaAuth?.logo || '/image/logo/smurfit/icon.png'}
-                                alt={empresaAuth?.razon_social || 'Smurfit Westrock'}
-                                className="h-9 w-auto object-contain"
-                            />
-                            Registro de Asistencia
-                        </h2>
-                        <p className="text-muted-foreground mt-1">
-                            Ingrese su número de empleado, escanee su gafete QR o use la pistola lectora.
-                        </p>
-                    </div>
-                    {/* En pantallas pequeñas el reloj no cabe en la barra superior */}
-                    <div className="sm:hidden text-2xl font-bold font-mono tabular-nums text-primary">{formatTime(currentTime)}</div>
-                </div>
+            <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 flex flex-col justify-center">
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* 1. VISUALIZACIÓN PREVIA: HUB DE SELECCIÓN TÁCTIL (2 BOTONES PRINCIPALES) */}
+                {modoVista === 'selector' && (
+                    <div className="flex-1 flex flex-col justify-center py-6 sm:py-10 max-w-5xl mx-auto w-full animate-in fade-in zoom-in-95 duration-300">
+                        {/* ENCABEZADO DE BIENVENIDA */}
+                        <div className="text-center space-y-3 mb-8 sm:mb-12">
+                            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm font-semibold">
+                                <Sparkles className="w-4 h-4" />
+                                <span>Kiosko Reloj Checador • {empresaAuth?.nombre_comercial || empresaAuth?.razon_social || 'Smurfit Westrock'}</span>
+                            </div>
+                            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-foreground">
+                                Bienvenido al Control de Asistencia
+                            </h2>
+                            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
+                                Seleccione la operación que desea realizar tocando una de las siguientes opciones:
+                            </p>
+                        </div>
+
+                        {/* TARJETAS PRINCIPALES DE SELECCIÓN */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+                            {/* BOTÓN 1: REGISTRO DE MARCAJES */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    triggerHaptic();
+                                    playBeepSound();
+                                    setModoVista('marcaje');
+                                    handleNumpadClear();
+                                    speakMessage('Módulo de asistencia. Ingrese su número de empleado o acerque su gafete.');
+                                }}
+                                className="group relative flex flex-col justify-between p-7 sm:p-10 rounded-3xl bg-card border-2 border-emerald-500/30 hover:border-emerald-500 dark:border-emerald-500/20 dark:hover:border-emerald-400 shadow-md hover:shadow-2xl hover:shadow-emerald-500/10 active:scale-[0.98] transition-all text-left overflow-hidden cursor-pointer"
+                            >
+                                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-56 h-56 rounded-full bg-emerald-500/10 group-hover:bg-emerald-500/20 blur-3xl transition-all" />
+
+                                <div className="space-y-6 relative z-10">
+                                    <div className="flex items-center justify-between">
+                                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-105 transition-transform">
+                                            <Clock className="w-9 h-9 sm:w-11 sm:h-11" />
+                                        </div>
+                                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 text-xs sm:text-sm px-3 py-1 font-bold">
+                                            Asistencia Diaria
+                                        </Badge>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-2xl sm:text-3xl font-extrabold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                            Registro de Marcajes
+                                        </h3>
+                                        <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
+                                            Cheque su entrada, salida de turno, inicio o fin de alimentos, descansos programados y horas extras de jornada.
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-2 pt-2 border-t border-border/60">
+                                        <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-foreground">
+                                            <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center text-xs font-bold">✓</div>
+                                            <span>Entrada y Salida de Turno</span>
+                                        </div>
+                                        <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-foreground">
+                                            <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center text-xs font-bold">✓</div>
+                                            <span>Comedor (Alimentos) & Descansos</span>
+                                        </div>
+                                        <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-foreground">
+                                            <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center text-xs font-bold">✓</div>
+                                            <span>Numpad Táctil, Lector USB y QR</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-8 pt-4 border-t border-border/60 relative z-10 flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-bold text-sm sm:text-base group-hover:translate-x-1 transition-transform">
+                                    <span>INGRESAR A CHECADOR</span>
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
+                                        <ChevronRight className="w-5 h-5" />
+                                    </div>
+                                </div>
+                            </button>
+
+                            {/* BOTÓN 2: ENROLAR EMPLEADO */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    triggerHaptic();
+                                    playBeepSound();
+                                    setModoVista('enrolamiento');
+                                    handleNumpadClear();
+                                    speakMessage('Módulo de enrolamiento biométrico facial. Ingrese su número de nómina.');
+                                }}
+                                className="group relative flex flex-col justify-between p-7 sm:p-10 rounded-3xl bg-card border-2 border-indigo-500/30 hover:border-indigo-500 dark:border-indigo-500/20 dark:hover:border-indigo-400 shadow-md hover:shadow-2xl hover:shadow-indigo-500/10 active:scale-[0.98] transition-all text-left overflow-hidden cursor-pointer"
+                            >
+                                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-56 h-56 rounded-full bg-indigo-500/10 group-hover:bg-indigo-500/20 blur-3xl transition-all" />
+
+                                <div className="space-y-6 relative z-10">
+                                    <div className="flex items-center justify-between">
+                                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform">
+                                            <ScanFace className="w-9 h-9 sm:w-11 sm:h-11" />
+                                        </div>
+                                        <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800 text-xs sm:text-sm px-3 py-1 font-bold">
+                                            BioTime Facial
+                                        </Badge>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-2xl sm:text-3xl font-extrabold text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                            Enrolar Empleado
+                                        </h3>
+                                        <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
+                                            Captura de fotografía facial para nuevos ingresos o actualización biométrica con sincronización automática a BioTime.
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-2 pt-2 border-t border-border/60">
+                                        <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-foreground">
+                                            <div className="w-5 h-5 rounded-full bg-indigo-500/15 text-indigo-600 flex items-center justify-center text-xs font-bold">✓</div>
+                                            <span>Captura de Fotos Faciales en Vivo</span>
+                                        </div>
+                                        <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-foreground">
+                                            <div className="w-5 h-5 rounded-full bg-indigo-500/15 text-indigo-600 flex items-center justify-center text-xs font-bold">✓</div>
+                                            <span>Aviso de Privacidad y Consentimiento</span>
+                                        </div>
+                                        <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-foreground">
+                                            <div className="w-5 h-5 rounded-full bg-indigo-500/15 text-indigo-600 flex items-center justify-center text-xs font-bold">✓</div>
+                                            <span>Sincronización Inmediata con BioTime</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-8 pt-4 border-t border-border/60 relative z-10 flex items-center justify-between text-indigo-600 dark:text-indigo-400 font-bold text-sm sm:text-base group-hover:translate-x-1 transition-transform">
+                                    <span>INICIAR ENROLAMIENTO</span>
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
+                                        <ChevronRight className="w-5 h-5" />
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* PIE INFORMATIVO */}
+                        <div className="mt-10 sm:mt-12 text-center text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-2 flex-wrap">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>Terminal táctil lista para interactuar.</span>
+                            <span>•</span>
+                            <span>Hora oficial de planta: <strong className="font-mono text-foreground">{horaPlanta}</strong></span>
+                            <span>•</span>
+                            <span>{tz}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* 2. MODO REGISTRO DE MARCAJES (ASISTENCIA) */}
+                {modoVista === 'marcaje' && (
+                    <div className="w-full flex-1 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+                        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                            <div className="flex items-start gap-3 sm:gap-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={volverAlSelector}
+                                    className="h-12 px-3 sm:px-4 rounded-xl font-bold border-2 hover:bg-muted flex items-center gap-2 shrink-0 shadow-sm"
+                                    title="Regresar a la pantalla previa"
+                                >
+                                    <ArrowLeft className="w-5 h-5" />
+                                    <span className="hidden sm:inline">Menú Principal</span>
+                                </Button>
+                                <div>
+                                    <h2 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
+                                        <img
+                                            src={empresaAuth?.logo_mini || empresaAuth?.logo || '/image/logo/smurfit/icon.png'}
+                                            alt={empresaAuth?.razon_social || 'Smurfit Westrock'}
+                                            className="h-9 w-auto object-contain"
+                                        />
+                                        Registro de Asistencia
+                                    </h2>
+                                    <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
+                                        Ingrese su número de empleado, escanee su gafete QR o use la pistola lectora.
+                                    </p>
+                                </div>
+                            </div>
+                            {/* En pantallas pequeñas el reloj no cabe en la barra superior */}
+                            <div className="sm:hidden text-2xl font-bold font-mono tabular-nums text-primary">{formatTime(currentTime)}</div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     {/* COLUMNA IZQUIERDA: NUMPAD (principal) O ESCÁNER QR CON CÁMARA (segunda opción) */}
                     <div className="lg:col-span-6 space-y-4">
                         <Card className="shadow-sm border-t-4 border-t-primary">
@@ -1310,11 +1525,12 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                             handleNumpadClear();
                                             setSuccessMessage(null);
                                             setSuccessExtraData(null);
+                                            setModoVista('selector');
                                         }}
                                         className="w-full h-14 text-sm sm:text-base font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95"
                                     >
                                         <FastForward className="w-5 h-5" />
-                                        <span>REGISTRAR SIGUIENTE EMPLEADO AHORA</span>
+                                        <span>FINALIZAR / VOLVER AL MENÚ</span>
                                     </Button>
                                 </div>
                             </Card>
@@ -1716,7 +1932,240 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                         )}
                     </div>
                 </div>
-            </main>
+            </div>
+        )}
+
+            {/* 3. MODO ENROLAMIENTO BIOMÉTRICO FACIAL */}
+            {modoVista === 'enrolamiento' && (
+                <div className="w-full flex-1 flex flex-col space-y-6 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                        <div className="flex items-start gap-3 sm:gap-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={volverAlSelector}
+                                className="h-12 px-3 sm:px-4 rounded-xl font-bold border-2 hover:bg-muted flex items-center gap-2 shrink-0 shadow-sm"
+                                title="Regresar a la pantalla previa"
+                            >
+                                <ArrowLeft className="w-5 h-5" />
+                                <span className="hidden sm:inline">Menú Principal</span>
+                            </Button>
+                            <div>
+                                <h2 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3 text-indigo-950 dark:text-indigo-200">
+                                    <div className="p-2 rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/30">
+                                        <ScanFace className="w-6 h-6" />
+                                    </div>
+                                    <span>Enrolamiento Biométrico Facial</span>
+                                </h2>
+                                <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
+                                    Localice al colaborador para capturar sus fotografías faciales y sincronizarlo con BioTime.
+                                </p>
+                            </div>
+                        </div>
+                        <Badge variant="outline" className="border-indigo-300 text-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 dark:text-indigo-300 self-start md:self-auto text-xs py-1 px-3">
+                            Módulo de Enrolamiento
+                        </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        {/* COLUMNA IZQUIERDA: BÚSQUEDA DEL COLABORADOR Y TECLADO */}
+                        <div className="lg:col-span-6 space-y-4">
+                            <Card className="shadow-sm border-t-4 border-t-indigo-600">
+                                <CardContent className="space-y-5">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400">
+                                            <Search className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold leading-tight">Identificación del Colaborador</h3>
+                                            <Label className="text-xs text-muted-foreground font-normal">
+                                                Ingrese el número de nómina, documento o pase el gafete por el lector
+                                            </Label>
+                                        </div>
+                                    </div>
+
+                                    <input
+                                        ref={inputRef}
+                                        type="text"
+                                        value={documentInput}
+                                        onChange={(e) => setDocumentInput(e.target.value)}
+                                        placeholder="N° de empleado o documento..."
+                                        className="w-full text-center text-2xl sm:text-3xl font-mono font-bold tracking-widest bg-background border-2 border-input rounded-xl py-4 text-foreground placeholder:text-base placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/70 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/15 transition"
+                                        autoFocus
+                                    />
+
+                                    {/* TECLADO TÁCTIL */}
+                                    <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
+                                        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
+                                            <button key={num} type="button" onClick={() => handleNumpadPress(num)} className={teclaDigito}>
+                                                {num}
+                                            </button>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={handleNumpadClear}
+                                            className="h-16 rounded-2xl text-xs sm:text-sm font-bold border-2 shadow-sm transition-all active:scale-90 flex items-center justify-center select-none bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-600 hover:text-white hover:border-rose-600 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900"
+                                        >
+                                            LIMPIAR
+                                        </button>
+                                        <button type="button" onClick={() => handleNumpadPress('0')} className={teclaDigito}>
+                                            0
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleNumpadDelete}
+                                            className="h-16 rounded-2xl border-2 shadow-sm transition-all active:scale-90 flex items-center justify-center select-none bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-500 hover:text-white hover:border-amber-500 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900"
+                                        >
+                                            <Delete className="w-6 h-6 sm:w-7 sm:h-7" />
+                                        </button>
+                                    </div>
+
+                                    <Button
+                                        onClick={() => handleSearch()}
+                                        disabled={!documentInput.trim() || loadingSearch}
+                                        className="w-full h-14 text-base sm:text-lg font-bold rounded-xl shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white"
+                                    >
+                                        {loadingSearch ? 'LOCALIZANDO COLABORADOR...' : 'LOCALIZAR COLABORADOR'}
+                                    </Button>
+                                </CardContent>
+                            </Card>
+
+                            {errorMessage && (
+                                <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 dark:bg-rose-950/30 dark:border-rose-900 dark:text-rose-300 text-sm flex items-center gap-3 animate-shake">
+                                    <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
+                                    <span>{errorMessage}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* COLUMNA DERECHA: RESULTADO DE BÚSQUEDA Y ACCIÓN DE ENROLAR */}
+                        <div className="lg:col-span-6 space-y-4">
+                            {empleado ? (
+                                <Card className={`shadow-sm space-y-5 p-6 border-t-4 ${empleado.enrolado ? 'border-t-emerald-500' : 'border-t-indigo-600'}`}>
+                                    <div className="flex items-center gap-4 border-b pb-4">
+                                        <div className="w-20 h-20 shrink-0 rounded-2xl bg-muted border overflow-hidden flex items-center justify-center text-muted-foreground font-bold text-xl relative">
+                                            {empleado.foto_empleado && !fotoFallida ? (
+                                                <img
+                                                    src={empleado.foto_empleado}
+                                                    alt={empleado.nombre_completo}
+                                                    className="w-full h-full object-cover"
+                                                    onError={() => setFotoFallida(true)}
+                                                />
+                                            ) : (
+                                                <span>{empleado.nombre_completo.substring(0, 2).toUpperCase()}</span>
+                                            )}
+                                            {!empleado.enrolado && (
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-amber-300">
+                                                    <ScanFace className="w-8 h-8 animate-pulse" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="space-y-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {empleado.enrolado ? (
+                                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 text-xs flex items-center gap-1 font-semibold">
+                                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                                        <span>Enrolado en BioTime</span>
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 text-xs flex items-center gap-1 font-bold">
+                                                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                                                        <span>Pendiente de Enrolar</span>
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <h2 className="text-xl font-bold text-foreground truncate">{empleado.nombre_completo}</h2>
+                                            <p className="text-xs text-muted-foreground truncate">{empleado.cargo || 'Sin cargo'} • {empleado.departamento || empleado.area || 'Sin departamento'}</p>
+                                            <p className="text-xs text-primary font-medium">Turno: {empleado.turno}</p>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={handleNumpadClear}
+                                            className="ml-auto self-start shrink-0 text-muted-foreground"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+
+                                    {!empleado.enrolado ? (
+                                        <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/15 border-2 border-dashed border-indigo-400 rounded-2xl p-5 text-center space-y-4">
+                                            <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center mx-auto shadow-lg shadow-indigo-600/30">
+                                                <ScanFace className="w-7 h-7 animate-pulse" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <h3 className="text-lg font-bold text-foreground">
+                                                    Colaborador Listo para Enrolar
+                                                </h3>
+                                                <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                                                    Se tomarán 2 fotografías faciales frontales con la cámara para crear la plantilla biométrica y sincronizarla en automático con BioTime.
+                                                </p>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                size="lg"
+                                                onClick={() => setIsEnrolamientoModalOpen(true)}
+                                                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm sm:text-base rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2"
+                                            >
+                                                <ScanFace className="w-5 h-5" />
+                                                <span>INICIAR ENROLAMIENTO FACIAL AHORA</span>
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-200 text-sm flex items-center gap-3">
+                                                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                                                <div>
+                                                    <strong>Perfil Biométrico Activo.</strong>
+                                                    <p className="text-xs opacity-90 mt-0.5">El colaborador ya cuenta con registro facial y puede registrar asistencia sin inconvenientes.</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() => setIsEnrolamientoModalOpen(true)}
+                                                    className="h-12 border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 font-bold text-xs sm:text-sm rounded-xl gap-2"
+                                                >
+                                                    <ScanFace className="w-4 h-4" />
+                                                    <span>Actualizar Fotos</span>
+                                                </Button>
+
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setModoVista('marcaje');
+                                                        speakMessage(`Colaborador ${empleado.nombre_completo}. Puede registrar su asistencia.`);
+                                                    }}
+                                                    className="h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl gap-2"
+                                                >
+                                                    <Clock className="w-4 h-4" />
+                                                    <span>Ir a Marcaje</span>
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </Card>
+                            ) : (
+                                <Card className="border-2 border-dashed shadow-none p-10 text-center space-y-4">
+                                    <div className="w-20 h-20 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 flex items-center justify-center mx-auto">
+                                        <ScanFace className="w-10 h-10" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-foreground">
+                                        En espera de ingreso de documento o QR
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                                        Ingrese el número de nómina en el teclado táctil de la izquierda o acerque su gafete al lector para cargar sus datos y proceder con la toma de fotografías biométricas.
+                                    </p>
+                                </Card>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </main>
 
             {/* MODAL SELECCIÓN DE MINUTOS DE DESCANSO */}
             <Dialog open={isDescansoModalOpen} onOpenChange={setIsDescansoModalOpen}>
@@ -2116,7 +2565,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                 isOpen={isEnrolamientoModalOpen}
                 onClose={() => setIsEnrolamientoModalOpen(false)}
                 empleado={empleado}
-                empresaNombre="Smurfit Westrock"
+                empresaNombre={empresaAuth?.nombre_comercial || empresaAuth?.razon_social || 'Smurfit Westrock'}
                 csrfToken={getCsrfToken()}
                 onSuccess={handleEnrolamientoSuccess}
             />
