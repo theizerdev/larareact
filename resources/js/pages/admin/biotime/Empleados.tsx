@@ -43,6 +43,7 @@ export default function BioTimeEmpleados({ empleados, stats, filters, empleados_
     const [search, setSearch] = React.useState(filters.search || '');
     const [linkStatus, setLinkStatus] = React.useState(filters.link_status || 'all');
     const [busy, setBusy] = React.useState(false);
+    const [isSyncing, setIsSyncing] = React.useState(false);
     const [isTableLoading, setIsTableLoading] = React.useState(false);
 
     React.useEffect(() => {
@@ -82,8 +83,8 @@ export default function BioTimeEmpleados({ empleados, stats, filters, empleados_
     };
 
     const sync = () => {
-        setBusy(true);
-        router.post('/admin/biotime/sync', { only: 'employees' }, { preserveScroll: true, onFinish: () => setBusy(false) });
+        setIsSyncing(true);
+        router.post('/admin/biotime/sync', { only: 'employees' }, { preserveScroll: true, onFinish: () => setIsSyncing(false) });
     };
 
     const columns: ColumnDef<BiotimeEmpleado>[] = [
@@ -168,9 +169,9 @@ export default function BioTimeEmpleados({ empleados, stats, filters, empleados_
                             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
                             {__('Auto-link')}
                         </Button>
-                        <Button onClick={sync} disabled={busy} variant="secondary" className="gap-2">
-                            <RefreshCw className="h-4 w-4" />
-                            {__('Sync now')}
+                        <Button onClick={sync} disabled={busy || isSyncing} variant="secondary" className="gap-2">
+                            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                            {isSyncing ? __('Sincronizando...') : __('Sync now')}
                         </Button>
                         {/* Recarga al volver del ZIP para que el conteo de pendientes baje. */}
                         <Button asChild variant="secondary" className="gap-2" title={__('Only photos that are new or changed since the last ZIP. JPG files of up to 25 KB named with the employee number, for BioTime › Device › Data › Bio-Photo › Import Bio-Photo.')}>
