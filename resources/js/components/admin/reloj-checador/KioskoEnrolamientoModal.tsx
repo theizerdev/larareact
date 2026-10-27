@@ -442,7 +442,11 @@ export function KioskoEnrolamientoModal({
                 if (data.errors) {
                     setFieldErrors(data.errors);
                 }
-                setErrorMsg(data.message || 'Error al completar el enrolamiento. Verifique los datos ingresados.');
+                const errorTexto = (Array.isArray(data.errors?.biotime) ? data.errors.biotime[0] : null)
+                    || data.errors?.biotime
+                    || data.message
+                    || 'Error al completar el enrolamiento. Verifique los datos ingresados.';
+                setErrorMsg(errorTexto);
             }
         } catch (err: any) {
             setErrorMsg('No se pudo conectar con el servidor para enrolar al colaborador.');
@@ -609,9 +613,19 @@ export function KioskoEnrolamientoModal({
                 {paso === 2 && (
                     <form onSubmit={handleFinalizar} className="max-w-7xl w-full mx-auto flex flex-col justify-center h-full space-y-4 my-auto animate-in fade-in-50 duration-300">
                         {errorMsg && (
-                            <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-2xl text-red-600 dark:text-red-400 text-sm font-semibold">
-                                <AlertCircle className="w-5 h-5 shrink-0" />
-                                <span>{errorMsg}</span>
+                            <div className="flex items-start gap-3.5 p-4 sm:p-5 bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-900 rounded-2xl text-rose-700 dark:text-rose-300 text-sm font-semibold shadow-md animate-shake">
+                                <AlertCircle className="w-6 h-6 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+                                <div className="space-y-1">
+                                    <div className="font-bold text-base text-rose-900 dark:text-rose-100 flex items-center gap-2">
+                                        <span>Error en la Sincronización con BioTime</span>
+                                        <Badge variant="outline" className="text-[10px] bg-rose-100 text-rose-800 dark:bg-rose-950 border-rose-300">
+                                            Rechazado
+                                        </Badge>
+                                    </div>
+                                    <p className="text-xs sm:text-sm font-normal text-rose-800 dark:text-rose-200 leading-relaxed">
+                                        {errorMsg}
+                                    </p>
+                                </div>
                             </div>
                         )}
 

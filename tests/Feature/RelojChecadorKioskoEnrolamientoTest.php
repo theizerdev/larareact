@@ -155,4 +155,41 @@ class RelojChecadorKioskoEnrolamientoTest extends TestCase
 
         $this->assertNull($this->empleado->fresh()->enrolado_en);
     }
+
+    public function test_enrolar_empleado_muestra_error_y_no_enrola_si_biotime_falla(): void
+    {
+        $this->mock(\App\Services\BioTimeEmpleadoPusher::class, function ($mock) {
+            $mock->shouldReceive('enviar')
+                ->once()
+                ->andReturn([
+                    'ok' => false,
+                    'accion' => 'error',
+                    'mensaje' => 'BioTime rechazó el cambio (HTTP 406): {"message":"El empleado Juan con el número de móvil +52-3310049036 ya está registrado, por favor intenta con otro número"}',
+                    'reintentar' => false,
+                ]);
+        });
+
+        $payload = [
+            'empleado_id' => $this->empleado->id,
+            'aviso_privacidad' => true,
+            'foto_empleado' => $this->fotoDataUri(),
+            'foto_empleado_2' => $this->fotoDataUri(),
+            'genero' => 'M',
+            'fecha_nacimiento' => '1992-08-15',
+        ];
+
+        $response = $this->actingAs($this->user)
+            ->postJson('/admin/api/reloj-checador/enrolar', $payload);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonValidationErrors(['biotime']);
+
+        $mensaje = $response->json('message');
+        $this->assertStringContainsString('El empleado Juan con el número de móvil +52-3310049036 ya está registrado', $mensaje);
+        $this->assertStringNotContainsString('{"message":', $mensaje);
+
+        // El empleado NO debe quedar marcado como enrolado
+        $this->assertNull($this->empleado->fresh()->enrolado_en);
+    }
 }

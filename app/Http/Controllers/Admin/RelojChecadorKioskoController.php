@@ -413,7 +413,21 @@ class RelojChecadorKioskoController extends Controller
             ], 404);
         }
 
-        $empleado = $enrolamientoService->guardar($empleado, $request->all());
+        try {
+            $empleado = $enrolamientoService->guardar($empleado, $request->all());
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $primerError = collect($e->errors())->flatten()->first() ?: $e->getMessage();
+            return response()->json([
+                'success' => false,
+                'message' => $primerError,
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al procesar el enrolamiento: ' . $e->getMessage(),
+            ], 500);
+        }
 
         activity('empleados')
             ->causedBy($user)
