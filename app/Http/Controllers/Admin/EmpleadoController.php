@@ -85,6 +85,7 @@ class EmpleadoController extends Controller
             'empresa' => $empresa ? [
                 'id' => $empresa->id,
                 'razon_social' => $empresa->razon_social,
+                'biotime_active' => (bool) $empresa->biotime_active,
             ] : null,
             'sucursal' => $sucursal ? [
                 'id' => $sucursal->id,

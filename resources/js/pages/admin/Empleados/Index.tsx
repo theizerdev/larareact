@@ -195,6 +195,7 @@ interface EmpleadosPageProps {
     empresa?: {
         id: number;
         razon_social: string;
+        biotime_active?: boolean;
     } | null;
     sucursal?: {
         id: number;
@@ -308,6 +309,15 @@ export default function EmpleadosIndexPage({
 
     const [isPreRegistroModalOpen, setIsPreRegistroModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [isSyncingBioTime, setIsSyncingBioTime] = useState(false);
+
+    const handleSyncBioTime = () => {
+        setIsSyncingBioTime(true);
+        router.post('/admin/biotime/sync', { only: 'employees' }, {
+            preserveScroll: true,
+            onFinish: () => setIsSyncingBioTime(false),
+        });
+    };
     const preRegistroForm = useForm({
         nombres: '',
         apellidos: '',
@@ -883,6 +893,17 @@ export default function EmpleadosIndexPage({
                     colorClassName="bg-indigo-600"
                 >
                     <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            onClick={handleSyncBioTime}
+                            disabled={isSyncingBioTime}
+                            className="bg-white text-indigo-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-white shadow-sm font-semibold flex items-center gap-1.5"
+                            title={__('Sincronizar empleados con BioTime Cloud')}
+                        >
+                            <RefreshCw className={`w-4 h-4 ${isSyncingBioTime ? 'animate-spin' : ''}`} />
+                            {isSyncingBioTime ? __('Sincronizando...') : __('Sincronizar BioTime')}
+                        </Button>
+
                         <Button
                             type="button"
                             onClick={() => {
