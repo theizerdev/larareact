@@ -370,7 +370,7 @@ export default function BiometricosSetupIndexPage({
             },
         },
         {
-            header: 'Equipo Actual (Cols E–J)',
+            header: 'Equipo Actual',
             cell: (item) => {
                 const hasActualData = item.actual_no_serie || item.actual_ip || item.actual_gateway || item.actual_comentario;
                 return (
@@ -425,7 +425,7 @@ export default function BiometricosSetupIndexPage({
             },
         },
         {
-            header: 'Nuevo Biométrico (Cols K–Q)',
+            header: 'Nuevo Biométrico',
             cell: (item) => {
                 const hasNuevoData =
                     item.nuevo_marca ||
@@ -653,7 +653,7 @@ export default function BiometricosSetupIndexPage({
                             </Select>
                         </FilterField>
 
-                        <FilterField label="Planta / Ubicación (Pestaña 3)">
+                        <FilterField label="Planta / Ubicación">
                             <Select value={ubicacionFilter} onValueChange={setUbicacionFilter}>
                                 <SelectTrigger className="w-full md:w-64">
                                     <SelectValue placeholder="Todas las plantas" />
@@ -733,21 +733,21 @@ export default function BiometricosSetupIndexPage({
                             {editingItem ? 'Editar Biométrico Setup' : 'Registrar Biométrico Setup'}
                         </DialogTitle>
                         <DialogDescription>
-                            Configura la localidad, los datos del Equipo Actual (Columnas E–J) y los datos del Nuevo Biométrico (Columnas K–Q).
+                            Configura la localidad, los datos del Equipo Actual y los datos del Nuevo Biométrico.
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-6 pt-2">
-                        {/* Sección 1: Localidad y Ubicación (Cols A-D) */}
+                        {/* Sección 1: Localidad y Ubicación */}
                         <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
                             <h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
                                 <MapPin className="h-4 w-4" />
-                                1. Localidad y Ubicación Física (Columnas A–D)
+                                1. Localidad y Ubicación Física
                             </h3>
 
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                                 <div className="md:col-span-6 space-y-2">
-                                    <Label>Vincular con Catálogo de Ubicaciones (Pestaña 3)</Label>
+                                    <Label>Vincular con Catálogo de Ubicaciones</Label>
                                     <Select
                                         value={data.reloj_ubicacion_id ? String(data.reloj_ubicacion_id) : 'none'}
                                         onValueChange={handleSelectUbicacionCatalogo}
@@ -768,7 +768,7 @@ export default function BiometricosSetupIndexPage({
                                 </div>
 
                                 <div className="md:col-span-2 space-y-2">
-                                    <Label htmlFor="numero_localidad">Núm. (Col C)</Label>
+                                    <Label htmlFor="numero_localidad">Núm. Localidad</Label>
                                     <Input
                                         id="numero_localidad"
                                         type="number"
@@ -779,7 +779,7 @@ export default function BiometricosSetupIndexPage({
                                 </div>
 
                                 <div className="md:col-span-4 space-y-2">
-                                    <Label htmlFor="legacy">Legacy (Col A)</Label>
+                                    <Label htmlFor="legacy">Legacy</Label>
                                     <Select
                                         value={data.legacy || 'none'}
                                         onValueChange={(val) => setData('legacy', val === 'none' ? '' : val)}
@@ -799,7 +799,7 @@ export default function BiometricosSetupIndexPage({
                                 </div>
 
                                 <div className="md:col-span-6 space-y-2">
-                                    <Label htmlFor="localidad_nombre">Nombre de Localidad (Col B) *</Label>
+                                    <Label htmlFor="localidad_nombre">Nombre de Localidad *</Label>
                                     <Input
                                         id="localidad_nombre"
                                         placeholder="Ej. CONSUMER PACKAGING TIJUANA (LSKNA)"
@@ -813,7 +813,7 @@ export default function BiometricosSetupIndexPage({
                                 </div>
 
                                 <div className="md:col-span-6 space-y-2">
-                                    <Label htmlFor="ubicacion_fisica">Ubicación Física en Planta (Col D)</Label>
+                                    <Label htmlFor="ubicacion_fisica">Ubicación Física en Planta</Label>
                                     <Input
                                         id="ubicacion_fisica"
                                         placeholder="Ej. Recepción, Comedor, Caseta 1, o ???"
@@ -826,15 +826,15 @@ export default function BiometricosSetupIndexPage({
 
                         {/* Sección 2 y 3 lado a lado: Equipo Actual vs Nuevo Biométrico */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                            {/* Bloque Equipo Actual (Cols E-J) */}
+                            {/* Bloque Equipo Actual */}
                             <div className="rounded-xl border bg-slate-50/60 dark:bg-slate-900/30 p-4 space-y-4">
                                 <div className="flex items-center justify-between border-b pb-2.5">
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
                                         <Server className="h-4 w-4 text-indigo-600" />
-                                        2. Equipo Actual (Columnas E–J)
+                                        2. Equipo Actual
                                     </h3>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-medium">Instalado (Col I)</span>
+                                        <span className="text-xs font-medium">Instalado</span>
                                         <Switch
                                             checked={Boolean(data.actual_instalado)}
                                             onCheckedChange={(v) => setData('actual_instalado', v)}
@@ -844,7 +844,7 @@ export default function BiometricosSetupIndexPage({
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="actual_no_serie">No. Serie Actual (Col E)</Label>
+                                        <Label htmlFor="actual_no_serie">No. Serie Actual</Label>
                                         <Input
                                             id="actual_no_serie"
                                             placeholder="Ej. 543726588"
@@ -854,7 +854,7 @@ export default function BiometricosSetupIndexPage({
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="actual_ip">Dirección IP Actual (Col F)</Label>
+                                        <Label htmlFor="actual_ip">Dirección IP Actual</Label>
                                         <Input
                                             id="actual_ip"
                                             placeholder="Ej. 10.42.134.134"
@@ -864,7 +864,7 @@ export default function BiometricosSetupIndexPage({
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="actual_mascara">Mask / Subnet (Col G)</Label>
+                                        <Label htmlFor="actual_mascara">Mask / Subnet</Label>
                                         <Input
                                             id="actual_mascara"
                                             placeholder="Ej. 255.255.255.192"
@@ -874,7 +874,7 @@ export default function BiometricosSetupIndexPage({
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="actual_gateway">Gateway (Col H)</Label>
+                                        <Label htmlFor="actual_gateway">Gateway</Label>
                                         <Input
                                             id="actual_gateway"
                                             placeholder="Ej. 10.42.134.129"
@@ -885,7 +885,7 @@ export default function BiometricosSetupIndexPage({
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="actual_comentario">Comentario Actual (Col J)</Label>
+                                    <Label htmlFor="actual_comentario">Comentario Actual</Label>
                                     <Textarea
                                         id="actual_comentario"
                                         rows={2}
@@ -896,15 +896,15 @@ export default function BiometricosSetupIndexPage({
                                 </div>
                             </div>
 
-                            {/* Bloque Nuevo Biométrico (Cols K-Q) */}
+                            {/* Bloque Nuevo Biométrico */}
                             <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/20 dark:bg-emerald-950/15 p-4 space-y-4">
                                 <div className="flex items-center justify-between border-b border-emerald-200/60 dark:border-emerald-900/50 pb-2.5">
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
                                         <Sparkles className="h-4 w-4 text-emerald-600" />
-                                        3. Nuevo Biométrico (Columnas K–Q)
+                                        3. Nuevo Biométrico
                                     </h3>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-medium">Instalado (Col O)</span>
+                                        <span className="text-xs font-medium">Instalado</span>
                                         <Switch
                                             checked={Boolean(data.nuevo_instalado)}
                                             onCheckedChange={(v) => setData('nuevo_instalado', v)}
@@ -934,7 +934,7 @@ export default function BiometricosSetupIndexPage({
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="nuevo_no_serie">No. Serie Nuevo (Col K)</Label>
+                                        <Label htmlFor="nuevo_no_serie">No. Serie Nuevo</Label>
                                         <Input
                                             id="nuevo_no_serie"
                                             placeholder="Número de serie nuevo"
@@ -944,7 +944,7 @@ export default function BiometricosSetupIndexPage({
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="nuevo_ip">Dirección IP Nueva (Col L)</Label>
+                                        <Label htmlFor="nuevo_ip">Dirección IP Nueva</Label>
                                         <Input
                                             id="nuevo_ip"
                                             placeholder="Ej. 10.52.134.50"
@@ -954,7 +954,7 @@ export default function BiometricosSetupIndexPage({
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="nuevo_mascara">Mask / Subnet Nuevo (Col M)</Label>
+                                        <Label htmlFor="nuevo_mascara">Mask / Subnet Nuevo</Label>
                                         <Input
                                             id="nuevo_mascara"
                                             placeholder="Ej. 255.255.255.0"
@@ -964,7 +964,7 @@ export default function BiometricosSetupIndexPage({
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="nuevo_gateway">Gateway Nuevo (Col N)</Label>
+                                        <Label htmlFor="nuevo_gateway">Gateway Nuevo</Label>
                                         <Input
                                             id="nuevo_gateway"
                                             placeholder="Ej. 10.52.134.1"
@@ -974,7 +974,7 @@ export default function BiometricosSetupIndexPage({
                                     </div>
 
                                     <div className="sm:col-span-2 space-y-1.5">
-                                        <Label htmlFor="nuevo_mac_address">MAC Address (Col Q)</Label>
+                                        <Label htmlFor="nuevo_mac_address">MAC Address</Label>
                                         <Input
                                             id="nuevo_mac_address"
                                             placeholder="Ej. 00:17:61:11:F0:FC"
@@ -985,7 +985,7 @@ export default function BiometricosSetupIndexPage({
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="nuevo_comentario">Comentario Nuevo (Col P)</Label>
+                                    <Label htmlFor="nuevo_comentario">Comentario Nuevo</Label>
                                     <Textarea
                                         id="nuevo_comentario"
                                         rows={2}

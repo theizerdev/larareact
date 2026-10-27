@@ -33,8 +33,8 @@ trait Multitenantable
                         }
                     }
 
-                    if ($table !== 'empresas' && $table !== 'sucursales' && isset($user->sucursal_id) && $user->sucursal_id) {
-                        if (! isset($model->sucursal_id) || empty($model->sucursal_id)) {
+                    if ($table !== 'empresas' && $table !== 'sucursales' && in_array('sucursal_id', $model->getFillable(), true) && isset($user->sucursal_id) && $user->sucursal_id) {
+                        if (! array_key_exists('sucursal_id', $model->getAttributes()) && empty($model->sucursal_id)) {
                             $model->sucursal_id = $user->sucursal_id;
                         }
                     }
@@ -88,9 +88,9 @@ trait Multitenantable
                     }
                 }
 
-                // 2. Filtrado por Sucursal (no aplica a la tabla empresas)
-                if ($table === 'empresas') {
-                    // La tabla empresas representa el tenant principal y no posee columna sucursal_id
+                // 2. Filtrado por Sucursal (no aplica a tablas sin columna sucursal_id)
+                if (in_array($table, ['empresas', 'reloj_equipos_biometricos'], true)) {
+                    // Estas tablas no poseen columna sucursal_id directa
                 } elseif ($table === 'sucursales') {
                     if ($user->sucursal_id) {
                         $builder->where("{$table}.id", $user->sucursal_id);
