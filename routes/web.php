@@ -72,6 +72,12 @@ Route::post('locale', function (Request $request) {
 // Microsoft Entra ID (Azure AD SSO)
 Route::middleware(['guest'])->group(function () {
     Route::get('/auth/sso/azure/redirect', [\App\Http\Controllers\Auth\AzureSsoController::class, 'redirect'])->name('auth.azure.redirect');
+});
+// Sin guest: la app móvil abre el navegador del teléfono, que puede tener una
+// sesión web abierta, y aun así debe volver a la app. El callback del web
+// conserva el comportamiento de guest.
+Route::middleware('throttle:20,1')->group(function () {
+    Route::get('/auth/sso/azure/movil', [\App\Http\Controllers\Auth\AzureSsoController::class, 'redirectMovil'])->name('auth.azure.movil');
     Route::get('/auth/sso/azure/callback', [\App\Http\Controllers\Auth\AzureSsoController::class, 'callback'])->name('auth.azure.callback');
 });
 

@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\AsistenciaMarcaje;
 use App\Models\ConfiguracionAsistencia;
 use App\Models\Empleado;
-use App\Models\OpcionComida;
 use App\Services\CalculoAsistenciaLftService;
 use App\Services\EmpleadoEnrolamientoService;
 use App\Services\RegistroMarcajeService;
@@ -243,67 +242,30 @@ class RelojChecadorKioskoController extends Controller
             }
         }
 
+        // Tipo de comida: el nombre y el costo se toman de la configuración, no
+        // del navegador, y quedan fijos en el marcaje (ver RegistroMarcajeService).
+        // Antes de guardar la foto, para no dejarla huérfana si se rechaza.
+        $comida = null;
+        $noAdquirio = ! empty($validated['no_adquirio_alimento']);
+        if ($validated['tipo_marcaje'] === 'salida_comida' && ($noAdquirio || isset($validated['comida_opcion']))) {
+            $comida = $registro->resolverComida($empleado, $validated['comida_opcion'] ?? null, $noAdquirio);
+
+            if (! $comida) {
+                return response()->json(['success' => false, 'message' => 'El tipo de comida seleccionado ya no existe.'], 422);
+            }
+            if (! empty($comida['sin_consumo'])) {
+                $validated['observaciones'] = $registro->anotarObservaciones(
+                    $validated['observaciones'] ?? null,
+                    ['El empleado no adquirió alimento de las opciones disponibles'],
+                );
+            }
+        }
+
         $fotoPath = $registro->guardarFoto($validated['fotografia_base64'] ?? null, $empleado->id);
 
         $lat = $validated['latitud'] ?? null;
         $lon = $validated['longitud'] ?? null;
         $geoloc = ($lat && $lon) ? "{$lat}, {$lon}" : null;
-
-        // Tipo de comida: el nombre y el costo se toman de la configuración, no
-        // del navegador, y quedan fijos en el marcaje.
-        $comida = null;
-        if ($validated['tipo_marcaje'] === 'salida_comida') {
-            $esSinConsumo = !empty($validated['no_adquirio_alimento'])
-                || (isset($validated['comida_opcion']) && in_array((string)$validated['comida_opcion'], ['sin_consumo', 'ninguno', 'no_adquirio', '-1'], true));
-
-            if ($esSinConsumo) {
-                $comida = [
-                    'nombre' => 'No adquirió alimento de las opciones disponibles',
-                    'costo' => 0.0,
-                ];
-                $obsSinComida = 'El empleado no adquirió alimento de las opciones disponibles';
-                $validated['observaciones'] = !empty($validated['observaciones'])
-                    ? substr($validated['observaciones'] . ' - ' . $obsSinComida, 0, 255)
-                    : $obsSinComida;
-            } elseif (isset($validated['comida_opcion'])) {
-                $opcionIdentificador = $validated['comida_opcion'];
-
-                // 1. Intentar buscar por ID en OpcionComida
-                $opcionModel = OpcionComida::where('empresa_id', $empleado->empresa_id)
-                    ->where('status', true)
-                    ->find($opcionIdentificador);
-
-                if ($opcionModel) {
-                    $costoEmp = (float) $opcionModel->costo_empleado;
-                    $costoEmpresa = (float) $opcionModel->costo_empresa;
-                    $subsidio = max(0.0, $costoEmpresa - $costoEmp);
-                    $comida = [
-                        'id' => $opcionModel->id,
-                        'proveedor_id' => $opcionModel->proveedor_id,
-                        'nombre' => $opcionModel->nombre,
-                        'costo' => $costoEmp,
-                        'costo_empresa' => $costoEmpresa,
-                        'subsidio' => $subsidio,
-                    ];
-                } else {
-                    // 2. Si no es un ID directo (o en tests/fallback donde viene un índice 0, 1, 2)
-                    $opcionesKiosko = ConfiguracionAsistencia::obtenerOpcionesParaKiosko($empleado->empresa_id, $empleado->sucursal_id);
-                    $comida = $opcionesKiosko[$opcionIdentificador] ?? null;
-                    if ($comida && isset($comida['id'])) {
-                        $model = OpcionComida::find($comida['id']);
-                        if ($model) {
-                            $comida['proveedor_id'] = $model->proveedor_id;
-                            $comida['costo_empresa'] = (float) $model->costo_empresa;
-                            $comida['subsidio'] = max(0.0, (float) $model->costo_empresa - (float) ($comida['costo'] ?? 0));
-                        }
-                    }
-                }
-
-                if (! $comida) {
-                    return response()->json(['success' => false, 'message' => 'El tipo de comida seleccionado ya no existe.'], 422);
-                }
-            }
-        }
 
         $marcaje = AsistenciaMarcaje::create([
             'empresa_id' => $empleado->empresa_id,
@@ -319,12 +281,7 @@ class RelojChecadorKioskoController extends Controller
             'observaciones' => $validated['observaciones'] ?? null,
             'incidente_causa' => $validated['incidente_causa'] ?? null,
             'duracion_descanso_minutos' => $validated['duracion_descanso_minutos'] ?? null,
-            'comida_tipo' => $comida['nombre'] ?? null,
-            'comida_costo' => $comida['costo'] ?? null,
-            'opcion_comida_id' => $comida['id'] ?? null,
-            'proveedor_id' => $comida['proveedor_id'] ?? null,
-            'comida_costo_empresa' => $comida['costo_empresa'] ?? null,
-            'comida_subsidio' => $comida['subsidio'] ?? null,
+            ...$registro->atributosComida($comida),
             'tipo_entrada' => $validated['tipo_entrada'] ?? 'normal',
             'registrado_por_user_id' => $request->user()?->id,
         ]);

@@ -88,7 +88,7 @@ class MovilDataController extends Controller
             ? Carbon::parse($request->query('fecha'))
             : Carbon::today();
 
-        $marcajes = AsistenciaMarcaje::with(['empleado.departamento'])
+        $marcajes = AsistenciaMarcaje::with(['empleado.departamento', 'sucursal:id,zona_horaria', 'empresa:id,zona_horaria'])
             ->whereDate('fecha_hora', $fecha)
             ->orderBy('fecha_hora', 'desc')
             ->limit(300)
@@ -109,7 +109,8 @@ class MovilDataController extends Controller
                 'id' => $m->id,
                 'nombre' => $m->empleado?->nombre_completo ?? 'Empleado',
                 'tipo' => $m->tipo_marcaje,
-                'hora' => Carbon::parse($m->fecha_hora)->format('H:i:s'),
+                // En la zona de la planta del marcaje, como los reportes web.
+                'hora' => Carbon::parse($m->fecha_hora_local)->format('H:i:s'),
                 'departamento' => $m->empleado?->departamento?->nombre ?? '—',
             ])->values(),
         ]);
@@ -158,12 +159,13 @@ class MovilDataController extends Controller
         $marcajes = AsistenciaMarcaje::where('empleado_id', $id)
             ->orderBy('fecha_hora', 'desc')
             ->limit(50)
+            ->with(['sucursal:id,zona_horaria', 'empresa:id,zona_horaria'])
             ->get()
             ->map(fn (AsistenciaMarcaje $m) => [
                 'id' => $m->id,
                 'tipo' => $m->tipo_marcaje,
-                'fecha' => Carbon::parse($m->fecha_hora)->format('d/m/Y'),
-                'hora' => Carbon::parse($m->fecha_hora)->format('H:i:s'),
+                'fecha' => Carbon::parse($m->fecha_hora_local)->format('d/m/Y'),
+                'hora' => Carbon::parse($m->fecha_hora_local)->format('H:i:s'),
             ]);
 
         return response()->json(['data' => $marcajes]);

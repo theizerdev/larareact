@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    // SSO de Entra ID (tenant y cliente se configuran en la consola SOX).
+    // app_callback: a donde vuelve el navegador cuando se inicia sesión
+    // desde la app móvil; es el esquema que registra la app.
+    'azure' => [
+        'app_callback' => env('AZURE_APP_CALLBACK', 'com.smurfit.app://sso'),
+    ],
+
 ];

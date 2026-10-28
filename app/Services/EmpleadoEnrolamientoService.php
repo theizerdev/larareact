@@ -11,6 +11,23 @@ use Throwable;
 
 class EmpleadoEnrolamientoService
 {
+    /** Horas que sirve un enlace público de enrolamiento. */
+    public const HORAS_ENLACE = 72;
+
+    /**
+     * Enlace público de enrolamiento nuevo (el anterior deja de servir), para
+     * mandarlo por WhatsApp/correo o mostrarlo como QR.
+     */
+    public function generarEnlace(Empleado $empleado): string
+    {
+        $empleado->forceFill([
+            'enrolamiento_token' => Str::random(48),
+            'enrolamiento_token_expires_at' => now()->addHours(self::HORAS_ENLACE),
+        ])->save();
+
+        return url("/enrolamiento/{$empleado->enrolamiento_token}");
+    }
+
     /**
      * Valida y guarda los datos de enrolamiento de un empleado,
      * almacena sus fotografías frontales y sincroniza con BioTime.

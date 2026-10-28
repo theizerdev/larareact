@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Auth\AzureSsoController;
 use App\Http\Controllers\Controller;
 use App\Models\ConfiguracionSox;
 use App\Models\Empleado;
 use App\Models\User;
 use App\Rules\NotInPasswordHistory;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -86,6 +89,60 @@ class AuthController extends Controller
             return $this->credencialesIncorrectas();
         }
 
+        if ($rechazo = $this->sinAccesoALaApp($user)) {
+            return $rechazo;
+        }
+
+        $user->update(['failed_login_attempts' => 0, 'locked_until' => null]);
+
+        return $this->emitirToken($user);
+    }
+
+    /**
+     * Inicio de sesión con Microsoft Entra ID: canjea el código que
+     * AzureSsoController devolvió a la app. Sólo sirve una vez, dura dos
+     * minutos y exige el verificador PKCE de quien inició el flujo, para que
+     * otra app que capture el código no pueda usarlo.
+     */
+    public function loginMicrosoft(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string|max:100',
+            'verifier' => 'required|string|min:43|max:128',
+        ]);
+
+        $datos = Cache::pull(AzureSsoController::CACHE_CODIGO_MOVIL.$request->input('code'));
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $request->input('verifier'), true)), '+/', '-_'), '=');
+
+        $user = $datos && hash_equals($datos['challenge'], $challenge) ? User::find($datos['user_id']) : null;
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El inicio de sesión con Microsoft expiró o no es válido. Intente de nuevo.',
+            ], 401);
+        }
+
+        if ($user->isLocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Esta cuenta está temporalmente bloqueada por política SOX. Contacte al administrador.',
+            ], 423);
+        }
+
+        if ($rechazo = $this->sinAccesoALaApp($user)) {
+            return $rechazo;
+        }
+
+        AzureSsoController::registrarAcceso($request, $user, 'app_movil');
+
+        return $this->emitirToken($user);
+    }
+
+    /**
+     * Cuenta inactiva, o trabajador al que RH no le habilitó la app.
+     */
+    private function sinAccesoALaApp(User $user): ?JsonResponse
+    {
         if ($user->status && $user->status !== 'activo') {
             return response()->json([
                 'success' => false,
@@ -101,9 +158,7 @@ class AuthController extends Controller
             ], 403);
         }
 
-        $user->update(['failed_login_attempts' => 0, 'locked_until' => null]);
-
-        return $this->emitirToken($user);
+        return null;
     }
 
     private function credencialesIncorrectas()

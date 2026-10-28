@@ -6,14 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\AsistenciaMarcaje;
 use App\Models\AsistenciaResumenDiario;
 use App\Models\ConfiguracionAsistencia;
+use App\Models\Departamento;
 use App\Models\Empleado;
 use App\Models\Sucursal;
+use App\Services\AccessCodeService;
 use App\Services\CalculoAsistenciaLftService;
+use App\Services\EmpleadoEnrolamientoService;
 use App\Services\RegistroMarcajeService;
 use Carbon\Carbon;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class KioskoApiController extends Controller
 {
@@ -30,9 +35,12 @@ class KioskoApiController extends Controller
 
         $configuracion = ConfiguracionAsistencia::where('empresa_id', $empresaId)->first();
 
-        // Zona horaria: Sucursal -> Empresa -> País -> App Config -> America/Mexico_City
+        // Zona horaria: Sucursal -> Empresa -> País -> App Config -> America/Mexico_City.
+        // La sucursal es la del empleado de la cuenta (autoservicio), como las
+        // opciones de comida de abajo; si no tiene, la de la cuenta.
         $empresa = $user ? $user->empresa : null;
-        $sucursal = ($user && ! empty($user->sucursal_id)) ? Sucursal::find($user->sucursal_id) : null;
+        $sucursalId = $user?->empleado?->sucursal_id ?? $user?->sucursal_id;
+        $sucursal = $sucursalId ? Sucursal::find($sucursalId) : null;
 
         $zonaHoraria = $sucursal?->zona_horaria
             ?? $empresa?->zona_horaria
@@ -42,6 +50,14 @@ class KioskoApiController extends Controller
 
         $payload = $configuracion ? $configuracion->toArray() : [];
         $payload['zona_horaria'] = $zonaHoraria;
+        // Las mismas que ve el kiosko web en INICIO COMIDA (reemplaza la lista
+        // cruda de la configuración). Las del comedor del propio empleado
+        // cuando la cuenta es de autoservicio.
+        $payload['opciones_comida'] = ConfiguracionAsistencia::obtenerOpcionesParaKiosko(
+            $empresaId,
+            $user?->empleado?->sucursal_id ?? $user?->sucursal_id,
+            $zonaHoraria,
+        );
 
         return response()->json($payload);
     }
@@ -116,10 +132,11 @@ class KioskoApiController extends Controller
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
                 'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
                 'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
+                ...$this->datosEnrolamiento($empleado),
             ],
             'ultimo_marcaje' => $ultimoMarcaje ? [
                 'tipo' => $ultimoMarcaje->tipo_marcaje,
-                'hora' => Carbon::parse($ultimoMarcaje->fecha_hora)->format('H:i:s'),
+                'hora' => Carbon::parse($ultimoMarcaje->fecha_hora_local)->format('H:i:s'),
             ] : null,
             'sugerencia_marcaje' => $siguienteMarcaje,
         ]);
@@ -188,11 +205,12 @@ class KioskoApiController extends Controller
                 'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
                 'permite_app_movil' => (bool) $empleado->permite_app_movil,
                 'intervalo_geolocalizacion_minutos' => $empleado->intervalo_geolocalizacion_minutos ?? 15,
+                ...$this->datosEnrolamiento($empleado),
             ],
             'intervalo_geolocalizacion_minutos' => $empleado->intervalo_geolocalizacion_minutos ?? 15,
             'ultimo_marcaje' => $ultimoMarcaje ? [
                 'tipo' => $ultimoMarcaje->tipo_marcaje,
-                'hora' => Carbon::parse($ultimoMarcaje->fecha_hora)->format('H:i:s'),
+                'hora' => Carbon::parse($ultimoMarcaje->fecha_hora_local)->format('H:i:s'),
             ] : null,
             'sugerencia_marcaje' => $siguienteMarcaje,
         ]);
@@ -213,6 +231,15 @@ class KioskoApiController extends Controller
             'incidente_causa' => 'nullable|string|max:255',
             'duracion_descanso_minutos' => 'nullable|integer|min:1|max:120',
             'tipo_entrada' => 'nullable|string|in:normal,extraordinaria_doble,extraordinaria_triple',
+            // INICIO COMIDA, igual que el kiosko web. La app manda el id de la
+            // opción en `opcion_comida_id` (nunca se lee como índice) y el
+            // índice sólo para la configuración anterior sin modelos, en
+            // `comida_opcion`. `comida_nombre` sólo sirve para anotar una
+            // opción que ya no existe al llegar desde la cola.
+            'opcion_comida_id' => 'nullable|integer',
+            'comida_opcion' => 'nullable',
+            'no_adquirio_alimento' => 'nullable|boolean',
+            'comida_nombre' => 'nullable|string|max:120',
             // Evidencia de la app (ver RegistroMarcajeService).
             'uuid_cliente' => 'nullable|uuid',
             'fecha_hora_dispositivo' => 'nullable|date',
@@ -292,6 +319,33 @@ class KioskoApiController extends Controller
             ], 422);
         }
 
+        // Comida antes de guardar la foto, para no dejarla huérfana si se rechaza.
+        $comida = null;
+        $notaComida = null;
+        $noAdquirio = ! empty($validated['no_adquirio_alimento']);
+        $opcionId = $validated['opcion_comida_id'] ?? null;
+        if ($validated['tipo_marcaje'] === 'salida_comida' && ($noAdquirio || $opcionId !== null || isset($validated['comida_opcion']))) {
+            $comida = $opcionId !== null && ! $noAdquirio
+                ? $registro->comidaPorId($empleado, $opcionId, incluirInactivas: $desdeCola)
+                : $registro->resolverComida($empleado, $validated['comida_opcion'] ?? null, $noAdquirio);
+
+            if (! $comida && ! $desdeCola) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El tipo de comida seleccionado ya no existe. Elige otro.',
+                ], 422);
+            }
+
+            if (! $comida) {
+                // Elegida sin conexión y borrada después: el marcaje ya ocurrió,
+                // así que se registra sin comida y RH ve qué se eligió.
+                $nombre = $validated['comida_nombre'] ?? null;
+                $notaComida = 'La comida elegida sin conexión'.($nombre ? " ({$nombre})" : '').' ya no existe.';
+            } elseif (! empty($comida['sin_consumo'])) {
+                $notaComida = 'El empleado no adquirió alimento de las opciones disponibles';
+            }
+        }
+
         [$fechaHora, $notaHora] = $registro->horaDeMarcaje($validated['fecha_hora_dispositivo'] ?? null, $desdeCola);
 
         // Aplicar redondeo si está configurado en ConfiguracionAsistencia
@@ -315,6 +369,7 @@ class KioskoApiController extends Controller
         $estadoUbicacion = $validated['ubicacion_estado'] ?? null;
         $sinUbicacion = RegistroMarcajeService::ESTADOS_UBICACION[$estadoUbicacion] ?? null;
         $observaciones = $registro->anotarObservaciones($validated['observaciones'] ?? null, [
+            $notaComida,
             $notaHora,
             ! empty($validated['ubicacion_simulada']) ? 'Ubicación simulada (GPS falso) detectada por la app.' : null,
             $sinUbicacion && $lat === null ? "Sin ubicación: {$sinUbicacion}." : null,
@@ -337,6 +392,7 @@ class KioskoApiController extends Controller
                 'observaciones' => $observaciones,
                 'incidente_causa' => $validated['incidente_causa'] ?? null,
                 'duracion_descanso_minutos' => $validated['duracion_descanso_minutos'] ?? null,
+                ...$registro->atributosComida($comida),
                 'tipo_entrada' => $validated['tipo_entrada'] ?? 'normal',
                 'registrado_por_user_id' => $request->user()?->id,
                 'uuid_cliente' => $uuid,
@@ -374,6 +430,288 @@ class KioskoApiController extends Controller
         return $this->respuestaMarcaje($empleado, $marcaje);
     }
 
+    /**
+     * Enrolamiento biométrico desde la app, igual que en el kiosko web: dos
+     * fotos frontales, sexo y fecha de nacimiento, con el aviso de privacidad
+     * aceptado; EmpleadoEnrolamientoService las guarda y sincroniza con
+     * BioTime. Una cuenta vinculada a un empleado sólo se enrola a sí misma;
+     * enrolar a otros exige los permisos del kiosko web.
+     */
+    public function enrolar(Request $request, EmpleadoEnrolamientoService $enrolamiento)
+    {
+        $request->validate(['empleado_id' => 'nullable|integer']);
+
+        $user = $request->user();
+        $propioEmpleado = $user->empleado;
+
+        if ($propioEmpleado) {
+            if (! $propioEmpleado->status || ! $propioEmpleado->permite_app_movil) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para utilizar la app móvil. Contacta a Recursos Humanos.',
+                ], 403);
+            }
+            $empleado = $propioEmpleado;
+        } else {
+            if (! $user->canAny(['asistencia.kiosko', 'asistencia.view', 'empleados.edit'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para enrolar a otros empleados.',
+                ], 403);
+            }
+
+            $empleado = Empleado::where('id', $request->integer('empleado_id'))
+                ->when($user->empresa_id, fn ($q) => $q->where('empresa_id', $user->empresa_id))
+                ->first();
+
+            if (! $empleado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Empleado no encontrado o no pertenece a tu empresa.',
+                ], 404);
+            }
+        }
+
+        $empleado = $enrolamiento->guardar($empleado, $request->only([
+            'aviso_privacidad', 'foto_empleado', 'foto_empleado_2', 'genero', 'fecha_nacimiento',
+        ]));
+
+        activity('empleados')
+            ->causedBy($user)
+            ->performedOn($empleado)
+            ->log("Se completó el enrolamiento biométrico de {$empleado->nombre_completo} desde la app móvil.");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Enrolamiento completado.',
+            'empleado' => [
+                'id' => $empleado->id,
+                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
+                ...$this->datosEnrolamiento($empleado),
+            ],
+        ]);
+    }
+
+    /**
+     * Enlace público de enrolamiento (C2 · QR-Link) para que el empleado se
+     * enrole desde su propio teléfono: la app lo muestra como QR o lo copia
+     * para mandarlo por WhatsApp. Genera uno nuevo cada vez.
+     */
+    public function generarEnlaceEnrolamiento(Request $request, EmpleadoEnrolamientoService $enrolamiento)
+    {
+        $request->validate(['empleado_id' => 'required|integer']);
+
+        $user = $request->user();
+        $empleado = Empleado::where('id', $request->integer('empleado_id'))
+            ->where('status', true)
+            ->when($user->empresa_id, fn ($q) => $q->where('empresa_id', $user->empresa_id))
+            ->first();
+
+        if (! $empleado) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Empleado no encontrado o no pertenece a tu empresa.',
+            ], 404);
+        }
+
+        $enlace = $enrolamiento->generarEnlace($empleado);
+
+        activity('empleados')
+            ->causedBy($user)
+            ->performedOn($empleado)
+            ->log("Se generó el enlace de enrolamiento de {$empleado->nombre_completo} desde la app móvil.");
+
+        return response()->json([
+            'success' => true,
+            'enlace' => $enlace,
+            'expira_en' => $empleado->enrolamiento_token_expires_at->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Lo que muestra la app al abrir un enlace de enrolamiento: el empleado
+     * al que pertenece, para la bienvenida y los datos ya capturados.
+     */
+    public function enlaceEnrolamiento(string $token)
+    {
+        $empleado = $this->empleadoDelEnlace($token);
+        if (! $empleado instanceof Empleado) {
+            return $empleado;
+        }
+
+        return response()->json([
+            'success' => true,
+            'empleado' => $this->empleadoParaApp($empleado),
+            'expira_en' => $empleado->enrolamiento_token_expires_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Enrolamiento con el enlace, sin sesión: mismas validaciones que la
+     * página pública del web y que enrolar().
+     */
+    public function enrolarConEnlace(Request $request, string $token, EmpleadoEnrolamientoService $enrolamiento)
+    {
+        $empleado = $this->empleadoDelEnlace($token);
+        if (! $empleado instanceof Empleado) {
+            return $empleado;
+        }
+
+        $empleado = $enrolamiento->guardar($empleado, $request->only([
+            'aviso_privacidad', 'foto_empleado', 'foto_empleado_2', 'genero', 'fecha_nacimiento',
+        ]));
+
+        activity('empleados')
+            ->performedOn($empleado)
+            ->log("Se completó el enrolamiento biométrico de {$empleado->nombre_completo} desde la app móvil con el enlace de enrolamiento.");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Enrolamiento completado.',
+            'empleado' => [
+                'id' => $empleado->id,
+                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
+                ...$this->datosEnrolamiento($empleado),
+            ],
+        ]);
+    }
+
+    /**
+     * Áreas para el alta de un empleado desde la app.
+     */
+    public function departamentos()
+    {
+        return response()->json([
+            'success' => true,
+            'departamentos' => Departamento::where('status', true)
+                ->orderBy('nombre')
+                ->get(['id', 'nombre']),
+        ]);
+    }
+
+    /**
+     * Alta del empleado que todavía no está en el sistema (B · Sin datos), con
+     * lo mínimo para enrolarlo enseguida: número, nombre y área. El número es
+     * obligatorio y no puede ser de otro empleado.
+     */
+    public function altaEmpleado(Request $request)
+    {
+        $data = $request->validate([
+            'numero' => 'required|string|max:50',
+            'nombres' => 'required|string|max:255',
+            'apellidos' => 'required|string|max:255',
+            'departamento_id' => 'nullable|integer',
+        ], [
+            'numero.required' => 'Capture el número de empleado.',
+            'nombres.required' => 'Capture el nombre.',
+            'apellidos.required' => 'Capture los apellidos.',
+        ]);
+
+        $user = $request->user();
+        $numero = trim($data['numero']);
+
+        // Sin el scope de empresa: documento_identidad es único en toda la tabla.
+        $existe = Empleado::withoutTenant()
+            ->where(fn ($q) => $q->where('documento_identidad', $numero)->orWhere('codigo_acceso', $numero))
+            ->exists();
+        if ($existe) {
+            throw ValidationException::withMessages([
+                'numero' => 'Ya existe un empleado con ese número. Búsquelo en el kiosko para enrolarlo.',
+            ]);
+        }
+
+        // El scope de empresa deja fuera las áreas ajenas.
+        if (! empty($data['departamento_id']) && ! Departamento::whereKey($data['departamento_id'])->exists()) {
+            throw ValidationException::withMessages(['departamento_id' => 'El área no es válida.']);
+        }
+
+        $empleado = AccessCodeService::createWithRetry(fn () => Empleado::create([
+            'nombres' => trim($data['nombres']),
+            'apellidos' => trim($data['apellidos']),
+            'documento_identidad' => $numero,
+            'departamento_id' => $data['departamento_id'] ?? null,
+            'empresa_id' => $user->empresa_id,
+            'sucursal_id' => $user->sucursal_id,
+            'status' => true,
+        ]));
+
+        activity('empleados')
+            ->causedBy($user)
+            ->performedOn($empleado)
+            ->log("Se dio de alta a {$empleado->nombre_completo} desde la app móvil para enrolarlo.");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Empleado dado de alta.',
+            'empleado' => $this->empleadoParaApp($empleado->fresh()),
+        ], 201);
+    }
+
+    /**
+     * Empleado activo dueño del token, o la respuesta de error si el enlace
+     * no existe o ya venció.
+     */
+    private function empleadoDelEnlace(string $token): Empleado|JsonResponse
+    {
+        $empleado = Empleado::withoutTenant()
+            ->where('enrolamiento_token', $token)
+            ->where('status', true)
+            ->first();
+
+        if (! $empleado) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El enlace de enrolamiento no existe o ya no es válido.',
+            ], 404);
+        }
+
+        if ($empleado->enrolamiento_token_expires_at?->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este enlace de enrolamiento ha expirado. Solicite uno nuevo a Recursos Humanos.',
+            ], 410);
+        }
+
+        return $empleado;
+    }
+
+    /**
+     * El empleado con la forma de buscar(), sin el último marcaje.
+     */
+    private function empleadoParaApp(Empleado $empleado): array
+    {
+        $empleado->loadMissing(['turnoLaboral', 'departamento', 'cargo', 'empresa']);
+
+        return [
+            'id' => $empleado->id,
+            'nombre_completo' => $empleado->nombre_completo,
+            'documento_identidad' => $empleado->documento_identidad,
+            'codigo_acceso' => $empleado->codigo_acceso,
+            'numero_empleado' => $empleado->codigo_acceso,
+            'departamento' => $empleado->departamento?->nombre,
+            'cargo' => $empleado->cargo?->nombre,
+            'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
+            'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
+            ...$this->datosEnrolamiento($empleado),
+        ];
+    }
+
+    /**
+     * Lo que el kiosko web muestra sobre el enrolamiento biométrico: para
+     * avisar a quien falta y precargar los datos ya capturados.
+     */
+    private function datosEnrolamiento(Empleado $empleado): array
+    {
+        return [
+            'nombres' => $empleado->nombres,
+            'enrolado' => ! empty($empleado->enrolado_en),
+            'enrolado_en' => $empleado->enrolado_en?->toIso8601String(),
+            'genero' => $empleado->genero,
+            'fecha_nacimiento' => $empleado->fecha_nacimiento?->format('Y-m-d'),
+            'empresa_nombre' => $empleado->empresa?->razon_social ?? $empleado->empresa?->nombre_comercial,
+        ];
+    }
+
     private function respuestaMarcaje(Empleado $empleado, AsistenciaMarcaje $marcaje)
     {
         return response()->json([
@@ -382,8 +720,9 @@ class KioskoApiController extends Controller
             'empleado_nombre' => $empleado->nombre_completo,
             'marcaje' => [
                 'tipo_marcaje' => $marcaje->tipo_marcaje,
-                'hora' => $marcaje->fecha_hora->format('H:i:s'),
-                'fecha' => $marcaje->fecha_hora->format('d/m/Y'),
+                'hora' => Carbon::parse($marcaje->fecha_hora_local)->format('H:i:s'),
+                'fecha' => Carbon::parse($marcaje->fecha_hora_local)->format('d/m/Y'),
+                'comida_tipo' => $marcaje->comida_tipo,
             ],
         ]);
     }
@@ -409,11 +748,13 @@ class KioskoApiController extends Controller
             ->where('fecha_hora', '>=', $desde)
             ->orderBy('fecha_hora', 'desc')
             ->limit(100)
+            ->with(['sucursal:id,zona_horaria', 'empresa:id,zona_horaria'])
             ->get()
             ->map(fn (AsistenciaMarcaje $m) => [
                 'tipo' => $m->tipo_marcaje,
-                'fecha' => Carbon::parse($m->fecha_hora)->format('d/m/Y'),
-                'hora' => Carbon::parse($m->fecha_hora)->format('H:i:s'),
+                // En la zona de la planta del marcaje, como los reportes web.
+                'fecha' => Carbon::parse($m->fecha_hora_local)->format('d/m/Y'),
+                'hora' => Carbon::parse($m->fecha_hora_local)->format('H:i:s'),
             ]);
 
         $resumen = AsistenciaResumenDiario::where('empleado_id', $empleado->id)
