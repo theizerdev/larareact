@@ -330,6 +330,26 @@ class BioTimeController extends Controller
                 'only' => 'sometimes|string',
             ]);
 
+            $only = $validated['only'] ?? null;
+
+            if ($only === 'employees') {
+                $service = BioTimeSyncService::for($empresa);
+                $service->syncCatalogs($empresa);
+                $res = $service->syncEmployees($empresa, forceProvision: true, forceUpdate: true);
+
+                $msg = sprintf(
+                    'Sincronización de empleados completada: %d consultados en BioTime, %d creados y %d actualizados en Hoshō.',
+                    $res['fetched'] ?? 0,
+                    $res['created'] ?? 0,
+                    $res['updated'] ?? 0
+                );
+
+                return back()->with('notification', [
+                    'type' => 'success',
+                    'message' => $msg,
+                ]);
+            }
+
             // El botón corre SÍNCRONO dentro del request web, así que se mantiene
             // acotado y rápido: nunca `--full`, y los marcajes se limitan a la
             // ventana de los últimos 2 días. El backfill histórico y la
@@ -339,11 +359,18 @@ class BioTimeController extends Controller
                 '--empresa' => $empresa->id,
                 '--since' => now()->subDays(2)->format('Y-m-d H:i:s'),
             ];
-            if (! empty($validated['only'])) {
-                $options['--only'] = $validated['only'];
+            if (! empty($only)) {
+                $options['--only'] = $only;
             }
 
             $exit = Artisan::call('biotime:sync', $options);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::channel('biotime')->error('Error en syncNow: '.$e->getMessage(), ['exception' => $e]);
+
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => __('Error al sincronizar con BioTime: :error', ['error' => $e->getMessage()]),
+            ]);
         } finally {
             $lock->release();
         }

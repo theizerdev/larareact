@@ -37,6 +37,10 @@ class HandleInertiaRequests extends Middleware
     {
         $currentLocale = app()->getLocale();
 
+        if ($request->user() && $request->user()->empresa_id) {
+            $this->verificarSincronizacionBioTime($request->user());
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -104,5 +108,26 @@ class HandleInertiaRequests extends Middleware
             \App\Notifications\WelcomeNotification::class => '/dashboard',
             default => null,
         };
+    }
+
+    /**
+     * Sincroniza automáticamente empleados de BioTime al entrar al sistema,
+     * respetando una ventana de cooldown de 15 minutos por empresa.
+     */
+    private function verificarSincronizacionBioTime($user): void
+    {
+        $cacheKey = "biotime:auto_sync:empresa_{$user->empresa_id}";
+
+        if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+            return;
+        }
+
+        $empresa = $user->empresa;
+        if (! $empresa || ! $empresa->biotime_active) {
+            return;
+        }
+
+        \Illuminate\Support\Facades\Cache::put($cacheKey, now()->toIso8601String(), now()->addMinutes(15));
+        dispatch(new \App\Jobs\SyncBioTimeEmployeesJob($empresa->id))->afterResponse();
     }
 }

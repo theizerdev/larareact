@@ -74,7 +74,7 @@ class BioTimeSyncService
                 $summary['parts'][$part] = match ($part) {
                     'terminals' => $this->syncTerminals($empresa),
                     'catalogs' => $this->syncCatalogs($empresa),
-                    'employees' => $this->syncEmployees($empresa),
+                    'employees' => $this->syncEmployees($empresa, forceProvision: true, forceUpdate: true),
                     'transactions' => $this->syncTransactions($empresa, $full, $since),
                     'attendance' => $this->syncAttendance($empresa),
                     default => ['skipped' => "parte desconocida: {$part}"],
@@ -197,15 +197,14 @@ class BioTimeSyncService
     /*  Empleados + vínculo suave                                          */
     /* ------------------------------------------------------------------ */
 
-    public function syncEmployees(Empresa $empresa): array
+    public function syncEmployees(Empresa $empresa, bool $forceProvision = false, bool $forceUpdate = true): array
     {
         $res = $this->client->listEmployees();
         if (! $res['success']) {
             throw new \RuntimeException($res['error'] ?? 'No se pudieron leer los empleados.');
         }
 
-        // Qué columnas cambió BioTime en cada persona: el alta automática sólo
-        // pisa en Organización / Colaboradores lo que cambió en el reloj.
+        // Qué columnas cambió BioTime en cada persona
         $cambios = [];
 
         foreach ($res['data'] as $e) {
@@ -219,11 +218,27 @@ class BioTimeSyncService
         $linked = $this->resolveLinks($empresa);
         $resultado = ['fetched' => count($res['data']), 'auto_linked' => $linked];
 
-        if ($empresa->biotime_auto_alta) {
-            $alta = app(BioTimeEmpleadoProvisioner::class)->sincronizar($empresa, $cambios);
-            $resultado += ['created' => $alta['creados'], 'updated' => $alta['actualizados'], 'accounts' => $alta['cuentas'], 'skipped' => count($alta['omitidos'])];
+        // Sincronización integral hacia la tabla `empleados`:
+        // Actualiza los que existen y crea los que no están en Hoshō
+        if ($empresa->biotime_auto_alta || $forceProvision) {
+            $alta = app(BioTimeEmpleadoProvisioner::class)->sincronizar(
+                $empresa,
+                $cambios,
+                dryRun: false,
+                sucursal: null,
+                usuario: null,
+                forceUpdate: $forceUpdate,
+            );
+
+            $resultado += [
+                'created' => $alta['creados'],
+                'updated' => $alta['actualizados'],
+                'accounts' => $alta['cuentas'],
+                'skipped' => count($alta['omitidos']),
+            ];
+
             foreach ($alta['omitidos'] as $motivo) {
-                Log::channel('biotime')->warning("BioTime alta automática omitida: {$motivo}", ['empresa_id' => $empresa->id]);
+                Log::channel('biotime')->warning("BioTime sincronización omitida: {$motivo}", ['empresa_id' => $empresa->id]);
             }
             foreach ($alta['sin_cuenta'] as $motivo) {
                 Log::channel('biotime')->info("BioTime cuenta de usuario no creada: {$motivo}", ['empresa_id' => $empresa->id]);

@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Foundation\Console\ServeCommand;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -38,6 +40,9 @@ class AppServiceProvider extends ServiceProvider
             }
             return null;
         });
+
+        // Sincronización automática de BioTime al iniciar sesión
+        Event::listen(Login::class, \App\Listeners\SyncBioTimeEmployeesOnLogin::class);
 
         $this->configureDefaults();
     }
