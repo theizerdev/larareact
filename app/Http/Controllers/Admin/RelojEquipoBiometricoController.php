@@ -10,6 +10,8 @@ use App\Services\EquiposUbicacionesImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class RelojEquipoBiometricoController extends Controller
@@ -34,8 +36,14 @@ class RelojEquipoBiometricoController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('localidad_nombre', 'like', "%{$search}%")
                     ->orWhere('ubicacion_fisica', 'like', "%{$search}%")
+                    ->orWhere('dimensiones', 'like', "%{$search}%")
+                    ->orWhere('instalacion_fisica', 'like', "%{$search}%")
+                    ->orWhere('instalacion_comentario', 'like', "%{$search}%")
+                    ->orWhere('actual_marca', 'like', "%{$search}%")
+                    ->orWhere('actual_modelo', 'like', "%{$search}%")
                     ->orWhere('actual_no_serie', 'like', "%{$search}%")
                     ->orWhere('actual_ip', 'like', "%{$search}%")
+                    ->orWhere('actual_mac_address', 'like', "%{$search}%")
                     ->orWhere('actual_gateway', 'like', "%{$search}%")
                     ->orWhere('actual_comentario', 'like', "%{$search}%")
                     ->orWhere('nuevo_marca', 'like', "%{$search}%")
@@ -143,12 +151,26 @@ class RelojEquipoBiometricoController extends Controller
             'localidad_nombre' => 'required|string|max:255',
             'numero_localidad' => 'nullable|integer|min:1|max:99999',
             'ubicacion_fisica' => 'nullable|string|max:255',
+
+            // Características de instalación
+            'dimensiones' => 'nullable|string|max:120',
+            'instalacion_fisica' => 'nullable|string|max:255',
+            'instalacion_comentario' => 'nullable|string|max:1500',
+            'instalacion_foto' => 'nullable|string',
+
+            // Equipo Inicial
+            'actual_marca' => 'nullable|string|max:120',
+            'actual_modelo' => 'nullable|string|max:120',
             'actual_no_serie' => 'nullable|string|max:120',
             'actual_ip' => 'nullable|string|max:60',
             'actual_mascara' => 'nullable|string|max:60',
             'actual_gateway' => 'nullable|string|max:60',
+            'actual_mac_address' => 'nullable|string|max:60',
             'actual_instalado' => 'boolean',
             'actual_comentario' => 'nullable|string|max:1000',
+            'actual_foto' => 'nullable|string',
+
+            // Equipo Final
             'nuevo_marca' => 'nullable|string|max:120',
             'nuevo_modelo' => 'nullable|string|max:120',
             'nuevo_no_serie' => 'nullable|string|max:120',
@@ -158,6 +180,8 @@ class RelojEquipoBiometricoController extends Controller
             'nuevo_instalado' => 'boolean',
             'nuevo_comentario' => 'nullable|string|max:1000',
             'nuevo_mac_address' => 'nullable|string|max:60',
+            'nuevo_foto' => 'nullable|string',
+
             'activo' => 'boolean',
         ]);
 
@@ -172,6 +196,10 @@ class RelojEquipoBiometricoController extends Controller
                 $validated['legacy'] = $validated['legacy'] ?: $ubicacion->legacy;
             }
         }
+
+        $validated['actual_foto'] = $this->procesarFoto($request->input('actual_foto'), 'inicial');
+        $validated['nuevo_foto'] = $this->procesarFoto($request->input('nuevo_foto'), 'final');
+        $validated['instalacion_foto'] = $this->procesarFoto($request->input('instalacion_foto'), 'instalacion');
 
         try {
             RelojEquipoBiometrico::create($validated);
@@ -199,12 +227,26 @@ class RelojEquipoBiometricoController extends Controller
             'localidad_nombre' => 'required|string|max:255',
             'numero_localidad' => 'nullable|integer|min:1|max:99999',
             'ubicacion_fisica' => 'nullable|string|max:255',
+
+            // Características de instalación
+            'dimensiones' => 'nullable|string|max:120',
+            'instalacion_fisica' => 'nullable|string|max:255',
+            'instalacion_comentario' => 'nullable|string|max:1500',
+            'instalacion_foto' => 'nullable|string',
+
+            // Equipo Inicial
+            'actual_marca' => 'nullable|string|max:120',
+            'actual_modelo' => 'nullable|string|max:120',
             'actual_no_serie' => 'nullable|string|max:120',
             'actual_ip' => 'nullable|string|max:60',
             'actual_mascara' => 'nullable|string|max:60',
             'actual_gateway' => 'nullable|string|max:60',
+            'actual_mac_address' => 'nullable|string|max:60',
             'actual_instalado' => 'boolean',
             'actual_comentario' => 'nullable|string|max:1000',
+            'actual_foto' => 'nullable|string',
+
+            // Equipo Final
             'nuevo_marca' => 'nullable|string|max:120',
             'nuevo_modelo' => 'nullable|string|max:120',
             'nuevo_no_serie' => 'nullable|string|max:120',
@@ -214,8 +256,14 @@ class RelojEquipoBiometricoController extends Controller
             'nuevo_instalado' => 'boolean',
             'nuevo_comentario' => 'nullable|string|max:1000',
             'nuevo_mac_address' => 'nullable|string|max:60',
+            'nuevo_foto' => 'nullable|string',
+
             'activo' => 'boolean',
         ]);
+
+        $validated['actual_foto'] = $this->procesarFoto($request->input('actual_foto'), 'inicial', $biometrico->actual_foto);
+        $validated['nuevo_foto'] = $this->procesarFoto($request->input('nuevo_foto'), 'final', $biometrico->nuevo_foto);
+        $validated['instalacion_foto'] = $this->procesarFoto($request->input('instalacion_foto'), 'instalacion', $biometrico->instalacion_foto);
 
         try {
             DB::transaction(function () use ($biometrico, $validated) {
@@ -249,6 +297,10 @@ class RelojEquipoBiometricoController extends Controller
     public function destroy(RelojEquipoBiometrico $biometrico)
     {
         try {
+            $this->eliminarArchivoStorage($biometrico->actual_foto);
+            $this->eliminarArchivoStorage($biometrico->nuevo_foto);
+            $this->eliminarArchivoStorage($biometrico->instalacion_foto);
+
             $biometrico->delete();
 
             return back()->with('notification', [
@@ -262,6 +314,51 @@ class RelojEquipoBiometricoController extends Controller
                 'type' => 'error',
                 'message' => 'No se pudo eliminar el equipo biométrico.',
             ]);
+        }
+    }
+
+    private function procesarFoto(?string $valor, string $subdirectorio, ?string $fotoAnterior = null): ?string
+    {
+        if (empty($valor)) {
+            $this->eliminarArchivoStorage($fotoAnterior);
+            return null;
+        }
+
+        // Si es una imagen base64 (data:image/...)
+        if (preg_match('/^data:image\/(\w+);base64,/', $valor, $matches)) {
+            $extension = strtolower($matches[1]);
+            if ($extension === 'jpeg') {
+                $extension = 'jpg';
+            }
+
+            $base64Data = substr($valor, strpos($valor, ',') + 1);
+            $decoded = base64_decode($base64Data);
+
+            if ($decoded !== false) {
+                $this->eliminarArchivoStorage($fotoAnterior);
+                $fileName = Str::random(40) . '.' . $extension;
+                $relativePath = "biometricos/{$subdirectorio}/{$fileName}";
+                Storage::disk('public')->put($relativePath, $decoded);
+
+                return '/storage/' . $relativePath;
+            }
+        }
+
+        // Si ya es una ruta guardada
+        if (str_starts_with($valor, '/storage/') || str_starts_with($valor, 'http://') || str_starts_with($valor, 'https://')) {
+            return $valor;
+        }
+
+        return $fotoAnterior;
+    }
+
+    private function eliminarArchivoStorage(?string $ruta): void
+    {
+        if ($ruta && str_starts_with($ruta, '/storage/')) {
+            $diskPath = Str::after($ruta, '/storage/');
+            if (Storage::disk('public')->exists($diskPath)) {
+                Storage::disk('public')->delete($diskPath);
+            }
         }
     }
 }

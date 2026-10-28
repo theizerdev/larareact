@@ -1,18 +1,25 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     AlertTriangle,
+    Camera,
     CheckCircle2,
     Cpu,
     FileSpreadsheet,
+    Image as ImageIcon,
+    Layers,
     MapPin,
+    Maximize2,
     MoreVertical,
     Network,
     Pencil,
     Plus,
+    Ruler,
     Server,
     Sparkles,
     ToggleRight,
     Trash2,
+    Upload,
+    Wrench,
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -51,6 +58,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/use-permission';
 import { cleanParams, cn } from '@/lib/utils';
@@ -76,21 +84,37 @@ interface RelojEquipoBiometrico {
     localidad_nombre: string;
     numero_localidad: number | null;
     ubicacion_fisica: string | null;
+
+    // Características de instalación
+    dimensiones: string | null;
+    instalacion_fisica: string | null;
+    instalacion_comentario: string | null;
+    instalacion_foto: string | null;
+
+    // Equipo Inicial (Actual)
+    actual_marca: string | null;
+    actual_modelo: string | null;
     actual_no_serie: string | null;
     actual_ip: string | null;
     actual_mascara: string | null;
     actual_gateway: string | null;
+    actual_mac_address: string | null;
     actual_instalado: boolean;
     actual_comentario: string | null;
+    actual_foto: string | null;
+
+    // Equipo Final (Nuevo)
     nuevo_marca: string | null;
     nuevo_modelo: string | null;
     nuevo_no_serie: string | null;
     nuevo_ip: string | null;
     nuevo_mascara: string | null;
     nuevo_gateway: string | null;
+    nuevo_mac_address: string | null;
     nuevo_instalado: boolean;
     nuevo_comentario: string | null;
-    nuevo_mac_address: string | null;
+    nuevo_foto: string | null;
+
     activo: boolean;
     ubicacion?: UbicacionOption | null;
 }
@@ -127,21 +151,37 @@ const initialForm = {
     localidad_nombre: '',
     numero_localidad: '' as string | number,
     ubicacion_fisica: '',
+
+    // Características de instalación
+    dimensiones: '',
+    instalacion_fisica: '',
+    instalacion_comentario: '',
+    instalacion_foto: '',
+
+    // Equipo Inicial
+    actual_marca: '',
+    actual_modelo: '',
     actual_no_serie: '',
     actual_ip: '',
     actual_mascara: '',
     actual_gateway: '',
+    actual_mac_address: '',
     actual_instalado: true,
     actual_comentario: '',
+    actual_foto: '',
+
+    // Equipo Final
     nuevo_marca: '',
     nuevo_modelo: '',
     nuevo_no_serie: '',
     nuevo_ip: '',
     nuevo_mascara: '',
     nuevo_gateway: '',
+    nuevo_mac_address: '',
     nuevo_instalado: false,
     nuevo_comentario: '',
-    nuevo_mac_address: '',
+    nuevo_foto: '',
+
     activo: true,
 };
 
@@ -160,6 +200,199 @@ function getLegacyBadgeStyle(legacy?: string | null) {
         return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800';
     }
     return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+}
+
+/**
+ * Componente Drag & Drop para carga de fotografías con optimización en canvas y vista previa
+ */
+function PhotoDropzone({
+    label,
+    description,
+    value,
+    onChange,
+    onViewFull,
+    id,
+}: {
+    label: string;
+    description?: string;
+    value?: string | null;
+    onChange: (val: string) => void;
+    onViewFull?: (src: string, title: string) => void;
+    id?: string;
+}) {
+    const [isDragging, setIsDragging] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const processFile = (file: File) => {
+        if (!file.type.startsWith('image/')) {
+            notifyError('Solo se permiten archivos de imagen (PNG, JPG o WEBP).');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const rawDataUrl = event.target?.result as string;
+            const img = new Image();
+            img.onload = () => {
+                const maxDim = 1920;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    onChange(optimizedDataUrl);
+                } else {
+                    onChange(rawDataUrl);
+                }
+            };
+            img.onerror = () => {
+                onChange(rawDataUrl);
+            };
+            img.src = rawDataUrl;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            processFile(e.dataTransfer.files[0]);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    return (
+        <div className="space-y-1.5">
+            <Label htmlFor={id} className="text-xs font-semibold flex items-center justify-between">
+                <span>{label}</span>
+                {value && (
+                    <span className="text-[11px] font-normal text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Foto adjunta
+                    </span>
+                )}
+            </Label>
+            {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
+
+            <input
+                ref={fileInputRef}
+                id={id}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                        processFile(e.target.files[0]);
+                    }
+                }}
+            />
+
+            {value ? (
+                <div className="relative group rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 p-2.5 overflow-hidden flex items-center gap-3">
+                    <div
+                        className="relative h-20 w-24 rounded-lg overflow-hidden border bg-background shrink-0 cursor-pointer shadow-xs group/img"
+                        onClick={() => onViewFull && onViewFull(value, label)}
+                        title="Haz clic para ampliar la imagen"
+                    >
+                        <img src={value} alt={label} className="h-full w-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity text-white">
+                            <Maximize2 className="h-4 w-4 drop-shadow" />
+                        </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-1">
+                        <p className="text-xs font-medium text-foreground truncate">
+                            {value.startsWith('data:') ? 'Nueva fotografía seleccionada' : 'Fotografía guardada en el servidor'}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                            {value.startsWith('data:')
+                                ? 'Se subirá y almacenará al guardar el formulario'
+                                : 'Disponible para consulta y ampliación'}
+                        </p>
+                        <div className="flex items-center gap-2 pt-1 flex-wrap">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs px-2.5"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <Upload className="h-3 w-3 mr-1" />
+                                Cambiar foto
+                            </Button>
+                            {onViewFull && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs px-2.5"
+                                    onClick={() => onViewFull(value, label)}
+                                >
+                                    <Maximize2 className="h-3 w-3 mr-1" />
+                                    Ver grande
+                                </Button>
+                            )}
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs px-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                onClick={() => onChange('')}
+                            >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Quitar
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={cn(
+                        'flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 cursor-pointer transition-colors text-center',
+                        isDragging
+                            ? 'border-primary bg-primary/10'
+                            : 'border-slate-300 dark:border-slate-700 hover:border-primary/60 hover:bg-slate-50 dark:hover:bg-slate-900/50'
+                    )}
+                >
+                    <div className="rounded-full bg-primary/10 p-2.5 mb-2 text-primary">
+                        <Upload className="h-5 w-5" />
+                    </div>
+                    <p className="text-xs font-medium text-foreground">
+                        Arrastra y suelta aquí tu foto, o <span className="text-primary underline">haz clic para explorar</span>
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">PNG, JPG o WEBP (máx. 10MB)</p>
+                </div>
+            )}
+        </div>
+    );
 }
 
 export default function BiometricosSetupIndexPage({
@@ -191,6 +424,9 @@ export default function BiometricosSetupIndexPage({
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<RelojEquipoBiometrico | null>(null);
     const [deletingItem, setDeletingItem] = useState<RelojEquipoBiometrico | null>(null);
+
+    // Lightbox para vista ampliada de imágenes
+    const [lightboxImage, setLightboxImage] = useState<{ src: string; title: string } | null>(null);
 
     const { data, setData, reset, errors, processing } = useForm(initialForm);
 
@@ -239,21 +475,34 @@ export default function BiometricosSetupIndexPage({
             localidad_nombre: item.localidad_nombre || '',
             numero_localidad: item.numero_localidad ?? '',
             ubicacion_fisica: item.ubicacion_fisica || '',
+
+            dimensiones: item.dimensiones || '',
+            instalacion_fisica: item.instalacion_fisica || '',
+            instalacion_comentario: item.instalacion_comentario || '',
+            instalacion_foto: item.instalacion_foto || '',
+
+            actual_marca: item.actual_marca || '',
+            actual_modelo: item.actual_modelo || '',
             actual_no_serie: item.actual_no_serie || '',
             actual_ip: item.actual_ip || '',
             actual_mascara: item.actual_mascara || '',
             actual_gateway: item.actual_gateway || '',
+            actual_mac_address: item.actual_mac_address || '',
             actual_instalado: Boolean(item.actual_instalado),
             actual_comentario: item.actual_comentario || '',
+            actual_foto: item.actual_foto || '',
+
             nuevo_marca: item.nuevo_marca || '',
             nuevo_modelo: item.nuevo_modelo || '',
             nuevo_no_serie: item.nuevo_no_serie || '',
             nuevo_ip: item.nuevo_ip || '',
             nuevo_mascara: item.nuevo_mascara || '',
             nuevo_gateway: item.nuevo_gateway || '',
+            nuevo_mac_address: item.nuevo_mac_address || '',
             nuevo_instalado: Boolean(item.nuevo_instalado),
             nuevo_comentario: item.nuevo_comentario || '',
-            nuevo_mac_address: item.nuevo_mac_address || '',
+            nuevo_foto: item.nuevo_foto || '',
+
             activo: Boolean(item.activo),
         });
         setIsModalOpen(true);
@@ -319,6 +568,10 @@ export default function BiometricosSetupIndexPage({
         });
     };
 
+    const openLightbox = (src: string, title: string) => {
+        setLightboxImage({ src, title });
+    };
+
     const columns: ColumnDef<RelojEquipoBiometrico>[] = [
         {
             header: 'Localidad & Ubicación',
@@ -370,31 +623,133 @@ export default function BiometricosSetupIndexPage({
             },
         },
         {
-            header: 'Equipo Actual',
+            header: 'Características de Instalación',
             cell: (item) => {
-                const hasActualData = item.actual_no_serie || item.actual_ip || item.actual_gateway || item.actual_comentario;
+                const hasInstalacionData =
+                    item.dimensiones ||
+                    item.instalacion_fisica ||
+                    item.instalacion_comentario ||
+                    item.instalacion_foto;
+
+                return (
+                    <div className="rounded-xl border bg-slate-50/50 dark:bg-slate-900/30 p-2.5 space-y-1.5 min-w-[220px]">
+                        <div className="flex items-center justify-between gap-2 border-b pb-1">
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                <Wrench className="h-3 w-3 text-amber-600" />
+                                Instalación
+                            </span>
+                            {item.instalacion_foto && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        openLightbox(item.instalacion_foto!, `Instalación - ${item.localidad_nombre}`);
+                                    }}
+                                    className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline font-medium"
+                                >
+                                    <Camera className="h-3 w-3" /> Ver foto
+                                </button>
+                            )}
+                        </div>
+
+                        {hasInstalacionData ? (
+                            <div className="space-y-1 text-xs">
+                                {item.dimensiones && (
+                                    <p className="flex items-center gap-1 text-[11px]">
+                                        <Ruler className="h-3 w-3 text-muted-foreground shrink-0" />
+                                        <span className="text-muted-foreground">Dim:</span>
+                                        <strong className="text-foreground">{item.dimensiones}</strong>
+                                    </p>
+                                )}
+                                {item.instalacion_fisica && (
+                                    <p className="text-[11px] text-foreground font-medium truncate max-w-[240px]">
+                                        {item.instalacion_fisica}
+                                    </p>
+                                )}
+                                {item.instalacion_comentario && (
+                                    <p className="text-[10px] text-muted-foreground italic line-clamp-2">
+                                        “{item.instalacion_comentario}”
+                                    </p>
+                                )}
+                                {item.instalacion_foto && (
+                                    <div
+                                        className="mt-1 h-12 w-20 rounded-md overflow-hidden border bg-background cursor-pointer hover:opacity-85 transition-opacity"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openLightbox(item.instalacion_foto!, `Instalación - ${item.localidad_nombre}`);
+                                        }}
+                                        title="Clic para ampliar foto de instalación"
+                                    >
+                                        <img
+                                            src={item.instalacion_foto}
+                                            alt="Foto instalación"
+                                            className="h-full w-full object-cover"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-xs text-muted-foreground italic py-1">Sin detalles de instalación</p>
+                        )}
+                    </div>
+                );
+            },
+        },
+        {
+            header: 'Equipo Inicial',
+            cell: (item) => {
+                const hasActualData =
+                    item.actual_marca ||
+                    item.actual_modelo ||
+                    item.actual_no_serie ||
+                    item.actual_ip ||
+                    item.actual_mac_address ||
+                    item.actual_gateway ||
+                    item.actual_comentario ||
+                    item.actual_foto;
+
                 return (
                     <div className="rounded-xl border bg-slate-50/60 dark:bg-slate-900/40 p-2.5 space-y-1 min-w-[230px]">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                                <Server className="h-3 w-3" />
-                                Actual
+                        <div className="flex items-center justify-between gap-2 border-b pb-1">
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                <Server className="h-3 w-3 text-indigo-600" />
+                                Inicial
                             </span>
-                            <Badge
-                                variant="outline"
-                                className={cn(
-                                    'text-[10px]',
-                                    item.actual_instalado
-                                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                        : 'border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                            <div className="flex items-center gap-1.5">
+                                {item.actual_foto && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openLightbox(item.actual_foto!, `Equipo Inicial - ${item.localidad_nombre}`);
+                                        }}
+                                        className="text-primary hover:text-primary/80"
+                                        title="Ver foto equipo inicial"
+                                    >
+                                        <ImageIcon className="h-3.5 w-3.5" />
+                                    </button>
                                 )}
-                            >
-                                {item.actual_instalado ? 'Instalado: Yes' : 'Instalado: No'}
-                            </Badge>
+                                <Badge
+                                    variant="outline"
+                                    className={cn(
+                                        'text-[10px]',
+                                        item.actual_instalado
+                                            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                            : 'border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                                    )}
+                                >
+                                    {item.actual_instalado ? 'Instalado: Sí' : 'Instalado: No'}
+                                </Badge>
+                            </div>
                         </div>
 
                         {hasActualData ? (
                             <div className="space-y-0.5 text-xs">
+                                {(item.actual_marca || item.actual_modelo) && (
+                                    <p className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
+                                        {[item.actual_marca, item.actual_modelo].filter(Boolean).join(' • ')}
+                                    </p>
+                                )}
                                 <p className="font-mono text-[11px]">
                                     <span className="text-muted-foreground">S/N:</span>{' '}
                                     <strong className="text-foreground">{item.actual_no_serie || 'S/N'}</strong>
@@ -408,6 +763,9 @@ export default function BiometricosSetupIndexPage({
                                         )}
                                     </p>
                                 )}
+                                {item.actual_mac_address && (
+                                    <p className="font-mono text-[10px] text-muted-foreground">MAC: {item.actual_mac_address}</p>
+                                )}
                                 {item.actual_gateway && (
                                     <p className="font-mono text-[10px] text-muted-foreground">GW: {item.actual_gateway}</p>
                                 )}
@@ -416,16 +774,28 @@ export default function BiometricosSetupIndexPage({
                                         “{item.actual_comentario}”
                                     </p>
                                 )}
+                                {item.actual_foto && (
+                                    <div
+                                        className="mt-1 h-10 w-16 rounded-md overflow-hidden border bg-background cursor-pointer hover:opacity-85 transition-opacity"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openLightbox(item.actual_foto!, `Equipo Inicial - ${item.localidad_nombre}`);
+                                        }}
+                                        title="Clic para ampliar foto del equipo inicial"
+                                    >
+                                        <img src={item.actual_foto} alt="Foto inicial" className="h-full w-full object-cover" />
+                                    </div>
+                                )}
                             </div>
                         ) : (
-                            <p className="text-xs text-muted-foreground italic py-1">Sin datos de equipo actual</p>
+                            <p className="text-xs text-muted-foreground italic py-1">Sin datos de equipo inicial</p>
                         )}
                     </div>
                 );
             },
         },
         {
-            header: 'Nuevo Biométrico',
+            header: 'Equipo Final',
             cell: (item) => {
                 const hasNuevoData =
                     item.nuevo_marca ||
@@ -434,7 +804,9 @@ export default function BiometricosSetupIndexPage({
                     item.nuevo_ip ||
                     item.nuevo_mac_address ||
                     item.nuevo_gateway ||
-                    item.nuevo_comentario;
+                    item.nuevo_comentario ||
+                    item.nuevo_foto;
+
                 return (
                     <div
                         className={cn(
@@ -444,22 +816,37 @@ export default function BiometricosSetupIndexPage({
                                 : 'border-dashed border-slate-200 dark:border-slate-800 bg-transparent'
                         )}
                     >
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center justify-between gap-2 border-b border-emerald-200/60 dark:border-emerald-900/40 pb-1">
                             <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                                 <Sparkles className="h-3 w-3" />
-                                Nuevo
+                                Final
                             </span>
-                            <Badge
-                                variant="outline"
-                                className={cn(
-                                    'text-[10px]',
-                                    item.nuevo_instalado
-                                        ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                                        : 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                            <div className="flex items-center gap-1.5">
+                                {item.nuevo_foto && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openLightbox(item.nuevo_foto!, `Equipo Final - ${item.localidad_nombre}`);
+                                        }}
+                                        className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                                        title="Ver foto equipo final"
+                                    >
+                                        <ImageIcon className="h-3.5 w-3.5" />
+                                    </button>
                                 )}
-                            >
-                                {item.nuevo_instalado ? 'Instalado: Yes' : 'Pendiente'}
-                            </Badge>
+                                <Badge
+                                    variant="outline"
+                                    className={cn(
+                                        'text-[10px]',
+                                        item.nuevo_instalado
+                                            ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                            : 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                    )}
+                                >
+                                    {item.nuevo_instalado ? 'Instalado: Sí' : 'Pendiente'}
+                                </Badge>
+                            </div>
                         </div>
 
                         {hasNuevoData ? (
@@ -490,6 +877,18 @@ export default function BiometricosSetupIndexPage({
                                 )}
                                 {item.nuevo_comentario && (
                                     <p className="text-[11px] text-muted-foreground italic pt-0.5">“{item.nuevo_comentario}”</p>
+                                )}
+                                {item.nuevo_foto && (
+                                    <div
+                                        className="mt-1 h-10 w-16 rounded-md overflow-hidden border bg-background cursor-pointer hover:opacity-85 transition-opacity"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openLightbox(item.nuevo_foto!, `Equipo Final - ${item.localidad_nombre}`);
+                                        }}
+                                        title="Clic para ampliar foto del equipo final"
+                                    >
+                                        <img src={item.nuevo_foto} alt="Foto final" className="h-full w-full object-cover" />
+                                    </div>
                                 )}
                             </div>
                         ) : (
@@ -567,8 +966,8 @@ export default function BiometricosSetupIndexPage({
 
                 <ModuleHeader
                     icon={<Cpu className="h-6 w-6 text-white" />}
-                    title="Biométricos Setup (Inventario Actual y Nuevos Equipos)"
-                    description="Gestiona la configuración de red, números de serie, direcciones IP/MAC y transición de Equipos Actuales a Nuevos Biométricos por localidad."
+                    title="Biométricos Setup (Inventario Inicial y Final)"
+                    description="Gestiona la configuración de red, números de serie, direcciones IP/MAC, características de instalación y transición de Equipos Iniciales a Finales por localidad."
                     colorClassName="bg-emerald-600"
                 >
                     <div className="flex flex-wrap items-center gap-2">
@@ -607,7 +1006,7 @@ export default function BiometricosSetupIndexPage({
                     />
                     <StatCard
                         icon={<Server className="h-6 w-6" />}
-                        title="EQUIPOS ACTUALES INSTALADOS"
+                        title="EQUIPOS INICIALES INSTALADOS"
                         value={stats.actual_instalados}
                         colorClassName="bg-emerald-100 text-emerald-600"
                     />
@@ -670,7 +1069,7 @@ export default function BiometricosSetupIndexPage({
                             </Select>
                         </FilterField>
 
-                        <FilterField label="Actual Instalado">
+                        <FilterField label="Inicial Instalado">
                             <Select value={actualInstaladoFilter} onValueChange={setActualInstaladoFilter}>
                                 <SelectTrigger className="w-full md:w-40">
                                     <SelectValue placeholder="Todos" />
@@ -683,7 +1082,7 @@ export default function BiometricosSetupIndexPage({
                             </Select>
                         </FilterField>
 
-                        <FilterField label="Nuevo Instalado">
+                        <FilterField label="Final Instalado">
                             <Select value={nuevoInstaladoFilter} onValueChange={setNuevoInstaladoFilter}>
                                 <SelectTrigger className="w-full md:w-40">
                                     <SelectValue placeholder="Todos" />
@@ -716,7 +1115,7 @@ export default function BiometricosSetupIndexPage({
                     </div>
                 </FilterBar>
 
-                {/* Tabla */}
+                {/* Tabla Principal */}
                 <DataTable
                     data={biometricos}
                     columns={columns}
@@ -733,12 +1132,12 @@ export default function BiometricosSetupIndexPage({
                             {editingItem ? 'Editar Biométrico Setup' : 'Registrar Biométrico Setup'}
                         </DialogTitle>
                         <DialogDescription>
-                            Configura la localidad, los datos del Equipo Actual y los datos del Nuevo Biométrico.
+                            Configura la localidad, características de instalación física y especificaciones de Equipos Inicial y Final.
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-6 pt-2">
-                        {/* Sección 1: Localidad y Ubicación */}
+                        {/* Sección 1: Localidad y Ubicación Física */}
                         <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
                             <h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
                                 <MapPin className="h-4 w-4" />
@@ -824,177 +1223,326 @@ export default function BiometricosSetupIndexPage({
                             </div>
                         </div>
 
-                        {/* Sección 2 y 3 lado a lado: Equipo Actual vs Nuevo Biométrico */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                            {/* Bloque Equipo Actual */}
-                            <div className="rounded-xl border bg-slate-50/60 dark:bg-slate-900/30 p-4 space-y-4">
-                                <div className="flex items-center justify-between border-b pb-2.5">
+                        {/* Sección 2: Características de Instalación */}
+                        <div className="rounded-xl border border-amber-200/80 bg-amber-50/20 dark:border-amber-900/40 dark:bg-amber-950/10 p-4 space-y-4">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-2 border-b border-amber-200/60 dark:border-amber-900/40 pb-2">
+                                <Wrench className="h-4 w-4 text-amber-600" />
+                                2. Características de Instalación
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="dimensiones" className="flex items-center gap-1.5">
+                                        <Ruler className="h-3.5 w-3.5 text-amber-600" />
+                                        2. Dimensiones
+                                    </Label>
+                                    <Input
+                                        id="dimensiones"
+                                        placeholder="Ej. 185 x 85 x 20 mm / 7.2 x 3.3 in"
+                                        value={data.dimensiones}
+                                        onChange={(e) => setData('dimensiones', e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="instalacion_fisica" className="flex items-center gap-1.5">
+                                        <Layers className="h-3.5 w-3.5 text-amber-600" />
+                                        3. Instalación física
+                                    </Label>
+                                    <Input
+                                        id="instalacion_fisica"
+                                        placeholder="Ej. Montaje en pared, pedestal metálico, soporte brazo..."
+                                        value={data.instalacion_fisica}
+                                        onChange={(e) => setData('instalacion_fisica', e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <Label htmlFor="instalacion_comentario">4. Comentarios de Instalación</Label>
+                                    <Textarea
+                                        id="instalacion_comentario"
+                                        rows={2}
+                                        placeholder="Detalles de cableado UTP, alimentación PoE/12V, altura de montaje, canalización..."
+                                        value={data.instalacion_comentario}
+                                        onChange={(e) => setData('instalacion_comentario', e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="md:col-span-2">
+                                    <PhotoDropzone
+                                        id="instalacion_foto"
+                                        label="5. Foto de la Instalación Física"
+                                        description="Arrastra y suelta aquí la fotografía de la instalación, o haz clic para seleccionarla."
+                                        value={data.instalacion_foto}
+                                        onChange={(val) => setData('instalacion_foto', val)}
+                                        onViewFull={openLightbox}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sección 3: Equipos Biométricos con Tabs (Inicial y Final) */}
+                        <div className="rounded-xl border bg-card p-4 space-y-3">
+                            <Tabs defaultValue="inicial" className="w-full">
+                                <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                        <Server className="h-4 w-4 text-indigo-600" />
-                                        2. Equipo Actual
+                                        <Cpu className="h-4 w-4 text-primary" />
+                                        3. Equipos Biométricos
                                     </h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-medium">Instalado</span>
-                                        <Switch
-                                            checked={Boolean(data.actual_instalado)}
-                                            onCheckedChange={(v) => setData('actual_instalado', v)}
-                                        />
-                                    </div>
+                                    <TabsList className="grid w-full sm:w-64 grid-cols-2">
+                                        <TabsTrigger value="inicial" className="gap-1.5 font-medium">
+                                            <Server className="h-3.5 w-3.5 text-indigo-600" />
+                                            Inicial
+                                        </TabsTrigger>
+                                        <TabsTrigger value="final" className="gap-1.5 font-medium">
+                                            <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                                            Final
+                                        </TabsTrigger>
+                                    </TabsList>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="actual_no_serie">No. Serie Actual</Label>
-                                        <Input
-                                            id="actual_no_serie"
-                                            placeholder="Ej. 543726588"
-                                            value={data.actual_no_serie}
-                                            onChange={(e) => setData('actual_no_serie', e.target.value)}
-                                        />
+                                {/* TAB INICIAL */}
+                                <TabsContent value="inicial" className="space-y-4 pt-3">
+                                    <div className="rounded-xl border bg-slate-50/70 dark:bg-slate-900/30 p-4 space-y-4">
+                                        <div className="flex items-center justify-between border-b pb-2.5">
+                                            <div>
+                                                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                                    <Server className="h-4 w-4 text-indigo-600" />
+                                                    Equipo Inicial (Configuración y Foto)
+                                                </h4>
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    Datos del reloj checador inicial / existente en la posición.
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Label htmlFor="actual_instalado_switch" className="text-xs font-medium cursor-pointer">
+                                                    Instalado
+                                                </Label>
+                                                <Switch
+                                                    id="actual_instalado_switch"
+                                                    checked={Boolean(data.actual_instalado)}
+                                                    onCheckedChange={(v) => setData('actual_instalado', v)}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="actual_marca">Marca</Label>
+                                                <Input
+                                                    id="actual_marca"
+                                                    placeholder="Ej. ZKTeco, Suprema, GTI..."
+                                                    value={data.actual_marca}
+                                                    onChange={(e) => setData('actual_marca', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="actual_modelo">Modelo</Label>
+                                                <Input
+                                                    id="actual_modelo"
+                                                    placeholder="Ej. iFace 800, BioStation 2..."
+                                                    value={data.actual_modelo}
+                                                    onChange={(e) => setData('actual_modelo', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="actual_no_serie">No. Serie</Label>
+                                                <Input
+                                                    id="actual_no_serie"
+                                                    placeholder="Ej. 543726588"
+                                                    value={data.actual_no_serie}
+                                                    onChange={(e) => setData('actual_no_serie', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="actual_ip">Dirección IP</Label>
+                                                <Input
+                                                    id="actual_ip"
+                                                    placeholder="Ej. 10.42.134.134"
+                                                    value={data.actual_ip}
+                                                    onChange={(e) => setData('actual_ip', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="actual_mascara">Mask / subnet</Label>
+                                                <Input
+                                                    id="actual_mascara"
+                                                    placeholder="Ej. 255.255.255.192"
+                                                    value={data.actual_mascara}
+                                                    onChange={(e) => setData('actual_mascara', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="actual_gateway">Gateway</Label>
+                                                <Input
+                                                    id="actual_gateway"
+                                                    placeholder="Ej. 10.42.134.129"
+                                                    value={data.actual_gateway}
+                                                    onChange={(e) => setData('actual_gateway', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="sm:col-span-2 lg:col-span-3 space-y-1.5">
+                                                <Label htmlFor="actual_mac_address">Mac Address</Label>
+                                                <Input
+                                                    id="actual_mac_address"
+                                                    placeholder="Ej. 00:17:61:11:F0:FC"
+                                                    value={data.actual_mac_address}
+                                                    onChange={(e) => setData('actual_mac_address', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="sm:col-span-2 lg:col-span-3 space-y-1.5">
+                                                <Label htmlFor="actual_comentario">Comentario</Label>
+                                                <Textarea
+                                                    id="actual_comentario"
+                                                    rows={2}
+                                                    placeholder="Ej. S/N, cierre de planta, oficinas en remodelación..."
+                                                    value={data.actual_comentario}
+                                                    onChange={(e) => setData('actual_comentario', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="sm:col-span-2 lg:col-span-3">
+                                                <PhotoDropzone
+                                                    id="actual_foto"
+                                                    label="Foto del Equipo Inicial (Drag & Drop)"
+                                                    description="Arrastra y suelta aquí la imagen del equipo inicial / actual o haz clic para seleccionarla."
+                                                    value={data.actual_foto}
+                                                    onChange={(val) => setData('actual_foto', val)}
+                                                    onViewFull={openLightbox}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
+                                </TabsContent>
 
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="actual_ip">Dirección IP Actual</Label>
-                                        <Input
-                                            id="actual_ip"
-                                            placeholder="Ej. 10.42.134.134"
-                                            value={data.actual_ip}
-                                            onChange={(e) => setData('actual_ip', e.target.value)}
-                                        />
+                                {/* TAB FINAL */}
+                                <TabsContent value="final" className="space-y-4 pt-3">
+                                    <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/20 dark:bg-emerald-950/15 p-4 space-y-4">
+                                        <div className="flex items-center justify-between border-b border-emerald-200/60 dark:border-emerald-900/50 pb-2.5">
+                                            <div>
+                                                <h4 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                                                    <Sparkles className="h-4 w-4 text-emerald-600" />
+                                                    Equipo Final (Configuración y Foto)
+                                                </h4>
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    Datos del nuevo biométrico final a operar en esta localidad.
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Label htmlFor="nuevo_instalado_switch" className="text-xs font-medium cursor-pointer">
+                                                    Instalado
+                                                </Label>
+                                                <Switch
+                                                    id="nuevo_instalado_switch"
+                                                    checked={Boolean(data.nuevo_instalado)}
+                                                    onCheckedChange={(v) => setData('nuevo_instalado', v)}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nuevo_marca">Marca</Label>
+                                                <Input
+                                                    id="nuevo_marca"
+                                                    placeholder="Ej. ZKTeco, Suprema, GTI..."
+                                                    value={data.nuevo_marca}
+                                                    onChange={(e) => setData('nuevo_marca', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nuevo_modelo">Modelo</Label>
+                                                <Input
+                                                    id="nuevo_modelo"
+                                                    placeholder="Ej. SpeedFace-V5L, ProFace X, SFace900..."
+                                                    value={data.nuevo_modelo}
+                                                    onChange={(e) => setData('nuevo_modelo', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nuevo_no_serie">No. Serie</Label>
+                                                <Input
+                                                    id="nuevo_no_serie"
+                                                    placeholder="Número de serie nuevo"
+                                                    value={data.nuevo_no_serie}
+                                                    onChange={(e) => setData('nuevo_no_serie', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nuevo_ip">Dirección IP</Label>
+                                                <Input
+                                                    id="nuevo_ip"
+                                                    placeholder="Ej. 10.52.134.50"
+                                                    value={data.nuevo_ip}
+                                                    onChange={(e) => setData('nuevo_ip', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nuevo_mascara">Mask / subnet</Label>
+                                                <Input
+                                                    id="nuevo_mascara"
+                                                    placeholder="Ej. 255.255.255.0"
+                                                    value={data.nuevo_mascara}
+                                                    onChange={(e) => setData('nuevo_mascara', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nuevo_gateway">Gateway</Label>
+                                                <Input
+                                                    id="nuevo_gateway"
+                                                    placeholder="Ej. 10.52.134.1"
+                                                    value={data.nuevo_gateway}
+                                                    onChange={(e) => setData('nuevo_gateway', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="sm:col-span-2 lg:col-span-3 space-y-1.5">
+                                                <Label htmlFor="nuevo_mac_address">Mac Address</Label>
+                                                <Input
+                                                    id="nuevo_mac_address"
+                                                    placeholder="Ej. 00:17:61:A4:5B:22"
+                                                    value={data.nuevo_mac_address}
+                                                    onChange={(e) => setData('nuevo_mac_address', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="sm:col-span-2 lg:col-span-3 space-y-1.5">
+                                                <Label htmlFor="nuevo_comentario">Comentario</Label>
+                                                <Textarea
+                                                    id="nuevo_comentario"
+                                                    rows={2}
+                                                    placeholder="Observaciones de instalación del equipo final..."
+                                                    value={data.nuevo_comentario}
+                                                    onChange={(e) => setData('nuevo_comentario', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="sm:col-span-2 lg:col-span-3">
+                                                <PhotoDropzone
+                                                    id="nuevo_foto"
+                                                    label="Foto del Equipo Final (Drag & Drop)"
+                                                    description="Arrastra y suelta aquí la imagen del equipo nuevo final o haz clic para seleccionarla."
+                                                    value={data.nuevo_foto}
+                                                    onChange={(val) => setData('nuevo_foto', val)}
+                                                    onViewFull={openLightbox}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="actual_mascara">Mask / Subnet</Label>
-                                        <Input
-                                            id="actual_mascara"
-                                            placeholder="Ej. 255.255.255.192"
-                                            value={data.actual_mascara}
-                                            onChange={(e) => setData('actual_mascara', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="actual_gateway">Gateway</Label>
-                                        <Input
-                                            id="actual_gateway"
-                                            placeholder="Ej. 10.42.134.129"
-                                            value={data.actual_gateway}
-                                            onChange={(e) => setData('actual_gateway', e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="actual_comentario">Comentario Actual</Label>
-                                    <Textarea
-                                        id="actual_comentario"
-                                        rows={2}
-                                        placeholder="Ej. S/N, Cierre de planta, Oficinas en remodelación..."
-                                        value={data.actual_comentario}
-                                        onChange={(e) => setData('actual_comentario', e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Bloque Nuevo Biométrico */}
-                            <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/20 dark:bg-emerald-950/15 p-4 space-y-4">
-                                <div className="flex items-center justify-between border-b border-emerald-200/60 dark:border-emerald-900/50 pb-2.5">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
-                                        <Sparkles className="h-4 w-4 text-emerald-600" />
-                                        3. Nuevo Biométrico
-                                    </h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-medium">Instalado</span>
-                                        <Switch
-                                            checked={Boolean(data.nuevo_instalado)}
-                                            onCheckedChange={(v) => setData('nuevo_instalado', v)}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="nuevo_marca">Marca (Opcional)</Label>
-                                        <Input
-                                            id="nuevo_marca"
-                                            placeholder="Ej. ZKTeco, Suprema, GTI..."
-                                            value={data.nuevo_marca}
-                                            onChange={(e) => setData('nuevo_marca', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="nuevo_modelo">Modelo (Opcional)</Label>
-                                        <Input
-                                            id="nuevo_modelo"
-                                            placeholder="Ej. SpeedFace V5L, SFace900..."
-                                            value={data.nuevo_modelo}
-                                            onChange={(e) => setData('nuevo_modelo', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="nuevo_no_serie">No. Serie Nuevo</Label>
-                                        <Input
-                                            id="nuevo_no_serie"
-                                            placeholder="Número de serie nuevo"
-                                            value={data.nuevo_no_serie}
-                                            onChange={(e) => setData('nuevo_no_serie', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="nuevo_ip">Dirección IP Nueva</Label>
-                                        <Input
-                                            id="nuevo_ip"
-                                            placeholder="Ej. 10.52.134.50"
-                                            value={data.nuevo_ip}
-                                            onChange={(e) => setData('nuevo_ip', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="nuevo_mascara">Mask / Subnet Nuevo</Label>
-                                        <Input
-                                            id="nuevo_mascara"
-                                            placeholder="Ej. 255.255.255.0"
-                                            value={data.nuevo_mascara}
-                                            onChange={(e) => setData('nuevo_mascara', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="nuevo_gateway">Gateway Nuevo</Label>
-                                        <Input
-                                            id="nuevo_gateway"
-                                            placeholder="Ej. 10.52.134.1"
-                                            value={data.nuevo_gateway}
-                                            onChange={(e) => setData('nuevo_gateway', e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="sm:col-span-2 space-y-1.5">
-                                        <Label htmlFor="nuevo_mac_address">MAC Address</Label>
-                                        <Input
-                                            id="nuevo_mac_address"
-                                            placeholder="Ej. 00:17:61:11:F0:FC"
-                                            value={data.nuevo_mac_address}
-                                            onChange={(e) => setData('nuevo_mac_address', e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="nuevo_comentario">Comentario Nuevo</Label>
-                                    <Textarea
-                                        id="nuevo_comentario"
-                                        rows={2}
-                                        placeholder="Observaciones de instalación del nuevo equipo..."
-                                        value={data.nuevo_comentario}
-                                        onChange={(e) => setData('nuevo_comentario', e.target.value)}
-                                    />
-                                </div>
-                            </div>
+                                </TabsContent>
+                            </Tabs>
                         </div>
 
                         <DialogFooter className="pt-4 border-t">
@@ -1009,12 +1557,38 @@ export default function BiometricosSetupIndexPage({
                 </DialogContent>
             </Dialog>
 
-            {/* Modal de Importación Masiva (con separación automática) */}
+            {/* Modal de Importación Masiva */}
             <EquiposUbicacionesImportModal
                 open={isImportModalOpen}
                 onOpenChange={setIsImportModalOpen}
                 defaultScope="ambos"
             />
+
+            {/* Modal Lightbox para visualización ampliada de fotos */}
+            <Dialog open={!!lightboxImage} onOpenChange={(open) => !open && setLightboxImage(null)}>
+                <DialogContent className="max-w-3xl p-5">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-semibold flex items-center gap-2">
+                            <Camera className="h-4 w-4 text-primary" />
+                            {lightboxImage?.title || 'Visualización de Fotografía'}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-2 flex items-center justify-center bg-black/5 dark:bg-black/30 rounded-xl overflow-hidden max-h-[75vh] border">
+                        {lightboxImage?.src && (
+                            <img
+                                src={lightboxImage.src}
+                                alt={lightboxImage.title}
+                                className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg"
+                            />
+                        )}
+                    </div>
+                    <DialogFooter className="mt-3">
+                        <Button type="button" variant="outline" onClick={() => setLightboxImage(null)}>
+                            Cerrar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Confirmación de Eliminación */}
             <AlertDialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
@@ -1040,4 +1614,3 @@ export default function BiometricosSetupIndexPage({
         </>
     );
 }
-
