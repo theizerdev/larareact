@@ -89,9 +89,6 @@ class AsistenciaReporteController extends Controller
 
         $now = Carbon::now();
         $configAsistencia = \App\Models\ConfiguracionAsistencia::where('empresa_id', $empresaId)->first();
-        $minutosLeySilla = $configAsistencia?->ley_silla_descanso_minutos ?? 15;
-        $intervaloHorasLeySilla = (float) ($configAsistencia?->ley_silla_intervalo_horas ?? 2.00);
-        $intervaloMinutosLeySilla = (int) round($intervaloHorasLeySilla * 60);
         $lftService = app(CalculoAsistenciaLftService::class);
 
         $startOfWeek = (clone $now)->startOfWeek()->startOfDay();
@@ -102,7 +99,7 @@ class AsistenciaReporteController extends Controller
             ->get()
             ->groupBy('empleado_id');
 
-        $empleadosPaginados->getCollection()->transform(function ($emp) use ($now, $minutosLeySilla, $intervaloHorasLeySilla, $intervaloMinutosLeySilla, $request, $empresaId, $lftService, $configAsistencia, $marcajesDeLaSemana) {
+        $empleadosPaginados->getCollection()->transform(function ($emp) use ($now, $request, $empresaId, $lftService, $configAsistencia, $marcajesDeLaSemana) {
             // Cargar historial de marcajes de este empleado ordenados cronológicamente
             $historialMarcajes = AsistenciaMarcaje::with('sucursal')
                 ->where('empleado_id', $emp->id)
@@ -120,107 +117,7 @@ class AsistenciaReporteController extends Controller
 
             $ultimoMarcaje = $historialMarcajes->first();
 
-            $tiempoRestanteInfo = null;
-            if ($ultimoMarcaje) {
-                $esAlmuerzo = $ultimoMarcaje->tipo_marcaje === 'salida_comida';
-                $esDescanso = $ultimoMarcaje->tipo_marcaje === 'descanso_inicio';
-                $esSalida = $ultimoMarcaje->tipo_marcaje === 'salida';
-
-                if ($esAlmuerzo || $esDescanso) {
-                    $nombreConcepto = $esAlmuerzo ? 'Almuerzo' : 'Descanso';
-                    $limiteMinutos = $esAlmuerzo 
-                        ? ($emp->turnoLaboral?->minutos_descanso ?? 60)
-                        : $minutosLeySilla;
-
-                    $tiposRegreso = $esAlmuerzo 
-                        ? ['entrada_comida', 'descanso_fin', 'salida', 'entrada_extraordinaria']
-                        : ['descanso_fin', 'entrada_comida', 'salida', 'entrada_extraordinaria'];
-
-                    $regreso = AsistenciaMarcaje::where('empleado_id', $emp->id)
-                        ->where('fecha_hora', '>', $ultimoMarcaje->fecha_hora)
-                        ->whereDate('fecha_hora', Carbon::parse($ultimoMarcaje->fecha_hora)->toDateString())
-                        ->whereIn('tipo_marcaje', $tiposRegreso)
-                        ->orderBy('fecha_hora', 'asc')
-                        ->first();
-
-                    if ($regreso) {
-                        $duracion = (int) round(Carbon::parse($ultimoMarcaje->fecha_hora)->diffInMinutes(Carbon::parse($regreso->fecha_hora)));
-                        $tiempoRestanteInfo = [
-                            'estado' => 'completado',
-                            'concepto' => $nombreConcepto,
-                            'texto' => "Duración: {$duracion} min",
-                            'subtexto' => "Límite {$nombreConcepto}: {$limiteMinutos} min",
-                            'minutos_restantes' => 0,
-                            'limite_minutos' => $limiteMinutos,
-                            'duracion_real' => $duracion,
-                        ];
-                    } else {
-                        $transcurridos = (int) round(Carbon::parse($ultimoMarcaje->fecha_hora)->diffInMinutes($now));
-                        $restantes = $limiteMinutos - $transcurridos;
-
-                        if ($restantes > 0) {
-                            $tiempoRestanteInfo = [
-                                'estado' => 'en_curso',
-                                'concepto' => $nombreConcepto,
-                                'texto' => "{$restantes} min restantes",
-                                'subtexto' => "{$nombreConcepto}: {$limiteMinutos} min permitidos",
-                                'minutos_restantes' => $restantes,
-                                'limite_minutos' => $limiteMinutos,
-                                'transcurridos' => $transcurridos,
-                            ];
-                        } else {
-                            $exceso = abs($restantes);
-                            $tiempoRestanteInfo = [
-                                'estado' => 'excedido',
-                                'concepto' => $nombreConcepto,
-                                'texto' => "Excedido por {$exceso} min",
-                                'subtexto' => "Límite {$nombreConcepto}: {$limiteMinutos} min",
-                                'minutos_restantes' => $restantes,
-                                'limite_minutos' => $limiteMinutos,
-                                'transcurridos' => $transcurridos,
-                            ];
-                        }
-                    }
-                } elseif ($esSalida) {
-                    $tiempoRestanteInfo = [
-                        'estado' => 'completado',
-                        'concepto' => 'Jornada',
-                        'texto' => 'Jornada Finalizada',
-                        'subtexto' => 'Marcaje de salida registrado',
-                        'minutos_restantes' => 0,
-                        'limite_minutos' => 0,
-                    ];
-                } else {
-                    // El empleado está laborando (entrada, descanso_fin, entrada_comida, entrada_extraordinaria)
-                    // Se calcula el conteo regresivo hasta el próximo llamado a descanso según el intervalo configurado
-                    $transcurridos = (int) round(Carbon::parse($ultimoMarcaje->fecha_hora)->diffInMinutes($now));
-                    $restantes = $intervaloMinutosLeySilla - $transcurridos;
-                    $intervaloFormatted = number_format($intervaloHorasLeySilla, 2);
-
-                    if ($restantes > 0) {
-                        $tiempoRestanteInfo = [
-                            'estado' => 'en_curso',
-                            'concepto' => 'Próximo Descanso',
-                            'texto' => "{$restantes} min para descanso",
-                            'subtexto' => "Próximo descanso (Cada {$intervaloFormatted}h continuas)",
-                            'minutos_restantes' => $restantes,
-                            'limite_minutos' => $intervaloMinutosLeySilla,
-                            'transcurridos' => $transcurridos,
-                        ];
-                    } else {
-                        $exceso = abs($restantes);
-                        $tiempoRestanteInfo = [
-                            'estado' => 'excedido',
-                            'concepto' => 'Próximo Descanso',
-                            'texto' => "Llamado a descanso pendiente ({$exceso} min)",
-                            'subtexto' => "Superado intervalo de {$intervaloFormatted}h continuas",
-                            'minutos_restantes' => $restantes,
-                            'limite_minutos' => $intervaloMinutosLeySilla,
-                            'transcurridos' => $transcurridos,
-                        ];
-                    }
-                }
-            }
+            $tiempoRestanteInfo = $lftService->tiempoRestante($emp, $ultimoMarcaje, $configAsistencia, $now);
 
             $emp->ultimo_marcaje = $ultimoMarcaje;
             $emp->tiempo_restante_info = $tiempoRestanteInfo;

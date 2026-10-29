@@ -138,6 +138,7 @@ class KioskoApiController extends Controller
                 'tipo' => $ultimoMarcaje->tipo_marcaje,
                 'hora' => Carbon::parse($ultimoMarcaje->fecha_hora_local)->format('H:i:s'),
             ] : null,
+            'tiempo' => $this->semaforoDeTiempo($empleado, $ultimoMarcaje),
             'sugerencia_marcaje' => $siguienteMarcaje,
         ]);
     }
@@ -212,6 +213,7 @@ class KioskoApiController extends Controller
                 'tipo' => $ultimoMarcaje->tipo_marcaje,
                 'hora' => Carbon::parse($ultimoMarcaje->fecha_hora_local)->format('H:i:s'),
             ] : null,
+            'tiempo' => $this->semaforoDeTiempo($empleado, $ultimoMarcaje),
             'sugerencia_marcaje' => $siguienteMarcaje,
         ]);
     }
@@ -694,6 +696,23 @@ class KioskoApiController extends Controller
             'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
             ...$this->datosEnrolamiento($empleado),
         ];
+    }
+
+    /**
+     * El semáforo de la Bitácora web para el último marcaje de hoy: minutos
+     * que quedan (o de exceso) de comida, descanso o para el próximo descanso.
+     */
+    private function semaforoDeTiempo(Empleado $empleado, ?AsistenciaMarcaje $ultimoMarcaje): ?array
+    {
+        if (! $ultimoMarcaje) {
+            return null;
+        }
+
+        return app(CalculoAsistenciaLftService::class)->tiempoRestante(
+            $empleado,
+            $ultimoMarcaje,
+            ConfiguracionAsistencia::where('empresa_id', $empleado->empresa_id)->first(),
+        );
     }
 
     /**
