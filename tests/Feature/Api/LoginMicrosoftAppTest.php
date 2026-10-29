@@ -51,11 +51,23 @@ class LoginMicrosoftAppTest extends TestCase
         $this->assertSame('login', $query['prompt']);
 
         $vuelta = $this->get('/auth/sso/azure/callback?code=abc&state='.$query['state']);
-        $app = $vuelta->headers->get('Location');
-        $this->assertStringStartsWith('com.smurfit.app://sso?', $app);
-        parse_str(parse_url($app, PHP_URL_QUERY), $params);
+        parse_str(parse_url($this->vueltaALaApp($vuelta), PHP_URL_QUERY), $params);
 
         return $params;
+    }
+
+    /**
+     * URL con que la página vuelve a la app. Es una página con botón, no un
+     * 302: Chrome no sigue una redirección a com.smurfit.app:// sin un toque.
+     */
+    private function vueltaALaApp($respuesta): string
+    {
+        $respuesta->assertOk()->assertViewIs('auth.volver-app');
+        $url = $respuesta->viewData('url');
+        $this->assertStringStartsWith('com.smurfit.app://sso?', $url);
+        $respuesta->assertSee('Volver a la app');
+
+        return $url;
     }
 
     public function test_entra_con_microsoft_y_el_codigo_sirve_una_sola_vez(): void
@@ -108,7 +120,9 @@ class LoginMicrosoftAppTest extends TestCase
     {
         $respuesta = $this->get('/auth/sso/azure/movil?challenge='.$this->challenge());
 
-        $this->assertStringStartsWith('com.smurfit.app://sso?error=', $respuesta->headers->get('Location'));
+        $this->assertStringStartsWith('com.smurfit.app://sso?error=', $this->vueltaALaApp($respuesta));
+        // El mensaje queda a la vista aunque el navegador no vuelva solo.
+        $respuesta->assertSee('en proceso de vinculación');
     }
 
     public function test_rechaza_un_challenge_que_no_es_pkce(): void
@@ -117,7 +131,7 @@ class LoginMicrosoftAppTest extends TestCase
 
         $respuesta = $this->get('/auth/sso/azure/movil?challenge=corto');
 
-        $this->assertStringStartsWith('com.smurfit.app://sso?error=', $respuesta->headers->get('Location'));
+        $this->assertStringStartsWith('com.smurfit.app://sso?error=', $this->vueltaALaApp($respuesta));
     }
 
     public function test_vuelve_a_la_app_aunque_el_navegador_tenga_sesion_web(): void

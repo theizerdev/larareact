@@ -8,6 +8,7 @@ use App\Models\ConfiguracionSox;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -47,7 +48,7 @@ class AzureSsoController extends Controller
      * abre sesión web: devuelve a la app un código de un solo uso que sólo
      * sirve junto con el verificador PKCE que la app guardó.
      */
-    public function redirectMovil(Request $request): RedirectResponse
+    public function redirectMovil(Request $request): RedirectResponse|Response
     {
         // SHA-256 en base64url: 43 caracteres.
         $challenge = (string) $request->query('challenge', '');
@@ -73,7 +74,7 @@ class AzureSsoController extends Controller
     /**
      * Handle OAuth2 callback from Microsoft Entra ID.
      */
-    public function callback(Request $request): RedirectResponse
+    public function callback(Request $request): RedirectResponse|Response
     {
         $state = (string) $request->query('state', '');
 
@@ -116,7 +117,7 @@ class AzureSsoController extends Controller
      * Vuelta de Microsoft de un inicio desde la app (el state ya se validó
      * contra la caché).
      */
-    private function callbackMovil(Request $request, string $challenge): RedirectResponse
+    private function callbackMovil(Request $request, string $challenge): Response
     {
         $code = $request->query('code');
         if (! $code) {
@@ -266,9 +267,16 @@ class AzureSsoController extends Controller
         return "https://login.microsoftonline.com/{$azure['tenant']}/oauth2/v2.0/authorize?{$params}";
     }
 
-    /** De vuelta a la app, con el esquema que ella registra. */
-    private function volverALaApp(array $params): RedirectResponse
+    /**
+     * De vuelta a la app, con el esquema que ella registra. Página y no 302:
+     * Chrome no abre la app desde una redirección sin un toque de la persona
+     * (ver auth/volver-app).
+     */
+    private function volverALaApp(array $params): Response
     {
-        return redirect()->away(config('services.azure.app_callback').'?'.http_build_query($params));
+        return response()->view('auth.volver-app', [
+            'url' => config('services.azure.app_callback').'?'.http_build_query($params),
+            'error' => $params['error'] ?? null,
+        ]);
     }
 }
