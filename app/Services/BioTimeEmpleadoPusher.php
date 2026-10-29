@@ -248,6 +248,21 @@ class BioTimeEmpleadoPusher
 
         if ($cambios !== []) {
             $r = $cliente->updateEmployee((string) $bio->biotime_id, $cambios);
+
+            // El espejo apunta a un id que BioTime ya no tiene (lo borraron
+            // allá o lo dieron de alta de nuevo; el sync no quita esas filas):
+            // se busca por número y se vuelve a vincular o a dar de alta.
+            if (! $r['success'] && str_contains((string) $r['error'], 'matches the given query')) {
+                $vigente = $cliente->findEmployeeByCode((string) $bio->emp_code);
+                if ($vigente['success'] && $vigente['data'] === null) {
+                    return $this->crear($empleado, $empresa, $cliente, $sync, (string) $bio->emp_code, false);
+                }
+                if ($vigente['success'] && (string) $vigente['data']['id'] !== (string) $bio->biotime_id) {
+                    $bio = $sync->espejarEmpleado($empresa, $vigente['data']);
+                    $r = $cliente->updateEmployee((string) $bio->biotime_id, $cambios);
+                }
+            }
+
             if (! $r['success']) {
                 return $this->fallo($empleado, false, 'error', $r['error'] ?? 'BioTime rechazó el cambio.', $r['status'] === null);
             }
