@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AsistenciaMarcaje;
 use App\Models\AsistenciaResumenSemanal;
+use App\Models\ConfiguracionAsistencia;
 use App\Models\Empleado;
 use App\Models\Sucursal;
 use App\Models\VisitaAcceso;
+use App\Services\CalculoAsistenciaLftService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -88,7 +90,7 @@ class MovilDataController extends Controller
             ? Carbon::parse($request->query('fecha'))
             : Carbon::today();
 
-        $marcajes = AsistenciaMarcaje::with(['empleado.departamento', 'sucursal:id,zona_horaria', 'empresa:id,zona_horaria'])
+        $marcajes = AsistenciaMarcaje::with(['empleado.departamento', 'empleado.turnoLaboral', 'sucursal:id,zona_horaria', 'empresa:id,zona_horaria'])
             ->whereDate('fecha_hora', $fecha)
             ->orderBy('fecha_hora', 'desc')
             ->limit(300)
@@ -97,6 +99,21 @@ class MovilDataController extends Controller
         $entradas = ['entrada', 'entrada_comida', 'descanso_fin', 'incidente_fin', 'entrada_extraordinaria'];
         $salidas = ['salida', 'salida_comida'];
         $descansos = ['descanso_inicio', 'descanso_fin'];
+
+        // Semáforo de la Bitácora web (tiempo restante o excedido) en el
+        // último marcaje de hoy de cada empleado; en días pasados no aplica.
+        $tiempos = [];
+        if ($fecha->isToday()) {
+            $lft = app(CalculoAsistenciaLftService::class);
+            $configs = [];
+            foreach ($marcajes->unique('empleado_id') as $ultimo) {
+                if (! $ultimo->empleado) {
+                    continue;
+                }
+                $configs[$ultimo->empresa_id] ??= ConfiguracionAsistencia::where('empresa_id', $ultimo->empresa_id)->first();
+                $tiempos[$ultimo->id] = $lft->tiempoRestante($ultimo->empleado, $ultimo, $configs[$ultimo->empresa_id]);
+            }
+        }
 
         return response()->json([
             'stats' => [
@@ -112,6 +129,7 @@ class MovilDataController extends Controller
                 // En la zona de la planta del marcaje, como los reportes web.
                 'hora' => Carbon::parse($m->fecha_hora_local)->format('H:i:s'),
                 'departamento' => $m->empleado?->departamento?->nombre ?? '—',
+                'tiempo' => $tiempos[$m->id] ?? null,
             ])->values(),
         ]);
     }

@@ -97,4 +97,20 @@ class SemaforoTiempoAppTest extends TestCase
                 ->where('marcajes.data.0.tiempo_restante_info.limite_minutos', 60)
                 ->etc());
     }
+
+    public function test_la_bitacora_movil_lleva_el_semaforo_en_el_ultimo_marcaje(): void
+    {
+        $this->marco('entrada', 120);
+        $this->marco('descanso_inicio', 20);
+        $user = $this->empleado->user;
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'asistencia.bitacora', 'guard_name' => 'web']));
+
+        $this->actingAs($user, 'sanctum')->getJson('/api/asistencia/bitacora')
+            ->assertOk()
+            ->assertJsonPath('marcajes.0.tipo', 'descanso_inicio')
+            ->assertJsonPath('marcajes.0.tiempo.estado', 'excedido')
+            ->assertJsonPath('marcajes.0.tiempo.concepto', 'Descanso')
+            ->assertJsonPath('marcajes.0.tiempo.limite_minutos', 15) // sin configuración: 15 min
+            ->assertJsonPath('marcajes.1.tiempo', null);
+    }
 }
