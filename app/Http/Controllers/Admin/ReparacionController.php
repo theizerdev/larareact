@@ -80,119 +80,112 @@ class ReparacionController extends Controller
             $sucursalId = $user->sucursal_id ? (int)$user->sucursal_id : ($isAdmin ? 'all' : ($sucursales->first()?->id ?? null));
         }
 
+        $search = is_string($search) ? trim($search) : '';
+        $status = $status ?: 'all';
+
+        // Estados agrupados (incluye alias heredados de versiones anteriores)
+        $statusAliases = self::listingStatusAliases();
+        $deliveredStates = array_merge(
+            $statusAliases[OrdenReparacion::ESTADO_ENTREGADO_REPARADO],
+            $statusAliases[OrdenReparacion::ESTADO_ENTREGADO_NO_REPARADO]
+        );
+
+        // Filtros comunes (se aplican tanto al listado como a los conteos por estado)
+        $folioCandidates = [];
+        $applyFilters = function ($query) use (
+            $sucursalId, $isTecnicoOnly, $isAdmin, $user, $tecnicoId, $from, $to, $year, $month,
+            $search, $marcaId, $modeloId, $categoriaId, &$folioCandidates
+        ) {
+            if ($sucursalId && $sucursalId !== 'all') {
+                $query->where('sucursal_id', $sucursalId);
+            }
+
+            // Si es exclusivamente rol Técnico (sin permisos de Administrador), mostrar ÚNICAMENTE sus órdenes asignadas
+            if ($isTecnicoOnly && !$isAdmin) {
+                $query->where('tecnico_id', $user->id);
+            } elseif ($tecnicoId && $tecnicoId !== 'all') {
+                if ($tecnicoId === 'unassigned') {
+                    $query->whereNull('tecnico_id');
+                } else {
+                    $query->where('tecnico_id', $tecnicoId);
+                }
+            }
+
+            // Filtros de fecha (solo aplican si no se está usando el buscador)
+            if ($search === '') {
+                if ($from) {
+                    $query->whereRaw('DATE(COALESCE(fecha_recepcion, created_at)) >= ?', [$from]);
+                }
+                if ($to) {
+                    $query->whereRaw('DATE(COALESCE(fecha_recepcion, created_at)) <= ?', [$to]);
+                }
+
+                // Filtros alternativos por Año y Mes (si no se indicó rango específico)
+                if (!$from && !$to) {
+                    if ($year && $year !== 'all') {
+                        $query->whereRaw('YEAR(COALESCE(fecha_recepcion, created_at)) = ?', [(int) $year]);
+                    }
+                    if ($month && $month !== 'all') {
+                        $query->whereRaw('MONTH(COALESCE(fecha_recepcion, created_at)) = ?', [(int) $month]);
+                    }
+                }
+            }
+
+            if ($search !== '') {
+                $folioCandidates = $this->applyListingSearch($query, $search);
+            }
+
+            if ($marcaId && $marcaId !== 'all') {
+                $query->where('marca_id', $marcaId);
+            }
+
+            if ($modeloId && $modeloId !== 'all') {
+                $query->where('modelo_id', $modeloId);
+            }
+
+            if ($categoriaId && $categoriaId !== 'all') {
+                $categoriaObj = \App\Models\Categoria::find($categoriaId);
+                $query->where(function ($q) use ($categoriaId, $categoriaObj) {
+                    $q->whereHas('modelo', function ($mq) use ($categoriaId) {
+                        $mq->where('categoria_id', $categoriaId);
+                    });
+                    if ($categoriaObj) {
+                        $q->orWhere('tipo_dispositivo', $categoriaObj->nombre);
+                    }
+                });
+            }
+        };
+
         $query = OrdenReparacion::withoutGlobalScope('multitenancy')->with([
             'cliente',
             'marca',
             'modelo',
-            'tecnico',
+            'tecnico:id,name',
             'empresa',
             'sucursal',
             'items.producto',
             'items.servicio',
         ])->where('empresa_id', $empresaId);
 
-        if ($sucursalId && $sucursalId !== 'all') {
-            $query->where('sucursal_id', $sucursalId);
-        }
+        $applyFilters($query);
 
-        // Si es exclusivamente rol Técnico (sin permisos de Administrador), mostrar ÚNICAMENTE sus órdenes asignadas
-        if ($isTecnicoOnly && !$isAdmin) {
-            $query->where('tecnico_id', $user->id);
-        } elseif ($tecnicoId && $tecnicoId !== 'all') {
-            if ($tecnicoId === 'unassigned') {
-                $query->whereNull('tecnico_id');
-            } else {
-                $query->where('tecnico_id', $tecnicoId);
-            }
-        }
+        // Vista efectiva:
+        //  - 'all'        => órdenes activas en taller (sin entregadas)
+        //  - 'entregados' => todas las entregadas (reparadas y no reparadas)
+        //  - 'todas'      => historial completo
+        //  - <estado>     => estado específico (agrupando alias heredados)
+        // Si el usuario escribe una búsqueda en el buscador (folio, cliente, IMEI, etc.),
+        // buscamos SIEMPRE en TODOS los estados para que aparezcan también las reparaciones entregadas.
+        $effectiveStatus = ($search !== '') ? 'todas' : $status;
 
-        // Filtro por rango de fechas (Desde - Hasta)
-        if ($from) {
-            $query->where(function ($q) use ($from) {
-                $q->whereDate('fecha_recepcion', '>=', $from)
-                  ->orWhere(function ($sub) use ($from) {
-                      $sub->whereNull('fecha_recepcion')
-                          ->whereDate('created_at', '>=', $from);
-                  });
+        if ($effectiveStatus === 'all') {
+            $query->where(function ($q) use ($deliveredStates) {
+                $q->whereNotIn('estado_orden', $deliveredStates)->orWhereNull('estado_orden');
             });
-        }
-
-        if ($to) {
-            $query->where(function ($q) use ($to) {
-                $q->whereDate('fecha_recepcion', '<=', $to)
-                  ->orWhere(function ($sub) use ($to) {
-                      $sub->whereNull('fecha_recepcion')
-                          ->whereDate('created_at', '<=', $to);
-                  });
-            });
-        }
-
-        // Filtros alternativos por Año y Mes (si no se indicó rango específico)
-        if (!$from && !$to) {
-            if ($year && $year !== 'all') {
-                $query->where(function ($q) use ($year) {
-                    $q->whereYear('fecha_recepcion', $year)
-                      ->orWhere(function ($sub) use ($year) {
-                          $sub->whereNull('fecha_recepcion')
-                              ->whereYear('created_at', $year);
-                      });
-                });
-            }
-
-            if ($month && $month !== 'all') {
-                $query->where(function ($q) use ($month) {
-                    $q->whereMonth('fecha_recepcion', $month)
-                      ->orWhere(function ($sub) use ($month) {
-                          $sub->whereNull('fecha_recepcion')
-                              ->whereMonth('created_at', $month);
-                      });
-                });
-            }
-        }
-
-        if ($search) {
-            $normalizedSearch = str_replace(["'", "´", "`"], '-', $search);
-            $query->where(function ($q) use ($search, $normalizedSearch) {
-                $q->where('numero_orden', 'like', "%{$search}%")
-                  ->orWhere('numero_orden', 'like', "%{$normalizedSearch}%")
-                  ->orWhere('cliente_nombre', 'like', "%{$search}%")
-                  ->orWhere('imei_serie', 'like', "%{$search}%")
-                  ->orWhere('marca_nombre', 'like', "%{$search}%")
-                  ->orWhere('modelo_nombre', 'like', "%{$search}%");
-            });
-        }
-
-        $deliveredStates = [
-            OrdenReparacion::ESTADO_ENTREGADO_REPARADO,
-            OrdenReparacion::ESTADO_ENTREGADO_NO_REPARADO,
-            OrdenReparacion::ESTADO_ENTREGADO_FINALIZADO,
-            'entregado',
-        ];
-
-        if ($status && $status !== 'all') {
-            $query->where('estado_orden', $status);
-        } else {
-            $query->whereNotIn('estado_orden', $deliveredStates);
-        }
-
-        if ($marcaId && $marcaId !== 'all') {
-            $query->where('marca_id', $marcaId);
-        }
-
-        if ($modeloId && $modeloId !== 'all') {
-            $query->where('modelo_id', $modeloId);
-        }
-
-        if ($categoriaId && $categoriaId !== 'all') {
-            $categoriaObj = \App\Models\Categoria::find($categoriaId);
-            $query->where(function ($q) use ($categoriaId, $categoriaObj) {
-                $q->whereHas('modelo', function ($mq) use ($categoriaId) {
-                    $mq->where('categoria_id', $categoriaId);
-                });
-                if ($categoriaObj) {
-                    $q->orWhere('tipo_dispositivo', $categoriaObj->nombre);
-                }
-            });
+        } elseif ($effectiveStatus === 'entregados') {
+            $query->whereIn('estado_orden', $deliveredStates);
+        } elseif ($effectiveStatus !== 'todas') {
+            $query->whereIn('estado_orden', $statusAliases[$effectiveStatus] ?? [$effectiveStatus]);
         }
 
         $perPage = (int) $request->input('perPage', 10);
@@ -200,22 +193,61 @@ class ReparacionController extends Controller
             $perPage = 10;
         }
 
-        $ordenes = $query->latest('id')->paginate($perPage)->withQueryString();
+        // Coincidencia exacta de folio siempre arriba
+        if (!empty($folioCandidates)) {
+            $placeholders = implode(',', array_fill(0, count($folioCandidates), '?'));
+            $query->orderByRaw("CASE WHEN numero_orden IN ({$placeholders}) THEN 0 ELSE 1 END", $folioCandidates);
+        }
 
-        // Conteo por Estados para Tablero / Filtros
+        // Ordenamiento seguro (lista blanca)
+        $sortBy = (string) $request->input('sortBy', '');
+        $sortDir = strtolower((string) $request->input('sortDir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        switch ($sortBy) {
+            case 'numero_orden':
+                $query->orderBy('id', $sortDir);
+                break;
+            case 'fecha_recepcion':
+                $query->orderByRaw("COALESCE(fecha_recepcion, created_at) {$sortDir}")->orderBy('id', $sortDir);
+                break;
+            case 'fecha_prometida':
+                $query->orderByRaw("fecha_prometida IS NULL")->orderBy('fecha_prometida', $sortDir);
+                break;
+            case 'cliente_nombre':
+            case 'estado_orden':
+            case 'costo_estimado':
+            case 'saldo_restante':
+                $query->orderBy($sortBy, $sortDir)->orderByDesc('id');
+                break;
+            default:
+                $sortBy = '';
+                $query->orderByDesc('id');
+        }
+
+        $ordenes = $query->paginate($perPage)->withQueryString();
+
+        // Conteo por Estados (respeta los mismos filtros que el listado, excepto el estado)
         $countsQuery = OrdenReparacion::withoutGlobalScope('multitenancy')->where('empresa_id', $empresaId);
-        if ($sucursalId && $sucursalId !== 'all') {
-            $countsQuery->where('sucursal_id', $sucursalId);
-        }
-        if ($isTecnicoOnly && !$isAdmin) {
-            $countsQuery->where('tecnico_id', $user->id);
-        }
-        $countsQuery->whereNotIn('estado_orden', $deliveredStates);
+        $applyFilters($countsQuery);
 
-        $counts = $countsQuery->select('estado_orden', DB::raw('count(*) as total'))
+        $rawCounts = $countsQuery->select('estado_orden', DB::raw('count(*) as total'))
             ->groupBy('estado_orden')
             ->pluck('total', 'estado_orden')
             ->toArray();
+
+        $counts = [];
+        foreach ($statusAliases as $key => $aliases) {
+            $counts[$key] = 0;
+            foreach ($aliases as $alias) {
+                $counts[$key] += (int) ($rawCounts[$alias] ?? 0);
+            }
+        }
+        $totalTodas = array_sum(array_map('intval', $rawCounts));
+        $totalEntregadas = $counts[OrdenReparacion::ESTADO_ENTREGADO_REPARADO] + $counts[OrdenReparacion::ESTADO_ENTREGADO_NO_REPARADO];
+        $summary = [
+            'activas' => $totalTodas - $totalEntregadas,
+            'entregadas' => $totalEntregadas,
+            'todas' => $totalTodas,
+        ];
 
         $tecnicosQuery = User::where('empresa_id', $empresaId);
         if ($sucursalId && $sucursalId !== 'all') {
@@ -299,6 +331,8 @@ class ReparacionController extends Controller
         return Inertia::render('admin/Reparaciones/Index', [
             'ordenes' => $ordenes,
             'counts' => $counts,
+            'summary' => $summary,
+            'searchAllStates' => $status === 'all' && $search !== '',
             'tecnicos' => $tecnicos,
             'clientes' => $clientes,
             'marcas' => $marcas,
@@ -314,6 +348,8 @@ class ReparacionController extends Controller
                 $request->only(['search', 'status', 'tecnico_id', 'year', 'month', 'marca_id', 'modelo_id', 'categoria_id']),
                 [
                     'perPage' => (string) $perPage,
+                    'sortBy' => $sortBy,
+                    'sortDir' => $sortBy ? $sortDir : '',
                     'sucursal_id' => $sucursalId !== null ? (string)$sucursalId : '',
                     'from' => $from ?: '',
                     'to' => $to ?: '',
@@ -321,6 +357,103 @@ class ReparacionController extends Controller
             ),
             'isTecnicoOnly' => $isTecnicoOnly && !$isAdmin,
         ]);
+    }
+
+    /**
+     * Estados del listado agrupados con sus alias heredados (valores antiguos en BD).
+     *
+     * @return array<string, string[]>
+     */
+    private static function listingStatusAliases(): array
+    {
+        return [
+            OrdenReparacion::ESTADO_RECIBIDO => [OrdenReparacion::ESTADO_RECIBIDO],
+            OrdenReparacion::ESTADO_EN_DIAGNOSTICO_PRESUPUESTO => [OrdenReparacion::ESTADO_EN_DIAGNOSTICO_PRESUPUESTO, 'en_diagnostico'],
+            OrdenReparacion::ESTADO_CONFIRMACION_PRESUPUESTO => [OrdenReparacion::ESTADO_CONFIRMACION_PRESUPUESTO, 'presupuestado'],
+            OrdenReparacion::ESTADO_ESPERA_REFACCION => [OrdenReparacion::ESTADO_ESPERA_REFACCION, 'esperando_repuesto'],
+            OrdenReparacion::ESTADO_EN_REPARACION => [OrdenReparacion::ESTADO_EN_REPARACION],
+            OrdenReparacion::ESTADO_LISTO_REPARADO => [OrdenReparacion::ESTADO_LISTO_REPARADO, 'reparado'],
+            OrdenReparacion::ESTADO_LISTO_SIN_SOLUCION => [OrdenReparacion::ESTADO_LISTO_SIN_SOLUCION, 'cancelado'],
+            OrdenReparacion::ESTADO_ENTREGADO_REPARADO => [OrdenReparacion::ESTADO_ENTREGADO_REPARADO, OrdenReparacion::ESTADO_ENTREGADO_FINALIZADO, 'entregado'],
+            OrdenReparacion::ESTADO_ENTREGADO_NO_REPARADO => [OrdenReparacion::ESTADO_ENTREGADO_NO_REPARADO],
+            OrdenReparacion::ESTADO_REINCIDENCIA_GARANTIA => [OrdenReparacion::ESTADO_REINCIDENCIA_GARANTIA, 'reincidencia'],
+        ];
+    }
+
+    /**
+     * Aplica la búsqueda libre del listado de reparaciones.
+     *
+     * Cada palabra debe coincidir con algún campo (folio, cliente, teléfono, IMEI, equipo, falla...).
+     * Los folios se normalizan: "REP'123", "rep123", "REP-123", "#123" o "000123" encuentran "REP-000123".
+     *
+     * @return string[] Folios exactos candidatos (para priorizarlos en el orden)
+     */
+    private function applyListingSearch($query, string $search): array
+    {
+        // Normalizar apóstrofes de lectores de código de barras con teclado en español (REP'000001 -> REP-000001)
+        $normalized = trim(str_replace(["'", '´', '`', '‘', '’'], '-', $search));
+        $folioCandidates = [];
+
+        // Búsqueda completa como folio
+        if (preg_match('/^(?:REP)?[\s\-_#.]*0*(\d{1,9})$/i', $normalized, $m)) {
+            $folioCandidates[] = 'REP-' . str_pad($m[1], 6, '0', STR_PAD_LEFT);
+        }
+        $folioCandidates[] = strtoupper($normalized);
+        $folioCandidates = array_values(array_unique($folioCandidates));
+
+        $tokens = preg_split('/\s+/', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (count($tokens) > 6) {
+            $tokens = array_slice($tokens, 0, 6);
+        }
+
+        $query->where(function ($outer) use ($normalized, $folioCandidates, $tokens) {
+            // 1) Coincidencia directa de folio completo
+            $outer->whereIn('numero_orden', $folioCandidates)
+                ->orWhere('numero_orden', 'like', '%' . addcslashes($normalized, '%_\\') . '%');
+
+            // 2) Coincidencia por palabras (todas deben coincidir en algún campo)
+            $outer->orWhere(function ($all) use ($tokens) {
+                foreach ($tokens as $token) {
+                    $like = '%' . addcslashes($token, '%_\\') . '%';
+                    $digits = preg_replace('/\D/', '', $token);
+                    $tokenFolio = preg_match('/^(?:REP)?[\-_#.]*0*(\d{1,9})$/i', $token, $tm)
+                        ? 'REP-' . str_pad($tm[1], 6, '0', STR_PAD_LEFT)
+                        : null;
+
+                    $all->where(function ($q) use ($like, $digits, $tokenFolio) {
+                        $q->where('numero_orden', 'like', $like)
+                            ->orWhere('cliente_nombre', 'like', $like)
+                            ->orWhere('cliente_telefono', 'like', $like)
+                            ->orWhere('imei_serie', 'like', $like)
+                            ->orWhere('marca_nombre', 'like', $like)
+                            ->orWhere('modelo_nombre', 'like', $like)
+                            ->orWhere('tipo_dispositivo', 'like', $like)
+                            ->orWhere('color', 'like', $like)
+                            ->orWhere('descripcion_falla', 'like', $like)
+                            ->orWhereHas('cliente', function ($c) use ($like) {
+                                $c->withoutGlobalScope('multitenancy')
+                                    ->where(function ($cc) use ($like) {
+                                        $cc->where('nombre', 'like', $like)
+                                            ->orWhere('telefono', 'like', $like);
+                                    });
+                            })
+                            ->orWhereHas('marca', fn ($mq) => $mq->withoutGlobalScope('multitenancy')->where('nombre', 'like', $like))
+                            ->orWhereHas('modelo', fn ($mq) => $mq->withoutGlobalScope('multitenancy')->where('nombre_comercial', 'like', $like));
+
+                        if ($tokenFolio) {
+                            $q->orWhere('numero_orden', $tokenFolio);
+                        }
+
+                        // Teléfonos escritos con espacios/guiones
+                        if (strlen($digits) >= 4) {
+                            $q->orWhere('cliente_telefono', 'like', '%' . $digits . '%');
+                        }
+                    });
+                }
+            });
+        });
+
+        return $folioCandidates;
     }
 
     public function create(Request $request)

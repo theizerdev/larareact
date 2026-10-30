@@ -15,7 +15,9 @@ import {
     Tag,
     Search,
     X,
-    Filter,
+    AlertTriangle,
+    Clock,
+    UserRound,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -97,6 +99,45 @@ const extractPatternNumbers = (val: string | null | undefined): number[] => {
     return digits.map(Number);
 };
 
+/** Metadatos visuales de cada estado del taller (orden = flujo de trabajo). */
+const STATUS_META: Array<{
+    value: string;
+    num: number;
+    label: string;
+    aliases: string[];
+    delivered?: boolean;
+    badge: string;
+    dot: string;
+}> = [
+    { value: 'recibido', num: 1, label: 'RECIBIDO', aliases: [], badge: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900', dot: 'bg-amber-500' },
+    { value: 'en_diagnostico_presupuesto', num: 2, label: 'EN DIAGNOSTICO Y PRESUPUESTO', aliases: ['en_diagnostico'], badge: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900', dot: 'bg-blue-500' },
+    { value: 'confirmacion_presupuesto', num: 3, label: 'CONFIRMACION DE PRESUPUESTO', aliases: ['presupuestado'], badge: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-900', dot: 'bg-indigo-500' },
+    { value: 'espera_refaccion', num: 4, label: 'ESPERA DE REFACCION', aliases: ['esperando_repuesto'], badge: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900', dot: 'bg-orange-500' },
+    { value: 'en_reparacion', num: 5, label: 'EN REPARACION', aliases: [], badge: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900', dot: 'bg-purple-500' },
+    { value: 'listo_reparado', num: 6, label: 'LISTO PARA ENTREGAR REPARADO', aliases: ['reparado'], badge: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900', dot: 'bg-emerald-500' },
+    { value: 'listo_sin_solucion', num: 7, label: 'LISTO PARA ENTREGAR SIN SOLUCION', aliases: ['cancelado'], badge: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900', dot: 'bg-rose-500' },
+    { value: 'entregado_reparado', num: 8, label: 'ENTREGADO REPARADO', aliases: ['entregado_finalizado', 'entregado'], delivered: true, badge: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800', dot: 'bg-emerald-600 dark:bg-emerald-400' },
+    { value: 'entregado_no_reparado', num: 9, label: 'ENTREGADO NO REPARADO', aliases: [], delivered: true, badge: 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800', dot: 'bg-rose-600 dark:bg-rose-400' },
+    { value: 'reincidencia_garantia', num: 10, label: 'REINCIDENCIA/GARANTIA', aliases: ['reincidencia'], badge: 'bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/30 dark:text-pink-400 dark:border-pink-900', dot: 'bg-pink-500' },
+];
+
+const findStatusMeta = (st?: string | null) =>
+    STATUS_META.find((s) => s.value === st || s.aliases.includes(String(st)));
+
+const isDeliveredStatus = (st?: string | null) => Boolean(findStatusMeta(st)?.delivered);
+
+/** Días calendario entre hoy y la fecha dada (positivo = en el pasado). */
+const daysSince = (dateStr?: string | null): number | null => {
+    if (!dateStr) return null;
+    const clean = String(dateStr).split('T')[0].split(' ')[0];
+    const [y, m, d] = clean.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    const date = new Date(y, m - 1, d);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.round((today.getTime() - date.getTime()) / 86400000);
+};
+
 interface Orden {
     id: number;
     numero_orden: string;
@@ -119,7 +160,9 @@ interface Orden {
     fecha_recepcion: string;
     fecha_estimada_entrega?: string;
     fecha_prometida?: string;
-    tecnico?: { name: string };
+    fecha_entrega?: string | null;
+    created_at?: string;
+    tecnico?: { id?: number; name: string } | null;
     cliente?: { nombre: string; telefono?: string };
     marca?: { nombre: string };
     modelo?: { nombre_comercial: string; codigo_modelo?: string };
@@ -133,6 +176,8 @@ interface Orden {
 interface Props {
     ordenes: Paginated<Orden>;
     counts: Record<string, number>;
+    summary?: { activas: number; entregadas: number; todas: number };
+    searchAllStates?: boolean;
     tecnicos: { id: number; name: string }[];
     marcas?: Array<{ id: number; nombre: string; modelos?: any[] }>;
     modelos?: Array<{ id: number; marca_id?: number; categoria_id?: number; nombre_comercial: string; codigo_modelo?: string }>;
@@ -151,6 +196,8 @@ interface Props {
         sucursal_id?: string;
         from?: string;
         to?: string;
+        sortBy?: string;
+        sortDir?: string;
     };
     isTecnicoOnly?: boolean;
     empresa?: any;
@@ -159,6 +206,8 @@ interface Props {
 export default function IndexReparaciones({
     ordenes,
     counts,
+    summary,
+    searchAllStates = false,
     tecnicos,
     marcas = [],
     modelos = [],
@@ -192,49 +241,42 @@ export default function IndexReparaciones({
     const [selectedStickerOrden, setSelectedStickerOrden] = useState<Orden | null>(null);
 
     // Select2 Options (memoized)
-    const statusOptions = useMemo(() => [
-        { value: 'all', label: __('Todos los estados') },
-        {
-            value: 'recibido',
-            label: `1-RECIBIDO (${counts?.['recibido'] ?? 0})`,
-            disabled: (counts?.['recibido'] ?? 0) === 0,
-        },
-        {
-            value: 'en_diagnostico_presupuesto',
-            label: `2-EN DIAGNOSTICO Y PRESUPUESTO (${counts?.['en_diagnostico_presupuesto'] ?? 0})`,
-            disabled: (counts?.['en_diagnostico_presupuesto'] ?? 0) === 0,
-        },
-        {
-            value: 'confirmacion_presupuesto',
-            label: `3-CONFIRMACION DE PRESUPUESTO (${counts?.['confirmacion_presupuesto'] ?? 0})`,
-            disabled: (counts?.['confirmacion_presupuesto'] ?? 0) === 0,
-        },
-        {
-            value: 'espera_refaccion',
-            label: `4-ESPERA DE REFACCION (${counts?.['espera_refaccion'] ?? 0})`,
-            disabled: (counts?.['espera_refaccion'] ?? 0) === 0,
-        },
-        {
-            value: 'en_reparacion',
-            label: `5-EN REPARACION (${counts?.['en_reparacion'] ?? 0})`,
-            disabled: (counts?.['en_reparacion'] ?? 0) === 0,
-        },
-        {
-            value: 'listo_reparado',
-            label: `6-LISTO PARA ENTREGAR REPARADO (${counts?.['listo_reparado'] ?? 0})`,
-            disabled: (counts?.['listo_reparado'] ?? 0) === 0,
-        },
-        {
-            value: 'listo_sin_solucion',
-            label: `7-LISTO PARA ENTREGAR SIN SOLUCION (${counts?.['listo_sin_solucion'] ?? 0})`,
-            disabled: (counts?.['listo_sin_solucion'] ?? 0) === 0,
-        },
-        {
-            value: 'reincidencia_garantia',
-            label: `8-REINCIDENCIA/GARANTIA (${counts?.['reincidencia_garantia'] ?? 0})`,
-            disabled: (counts?.['reincidencia_garantia'] ?? 0) === 0,
-        },
+    const totals = useMemo(() => {
+        const sum = (keys: string[]) => keys.reduce((acc, k) => acc + (counts?.[k] ?? 0), 0);
+        const entregadas = summary?.entregadas ?? sum(STATUS_META.filter((s) => s.delivered).map((s) => s.value));
+        const todas = summary?.todas ?? sum(STATUS_META.map((s) => s.value));
+        return {
+            activas: summary?.activas ?? todas - entregadas,
+            entregadas,
+            todas,
+        };
+    }, [counts, summary]);
+
+    // Pestañas de taller activas tal como en la imagen
+    const workshopTabs = useMemo(() => [
+        { value: 'recibido', label: __('RECIBIDO'), count: counts?.['recibido'] ?? 0 },
+        { value: 'en_diagnostico_presupuesto', label: __('EN DIAGNOSTICO Y PRESUPUESTO'), count: counts?.['en_diagnostico_presupuesto'] ?? 0 },
+        { value: 'confirmacion_presupuesto', label: __('CONFIRMACION DE PRESUPUESTO'), count: counts?.['confirmacion_presupuesto'] ?? 0 },
+        { value: 'espera_refaccion', label: __('ESPERA DE REFACCION'), count: counts?.['espera_refaccion'] ?? 0 },
+        { value: 'en_reparacion', label: __('EN REPARACION'), count: counts?.['en_reparacion'] ?? 0 },
+        { value: 'listo_reparado', label: __('LISTO PARA ENTREGAR REPARADO'), count: counts?.['listo_reparado'] ?? 0 },
+        { value: 'listo_sin_solucion', label: __('LISTO PARA ENTREGAR SIN SOLUCION'), count: counts?.['listo_sin_solucion'] ?? 0 },
+        { value: 'reincidencia_garantia', label: __('REINCIDENCIA/GARANTIA'), count: counts?.['reincidencia_garantia'] ?? 0 },
     ], [counts, __]);
+
+    const totalWorkshopCount = useMemo(() => {
+        return workshopTabs.reduce((acc, tab) => acc + tab.count, 0);
+    }, [workshopTabs]);
+
+    const statusOptions = useMemo(() => [
+        { value: 'all', label: `${__('Todos los estados')} (${totals.activas})` },
+        ...STATUS_META.map((s) => ({
+            value: s.value,
+            label: `${s.num}-${s.label} (${counts?.[s.value] ?? 0})`,
+        })),
+        { value: 'entregados', label: `${__('Todas las entregadas')} (${totals.entregadas})` },
+        { value: 'todas', label: `${__('Historial completo')} (${totals.todas})` },
+    ], [counts, totals, __]);
 
     const yearOptions = useMemo(() => {
         const currentY = String(new Date().getFullYear());
@@ -329,29 +371,52 @@ export default function IndexReparaciones({
 
     // Auto debounce filters
     const isInitialMount = useRef(true);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [isFetching, setIsFetching] = useState(false);
+    const resetSortRef = useRef(false);
+
+    const visitWithFilters = () => {
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+            debounceRef.current = null;
+        }
+        const keepSort = !resetSortRef.current && Boolean(filters.sortBy);
+        resetSortRef.current = false;
+        router.get(
+            '/admin/reparaciones',
+            cleanParams({
+                search: search.trim() || undefined,
+                status: status === 'all' ? undefined : status,
+                year: year !== 'all' ? year : undefined,
+                month: month !== 'all' ? month : undefined,
+                tecnico_id: tecnicoId === 'all' ? undefined : tecnicoId,
+                sucursal_id: sucursalId || undefined,
+                perPage: perPage === '10' ? undefined : perPage,
+                sortBy: keepSort ? filters.sortBy : undefined,
+                sortDir: keepSort ? filters.sortDir : undefined,
+            }),
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+                onStart: () => setIsFetching(true),
+                onFinish: () => setIsFetching(false),
+            }
+        );
+    };
+
     useEffect(() => {
         if (isInitialMount.current) {
             isInitialMount.current = false;
             return;
         }
 
-        const timer = setTimeout(() => {
-            router.get(
-                '/admin/reparaciones',
-                cleanParams({
-                    search: search || undefined,
-                    status: status === 'all' ? undefined : status,
-                    year: year !== 'all' ? year : undefined,
-                    month: month !== 'all' ? month : undefined,
-                    tecnico_id: tecnicoId === 'all' ? undefined : tecnicoId,
-                    sucursal_id: sucursalId === 'all' ? undefined : sucursalId,
-                    perPage: perPage === '10' ? undefined : perPage,
-                }),
-                { preserveState: true, preserveScroll: true }
-            );
-        }, 300);
+        debounceRef.current = setTimeout(visitWithFilters, 350);
 
-        return () => clearTimeout(timer);
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search, status, year, month, tecnicoId, sucursalId, perPage]);
 
     // QR Code Camera Scanner States
@@ -564,23 +629,25 @@ export default function IndexReparaciones({
         if (search.trim()) count++;
         if (status && status !== 'all') count++;
         if (tecnicoId && tecnicoId !== 'all') count++;
-        if (sucursalId && sucursalId !== 'all') count++;
         if (year && year !== 'all') count++;
         if (month && month !== 'all') count++;
         return count;
-    }, [search, status, tecnicoId, sucursalId, year, month]);
+    }, [search, status, tecnicoId, year, month]);
 
-    const hasActiveFilters = activeFilterCount > 0 || perPage !== '10';
+    const hasActiveFilters = activeFilterCount > 0 || perPage !== '10' || Boolean(filters.sortBy);
 
+    // La sucursal se conserva al limpiar (es el contexto de trabajo, no un filtro de búsqueda)
     const handleResetFilters = () => {
+        const changed = search !== '' || status !== 'all' || year !== 'all' || month !== 'all' || tecnicoId !== 'all' || perPage !== '10';
+        resetSortRef.current = true;
         setSearch('');
         setStatus('all');
         setYear('all');
         setMonth('all');
         setTecnicoId('all');
-        setSucursalId('all');
         setPerPage('10');
-        router.get('/admin/reparaciones', {}, { preserveState: true, preserveScroll: true });
+        // Si ningún estado cambió (p. ej. solo había orden activo), el efecto no se dispara: navegar ahora
+        if (!changed) visitWithFilters();
     };
 
     const sendWhatsApp = (o: Orden) => {
@@ -661,88 +728,46 @@ export default function IndexReparaciones({
     };
 
     const getStatusBadge = (st: string) => {
-        switch (st) {
-            case 'recibido':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                        1-RECIBIDO
-                    </span>
-                );
-            case 'en_diagnostico_presupuesto':
-            case 'en_diagnostico':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                        2-EN DIAGNOSTICO Y PRESUPUESTO
-                    </span>
-                );
-            case 'confirmacion_presupuesto':
-            case 'presupuestado':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-900">
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                        3-CONFIRMACION DE PRESUPUESTO
-                    </span>
-                );
-            case 'espera_refaccion':
-            case 'esperando_repuesto':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900">
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
-                        4-ESPERA DE REFACCION
-                    </span>
-                );
-            case 'en_reparacion':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                        5-EN REPARACION
-                    </span>
-                );
-            case 'listo_reparado':
-            case 'reparado':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        6-LISTO PARA ENTREGAR REPARADO
-                    </span>
-                );
-            case 'listo_sin_solucion':
-            case 'cancelado':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                        7-LISTO PARA ENTREGAR SIN SOLUCION
-                    </span>
-                );
-            case 'entregado_reparado':
-            case 'entregado_finalizado':
-            case 'entregado':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400"></span>
-                        8-ENTREGADO REPARADO
-                    </span>
-                );
-            case 'entregado_no_reparado':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400"></span>
-                        9-ENTREGADO NO REPARADO
-                    </span>
-                );
-            case 'reincidencia_garantia':
-            case 'reincidencia':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-pink-50 text-pink-700 border border-pink-200 dark:bg-pink-950/30 dark:text-pink-400 dark:border-pink-900">
-                        <span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
-                        8-REINCIDENCIA/GARANTIA
-                    </span>
-                );
-            default:
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{st?.replace(/_/g, ' ').toUpperCase()}</span>;
+        const meta = findStatusMeta(st);
+        if (!meta) {
+            return (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    {st?.replace(/_/g, ' ').toUpperCase() || '—'}
+                </span>
+            );
         }
+        return (
+            <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap', meta.badge)}>
+                <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', meta.dot)}></span>
+                {meta.num}-{meta.label}
+            </span>
+        );
+    };
+
+    /** Indicador de antigüedad / vencimiento de la orden. */
+    const getTimingInfo = (o: Orden) => {
+        if (isDeliveredStatus(o.estado_orden)) {
+            return o.fecha_entrega
+                ? { tone: 'muted' as const, text: `${__('Entregado')} ${formatDate(o.fecha_entrega)}` }
+                : null;
+        }
+        const overdueDays = daysSince(o.fecha_prometida);
+        if (overdueDays !== null && overdueDays > 0) {
+            return { tone: 'danger' as const, text: overdueDays === 1 ? __('Vencida hace 1 día') : `${__('Vencida hace')} ${overdueDays} ${__('días')}` };
+        }
+        if (overdueDays === 0) {
+            return { tone: 'warning' as const, text: __('Se entrega hoy') };
+        }
+        const age = daysSince(o.fecha_recepcion || o.created_at);
+        if (age === null) return null;
+        const text = age === 0 ? __('Ingresó hoy') : age === 1 ? __('1 día en taller') : `${age} ${__('días en taller')}`;
+        return { tone: age >= 15 ? ('warning' as const) : ('muted' as const), text };
+    };
+
+    const isOverdue = (o: Orden) => {
+        if (isDeliveredStatus(o.estado_orden)) return false;
+        const d = daysSince(o.fecha_prometida);
+        return d !== null && d > 0;
     };
 
     const breadcrumbs = [
@@ -753,39 +778,60 @@ export default function IndexReparaciones({
     const columns: ColumnDef<Orden>[] = [
         {
             header: __('Folio / Fecha'),
+            dropdownLabel: __('Folio / Fecha'),
             accessorKey: 'numero_orden',
-            cell: (o) => (
-                <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900">
-                            {o.numero_orden}
-                        </span>
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                copyToClipboard(o.numero_orden);
-                            }}
-                            className="text-slate-400 hover:text-purple-600 transition-colors"
-                            title={__('Copiar Folio')}
-                        >
-                            <Copy className="w-3 h-3" />
-                        </button>
+            sortable: true,
+            hideable: false,
+            cell: (o) => {
+                const timing = getTimingInfo(o);
+                return (
+                    <div className="flex flex-col gap-1 min-w-[130px]">
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900">
+                                {o.numero_orden}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyToClipboard(o.numero_orden);
+                                }}
+                                className="text-slate-400 hover:text-purple-600 transition-colors"
+                                title={__('Copiar Folio')}
+                            >
+                                <Copy className="w-3 h-3" />
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                            <Calendar className="w-3 h-3" />
+                            <span>{formatDate(o.fecha_recepcion || o.created_at)}</span>
+                        </div>
+                        {timing && (
+                            <span
+                                className={cn(
+                                    'inline-flex w-fit items-center gap-1 text-[10px] font-semibold rounded px-1.5 py-0.5',
+                                    timing.tone === 'danger' && 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
+                                    timing.tone === 'warning' && 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
+                                    timing.tone === 'muted' && 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                                )}
+                            >
+                                {timing.tone === 'danger' ? <AlertTriangle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                {timing.text}
+                            </span>
+                        )}
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
-                        <Calendar className="w-3 h-3" />
-                        <span>{formatDate(o.fecha_recepcion)}</span>
-                    </div>
-                </div>
-            ),
+                );
+            },
         },
         {
             header: __('Cliente'),
+            dropdownLabel: __('Cliente'),
             accessorKey: 'cliente_nombre',
+            sortable: true,
             cell: (o) => (
-                <div className="flex flex-col">
-                    <span className="font-semibold text-sm text-slate-800 dark:text-slate-200">
-                        {o.cliente?.nombre || o.cliente_nombre}
+                <div className="flex flex-col min-w-[140px]">
+                    <span className="font-semibold text-sm text-slate-800 dark:text-slate-200 leading-tight">
+                        {o.cliente?.nombre || o.cliente_nombre || __('Cliente General')}
                     </span>
                     {(o.cliente?.telefono || o.cliente_telefono) && (
                         <span className="font-mono text-xs text-purple-600 dark:text-purple-400">
@@ -796,56 +842,88 @@ export default function IndexReparaciones({
             ),
         },
         {
-            header: __('Dispositivo / Modelo'),
+            header: __('Equipo / Falla'),
+            dropdownLabel: __('Equipo / Falla'),
             accessorKey: 'modelo_nombre',
             cell: (o) => (
-                <div className="flex flex-col">
+                <div className="flex flex-col gap-0.5 min-w-[170px] max-w-[260px]">
                     <div className="font-semibold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1">
                         <Smartphone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>{o.marca?.nombre || o.marca_nombre} {o.modelo?.nombre_comercial || o.modelo_nombre}</span>
+                        <span className="truncate">
+                            {o.marca?.nombre || o.marca_nombre} {o.modelo?.nombre_comercial || o.modelo_nombre}
+                        </span>
+                        {o.color && <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400 shrink-0">· {o.color}</span>}
                     </div>
                     {o.imei_serie && (
-                        <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                        <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 truncate">
                             IMEI: {o.imei_serie}
                         </span>
                     )}
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate" title={o.descripcion_falla}>
+                        {o.descripcion_falla || __('Sin detalle especificado')}
+                    </p>
                 </div>
             ),
         },
-        {
-            header: __('Falla Reportada'),
-            accessorKey: 'descripcion_falla',
-            cell: (o) => (
-                <p className="text-slate-700 dark:text-slate-300 text-xs max-w-xs truncate" title={o.descripcion_falla}>
-                    {o.descripcion_falla || __('Sin detalle especificado')}
-                </p>
-            ),
-        },
+        ...(!isTecnicoOnly
+            ? [
+                  {
+                      header: __('Técnico'),
+                      dropdownLabel: __('Técnico'),
+                      hideOn: 'tablet' as const,
+                      cell: (o: Orden) =>
+                          o.tecnico?.name ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                  <UserRound className="w-3.5 h-3.5 text-slate-400" />
+                                  {o.tecnico.name}
+                              </span>
+                          ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 whitespace-nowrap">
+                                  {__('Sin asignar')}
+                              </span>
+                          ),
+                  } as ColumnDef<Orden>,
+              ]
+            : []),
         {
             header: __('Estado'),
+            dropdownLabel: __('Estado'),
             accessorKey: 'estado_orden',
+            sortable: true,
             className: 'text-center',
             cell: (o) => getStatusBadge(o.estado_orden),
         },
         {
-            header: __('Presupuesto'),
-            accessorKey: 'costo_estimado',
-            className: 'text-right',
-            cell: (o) => (
-                <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
-                    {currencySymbol}{formatNum(o.costo_estimado)}
-                </span>
-            ),
-        },
-        {
-            header: __('Saldo a Cobrar'),
+            header: __('Importe'),
+            dropdownLabel: __('Importe'),
             accessorKey: 'saldo_restante',
+            sortable: true,
             className: 'text-right',
-            cell: (o) => (
-                <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                    {currencySymbol}{formatNum(o.saldo_restante)}
-                </span>
-            ),
+            cell: (o) => {
+                const saldo = parseFloat(String(o.saldo_restante ?? 0)) || 0;
+                const anticipo = parseFloat(String(o.anticipo ?? 0)) || 0;
+                return (
+                    <div className="flex flex-col items-end gap-0.5 whitespace-nowrap">
+                        <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                            {__('Total')}: <span className="font-bold text-slate-800 dark:text-slate-200">{currencySymbol}{formatNum(o.costo_estimado)}</span>
+                        </span>
+                        {anticipo > 0 && (
+                            <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                                {__('Anticipo')}: {currencySymbol}{formatNum(o.anticipo)}
+                            </span>
+                        )}
+                        {saldo > 0 ? (
+                            <span className="font-mono font-black text-sm text-amber-600 dark:text-amber-400" title={__('Saldo a Cobrar')}>
+                                {currencySymbol}{formatNum(o.saldo_restante)}
+                            </span>
+                        ) : (
+                            <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                {__('Sin saldo')}
+                            </span>
+                        )}
+                    </div>
+                );
+            },
         },
         {
             header: __('Acciones'),
@@ -853,36 +931,7 @@ export default function IndexReparaciones({
             hideable: false,
             stopRowClick: true,
             cell: (o) => (
-                <div className="flex items-center justify-center gap-1.5">
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleQuickPrintTicket(o);
-                        }}
-                        className="h-8 text-xs font-bold gap-1 border-blue-200 hover:bg-blue-50 text-blue-700 dark:border-blue-900 dark:text-blue-300 dark:hover:bg-blue-950/40"
-                        title={__('Imprimir Ticket de Cliente')}
-                    >
-                        <Printer className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                        {__('Ticket')}
-                    </Button>
-
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedStickerOrden(o);
-                            setIsStickerModalOpen(true);
-                        }}
-                        className="h-8 text-xs font-bold gap-1 border-indigo-200 hover:bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
-                        title={__('Imprimir Etiqueta Adhesiva / Sticker')}
-                    >
-                        <Tag className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                        {__('Sticker')}
-                    </Button>
-
+                <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                     <Button
                         size="sm"
                         variant="outline"
@@ -890,10 +939,38 @@ export default function IndexReparaciones({
                             e.stopPropagation();
                             router.visit(`/admin/reparaciones/${o.id}`);
                         }}
-                        className="h-8 text-xs font-bold gap-1 border-purple-200 hover:bg-purple-50 text-purple-700 dark:border-purple-900 dark:text-purple-300 dark:hover:bg-purple-950/40"
+                        className="h-8 px-2.5 text-xs font-bold gap-1 border-purple-200 hover:bg-purple-50 text-purple-700 dark:border-purple-900 dark:text-purple-300 dark:hover:bg-purple-950/40"
+                        title={__('Ver ficha de la orden')}
                     >
                         <Eye className="w-3.5 h-3.5" />
-                        {__('Ficha')}
+                        <span className="hidden sm:inline">{__('Ficha')}</span>
+                    </Button>
+
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuickPrintTicket(o);
+                        }}
+                        className="h-8 w-8 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/40"
+                        title={__('Imprimir Ticket de Cliente')}
+                    >
+                        <Printer className="w-3.5 h-3.5" />
+                    </Button>
+
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedStickerOrden(o);
+                            setIsStickerModalOpen(true);
+                        }}
+                        className="h-8 w-8 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+                        title={__('Imprimir Etiqueta Adhesiva / Sticker')}
+                    >
+                        <Tag className="w-3.5 h-3.5" />
                     </Button>
 
                     {(o.cliente?.telefono || o.cliente_telefono) && (
@@ -929,34 +1006,37 @@ export default function IndexReparaciones({
                     description={__('Recepción de equipos, estado de taller, trazabilidad de repuestos y notificaciones vía WhatsApp.')}
                     colorClassName="bg-purple-600"
                 >
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                            setIsScanModalOpen(true);
-                            startCamera();
-                        }}
-                        className="gap-2 font-bold border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40"
-                    >
-                        <QrCode className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                        {__('Escanear QR')}
-                    </Button>
-
-                    <Link href="/admin/reparaciones/create">
-                        <Button className="bg-purple-600 hover:bg-purple-700 text-white font-bold gap-2">
-                            <Plus className="h-4 w-4" />
-                            {__('Nueva Recepción')}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setIsScanModalOpen(true);
+                                startCamera();
+                            }}
+                            className="gap-2 font-bold border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+                        >
+                            <QrCode className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                            <span className="hidden sm:inline">{__('Escanear QR')}</span>
+                            <span className="sm:hidden">{__('QR')}</span>
                         </Button>
-                    </Link>
+
+                        <Link href="/admin/reparaciones/create">
+                            <Button className="bg-purple-600 hover:bg-purple-700 text-white font-bold gap-2">
+                                <Plus className="h-4 w-4" />
+                                <span>{__('Nueva Recepción')}</span>
+                            </Button>
+                        </Link>
+                    </div>
                 </ModuleHeader>
 
-                {/* TABS / CHIPS RÁPIDOS CON CONTEOS POR ESTADO DE TALLER */}
+                {/* TABS / CHIPS RÁPIDOS CON CONTEOS POR ESTADO DE TALLER (TAL COMO EN LA IMAGEN) */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                     <button
                         type="button"
                         onClick={() => setStatus('all')}
                         className={cn(
-                            "px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 border shrink-0",
+                            "px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 border shrink-0 cursor-pointer select-none",
                             status === 'all'
                                 ? "bg-purple-600 text-white border-purple-600 shadow-sm"
                                 : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border"
@@ -967,21 +1047,19 @@ export default function IndexReparaciones({
                             "px-1.5 py-0.5 rounded-full text-[10px] font-mono",
                             status === 'all' ? "bg-purple-700/80 text-white" : "bg-muted text-foreground"
                         )}>
-                            {Object.values(counts || {}).reduce((a, b) => a + b, 0)}
+                            {totalWorkshopCount}
                         </span>
                     </button>
 
-                    {statusOptions
-                        .filter((opt) => opt.value !== 'all' && ((counts?.[opt.value] ?? 0) > 0 || status === opt.value))
-                        .map((opt) => {
-                            const count = counts?.[opt.value] ?? 0;
-                            const isSelected = status === opt.value;
-                            const labelText = opt.label.replace(/^\d+-/, '').replace(/\s*\(\d+\)$/, '');
+                    {workshopTabs
+                        .filter((tab) => tab.count > 0 || status === tab.value)
+                        .map((tab) => {
+                            const isSelected = status === tab.value;
                             return (
                                 <button
-                                    key={opt.value}
+                                    key={tab.value}
                                     type="button"
-                                    onClick={() => setStatus(isSelected ? 'all' : opt.value)}
+                                    onClick={() => setStatus(isSelected ? 'all' : tab.value)}
                                     className={cn(
                                         "px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 border shrink-0 select-none cursor-pointer",
                                         isSelected
@@ -989,19 +1067,34 @@ export default function IndexReparaciones({
                                             : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border"
                                     )}
                                 >
-                                    <span>{labelText}</span>
+                                    <span>{tab.label}</span>
                                     <span className={cn(
                                         "px-1.5 py-0.5 rounded-full text-[10px] font-mono",
-                                        isSelected
-                                            ? "bg-purple-700/80 text-white"
-                                            : "bg-muted text-foreground"
+                                        isSelected ? "bg-purple-700/80 text-white" : "bg-muted text-foreground"
                                     )}>
-                                        {count}
+                                        {tab.count}
                                     </span>
                                 </button>
                             );
                         })}
                 </div>
+
+                {/* AVISO INFORMATIVO AL BUSCAR CON FILTRO POR DEFECTO */}
+                {search && (
+                    <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-900/60 text-xs text-purple-900 dark:text-purple-200">
+                        <span className="flex items-center gap-1.5 font-medium">
+                            <Search className="w-3.5 h-3.5 shrink-0 text-purple-600 dark:text-purple-400" />
+                            {__('Buscando en todos los estados (incluyendo reparaciones entregadas y finalizadas).')}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setSearch('')}
+                            className="text-[11px] underline font-semibold text-purple-700 hover:text-purple-900 dark:text-purple-300 dark:hover:text-purple-100 cursor-pointer"
+                        >
+                            {__('Limpiar búsqueda')}
+                        </button>
+                    </div>
+                )}
 
                 {/* BARRA DE FILTROS PROFESIONAL Y ALINEADA */}
                 <FilterBar className="bg-card text-card-foreground shadow-sm rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
@@ -1011,12 +1104,18 @@ export default function IndexReparaciones({
                             <div className="relative">
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                                 <Input
-                                    placeholder={__('Folio (ej. REP-0001), Cliente, IMEI, Modelo...')}
+                                    placeholder={__('Folio (ej. REP-0001, 12), Cliente, IMEI, Modelo...')}
                                     value={search}
                                     onChange={(e) => {
                                         const val = e.target.value;
                                         const normalized = val.replace(/REP['´`]/gi, 'REP-');
                                         setSearch(normalized);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            visitWithFilters();
+                                        }
                                     }}
                                     className="pl-9 pr-8 h-9 text-xs"
                                 />
@@ -1131,13 +1230,17 @@ export default function IndexReparaciones({
                     columns={columns}
                     data={ordenes}
                     filters={filters}
+                    isLoading={isFetching}
+                    rowClassName={(row) => (isOverdue(row) ? 'bg-rose-50/40 dark:bg-rose-950/20' : '')}
                     onRowClick={(row) => router.visit(`/admin/reparaciones/${row.id}`)}
                     emptyState={{
-                        title: __('No se encontraron órdenes de reparación'),
-                        description: __('Intenta modificar los filtros de búsqueda o registra una nueva orden de servicio.'),
+                        title: search ? __('No se encontró la orden') : __('No se encontraron órdenes de reparación'),
+                        description: search
+                            ? __('No hay resultados para la búsqueda ingresada. Puedes buscar por folio (ej. REP-000001 o 1), cliente, teléfono o IMEI.')
+                            : __('Intenta modificar los filtros de búsqueda o registra una nueva orden de servicio.'),
                         icon: <Wrench className="w-10 h-10 text-slate-300 dark:text-slate-600" />,
-                        ctaLabel: __('Nueva Recepción'),
-                        onCtaClick: () => router.visit('/admin/reparaciones/create'),
+                        ctaLabel: search ? __('Limpiar búsqueda') : __('Nueva Recepción'),
+                        onCtaClick: () => (search ? setSearch('') : router.visit('/admin/reparaciones/create')),
                     }}
                 />
 
