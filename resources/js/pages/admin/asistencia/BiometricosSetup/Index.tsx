@@ -1137,11 +1137,11 @@ export default function BiometricosSetupIndexPage({
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-6 pt-2">
-                        {/* Sección 1: Localidad y Ubicación Física */}
+                        {/* Sección 1: Localidad y Ubicación Física y Características de Instalación */}
                         <div className="rounded-xl border bg-muted/20 p-4 space-y-4">
                             <h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
                                 <MapPin className="h-4 w-4" />
-                                1. Localidad y Ubicación Física
+                                1. Localidad y Ubicación Física y Características de Instalación
                             </h3>
 
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -1221,73 +1221,67 @@ export default function BiometricosSetupIndexPage({
                                     />
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Sección 2: Características de Instalación */}
-                        <div className="rounded-xl border border-amber-200/80 bg-amber-50/20 dark:border-amber-900/40 dark:bg-amber-950/10 p-4 space-y-4">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-2 border-b border-amber-200/60 dark:border-amber-900/40 pb-2">
-                                <Wrench className="h-4 w-4 text-amber-600" />
-                                2. Características de Instalación
-                            </h3>
+                            <div className="pt-3 border-t border-border/60">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="dimensiones" className="flex items-center gap-1.5">
+                                            <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+                                            Dimensiones
+                                        </Label>
+                                        <Input
+                                            id="dimensiones"
+                                            placeholder="Ej. 185 x 85 x 20 mm / 7.2 x 3.3 in"
+                                            value={data.dimensiones}
+                                            onChange={(e) => setData('dimensiones', e.target.value)}
+                                        />
+                                    </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="dimensiones" className="flex items-center gap-1.5">
-                                        <Ruler className="h-3.5 w-3.5 text-amber-600" />
-                                        2. Dimensiones
-                                    </Label>
-                                    <Input
-                                        id="dimensiones"
-                                        placeholder="Ej. 185 x 85 x 20 mm / 7.2 x 3.3 in"
-                                        value={data.dimensiones}
-                                        onChange={(e) => setData('dimensiones', e.target.value)}
-                                    />
-                                </div>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="instalacion_fisica" className="flex items-center gap-1.5">
+                                            <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                                            Instalación física
+                                        </Label>
+                                        <Input
+                                            id="instalacion_fisica"
+                                            placeholder="Ej. Montaje en pared, pedestal metálico, soporte brazo..."
+                                            value={data.instalacion_fisica}
+                                            onChange={(e) => setData('instalacion_fisica', e.target.value)}
+                                        />
+                                    </div>
 
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="instalacion_fisica" className="flex items-center gap-1.5">
-                                        <Layers className="h-3.5 w-3.5 text-amber-600" />
-                                        3. Instalación física
-                                    </Label>
-                                    <Input
-                                        id="instalacion_fisica"
-                                        placeholder="Ej. Montaje en pared, pedestal metálico, soporte brazo..."
-                                        value={data.instalacion_fisica}
-                                        onChange={(e) => setData('instalacion_fisica', e.target.value)}
-                                    />
-                                </div>
+                                    <div className="md:col-span-2 space-y-1.5">
+                                        <Label htmlFor="instalacion_comentario">Comentarios de Instalación</Label>
+                                        <Textarea
+                                            id="instalacion_comentario"
+                                            rows={2}
+                                            placeholder="Detalles de cableado UTP, alimentación PoE/12V, altura de montaje, canalización..."
+                                            value={data.instalacion_comentario}
+                                            onChange={(e) => setData('instalacion_comentario', e.target.value)}
+                                        />
+                                    </div>
 
-                                <div className="md:col-span-2 space-y-1.5">
-                                    <Label htmlFor="instalacion_comentario">4. Comentarios de Instalación</Label>
-                                    <Textarea
-                                        id="instalacion_comentario"
-                                        rows={2}
-                                        placeholder="Detalles de cableado UTP, alimentación PoE/12V, altura de montaje, canalización..."
-                                        value={data.instalacion_comentario}
-                                        onChange={(e) => setData('instalacion_comentario', e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="md:col-span-2">
-                                    <PhotoDropzone
-                                        id="instalacion_foto"
-                                        label="5. Foto de la Instalación Física"
-                                        description="Arrastra y suelta aquí la fotografía de la instalación, o haz clic para seleccionarla."
-                                        value={data.instalacion_foto}
-                                        onChange={(val) => setData('instalacion_foto', val)}
-                                        onViewFull={openLightbox}
-                                    />
+                                    <div className="md:col-span-2">
+                                        <PhotoDropzone
+                                            id="instalacion_foto"
+                                            label="Foto de la Instalación Física"
+                                            description="Arrastra y suelta aquí la fotografía de la instalación, o haz clic para seleccionarla."
+                                            value={data.instalacion_foto}
+                                            onChange={(val) => setData('instalacion_foto', val)}
+                                            onViewFull={openLightbox}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Sección 3: Equipos Biométricos con Tabs (Inicial y Final) */}
+                        {/* Sección 2: Equipos Biométricos con Tabs (Inicial y Final) */}
                         <div className="rounded-xl border bg-card p-4 space-y-3">
                             <Tabs defaultValue="inicial" className="w-full">
                                 <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
                                         <Cpu className="h-4 w-4 text-primary" />
-                                        3. Equipos Biométricos
+                                        2. Equipos Biométricos
                                     </h3>
                                     <TabsList className="grid w-full sm:w-64 grid-cols-2">
                                         <TabsTrigger value="inicial" className="gap-1.5 font-medium">
