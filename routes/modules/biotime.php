@@ -17,6 +17,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Acciones (sincronizar / vincular)
     Route::middleware(['permission:biotime.manage'])->group(function () {
         Route::post('/biotime/sync', [BioTimeController::class, 'syncNow'])->name('biotime.sync');
+        Route::delete('/biotime/dispositivos/{biotimeDispositivo}', [BioTimeController::class, 'excluirDispositivo'])->name('biotime.dispositivos.excluir');
+        Route::patch('/biotime/dispositivos/{biotimeDispositivo}/restaurar', [BioTimeController::class, 'restaurarDispositivo'])->name('biotime.dispositivos.restaurar');
         Route::post('/biotime/empleados/auto-vincular', [BioTimeController::class, 'autoVincular'])->name('biotime.empleados.auto-vincular');
         Route::put('/biotime/empleados/{biotimeEmpleado}/vincular', [BioTimeController::class, 'vincular'])->name('biotime.empleados.vincular');
         Route::get('/biotime/fotos/exportar', [BioTimeController::class, 'exportarFotos'])->name('biotime.fotos.exportar');
