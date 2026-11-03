@@ -219,7 +219,11 @@ class RelojUbicacionController extends Controller
         $file = $request->file('file');
         $empresaId = $request->user()?->empresa_id;
 
-        $result = $importService->parsePreview($file->getRealPath(), $scope, $empresaId);
+        $path = $file->getRealPath() ?: $file->getPathname();
+        \Log::info("previewImport: path={$path}, size=" . filesize($path) . ", exists=" . (file_exists($path) ? '1' : '0') . ", scope={$scope}");
+
+        $result = $importService->parsePreview($path, $scope, $empresaId);
+        \Log::info("previewImport result: success=" . ($result['success'] ? '1' : '0') . ", msg=" . ($result['message'] ?? ''));
 
         return response()->json($result);
     }
@@ -237,21 +241,30 @@ class RelojUbicacionController extends Controller
         $scope = $request->input('scope', 'ambos');
         $file = $request->file('file');
         $empresaId = $request->user()?->empresa_id;
+        $path = $file->getRealPath() ?: $file->getPathname();
 
-        $response = $importService->importFromFile($file->getRealPath(), $scope, $empresaId);
+        $response = $importService->importFromFile($path, $scope, $empresaId);
 
         if (! ($response['success'] ?? false)) {
             return response()->json($response, 422);
         }
 
         $res = $response['result'];
-        $msg = sprintf(
-            'Importación completada: Ubicaciones (%d nuevas, %d actualizadas) | Biométricos Setup (%d nuevos, %d actualizados).',
-            $res['ubicaciones_creadas'],
-            $res['ubicaciones_actualizadas'],
-            $res['biometricos_creados'],
-            $res['biometricos_actualizados']
-        );
+        if ($scope === 'biometricos') {
+            $msg = sprintf(
+                'Importación de Biométricos Setup completada: %d equipos registrados, %d actualizados.',
+                $res['biometricos_creados'],
+                $res['biometricos_actualizados']
+            );
+        } else {
+            $msg = sprintf(
+                'Importación completada: Ubicaciones (%d nuevas, %d actualizadas) | Biométricos Setup (%d nuevos, %d actualizados).',
+                $res['ubicaciones_creadas'],
+                $res['ubicaciones_actualizadas'],
+                $res['biometricos_creados'],
+                $res['biometricos_actualizados']
+            );
+        }
 
         return response()->json([
             'success' => true,

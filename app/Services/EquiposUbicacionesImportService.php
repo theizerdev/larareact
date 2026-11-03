@@ -3,14 +3,19 @@
 namespace App\Services;
 
 use App\Models\Empresa;
+use App\Models\RelojCedulaActividadCatalogo;
 use App\Models\RelojEquipoBiometrico;
 use App\Models\RelojUbicacion;
 use App\Models\Sucursal;
+use App\Services\RelojCedulaService;
 use Illuminate\Support\Facades\DB;
 use ZipArchive;
 
 class EquiposUbicacionesImportService
 {
+    public function __construct(
+        protected RelojCedulaService $cedulaService
+    ) {}
     /**
      * Analiza el archivo Excel (.xlsx) y devuelve la vista previa separada
      * para Ubicaciones (Pestaña 3) y Biométricos Setup (Pestaña 2).
@@ -53,12 +58,32 @@ class EquiposUbicacionesImportService
             }
         }
 
+        $cedulaStats = [
+            'detected' => false,
+            'sheet_title' => null,
+            'total_actividades' => 0,
+            'etapas' => 0,
+        ];
+
+        $cedulaSheet = $this->findCedulaSheet($sheets);
+        if ($cedulaSheet !== null) {
+            $sheetNamesFound['cedula'] = $cedulaSheet['title'];
+            $cedulaActivities = $this->cedulaService->parseRowsToActivities($cedulaSheet['rows']);
+            $cedulaStats = [
+                'detected' => true,
+                'sheet_title' => $cedulaSheet['title'],
+                'total_actividades' => count($cedulaActivities),
+                'etapas' => count(array_unique(array_column($cedulaActivities, 'etapa_num'))),
+            ];
+        }
+
         if (empty($ubicacionesRecords) && empty($biometricosRecords)) {
             return [
                 'success' => false,
                 'message' => 'No se encontraron datos compatibles con "Biométricos setup" ni "Ubicaciones (2)" en el archivo.',
                 'ubicaciones' => ['records' => [], 'stats' => ['total' => 0, 'nuevos' => 0, 'actualizar' => 0]],
                 'biometricos' => ['records' => [], 'stats' => ['total' => 0, 'nuevos' => 0, 'actualizar' => 0]],
+                'cedula' => $cedulaStats,
             ];
         }
 
@@ -77,6 +102,7 @@ class EquiposUbicacionesImportService
         return [
             'success' => true,
             'sheets_detected' => $sheetNamesFound,
+            'cedula' => $cedulaStats,
             'ubicaciones' => [
                 'records' => $ubicacionesRecords,
                 'stats' => $ubicacionesStats,
@@ -119,9 +145,19 @@ class EquiposUbicacionesImportService
             'ubicaciones_actualizadas' => 0,
             'biometricos_creados' => 0,
             'biometricos_actualizados' => 0,
+            'cedulas_sincronizadas' => 0,
         ];
 
-        DB::transaction(function () use ($ubicacionesData, $biometricosData, $empresaId, &$result) {
+        // Sincronizar catálogo de Cédula de Instalación si viene en el archivo
+        $cedulaSheet = $this->findCedulaSheet($sheets);
+        $catalogoCedula = null;
+        if ($cedulaSheet !== null) {
+            $catalogoCedula = $this->cedulaService->syncCatalogoFromRows($cedulaSheet['rows']);
+        } else {
+            $catalogoCedula = RelojCedulaActividadCatalogo::where('activo', true)->orderBy('orden')->get();
+        }
+
+        DB::transaction(function () use ($ubicacionesData, $biometricosData, $empresaId, $catalogoCedula, &$result) {
             // Mapa de sucursales para intentar vincular automáticamente si coincide nombre/ciudad
             $sucursales = Sucursal::withoutGlobalScopes()
                 ->where('empresa_id', $empresaId)
@@ -187,7 +223,28 @@ class EquiposUbicacionesImportService
                     ? (int) $bRow['numero_localidad']
                     : null;
 
+                $sucursalId = $bRow['sucursal_id'] ?? $this->matchSucursalId($sucursales, $localidadNombre, $bRow['ciudad'] ?? null);
+
                 $ubicacionMatched = $this->matchRelojUbicacion($todasUbicaciones, $numLocalidad, $localidadNombre);
+
+                // Si no existe la ubicación aún en reloj_ubicaciones, crearla asociada a la sucursal
+                if (! $ubicacionMatched) {
+                    $ubicacionMatched = RelojUbicacion::withoutGlobalScopes()->create([
+                        'empresa_id' => $empresaId,
+                        'sucursal_id' => $sucursalId,
+                        'numero_localidad' => $numLocalidad,
+                        'planta' => $localidadNombre,
+                        'direccion' => null,
+                        'estado' => $this->cleanText($bRow['estado'] ?? '') ?: null,
+                        'ciudad' => $this->cleanText($bRow['ciudad'] ?? '') ?: null,
+                        'legacy' => $this->normalizeLegacy($bRow['legacy'] ?? null),
+                        'activo' => true,
+                    ]);
+                    $todasUbicaciones->push($ubicacionMatched);
+                    $result['ubicaciones_creadas']++;
+                } elseif (! $ubicacionMatched->sucursal_id && $sucursalId) {
+                    $ubicacionMatched->update(['sucursal_id' => $sucursalId]);
+                }
 
                 $existingEquipo = $this->findMatchingExistingEquipo(
                     $equiposExistentes,
@@ -199,17 +256,25 @@ class EquiposUbicacionesImportService
 
                 $payload = [
                     'empresa_id' => $empresaId,
+                    'sucursal_id' => $sucursalId,
                     'reloj_ubicacion_id' => $ubicacionMatched?->id,
                     'legacy' => $this->normalizeLegacy($bRow['legacy'] ?? null) ?? $ubicacionMatched?->legacy,
                     'localidad_nombre' => $localidadNombre,
                     'numero_localidad' => $numLocalidad ?? $ubicacionMatched?->numero_localidad,
                     'ubicacion_fisica' => $this->cleanText($bRow['ubicacion_fisica'] ?? '') ?: null,
+                    'dimensiones' => $this->cleanText($bRow['dimensiones'] ?? '') ?: ($existingEquipo?->dimensiones ?? null),
+                    'instalacion_fisica' => $this->cleanText($bRow['instalacion_fisica'] ?? '') ?: ($existingEquipo?->instalacion_fisica ?? null),
+                    'instalacion_comentario' => $this->cleanText($bRow['instalacion_comentario'] ?? '') ?: ($existingEquipo?->instalacion_comentario ?? null),
+                    'actual_marca' => $this->cleanText($bRow['actual_marca'] ?? '') ?: ($existingEquipo?->actual_marca ?? null),
+                    'actual_modelo' => $this->cleanText($bRow['actual_modelo'] ?? '') ?: ($existingEquipo?->actual_modelo ?? null),
                     'actual_no_serie' => $this->cleanText($bRow['actual_no_serie'] ?? '') ?: null,
                     'actual_ip' => $this->cleanText($bRow['actual_ip'] ?? '') ?: null,
                     'actual_mascara' => $this->cleanText($bRow['actual_mascara'] ?? '') ?: null,
                     'actual_gateway' => $this->cleanText($bRow['actual_gateway'] ?? '') ?: null,
                     'actual_instalado' => $this->parseBoolean($bRow['actual_instalado'] ?? false),
                     'actual_comentario' => $this->cleanText($bRow['actual_comentario'] ?? '') ?: null,
+                    'actual_responsable' => $this->cleanText($bRow['actual_responsable'] ?? '') ?: ($existingEquipo?->actual_responsable ?? null),
+                    'actual_factible_acrilico' => $this->cleanText($bRow['actual_factible_acrilico'] ?? '') ?: ($existingEquipo?->actual_factible_acrilico ?? null),
                     'nuevo_marca' => $this->cleanText($bRow['nuevo_marca'] ?? '') ?: ($existingEquipo?->nuevo_marca ?? null),
                     'nuevo_modelo' => $this->cleanText($bRow['nuevo_modelo'] ?? '') ?: ($existingEquipo?->nuevo_modelo ?? null),
                     'nuevo_no_serie' => $this->cleanText($bRow['nuevo_no_serie'] ?? '') ?: null,
@@ -219,17 +284,28 @@ class EquiposUbicacionesImportService
                     'nuevo_instalado' => $this->parseBoolean($bRow['nuevo_instalado'] ?? false),
                     'nuevo_comentario' => $this->cleanText($bRow['nuevo_comentario'] ?? '') ?: null,
                     'nuevo_mac_address' => $this->cleanText($bRow['nuevo_mac_address'] ?? '') ?: null,
+                    'nuevo_responsable' => $this->cleanText($bRow['nuevo_responsable'] ?? '') ?: ($existingEquipo?->nuevo_responsable ?? null),
+                    'nuevo_factible_acrilico' => $this->cleanText($bRow['nuevo_factible_acrilico'] ?? '') ?: ($existingEquipo?->nuevo_factible_acrilico ?? null),
                     'activo' => true,
                 ];
 
+                $targetEquipo = null;
                 if ($existingEquipo) {
                     $usedEquipoIds[$existingEquipo->id] = true;
                     $existingEquipo->update($payload);
+                    $targetEquipo = $existingEquipo;
                     $result['biometricos_actualizados']++;
                 } else {
                     $created = RelojEquipoBiometrico::withoutGlobalScopes()->create($payload);
                     $usedEquipoIds[$created->id] = true;
+                    $targetEquipo = $created;
                     $result['biometricos_creados']++;
+                }
+
+                if ($targetEquipo) {
+                    $grupoInst = $bRow['grupo_inst'] ?? null;
+                    $this->cedulaService->syncCedulaParaEquipo($targetEquipo, $grupoInst, $catalogoCedula);
+                    $result['cedulas_sincronizadas']++;
                 }
             }
         });
@@ -323,7 +399,7 @@ class EquiposUbicacionesImportService
     }
 
     /**
-     * Extrae y valida las filas de la pestaña Biométricos setup.
+     * Extrae y valida las filas de la pestaña Biométricos setup / Biométricos setup (2).
      */
     protected function extractBiometricosFromRows(array $rows, int $empresaId): array
     {
@@ -332,15 +408,123 @@ class EquiposUbicacionesImportService
             ->orderBy('id')
             ->get();
 
-        // En Biométricos setup, la fila 1 tiene "Equipos actuales" / "Nuevos biométricos" y la fila 2 tiene los encabezados A..Q
-        $headerRowIdx = 2;
+        $sucursales = Sucursal::withoutGlobalScopes()
+            ->where('empresa_id', $empresaId)
+            ->get();
+
+        // En Inventario Total / Biométricos setup (2), buscar la fila de encabezados
+        $headerRowIdx = 1;
         foreach ($rows as $rIdx => $cells) {
             $norm = array_map(fn ($v) => $this->normalizeKey((string) $v), $cells);
-            if (in_array('localidad', $norm, true) && in_array('ubicacion', $norm, true)) {
+            if (in_array('localidad', $norm, true) || (in_array('ubicacion', $norm, true) && (in_array('gateway', $norm, true) || in_array('ip', $norm, true) || in_array('planta', $norm, true)))) {
                 $headerRowIdx = $rIdx;
                 break;
             }
         }
+
+        // Mapear columnas dinámicamente según los nombres de encabezados
+        $headerCells = $rows[$headerRowIdx] ?? [];
+        $colMap = [];
+        foreach ($headerCells as $colLetter => $rawHeader) {
+            $normH = $this->normalizeKey((string) $rawHeader);
+            if ($normH === '') {
+                continue;
+            }
+
+            if (str_contains($normH, 'legacy') && !isset($colMap['legacy'])) {
+                $colMap['legacy'] = $colLetter;
+            } elseif ((str_contains($normH, 'localidad') || str_contains($normH, 'planta')) && !isset($colMap['localidad'])) {
+                $colMap['localidad'] = $colLetter;
+            } elseif ((str_contains($normH, 'dir') || str_contains($normH, 'num')) && !isset($colMap['numero_localidad'])) {
+                $colMap['numero_localidad'] = $colLetter;
+            } elseif (str_contains($normH, 'ciudad') && !isset($colMap['ciudad'])) {
+                $colMap['ciudad'] = $colLetter;
+            } elseif (str_contains($normH, 'estado') && !isset($colMap['estado'])) {
+                $colMap['estado'] = $colLetter;
+            } elseif (str_contains($normH, 'ubicacion') && !isset($colMap['ubicacion'])) {
+                $colMap['ubicacion'] = $colLetter;
+            } elseif (str_contains($normH, 'observacion')) {
+                // Columna U en Inventario Total: Observación de Instalación
+                $colMap['instalacion_comentario'] = $colLetter;
+            } elseif (str_contains($normH, 'acrilico') || str_contains($normH, 'factible')) {
+                // Columna V en Inventario Total: Factible instalar Acrílico
+                $colMap['factible_acrilico'] = $colLetter;
+            } elseif (str_contains($normH, 'dimension')) {
+                $colMap['dimensiones'] = $colLetter;
+            } elseif (str_contains($normH, 'instalacionfisica') || (str_contains($normH, 'instalacion') && str_contains($normH, 'fisica'))) {
+                $colMap['instalacion_fisica'] = $colLetter;
+            } elseif (str_contains($normH, 'marca')) {
+                $colMap['actual_marca'] = $colLetter;
+            } elseif (str_contains($normH, 'modelo')) {
+                $colMap['actual_modelo'] = $colLetter;
+            } elseif (str_contains($normH, 'responsable') || str_contains($normH, 'instalador')) {
+                $colMap['responsable'] = $colLetter;
+            } elseif (str_contains($normH, 'team') && !isset($colMap['team'])) {
+                $colMap['team'] = $colLetter;
+            } elseif (str_contains($normH, 'serie') || str_contains($normH, 'serial')) {
+                if (str_contains($normH, '2') || str_contains($normH, 'nuevo')) {
+                    $colMap['nuevo_no_serie'] = $colLetter;
+                } elseif (!isset($colMap['actual_no_serie'])) {
+                    $colMap['actual_no_serie'] = $colLetter;
+                } else {
+                    $colMap['nuevo_no_serie'] = $colLetter;
+                }
+            } elseif ($normH === 'ip2' || (!str_contains($normH, 'tipo') && str_contains($normH, 'ip') && (str_contains($normH, '2') || str_contains($normH, 'nuevo')))) {
+                $colMap['nuevo_ip'] = $colLetter;
+            } elseif ($normH === 'ip' || (!str_contains($normH, 'tipo') && str_contains($normH, 'ip') && !isset($colMap['actual_ip']))) {
+                $colMap['actual_ip'] = $colLetter;
+            } elseif (str_contains($normH, 'mask') || str_contains($normH, 'subnet') || str_contains($normH, 'mascara')) {
+                if (str_contains($normH, '2') || str_contains($normH, 'nuevo')) {
+                    $colMap['nuevo_mascara'] = $colLetter;
+                } elseif (!isset($colMap['actual_mascara'])) {
+                    $colMap['actual_mascara'] = $colLetter;
+                } else {
+                    $colMap['nuevo_mascara'] = $colLetter;
+                }
+            } elseif (str_contains($normH, 'gateway')) {
+                if (str_contains($normH, '2') || str_contains($normH, 'nuevo')) {
+                    $colMap['nuevo_gateway'] = $colLetter;
+                } elseif (!isset($colMap['actual_gateway'])) {
+                    $colMap['actual_gateway'] = $colLetter;
+                } else {
+                    $colMap['nuevo_gateway'] = $colLetter;
+                }
+            } elseif (str_contains($normH, 'instalado')) {
+                if (str_contains($normH, '2') || str_contains($normH, 'nuevo')) {
+                    $colMap['nuevo_instalado'] = $colLetter;
+                } elseif (!isset($colMap['actual_instalado'])) {
+                    $colMap['actual_instalado'] = $colLetter;
+                } else {
+                    $colMap['nuevo_instalado'] = $colLetter;
+                }
+            } elseif (str_contains($normH, 'comentario')) {
+                if (str_contains($normH, '2') || str_contains($normH, 'nuevo')) {
+                    $colMap['nuevo_comentario'] = $colLetter;
+                } elseif (!isset($colMap['actual_comentario'])) {
+                    $colMap['actual_comentario'] = $colLetter;
+                } else {
+                    $colMap['nuevo_comentario'] = $colLetter;
+                }
+            } elseif (str_contains($normH, 'mac')) {
+                $colMap['nuevo_mac_address'] = $colLetter;
+            }
+        }
+
+        if (!isset($colMap['instalacion_comentario']) && isset($headerCells['U'])) {
+            $colMap['instalacion_comentario'] = 'U';
+        }
+        if (!isset($colMap['factible_acrilico']) && isset($headerCells['V'])) {
+            $colMap['factible_acrilico'] = 'V';
+        }
+
+        $hasCiudadEstado = isset($colMap['ciudad']) || isset($colMap['estado']);
+        $getVal = function(array $cells, string $key, string $fallbackNoOffset, string $fallbackWithOffset) use ($colMap, $hasCiudadEstado) {
+            if (isset($colMap[$key])) {
+                return isset($cells[$colMap[$key]]) ? $this->cleanText($cells[$colMap[$key]]) : '';
+            }
+            $targetLetter = $hasCiudadEstado ? $fallbackWithOffset : $fallbackNoOffset;
+            return isset($cells[$targetLetter]) ? $this->cleanText($cells[$targetLetter]) : '';
+        };
 
         $usedIds = [];
         $records = [];
@@ -350,36 +534,65 @@ class EquiposUbicacionesImportService
                 continue;
             }
 
-            $legacyRaw = $this->cleanText($cells['A'] ?? '');
-            $localidadNombre = $this->cleanText($cells['B'] ?? '');
-            $numRaw = $this->cleanText($cells['C'] ?? '');
-            $ubicacionFisica = $this->cleanText($cells['D'] ?? '');
+            $legacyRaw = $getVal($cells, 'legacy', 'A', 'A');
+            $localidadNombre = $getVal($cells, 'localidad', 'B', 'B');
+            $numRaw = $getVal($cells, 'numero_localidad', 'C', 'C');
+            $ciudad = $getVal($cells, 'ciudad', '', 'D');
+            $estado = $getVal($cells, 'estado', '', 'E');
+            $ubicacionFisica = $getVal($cells, 'ubicacion', 'D', 'F');
 
             if ($localidadNombre === '' && $ubicacionFisica === '') {
                 continue;
             }
 
             $numLocalidad = is_numeric($numRaw) ? (int) $numRaw : null;
+            $sucursalMatchedId = $this->matchSucursalId($sucursales, $localidadNombre, $ciudad);
+
+            $obsInstalacion = $getVal($cells, 'instalacion_comentario', 'U', 'U');
+            $factibleAcrilico = $getVal($cells, 'factible_acrilico', 'V', 'V');
+            $responsableRaw = $getVal($cells, 'responsable', '', '');
+            $teamRaw = $getVal($cells, 'team', 'AB', 'AB');
+            $responsableFinal = $responsableRaw ?: $teamRaw;
+            $grupoInst = $getVal($cells, 'grupo_inst', 'Y', 'Y');
+            $dimensiones = $getVal($cells, 'dimensiones', 'Q', 'Q');
+            $instalacionFisica = $getVal($cells, 'instalacion_fisica', 'R', 'R');
+            $actualMarca = $getVal($cells, 'actual_marca', 'O', 'O');
+            $actualModelo = $getVal($cells, 'actual_modelo', 'P', 'P');
 
             $rowRecord = [
                 'row_number' => $rIdx,
+                'sucursal_id' => $sucursalMatchedId,
                 'legacy' => $this->normalizeLegacy($legacyRaw),
                 'localidad_nombre' => $localidadNombre,
                 'numero_localidad' => $numLocalidad,
+                'ciudad' => $ciudad ?: null,
+                'estado' => $estado ?: null,
                 'ubicacion_fisica' => $ubicacionFisica ?: null,
-                'actual_no_serie' => $this->cleanText($cells['E'] ?? '') ?: null,
-                'actual_ip' => $this->cleanText($cells['F'] ?? '') ?: null,
-                'actual_mascara' => $this->cleanText($cells['G'] ?? '') ?: null,
-                'actual_gateway' => $this->cleanText($cells['H'] ?? '') ?: null,
-                'actual_instalado' => $this->parseBoolean($cells['I'] ?? false),
-                'actual_comentario' => $this->cleanText($cells['J'] ?? '') ?: null,
-                'nuevo_no_serie' => $this->cleanText($cells['K'] ?? '') ?: null,
-                'nuevo_ip' => $this->cleanText($cells['L'] ?? '') ?: null,
-                'nuevo_mascara' => $this->cleanText($cells['M'] ?? '') ?: null,
-                'nuevo_gateway' => $this->cleanText($cells['N'] ?? '') ?: null,
-                'nuevo_instalado' => $this->parseBoolean($cells['O'] ?? false),
-                'nuevo_comentario' => $this->cleanText($cells['P'] ?? '') ?: null,
-                'nuevo_mac_address' => $this->cleanText($cells['Q'] ?? '') ?: null,
+                'dimensiones' => $dimensiones ?: null,
+                'instalacion_fisica' => $instalacionFisica ?: null,
+                'instalacion_comentario' => $obsInstalacion ?: null,
+                'actual_marca' => $actualMarca ?: null,
+                'actual_modelo' => $actualModelo ?: null,
+                'actual_no_serie' => $getVal($cells, 'actual_no_serie', 'E', 'G') ?: null,
+                'actual_ip' => $getVal($cells, 'actual_ip', 'F', 'H') ?: null,
+                'actual_mascara' => $getVal($cells, 'actual_mascara', 'G', 'I') ?: null,
+                'actual_gateway' => $getVal($cells, 'actual_gateway', 'H', 'J') ?: null,
+                'actual_instalado' => $this->parseBoolean($getVal($cells, 'actual_instalado', 'I', 'K')),
+                'actual_comentario' => $getVal($cells, 'actual_comentario', 'J', 'L') ?: null,
+                'actual_responsable' => $responsableFinal ?: null,
+                'actual_factible_acrilico' => $factibleAcrilico ?: null,
+                'nuevo_marca' => $getVal($cells, 'nuevo_marca', '', '') ?: null,
+                'nuevo_modelo' => $getVal($cells, 'nuevo_modelo', '', '') ?: null,
+                'nuevo_no_serie' => $getVal($cells, 'nuevo_no_serie', 'K', 'M') ?: null,
+                'nuevo_ip' => $getVal($cells, 'nuevo_ip', 'L', 'N') ?: null,
+                'nuevo_mascara' => $getVal($cells, 'nuevo_mascara', 'M', 'O') ?: null,
+                'nuevo_gateway' => $getVal($cells, 'nuevo_gateway', 'N', 'P') ?: null,
+                'nuevo_instalado' => $this->parseBoolean($getVal($cells, 'nuevo_instalado', 'O', 'Q')),
+                'nuevo_comentario' => $getVal($cells, 'nuevo_comentario', 'P', 'S') ?: null,
+                'nuevo_mac_address' => $getVal($cells, 'nuevo_mac_address', 'Q', 'R') ?: null,
+                'nuevo_responsable' => $responsableFinal ?: null,
+                'nuevo_factible_acrilico' => $factibleAcrilico ?: null,
+                'grupo_inst' => $grupoInst ?: null,
             ];
 
             $matched = $this->findMatchingExistingEquipo(
@@ -428,32 +641,99 @@ class EquiposUbicacionesImportService
     }
 
     /**
-     * Encuentra la hoja "Biométricos setup" en el libro Excel.
+     * Encuentra la hoja "Inventario Total", "Biométricos setup (2)" o "Biométricos setup" en el libro Excel.
      */
     protected function findBiometricosSetupSheet(array $sheets): ?array
     {
-        // 1. Priorizar coincidencia por título "Biométricos setup"
+        // 1. Prioridad absoluta: "Inventario Total"
         foreach ($sheets as $sheet) {
             $normTitle = $this->normalizeKey($sheet['title']);
-            if (str_contains($normTitle, 'biometricossetup') || str_contains($normTitle, 'biometricos')) {
-                // Verificar que no sea el checklist
-                if (! str_contains($normTitle, 'checklist')) {
-                    return $sheet;
-                }
+            if (
+                $normTitle === 'inventariototal' ||
+                str_contains($normTitle, 'inventariototal') ||
+                (str_contains($normTitle, 'inventario') && str_contains($normTitle, 'total'))
+            ) {
+                return $sheet;
             }
         }
 
-        // 2. Buscar por estructura de columnas (Localidad, Ubicación, Mask/Subnet, Gateway)
+        // 2. Prioridad secundaria: "Biométricos setup (2)" (exacta o variantes de setup 2)
         foreach ($sheets as $sheet) {
+            $normTitle = $this->normalizeKey($sheet['title']);
+            if (
+                $normTitle === 'biometricossetup2' ||
+                str_contains($normTitle, 'biometricossetup2') ||
+                (str_contains($normTitle, 'setup') && str_contains($normTitle, '2'))
+            ) {
+                return $sheet;
+            }
+        }
+
+        // 3. Coincidencia para "Biométricos setup" estándar (excluyendo 'actuales', 'checklist', 'foto')
+        foreach ($sheets as $sheet) {
+            $normTitle = $this->normalizeKey($sheet['title']);
+            if (str_contains($normTitle, 'actual') || str_contains($normTitle, 'checklist') || str_contains($normTitle, 'foto')) {
+                continue;
+            }
+            if (str_contains($normTitle, 'biometricossetup') || (str_contains($normTitle, 'biometrico') && str_contains($normTitle, 'setup'))) {
+                return $sheet;
+            }
+        }
+
+        // 4. Buscar por estructura de columnas (Localidad, Ubicación, Mask/Subnet, Gateway)
+        // excluyendo expresamente hojas de checklist, fotos o auditorías de 'actuales'
+        foreach ($sheets as $sheet) {
+            $normTitle = $this->normalizeKey($sheet['title']);
+            if (str_contains($normTitle, 'actual') || str_contains($normTitle, 'checklist') || str_contains($normTitle, 'foto')) {
+                continue;
+            }
             foreach (array_slice($sheet['rows'], 0, 5, true) as $row) {
                 $norm = array_map(fn ($v) => $this->normalizeKey((string) $v), $row);
-                if (in_array('localidad', $norm, true) && in_array('gateway', $norm, true)) {
+                if (in_array('localidad', $norm, true) && (in_array('ubicacion', $norm, true) || in_array('gateway', $norm, true))) {
                     return $sheet;
                 }
             }
         }
 
         return null;
+    }
+
+    /**
+     * Encuentra la hoja "Cédula de Instalación" en el libro Excel.
+     */
+    public function findCedulaSheet(array $sheets): ?array
+    {
+        foreach ($sheets as $sheet) {
+            $normTitle = $this->normalizeKey($sheet['title']);
+            if (str_contains($normTitle, 'cedula') && str_contains($normTitle, 'instalacion')) {
+                return $sheet;
+            }
+        }
+
+        foreach ($sheets as $sheet) {
+            $normTitle = $this->normalizeKey($sheet['title']);
+            if (str_contains($normTitle, 'cedula')) {
+                return $sheet;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Extrae las actividades de la Cédula de Instalación a partir de sus filas.
+     */
+    public function extractCedulaActivitiesFromRows(array $rows): array
+    {
+        return $this->cedulaService->parseRowsToActivities($rows);
+    }
+
+    /**
+     * Sincroniza el catálogo maestro de actividades de la Cédula.
+     */
+    public function syncCedulaCatalogo(array $activities): array
+    {
+        return $this->cedulaService->syncCatalogoFromRows($activities)->toArray();
     }
 
     /**
@@ -590,7 +870,8 @@ class EquiposUbicacionesImportService
     {
         if (class_exists(ZipArchive::class)) {
             $zip = new ZipArchive();
-            if ($zip->open($filePath) === true) {
+            $openRes = $zip->open($filePath);
+            if ($openRes === true) {
                 $entries = [];
                 for ($i = 0; $i < $zip->numFiles; $i++) {
                     $name = $zip->getNameIndex($i);
@@ -598,6 +879,24 @@ class EquiposUbicacionesImportService
                 }
                 $zip->close();
                 return $entries;
+            }
+
+            // Si falló abrir el archivo temporal directamente (común en temp files sin extensión .xlsx en Windows),
+            // intentar copiar a un archivo temporal con extensión .xlsx
+            $tmpCopy = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'smurfit_zip_' . uniqid() . '.xlsx';
+            if (@copy($filePath, $tmpCopy)) {
+                $openResCopy = $zip->open($tmpCopy);
+                if ($openResCopy === true) {
+                    $entries = [];
+                    for ($i = 0; $i < $zip->numFiles; $i++) {
+                        $name = $zip->getNameIndex($i);
+                        $entries[$name] = $zip->getFromIndex($i);
+                    }
+                    $zip->close();
+                    @unlink($tmpCopy);
+                    return $entries;
+                }
+                @unlink($tmpCopy);
             }
         }
 
@@ -622,6 +921,11 @@ class EquiposUbicacionesImportService
             );
             $name = substr($data, $offset + 46, $hdr['name_len']);
             $offset += 46 + $hdr['name_len'] + $hdr['extra_len'] + $hdr['comment_len'];
+
+            // Descomprimir únicamente archivos XML y rels necesarios para parsear las hojas
+            if (! str_ends_with($name, '.xml') && ! str_ends_with($name, '.rels')) {
+                continue;
+            }
 
             $lhdr = unpack('vname_len/vextra_len', substr($data, $hdr['local_offset'] + 26, 4));
             $dataStart = $hdr['local_offset'] + 30 + $lhdr['name_len'] + $lhdr['extra_len'];
@@ -751,15 +1055,27 @@ class EquiposUbicacionesImportService
 
     protected function matchSucursalId($sucursales, string $planta, ?string $ciudad): ?int
     {
-        $normPlanta = $this->cleanPlantComparisonKey($planta);
-        $normCiudad = $this->normalizeKey((string) $ciudad);
+        $targetNorm = $this->normalizeKey($planta);
+        $targetClean = $this->cleanPlantComparisonKey($planta);
 
+        // 1. Coincidencia exacta completa por nombre normalizado
         foreach ($sucursales as $suc) {
-            $normSuc = $this->cleanPlantComparisonKey($suc->nombre);
-            if ($normSuc !== '' && (str_contains($normPlanta, $normSuc) || str_contains($normSuc, $normPlanta))) {
+            if ($this->normalizeKey($suc->nombre) === $targetNorm) {
                 return $suc->id;
             }
-            if ($normCiudad !== '' && strlen($normCiudad) > 3 && str_contains($normSuc, $normCiudad)) {
+        }
+
+        // 2. Coincidencia exacta sin sufijo entre paréntesis como (LSKM), (LSKNA), etc.
+        foreach ($sucursales as $suc) {
+            if ($this->cleanPlantComparisonKey($suc->nombre) === $targetClean) {
+                return $suc->id;
+            }
+        }
+
+        // 3. Coincidencia por subcadena fuerte de nombre de planta
+        foreach ($sucursales as $suc) {
+            $normSuc = $this->cleanPlantComparisonKey($suc->nombre);
+            if ($normSuc !== '' && (str_contains($targetClean, $normSuc) || str_contains($normSuc, $targetClean))) {
                 return $suc->id;
             }
         }

@@ -6,6 +6,7 @@ use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -20,6 +21,7 @@ class RelojEquipoBiometrico extends Model
         return LogOptions::defaults()
             ->logOnly([
                 'empresa_id',
+                'sucursal_id',
                 'reloj_ubicacion_id',
                 'legacy',
                 'localidad_nombre',
@@ -34,12 +36,16 @@ class RelojEquipoBiometrico extends Model
                 'actual_ip',
                 'actual_mac_address',
                 'actual_instalado',
+                'actual_responsable',
+                'actual_factible_acrilico',
                 'nuevo_marca',
                 'nuevo_modelo',
                 'nuevo_no_serie',
                 'nuevo_ip',
                 'nuevo_mac_address',
                 'nuevo_instalado',
+                'nuevo_responsable',
+                'nuevo_factible_acrilico',
                 'activo',
             ])
             ->logOnlyDirty()
@@ -48,6 +54,7 @@ class RelojEquipoBiometrico extends Model
 
     protected $fillable = [
         'empresa_id',
+        'sucursal_id',
         'reloj_ubicacion_id',
         'legacy',
         'localidad_nombre',
@@ -66,6 +73,8 @@ class RelojEquipoBiometrico extends Model
         'actual_mac_address',
         'actual_instalado',
         'actual_comentario',
+        'actual_responsable',
+        'actual_factible_acrilico',
         'actual_foto',
         'nuevo_marca',
         'nuevo_modelo',
@@ -75,6 +84,8 @@ class RelojEquipoBiometrico extends Model
         'nuevo_gateway',
         'nuevo_instalado',
         'nuevo_comentario',
+        'nuevo_responsable',
+        'nuevo_factible_acrilico',
         'nuevo_mac_address',
         'nuevo_foto',
         'activo',
@@ -98,6 +109,16 @@ class RelojEquipoBiometrico extends Model
     public function ubicacion(): BelongsTo
     {
         return $this->belongsTo(RelojUbicacion::class, 'reloj_ubicacion_id');
+    }
+
+    public function sucursal(): BelongsTo
+    {
+        return $this->belongsTo(Sucursal::class, 'sucursal_id');
+    }
+
+    public function cedula(): HasOne
+    {
+        return $this->hasOne(RelojBiometricoCedula::class, 'reloj_equipo_biometrico_id');
     }
 }
 

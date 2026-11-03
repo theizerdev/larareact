@@ -3,6 +3,7 @@ import {
     AlertTriangle,
     Camera,
     CheckCircle2,
+    ClipboardCheck,
     Cpu,
     FileSpreadsheet,
     Image as ImageIcon,
@@ -15,6 +16,7 @@ import {
     Plus,
     Ruler,
     Server,
+    ShieldCheck,
     Sparkles,
     ToggleRight,
     Trash2,
@@ -56,6 +58,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -65,6 +68,7 @@ import { cleanParams, cn } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
 import { notifyError } from '@/utils/notifications';
 import EquiposUbicacionesImportModal from '../Partials/EquiposUbicacionesImportModal';
+import CedulaInstalacionTab from './Partials/CedulaInstalacionTab';
 
 interface UbicacionOption {
     id: number;
@@ -76,9 +80,18 @@ interface UbicacionOption {
     direccion: string | null;
 }
 
+interface SucursalOption {
+    id: number;
+    nombre: string;
+    codigo_numeral: string;
+    zona_horaria: string;
+    direccion?: string | null;
+}
+
 interface RelojEquipoBiometrico {
     id: number;
     empresa_id: number | null;
+    sucursal_id?: number | null;
     reloj_ubicacion_id: number | null;
     legacy: string | null;
     localidad_nombre: string;
@@ -101,6 +114,8 @@ interface RelojEquipoBiometrico {
     actual_mac_address: string | null;
     actual_instalado: boolean;
     actual_comentario: string | null;
+    actual_responsable?: string | null;
+    actual_factible_acrilico?: string | null;
     actual_foto: string | null;
 
     // Equipo Final (Nuevo)
@@ -113,10 +128,22 @@ interface RelojEquipoBiometrico {
     nuevo_mac_address: string | null;
     nuevo_instalado: boolean;
     nuevo_comentario: string | null;
+    nuevo_responsable?: string | null;
+    nuevo_factible_acrilico?: string | null;
     nuevo_foto: string | null;
 
     activo: boolean;
+    sucursal?: SucursalOption | null;
     ubicacion?: UbicacionOption | null;
+    cedula?: {
+        id: number;
+        porcentaje_avance: number;
+        total_actividades: number;
+        actividades_completadas: number;
+        estado: 'pendiente' | 'en_proceso' | 'completada';
+        etapa_actual_num: number;
+        sub_etapa_actual_letra: string;
+    } | null;
 }
 
 interface BiometricosSetupPageProps {
@@ -129,12 +156,14 @@ interface BiometricosSetupPageProps {
         pendientes_ubicacion: number;
         por_legacy: Record<string, number>;
     };
+    sucursales: SucursalOption[];
     ubicacionesCatalogo: UbicacionOption[];
     legaciesDisponibles: string[];
     empresas: { id: number; razon_social: string }[];
     filters: {
         search?: string;
         legacy?: string;
+        sucursal_id?: string;
         reloj_ubicacion_id?: string;
         numero_localidad?: string;
         actual_instalado?: string;
@@ -146,6 +175,7 @@ interface BiometricosSetupPageProps {
 
 const initialForm = {
     empresa_id: '' as string | number,
+    sucursal_id: '' as string | number,
     reloj_ubicacion_id: '' as string | number,
     legacy: '',
     localidad_nombre: '',
@@ -168,6 +198,8 @@ const initialForm = {
     actual_mac_address: '',
     actual_instalado: true,
     actual_comentario: '',
+    actual_responsable: '',
+    actual_factible_acrilico: '',
     actual_foto: '',
 
     // Equipo Final
@@ -180,6 +212,8 @@ const initialForm = {
     nuevo_mac_address: '',
     nuevo_instalado: false,
     nuevo_comentario: '',
+    nuevo_responsable: '',
+    nuevo_factible_acrilico: '',
     nuevo_foto: '',
 
     activo: true,
@@ -398,7 +432,8 @@ function PhotoDropzone({
 export default function BiometricosSetupIndexPage({
     biometricos,
     stats,
-    ubicacionesCatalogo,
+    sucursales = [],
+    ubicacionesCatalogo = [],
     legaciesDisponibles,
     empresas,
     filters,
@@ -414,7 +449,7 @@ export default function BiometricosSetupIndexPage({
 
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [legacyFilter, setLegacyFilter] = useState(filters.legacy || 'all');
-    const [ubicacionFilter, setUbicacionFilter] = useState(filters.reloj_ubicacion_id || 'all');
+    const [ubicacionFilter, setUbicacionFilter] = useState(filters.sucursal_id || filters.reloj_ubicacion_id || 'all');
     const [numLocalidadFilter, setNumLocalidadFilter] = useState(filters.numero_localidad || '');
     const [actualInstaladoFilter, setActualInstaladoFilter] = useState(filters.actual_instalado || 'all');
     const [nuevoInstaladoFilter, setNuevoInstaladoFilter] = useState(filters.nuevo_instalado || 'all');
@@ -427,6 +462,15 @@ export default function BiometricosSetupIndexPage({
 
     // Lightbox para vista ampliada de imágenes
     const [lightboxImage, setLightboxImage] = useState<{ src: string; title: string } | null>(null);
+
+    // Modal de Cédula de Instalación
+    const [cedulaModalItem, setCedulaModalItem] = useState<RelojEquipoBiometrico | null>(null);
+    const [isCedulaModalOpen, setIsCedulaModalOpen] = useState(false);
+
+    const handleOpenCedulaModal = (item: RelojEquipoBiometrico) => {
+        setCedulaModalItem(item);
+        setIsCedulaModalOpen(true);
+    };
 
     const { data, setData, reset, errors, processing } = useForm(initialForm);
 
@@ -443,6 +487,7 @@ export default function BiometricosSetupIndexPage({
                 cleanParams({
                     search: searchTerm,
                     legacy: legacyFilter === 'all' ? '' : legacyFilter,
+                    sucursal_id: ubicacionFilter === 'all' ? '' : ubicacionFilter,
                     reloj_ubicacion_id: ubicacionFilter === 'all' ? '' : ubicacionFilter,
                     numero_localidad: numLocalidadFilter,
                     actual_instalado: actualInstaladoFilter === 'all' ? '' : actualInstaladoFilter,
@@ -470,6 +515,7 @@ export default function BiometricosSetupIndexPage({
         setEditingItem(item);
         setData({
             empresa_id: item.empresa_id ?? (empresas[0]?.id || ''),
+            sucursal_id: item.sucursal_id ?? item.reloj_ubicacion_id ?? '',
             reloj_ubicacion_id: item.reloj_ubicacion_id ?? '',
             legacy: item.legacy || '',
             localidad_nombre: item.localidad_nombre || '',
@@ -490,6 +536,8 @@ export default function BiometricosSetupIndexPage({
             actual_mac_address: item.actual_mac_address || '',
             actual_instalado: Boolean(item.actual_instalado),
             actual_comentario: item.actual_comentario || '',
+            actual_responsable: item.actual_responsable || '',
+            actual_factible_acrilico: item.actual_factible_acrilico || '',
             actual_foto: item.actual_foto || '',
 
             nuevo_marca: item.nuevo_marca || '',
@@ -501,6 +549,8 @@ export default function BiometricosSetupIndexPage({
             nuevo_mac_address: item.nuevo_mac_address || '',
             nuevo_instalado: Boolean(item.nuevo_instalado),
             nuevo_comentario: item.nuevo_comentario || '',
+            nuevo_responsable: item.nuevo_responsable || '',
+            nuevo_factible_acrilico: item.nuevo_factible_acrilico || '',
             nuevo_foto: item.nuevo_foto || '',
 
             activo: Boolean(item.activo),
@@ -508,24 +558,36 @@ export default function BiometricosSetupIndexPage({
         setIsModalOpen(true);
     };
 
-    const handleSelectUbicacionCatalogo = (val: string) => {
+    const handleSelectSucursal = (val: string) => {
         if (val === 'none') {
-            setData('reloj_ubicacion_id', '');
+            setData({
+                ...data,
+                sucursal_id: '',
+                reloj_ubicacion_id: '',
+            });
             return;
         }
-        const ubId = Number(val);
-        const found = ubicacionesCatalogo.find((u) => u.id === ubId);
+        const sucId = Number(val);
+        const found = sucursales.find((s) => s.id === sucId);
         if (found) {
             setData({
                 ...data,
+                sucursal_id: found.id,
                 reloj_ubicacion_id: found.id,
-                localidad_nombre: data.localidad_nombre || found.planta,
-                numero_localidad: found.numero_localidad ?? data.numero_localidad,
-                legacy: found.legacy || data.legacy,
+                localidad_nombre: found.nombre,
+                numero_localidad: isNaN(Number(found.codigo_numeral)) ? found.id : Number(found.codigo_numeral),
             });
         } else {
-            setData('reloj_ubicacion_id', ubId);
+            setData({
+                ...data,
+                sucursal_id: sucId,
+                reloj_ubicacion_id: sucId,
+            });
         }
+    };
+
+    const handleSelectUbicacionCatalogo = (val: string) => {
+        handleSelectSucursal(val);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -533,7 +595,8 @@ export default function BiometricosSetupIndexPage({
 
         const payload = {
             ...data,
-            reloj_ubicacion_id: data.reloj_ubicacion_id === '' ? null : Number(data.reloj_ubicacion_id),
+            sucursal_id: data.sucursal_id === '' ? null : Number(data.sucursal_id),
+            reloj_ubicacion_id: data.reloj_ubicacion_id === '' ? (data.sucursal_id === '' ? null : Number(data.sucursal_id)) : Number(data.reloj_ubicacion_id),
             numero_localidad: data.numero_localidad === '' ? null : Number(data.numero_localidad),
         };
 
@@ -612,10 +675,9 @@ export default function BiometricosSetupIndexPage({
                             )}
                         </div>
 
-                        {item.ubicacion && (
-                            <p className="text-[11px] text-muted-foreground truncate max-w-[290px]" title={item.ubicacion.direccion || ''}>
-                                {[item.ubicacion.ciudad, item.ubicacion.estado].filter(Boolean).join(', ')}
-                                {item.ubicacion.direccion ? ` — ${item.ubicacion.direccion}` : ''}
+                        {(item.sucursal?.direccion || item.ubicacion) && (
+                            <p className="text-[11px] text-muted-foreground truncate max-w-[290px]" title={item.sucursal?.direccion || item.ubicacion?.direccion || ''}>
+                                {item.sucursal?.direccion || [item.ubicacion?.ciudad, item.ubicacion?.estado].filter(Boolean).join(', ') + (item.ubicacion?.direccion ? ` — ${item.ubicacion.direccion}` : '')}
                             </p>
                         )}
                     </div>
@@ -774,6 +836,20 @@ export default function BiometricosSetupIndexPage({
                                         “{item.actual_comentario}”
                                     </p>
                                 )}
+                                {(item.actual_responsable || item.actual_factible_acrilico) && (
+                                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                        {item.actual_responsable && (
+                                            <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                                Resp: {item.actual_responsable}
+                                            </span>
+                                        )}
+                                        {item.actual_factible_acrilico && (
+                                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-300 dark:border-amber-700">
+                                                Acrílico: {item.actual_factible_acrilico}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                )}
                                 {item.actual_foto && (
                                     <div
                                         className="mt-1 h-10 w-16 rounded-md overflow-hidden border bg-background cursor-pointer hover:opacity-85 transition-opacity"
@@ -805,6 +881,8 @@ export default function BiometricosSetupIndexPage({
                     item.nuevo_mac_address ||
                     item.nuevo_gateway ||
                     item.nuevo_comentario ||
+                    item.nuevo_responsable ||
+                    item.nuevo_factible_acrilico ||
                     item.nuevo_foto;
 
                 return (
@@ -878,6 +956,20 @@ export default function BiometricosSetupIndexPage({
                                 {item.nuevo_comentario && (
                                     <p className="text-[11px] text-muted-foreground italic pt-0.5">“{item.nuevo_comentario}”</p>
                                 )}
+                                {(item.nuevo_responsable || item.nuevo_factible_acrilico) && (
+                                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                        {item.nuevo_responsable && (
+                                            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-100/50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">
+                                                Resp: {item.nuevo_responsable}
+                                            </span>
+                                        )}
+                                        {item.nuevo_factible_acrilico && (
+                                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-emerald-300 dark:border-emerald-700">
+                                                Acrílico: {item.nuevo_factible_acrilico}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                )}
                                 {item.nuevo_foto && (
                                     <div
                                         className="mt-1 h-10 w-16 rounded-md overflow-hidden border bg-background cursor-pointer hover:opacity-85 transition-opacity"
@@ -894,6 +986,38 @@ export default function BiometricosSetupIndexPage({
                         ) : (
                             <p className="text-xs text-muted-foreground italic py-1">Por asignar nuevo biométrico</p>
                         )}
+                    </div>
+                );
+            },
+        },
+        {
+            header: 'Cédula de Instalación',
+            cell: (item) => {
+                const ced = item.cedula;
+                const pct = ced ? Number(ced.porcentaje_avance || 0) : 0;
+                return (
+                    <div
+                        className="space-y-1.5 min-w-[170px] cursor-pointer group bg-muted/20 hover:bg-muted/40 p-2 rounded-lg border transition"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenCedulaModal(item);
+                        }}
+                        title="Clic para ver o gestionar la Cédula de Instalación"
+                    >
+                        <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1">
+                                <ShieldCheck className="h-3 w-3 text-indigo-600" />
+                                {pct === 100
+                                    ? 'Completada'
+                                    : `Etapa ${ced?.etapa_actual_num ?? 1} (${ced?.sub_etapa_actual_letra ?? 'A'})`}
+                            </span>
+                            <span className="font-mono font-bold text-primary">{pct}%</span>
+                        </div>
+                        <Progress value={pct} className="h-1.5" />
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                            <span>{ced ? `${ced.actividades_completadas}/${ced.total_actividades}` : '48 actividades'}</span>
+                            <span className="text-primary font-medium group-hover:underline">Abrir Cédula →</span>
+                        </div>
                     </div>
                 );
             },
@@ -924,6 +1048,11 @@ export default function BiometricosSetupIndexPage({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenCedulaModal(item)}>
+                            <ClipboardCheck className="mr-2 h-4 w-4 text-indigo-600" />
+                            Cédula de Instalación ({item.cedula?.porcentaje_avance ?? 0}%)
+                        </DropdownMenuItem>
+                        {/* Oculto temporalmente: link a admin/asistencia/ubicaciones
                         {item.numero_localidad && (
                             <DropdownMenuItem asChild>
                                 <Link href={`/admin/asistencia/ubicaciones?search=${item.numero_localidad}`}>
@@ -932,6 +1061,7 @@ export default function BiometricosSetupIndexPage({
                                 </Link>
                             </DropdownMenuItem>
                         )}
+                        */}
                         {canManage && (
                             <>
                                 <DropdownMenuItem onClick={() => handleEditClick(item)}>
@@ -971,12 +1101,14 @@ export default function BiometricosSetupIndexPage({
                     colorClassName="bg-emerald-600"
                 >
                     <div className="flex flex-wrap items-center gap-2">
+                        {/* Oculto temporalmente: Catálogo de Ubicaciones
                         <Button variant="outline" asChild className="bg-white/10 text-white border-white/20 hover:bg-white/20">
                             <Link href="/admin/asistencia/ubicaciones">
                                 <MapPin className="mr-2 h-4 w-4" />
                                 Catálogo de Ubicaciones
                             </Link>
                         </Button>
+                        */}
                         {canManage && (
                             <>
                                 <Button
@@ -1058,11 +1190,11 @@ export default function BiometricosSetupIndexPage({
                                     <SelectValue placeholder="Todas las plantas" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Todas las plantas</SelectItem>
-                                    {ubicacionesCatalogo.map((ub) => (
-                                        <SelectItem key={ub.id} value={String(ub.id)}>
-                                            {ub.numero_localidad ? `#${ub.numero_localidad} - ` : ''}
-                                            {ub.planta}
+                                    <SelectItem value="all">Todas las plantas ({sucursales.length || ubicacionesCatalogo.length || 68})</SelectItem>
+                                    {(sucursales.length > 0 ? sucursales : ubicacionesCatalogo).map((item: any) => (
+                                        <SelectItem key={item.id} value={String(item.id)}>
+                                            {item.codigo_numeral ? `#${item.codigo_numeral} - ` : (item.numero_localidad ? `#${item.numero_localidad} - ` : '')}
+                                            {item.nombre || item.planta}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -1127,13 +1259,27 @@ export default function BiometricosSetupIndexPage({
             {/* Modal Crear / Editar Biométrico Setup */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="w-[95vw] sm:max-w-[95vw] lg:max-w-[1040px] max-h-[92vh] overflow-y-auto p-6">
-                    <DialogHeader>
-                        <DialogTitle>
-                            {editingItem ? 'Editar Biométrico Setup' : 'Registrar Biométrico Setup'}
-                        </DialogTitle>
-                        <DialogDescription>
-                            Configura la localidad, características de instalación física y especificaciones de Equipos Inicial y Final.
-                        </DialogDescription>
+                    <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <DialogTitle>
+                                {editingItem ? 'Editar Biométrico Setup' : 'Registrar Biométrico Setup'}
+                            </DialogTitle>
+                            <DialogDescription>
+                                Configura la localidad, características de instalación física y especificaciones de Equipos Inicial y Final.
+                            </DialogDescription>
+                        </div>
+                        {editingItem && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenCedulaModal(editingItem)}
+                                className="border-indigo-300 hover:bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:text-indigo-300 font-semibold text-xs shrink-0 self-start sm:self-center"
+                            >
+                                <ClipboardCheck className="h-4 w-4 mr-1.5" />
+                                Cédula de Instalación ({editingItem.cedula?.porcentaje_avance ?? 0}%)
+                            </Button>
+                        )}
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-6 pt-2">
@@ -1146,20 +1292,20 @@ export default function BiometricosSetupIndexPage({
 
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                                 <div className="md:col-span-6 space-y-2">
-                                    <Label>Vincular con Catálogo de Ubicaciones</Label>
+                                    <Label>Vincular con Planta / Sucursal (Ubicación)</Label>
                                     <Select
-                                        value={data.reloj_ubicacion_id ? String(data.reloj_ubicacion_id) : 'none'}
-                                        onValueChange={handleSelectUbicacionCatalogo}
+                                        value={data.sucursal_id ? String(data.sucursal_id) : (data.reloj_ubicacion_id ? String(data.reloj_ubicacion_id) : 'none')}
+                                        onValueChange={handleSelectSucursal}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar planta del catálogo..." />
+                                            <SelectValue placeholder="Seleccionar planta del catálogo oficial..." />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="none">Sin vincular / Manual</SelectItem>
-                                            {ubicacionesCatalogo.map((ub) => (
-                                                <SelectItem key={ub.id} value={String(ub.id)}>
-                                                    {ub.numero_localidad ? `[#${ub.numero_localidad}] ` : ''}
-                                                    {ub.planta} {ub.legacy ? `(${ub.legacy})` : ''}
+                                            {(sucursales.length > 0 ? sucursales : ubicacionesCatalogo).map((item: any) => (
+                                                <SelectItem key={item.id} value={String(item.id)}>
+                                                    {item.codigo_numeral ? `[#${item.codigo_numeral}] ` : (item.numero_localidad ? `[#${item.numero_localidad}] ` : '')}
+                                                    {item.nombre || item.planta} {item.legacy ? `(${item.legacy})` : ''}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -1381,6 +1527,34 @@ export default function BiometricosSetupIndexPage({
                                                 />
                                             </div>
 
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="actual_responsable">Responsable de Instalación</Label>
+                                                <Input
+                                                    id="actual_responsable"
+                                                    placeholder="Ej. T4 / Técnico / Proveedor..."
+                                                    value={data.actual_responsable}
+                                                    onChange={(e) => setData('actual_responsable', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="actual_factible_acrilico">Factible Acrílico</Label>
+                                                <Select
+                                                    value={data.actual_factible_acrilico || 'none'}
+                                                    onValueChange={(val) => setData('actual_factible_acrilico', val === 'none' ? '' : val)}
+                                                >
+                                                    <SelectTrigger id="actual_factible_acrilico">
+                                                        <SelectValue placeholder="Seleccionar..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">Por definir</SelectItem>
+                                                        <SelectItem value="Si">Sí</SelectItem>
+                                                        <SelectItem value="No">No</SelectItem>
+                                                        <SelectItem value="No aplica">No aplica</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
                                             <div className="sm:col-span-2 lg:col-span-3 space-y-1.5">
                                                 <Label htmlFor="actual_mac_address">Mac Address</Label>
                                                 <Input
@@ -1502,6 +1676,34 @@ export default function BiometricosSetupIndexPage({
                                                 />
                                             </div>
 
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nuevo_responsable">Responsable de Instalación</Label>
+                                                <Input
+                                                    id="nuevo_responsable"
+                                                    placeholder="Ej. T4 / Técnico / Proveedor..."
+                                                    value={data.nuevo_responsable}
+                                                    onChange={(e) => setData('nuevo_responsable', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nuevo_factible_acrilico">Factible Acrílico</Label>
+                                                <Select
+                                                    value={data.nuevo_factible_acrilico || 'none'}
+                                                    onValueChange={(val) => setData('nuevo_factible_acrilico', val === 'none' ? '' : val)}
+                                                >
+                                                    <SelectTrigger id="nuevo_factible_acrilico">
+                                                        <SelectValue placeholder="Seleccionar..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">Por definir</SelectItem>
+                                                        <SelectItem value="Si">Sí</SelectItem>
+                                                        <SelectItem value="No">No</SelectItem>
+                                                        <SelectItem value="No aplica">No aplica</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
                                             <div className="sm:col-span-2 lg:col-span-3 space-y-1.5">
                                                 <Label htmlFor="nuevo_mac_address">Mac Address</Label>
                                                 <Input
@@ -1555,7 +1757,7 @@ export default function BiometricosSetupIndexPage({
             <EquiposUbicacionesImportModal
                 open={isImportModalOpen}
                 onOpenChange={setIsImportModalOpen}
-                defaultScope="ambos"
+                defaultScope="biometricos"
             />
 
             {/* Modal Lightbox para visualización ampliada de fotos */}
@@ -1581,6 +1783,39 @@ export default function BiometricosSetupIndexPage({
                             Cerrar
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Dedicado de Cédula de Instalación */}
+            <Dialog open={isCedulaModalOpen} onOpenChange={setIsCedulaModalOpen}>
+                <DialogContent className="w-[95vw] sm:max-w-[95vw] lg:max-w-[1100px] max-h-[92vh] overflow-y-auto p-6">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-base font-bold">
+                            <ShieldCheck className="h-5 w-5 text-indigo-600" />
+                            Cédula de Instalación: {cedulaModalItem?.localidad_nombre}
+                            {cedulaModalItem?.numero_localidad && (
+                                <Badge variant="outline" className="text-xs">
+                                    Localidad #{cedulaModalItem.numero_localidad}
+                                </Badge>
+                            )}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {cedulaModalItem?.ubicacion_fisica
+                                ? `Posición física en planta: ${cedulaModalItem.ubicacion_fisica}`
+                                : 'Seguimiento de etapas y sub-etapas dependientes para la instalación física y lógica.'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {cedulaModalItem && (
+                        <div className="pt-2">
+                            <CedulaInstalacionTab
+                                biometricoId={cedulaModalItem.id}
+                                biometricoNombre={cedulaModalItem.localidad_nombre}
+                                canManage={canManage}
+                                onViewFullPhoto={openLightbox}
+                            />
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
 

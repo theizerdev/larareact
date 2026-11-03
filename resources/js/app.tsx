@@ -17,11 +17,11 @@ createInertiaApp({
             ['./pages/**/*.tsx', '!./pages/**/Partials/**/*.tsx'],
             { eager: true }
         ) as Record<string, any>;
-        
+
         const path = `./pages/${name}.tsx`;
         const pathLower = path.toLowerCase();
         const matchingKey = Object.keys(pages).find((key) => key.toLowerCase() === pathLower);
-        
+
         if (matchingKey) {
             return pages[matchingKey];
         }

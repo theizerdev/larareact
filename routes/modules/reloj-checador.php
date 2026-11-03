@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\RelojCedulaController;
 use App\Http\Controllers\Admin\RelojEquipoBiometricoController;
 use App\Http\Controllers\Admin\RelojUbicacionController;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +35,14 @@ Route::middleware(['permission:asistencia.configuracion'])->group(function () {
         ->name('asistencia.biometricos-setup.toggle-status');
     Route::delete('/asistencia/biometricos-setup/{biometrico}', [RelojEquipoBiometricoController::class, 'destroy'])
         ->name('asistencia.biometricos-setup.destroy');
+
+    // Cédula de Instalación de Biométricos (Pestaña Cédula de Instalación)
+    Route::get('/asistencia/biometricos-setup/{biometrico}/cedula', [RelojCedulaController::class, 'show'])
+        ->name('asistencia.biometricos-setup.cedula.show');
+    Route::put('/asistencia/biometricos-setup/{biometrico}/cedula/items/{item}', [RelojCedulaController::class, 'updateItem'])
+        ->name('asistencia.biometricos-setup.cedula.items.update');
+    Route::post('/asistencia/biometricos-setup/{biometrico}/cedula/items/{item}/evidencia', [RelojCedulaController::class, 'uploadEvidencia'])
+        ->name('asistencia.biometricos-setup.cedula.items.upload-evidencia');
 
     // Motor de Importación Masiva Unificado (separa automáticamente Ubicaciones (2) y Biométricos setup)
     Route::post('/asistencia/equipos-ubicaciones/importar/preview', [RelojUbicacionController::class, 'previewImport'])

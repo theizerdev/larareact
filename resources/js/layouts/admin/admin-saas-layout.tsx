@@ -691,12 +691,13 @@ export default function AdminSaasLayout({
                                     permission: 'asistencia.configuracion',
                                     key: 'reloj_checador.comedor',
                                 },
-                                {
-                                    title: 'Ubicaciones de Plantas',
-                                    href: '/admin/asistencia/ubicaciones',
-                                    permission: 'asistencia.configuracion',
-                                    key: 'reloj_checador.ubicaciones',
-                                },
+                                // Ocultado temporalmente: admin/asistencia/ubicaciones
+                                // {
+                                //     title: 'Ubicaciones de Plantas',
+                                //     href: '/admin/asistencia/ubicaciones',
+                                //     permission: 'asistencia.configuracion',
+                                //     key: 'reloj_checador.ubicaciones',
+                                // },
                                 {
                                     title: 'Biométricos Setup',
                                     href: '/admin/asistencia/biometricos-setup',
