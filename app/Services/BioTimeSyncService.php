@@ -207,7 +207,17 @@ class BioTimeSyncService
         // Qué columnas cambió BioTime en cada persona
         $cambios = [];
 
+        // Quien sólo está en áreas cuyos relojes se eliminaron ya no se carga.
+        $sinReloj = BiotimeDispositivo::areasSinReloj($empresa->id);
+        $sinRelojOmitidos = 0;
+
         foreach ($res['data'] as $e) {
+            if (BiotimeDispositivo::soloEnAreasSinReloj($this->areaNames($e['area'] ?? null), $sinReloj)) {
+                $sinRelojOmitidos++;
+
+                continue;
+            }
+
             $bio = $this->espejarEmpleado($empresa, $e);
 
             if (! $bio->wasRecentlyCreated && $bio->wasChanged()) {
@@ -216,7 +226,7 @@ class BioTimeSyncService
         }
 
         $linked = $this->resolveLinks($empresa);
-        $resultado = ['fetched' => count($res['data']), 'auto_linked' => $linked];
+        $resultado = ['fetched' => count($res['data']), 'auto_linked' => $linked, 'sin_reloj' => $sinRelojOmitidos];
 
         // Sincronización integral hacia la tabla `empleados`:
         // Actualiza los que existen y crea los que no están en Hoshō
@@ -358,12 +368,21 @@ class BioTimeSyncService
             ->get(['id', 'emp_code', 'empleado_id'])
             ->keyBy(fn ($r) => (string) $r->emp_code);
 
+        // Relojes eliminados en Hoshō: sus marcajes ya no se bajan.
+        $excluidos = BiotimeDispositivo::query()
+            ->where('empresa_id', $empresa->id)
+            ->excluidos()
+            ->whereNotNull('sn')
+            ->pluck('sn')
+            ->flip();
+
         $windowDays = max(1, (int) config('biotime.window_days', 30));
         $chunk = max(50, (int) config('biotime.db_chunk', 200));
 
         $windows = 0;
         $fetched = 0;
         $upserted = 0;
+        $omitidos = 0;
         $maxId = (int) ($empresa->biotime_last_transaction_id ?? 0);
 
         $cursor = $start;
@@ -387,11 +406,19 @@ class BioTimeSyncService
             $fetched += count($rows);
 
             foreach (array_chunk($rows, $chunk) as $slice) {
-                DB::transaction(function () use ($slice, $empresa, $empMap, &$upserted, &$maxId) {
+                DB::transaction(function () use ($slice, $empresa, $empMap, $excluidos, &$upserted, &$omitidos, &$maxId) {
                     foreach ($slice as $m) {
                         $empCode = (string) ($m['emp_code'] ?? '');
                         $link = $empMap->get($empCode);
                         $bioId = (int) ($m['id'] ?? 0);
+
+                        // La marca de agua avanza igual: no se vuelven a pedir.
+                        if ($excluidos->has((string) ($m['terminal_sn'] ?? ''))) {
+                            $omitidos++;
+                            $maxId = max($maxId, $bioId);
+
+                            continue;
+                        }
 
                         BiotimeMarcaje::updateOrCreate(
                             ['empresa_id' => $empresa->id, 'biotime_id' => $bioId],
@@ -438,6 +465,7 @@ class BioTimeSyncService
             'windows' => $windows,
             'fetched' => $fetched,
             'upserted' => $upserted,
+            'omitidos_reloj_eliminado' => $omitidos,
             'from' => $start->toDateTimeString(),
             'to' => $now->toDateTimeString(),
             'max_transaction_id' => $maxId,

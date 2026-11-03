@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\AsistenciaMarcaje;
+use App\Models\ConfiguracionAsistencia;
 use App\Models\Empleado;
+use App\Models\OpcionComida;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -42,6 +44,91 @@ class RegistroMarcajeService
         'permisoDenegadoSiempre' => 'permiso de ubicación bloqueado',
         'sinSenal' => 'sin señal de GPS',
     ];
+
+    /** `comida_tipo` de un INICIO COMIDA sin platillo del comedor. */
+    public const COMIDA_SIN_CONSUMO = 'No adquirió alimento de las opciones disponibles';
+
+    /** Valores de `comida_opcion` que significan "no adquirió alimento". */
+    private const OPCIONES_SIN_CONSUMO = ['sin_consumo', 'ninguno', 'no_adquirio', '-1'];
+
+    /**
+     * Comida elegida en un INICIO COMIDA (`salida_comida`). El nombre, el costo,
+     * el proveedor y el subsidio salen de la configuración, nunca de lo que
+     * mande el cliente, y quedan fijos en el marcaje para la liquidación al
+     * proveedor.
+     *
+     * $opcion es el id de la OpcionComida o, con la configuración anterior sin
+     * modelos, el índice en las opciones del kiosko (así lo manda el kiosko
+     * web). Es ambiguo: el id de una opción borrada se leería como índice de
+     * otra; quien conoce el id usa comidaPorId(). Devuelve null si la opción
+     * no existe.
+     *
+     * @return array{nombre: string, costo: float, id?: int, proveedor_id?: ?int, costo_empresa?: float, subsidio?: float, sin_consumo?: bool}|null
+     */
+    public function resolverComida(Empleado $empleado, mixed $opcion, bool $noAdquirio = false): ?array
+    {
+        if ($noAdquirio || in_array((string) $opcion, self::OPCIONES_SIN_CONSUMO, true)) {
+            return ['nombre' => self::COMIDA_SIN_CONSUMO, 'costo' => 0.0, 'sin_consumo' => true];
+        }
+
+        if (blank($opcion)) {
+            return null;
+        }
+
+        if ($comida = $this->comidaPorId($empleado, $opcion)) {
+            return $comida;
+        }
+
+        $comida = ConfiguracionAsistencia::obtenerOpcionesParaKiosko($empleado->empresa_id, $empleado->sucursal_id)[$opcion] ?? null;
+        if ($comida && isset($comida['id']) && ($modelo = OpcionComida::find($comida['id']))) {
+            return $this->comidaDeOpcion($modelo);
+        }
+
+        return $comida;
+    }
+
+    /**
+     * Comida de una OpcionComida de la empresa del empleado, o null.
+     *
+     * $incluirInactivas es para lo que la app envía tarde desde su cola sin
+     * conexión: una opción desactivada después sigue siendo la que se tomó.
+     */
+    public function comidaPorId(Empleado $empleado, mixed $id, bool $incluirInactivas = false): ?array
+    {
+        $modelo = OpcionComida::where('empresa_id', $empleado->empresa_id)
+            ->when(! $incluirInactivas, fn ($q) => $q->where('status', true))
+            ->find($id);
+
+        return $modelo ? $this->comidaDeOpcion($modelo) : null;
+    }
+
+    /** Columnas de `asistencia_marcajes` para la comida de resolverComida(). */
+    public function atributosComida(?array $comida): array
+    {
+        return [
+            'comida_tipo' => $comida['nombre'] ?? null,
+            'comida_costo' => $comida['costo'] ?? null,
+            'opcion_comida_id' => $comida['id'] ?? null,
+            'proveedor_id' => $comida['proveedor_id'] ?? null,
+            'comida_costo_empresa' => $comida['costo_empresa'] ?? null,
+            'comida_subsidio' => $comida['subsidio'] ?? null,
+        ];
+    }
+
+    private function comidaDeOpcion(OpcionComida $opcion): array
+    {
+        $costoEmpleado = (float) $opcion->costo_empleado;
+        $costoEmpresa = (float) $opcion->costo_empresa;
+
+        return [
+            'id' => $opcion->id,
+            'proveedor_id' => $opcion->proveedor_id,
+            'nombre' => $opcion->nombre,
+            'costo' => $costoEmpleado,
+            'costo_empresa' => $costoEmpresa,
+            'subsidio' => max(0.0, $costoEmpresa - $costoEmpleado),
+        ];
+    }
 
     /** Marcaje ya registrado con el mismo identificador de la app (reenvío). */
     public function porUuidCliente(Empleado $empleado, ?string $uuid): ?AsistenciaMarcaje

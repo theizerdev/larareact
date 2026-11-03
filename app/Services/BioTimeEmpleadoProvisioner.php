@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BiotimeDispositivo;
 use App\Models\BiotimeEmpleado;
 use App\Models\BiotimeMarcaje;
 use App\Models\Cargo;
@@ -10,6 +11,7 @@ use App\Models\Empleado;
 use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
@@ -30,6 +32,8 @@ use Illuminate\Support\Str;
  *   y un correo para definir su contraseña. Nadie conoce la inicial.
  *
  * No borra ni desactiva a nadie y no toca fotos (la API no las expone).
+ * Quien sólo está en áreas cuyos relojes se eliminaron en Hoshō se deja
+ * como está: ni se crea ni se actualiza.
  *
  * El sentido contrario (de Colaboradores hacia BioTime) es BioTimeEmpleadoPusher.
  */
@@ -79,10 +83,12 @@ class BioTimeEmpleadoProvisioner
     ): array {
         $res = ['creados' => 0, 'actualizados' => 0, 'cuentas' => 0, 'omitidos' => [], 'sin_cuenta' => [], 'nuevos' => []];
 
-        $bios = BiotimeEmpleado::query()
+        $sinReloj = BiotimeDispositivo::areasSinReloj($empresa->id);
+
+        $bios = $this->conReloj(BiotimeEmpleado::query()
             ->where('empresa_id', $empresa->id)
             ->orderByRaw('CAST(emp_code AS UNSIGNED)')
-            ->get();
+            ->get(), $sinReloj);
 
         // 1. Auto-vincular pendientes cuyo documento, tarjeta o CURP ya coincida con Hoshō
         foreach ($bios->whereNull('empleado_id') as $bio) {
@@ -109,10 +115,10 @@ class BioTimeEmpleadoProvisioner
         }
 
         // Recargar con los vínculos aplicados
-        $bios = BiotimeEmpleado::query()
+        $bios = $this->conReloj(BiotimeEmpleado::query()
             ->where('empresa_id', $empresa->id)
             ->orderByRaw('CAST(emp_code AS UNSIGNED)')
-            ->get();
+            ->get(), $sinReloj);
 
         $pendientes = $bios->whereNull('empleado_id');
         $contexto = null;
@@ -161,10 +167,10 @@ class BioTimeEmpleadoProvisioner
 
         // 3. ACTUALIZAR: Los que están en Hosho se actualizan con todos los datos de BioTime
         if (! $dryRun) {
-            $vinculados = BiotimeEmpleado::query()
+            $vinculados = $this->conReloj(BiotimeEmpleado::query()
                 ->where('empresa_id', $empresa->id)
                 ->whereNotNull('empleado_id')
-                ->get();
+                ->get(), $sinReloj);
 
             foreach ($vinculados as $bio) {
                 if ($this->actualizar($bio, $empresa, $cambios[$bio->id] ?? [], $deptos, $cargos, $forceUpdate)) {
@@ -174,7 +180,7 @@ class BioTimeEmpleadoProvisioner
         }
 
         if (! $dryRun) {
-            [$res['cuentas'], $res['sin_cuenta']] = $this->cuentas($empresa);
+            [$res['cuentas'], $res['sin_cuenta']] = $this->cuentas($empresa, $sinReloj);
         }
 
         if (! $dryRun && ($res['creados'] || $res['actualizados'] || $res['cuentas'])) {
@@ -193,11 +199,12 @@ class BioTimeEmpleadoProvisioner
      *
      * @return array{0: int, 1: array<int,string>}
      */
-    private function cuentas(Empresa $empresa): array
+    private function cuentas(Empresa $empresa, array $sinReloj): array
     {
-        $ids = BiotimeEmpleado::query()
+        $ids = $this->conReloj(BiotimeEmpleado::query()
             ->where('empresa_id', $empresa->id)
             ->whereNotNull('empleado_id')
+            ->get(['empleado_id', 'area_names']), $sinReloj)
             ->pluck('empleado_id');
 
         $empleados = Empleado::withoutTenant()
@@ -257,6 +264,16 @@ class BioTimeEmpleadoProvisioner
         }
 
         return [$creadas, $omitidos];
+    }
+
+    /**
+     * @param  Collection<int,BiotimeEmpleado>  $bios
+     * @param  array<int,string>  $sinReloj
+     * @return Collection<int,BiotimeEmpleado>
+     */
+    private function conReloj(Collection $bios, array $sinReloj): Collection
+    {
+        return $bios->reject(fn (BiotimeEmpleado $bio) => BiotimeDispositivo::soloEnAreasSinReloj($bio->area_names, $sinReloj));
     }
 
     private function crear(BiotimeEmpleado $bio, string $codigo, Empresa $empresa, Sucursal $sucursal, User $usuario, $deptos, $cargos): void

@@ -53,9 +53,53 @@ class BioTimeController extends Controller
             ->get();
 
         return Inertia::render('admin/biotime/Dispositivos', [
-            'dispositivos' => $dispositivos,
+            'dispositivos' => $dispositivos->whereNull('excluido_at')->values(),
+            'excluidos' => $dispositivos->whereNotNull('excluido_at')->values(),
             'last_sync_at' => $request->user()?->empresa?->biotime_last_sync_at?->toIso8601String(),
             'biotime_active' => (bool) $request->user()?->empresa?->biotime_active,
+        ]);
+    }
+
+    /**
+     * Elimina el reloj de Hoshō. La fila se marca en vez de borrarse para que
+     * el siguiente sync no lo vuelva a traer; desde ahí deja de bajar sus
+     * marcajes y a los empleados de las áreas que se quedan sin reloj.
+     */
+    public function excluirDispositivo(Request $request, BiotimeDispositivo $biotimeDispositivo): RedirectResponse
+    {
+        $this->authorizeEmpresa($request, $biotimeDispositivo->empresa_id);
+
+        $validated = $request->validate([
+            'borrar_marcajes' => 'boolean',
+        ]);
+
+        $biotimeDispositivo->update(['excluido_at' => now()]);
+
+        $borrados = 0;
+        if (($validated['borrar_marcajes'] ?? false) && $biotimeDispositivo->sn) {
+            $borrados = BiotimeMarcaje::query()
+                ->where('empresa_id', $biotimeDispositivo->empresa_id)
+                ->where('dispositivo_sn', $biotimeDispositivo->sn)
+                ->delete();
+        }
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => $borrados > 0
+                ? __('Device removed. :count downloaded punches were deleted.', ['count' => $borrados])
+                : __('Device removed. Its data will no longer be downloaded.'),
+        ]);
+    }
+
+    public function restaurarDispositivo(Request $request, BiotimeDispositivo $biotimeDispositivo): RedirectResponse
+    {
+        $this->authorizeEmpresa($request, $biotimeDispositivo->empresa_id);
+
+        $biotimeDispositivo->update(['excluido_at' => null]);
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Device restored. Run a sync to download what was skipped.'),
         ]);
     }
 

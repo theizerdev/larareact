@@ -24,6 +24,17 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:lo
 Route::post('/login-empleado', [AuthController::class, 'loginEmpleado'])
     ->middleware('throttle:10,1');
 
+// Microsoft Entra ID: canje del código que devuelve /auth/sso/azure/movil.
+Route::post('/login-microsoft', [AuthController::class, 'loginMicrosoft'])
+    ->middleware('throttle:10,1');
+
+// Enrolamiento con el enlace (o su QR) que RH manda: el token es el secreto,
+// igual que en la página pública /enrolamiento/{token} del web.
+Route::prefix('enrolamiento/{token}')->middleware('throttle:20,1')->group(function () {
+    Route::get('/', [KioskoApiController::class, 'enlaceEnrolamiento']);
+    Route::post('/', [KioskoApiController::class, 'enrolarConEnlace']);
+});
+
 // Rutas protegidas por Sanctum. EnsureUserActive: una cuenta desactivada
 // pierde el acceso aunque conserve su token.
 Route::middleware(['auth:sanctum', EnsureUserActive::class])->group(function () {
@@ -56,6 +67,17 @@ Route::middleware(['auth:sanctum', EnsureUserActive::class])->group(function () 
         Route::post('/buscar', [KioskoApiController::class, 'buscar'])
             ->middleware('permission:asistencia.kiosko|asistencia.view');
         Route::post('/registrar', [KioskoApiController::class, 'registrar']);
+        // Igual: el propio empleado, o enrolar a otros con permiso del kiosko.
+        Route::post('/enrolar', [KioskoApiController::class, 'enrolar']);
+        // Enlace/QR de enrolamiento para que el empleado se enrole desde su
+        // teléfono; mismo permiso que "Enviar enlace" en Colaboradores.
+        Route::post('/enlace-enrolamiento', [KioskoApiController::class, 'generarEnlaceEnrolamiento'])
+            ->middleware('permission:empleados.edit');
+        // Alta del empleado que aún no está en el sistema, para enrolarlo.
+        Route::middleware('permission:empleados.create')->group(function () {
+            Route::get('/departamentos', [KioskoApiController::class, 'departamentos']);
+            Route::post('/empleados', [KioskoApiController::class, 'altaEmpleado']);
+        });
     });
 
     // Datos para las pantallas de la app móvil (Dashboard, Empleados, Bitácora).
