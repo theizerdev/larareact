@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import {
     CheckCircle2,
+    ClipboardCheck,
     Cpu,
     FileSpreadsheet,
     Layers,
@@ -38,6 +39,13 @@ interface PreviewResponse {
     sheets_detected?: {
         ubicaciones?: string;
         biometricos?: string;
+        cedula?: string;
+    };
+    cedula?: {
+        detected: boolean;
+        sheet_title?: string | null;
+        total_actividades: number;
+        etapas: number;
     };
     ubicaciones: {
         records: any[];
@@ -345,6 +353,31 @@ export default function EquiposUbicacionesImportModal({
                                     </div>
                                 )}
                             </div>
+
+                            {/* Banner Cédula de Instalación detectada */}
+                            {preview.cedula?.detected && (
+                                <div className="flex items-center justify-between rounded-xl border border-indigo-200/80 bg-indigo-50/50 dark:border-indigo-900/50 dark:bg-indigo-950/20 p-3.5 text-xs">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600/10 text-indigo-600">
+                                            <ClipboardCheck className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-foreground flex items-center gap-1.5">
+                                                Cédula de Instalación Vinculada
+                                                <Badge variant="outline" className="text-[10px] bg-indigo-100/60 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                                                    Hoja: {preview.cedula.sheet_title || 'Cédula de Instalación'}
+                                                </Badge>
+                                            </p>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Se detectaron {preview.cedula.total_actividades} actividades en {preview.cedula.etapas} etapas secuenciales. Al confirmar la importación, se sincronizarán e inicializarán automáticamente para los equipos.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Badge className="bg-indigo-600 text-white shrink-0 text-[10px]">
+                                        Activa
+                                    </Badge>
+                                </div>
+                            )}
 
                             {/* Tabla de Vista Previa según la pestaña activa */}
                             <div className="rounded-xl border overflow-hidden">

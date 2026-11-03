@@ -3,6 +3,7 @@ import {
     AlertTriangle,
     Camera,
     CheckCircle2,
+    ClipboardCheck,
     Cpu,
     FileSpreadsheet,
     Image as ImageIcon,
@@ -15,6 +16,7 @@ import {
     Plus,
     Ruler,
     Server,
+    ShieldCheck,
     Sparkles,
     ToggleRight,
     Trash2,
@@ -56,6 +58,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -65,6 +68,7 @@ import { cleanParams, cn } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
 import { notifyError } from '@/utils/notifications';
 import EquiposUbicacionesImportModal from '../Partials/EquiposUbicacionesImportModal';
+import CedulaInstalacionTab from './Partials/CedulaInstalacionTab';
 
 interface UbicacionOption {
     id: number;
@@ -131,6 +135,15 @@ interface RelojEquipoBiometrico {
     activo: boolean;
     sucursal?: SucursalOption | null;
     ubicacion?: UbicacionOption | null;
+    cedula?: {
+        id: number;
+        porcentaje_avance: number;
+        total_actividades: number;
+        actividades_completadas: number;
+        estado: 'pendiente' | 'en_proceso' | 'completada';
+        etapa_actual_num: number;
+        sub_etapa_actual_letra: string;
+    } | null;
 }
 
 interface BiometricosSetupPageProps {
@@ -449,6 +462,15 @@ export default function BiometricosSetupIndexPage({
 
     // Lightbox para vista ampliada de imágenes
     const [lightboxImage, setLightboxImage] = useState<{ src: string; title: string } | null>(null);
+
+    // Modal de Cédula de Instalación
+    const [cedulaModalItem, setCedulaModalItem] = useState<RelojEquipoBiometrico | null>(null);
+    const [isCedulaModalOpen, setIsCedulaModalOpen] = useState(false);
+
+    const handleOpenCedulaModal = (item: RelojEquipoBiometrico) => {
+        setCedulaModalItem(item);
+        setIsCedulaModalOpen(true);
+    };
 
     const { data, setData, reset, errors, processing } = useForm(initialForm);
 
@@ -969,6 +991,38 @@ export default function BiometricosSetupIndexPage({
             },
         },
         {
+            header: 'Cédula de Instalación',
+            cell: (item) => {
+                const ced = item.cedula;
+                const pct = ced ? Number(ced.porcentaje_avance || 0) : 0;
+                return (
+                    <div
+                        className="space-y-1.5 min-w-[170px] cursor-pointer group bg-muted/20 hover:bg-muted/40 p-2 rounded-lg border transition"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenCedulaModal(item);
+                        }}
+                        title="Clic para ver o gestionar la Cédula de Instalación"
+                    >
+                        <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1">
+                                <ShieldCheck className="h-3 w-3 text-indigo-600" />
+                                {pct === 100
+                                    ? 'Completada'
+                                    : `Etapa ${ced?.etapa_actual_num ?? 1} (${ced?.sub_etapa_actual_letra ?? 'A'})`}
+                            </span>
+                            <span className="font-mono font-bold text-primary">{pct}%</span>
+                        </div>
+                        <Progress value={pct} className="h-1.5" />
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                            <span>{ced ? `${ced.actividades_completadas}/${ced.total_actividades}` : '48 actividades'}</span>
+                            <span className="text-primary font-medium group-hover:underline">Abrir Cédula →</span>
+                        </div>
+                    </div>
+                );
+            },
+        },
+        {
             header: 'Estatus',
             stopRowClick: true,
             cell: (item) => (
@@ -994,6 +1048,10 @@ export default function BiometricosSetupIndexPage({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenCedulaModal(item)}>
+                            <ClipboardCheck className="mr-2 h-4 w-4 text-indigo-600" />
+                            Cédula de Instalación ({item.cedula?.porcentaje_avance ?? 0}%)
+                        </DropdownMenuItem>
                         {/* Oculto temporalmente: link a admin/asistencia/ubicaciones
                         {item.numero_localidad && (
                             <DropdownMenuItem asChild>
@@ -1201,13 +1259,27 @@ export default function BiometricosSetupIndexPage({
             {/* Modal Crear / Editar Biométrico Setup */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="w-[95vw] sm:max-w-[95vw] lg:max-w-[1040px] max-h-[92vh] overflow-y-auto p-6">
-                    <DialogHeader>
-                        <DialogTitle>
-                            {editingItem ? 'Editar Biométrico Setup' : 'Registrar Biométrico Setup'}
-                        </DialogTitle>
-                        <DialogDescription>
-                            Configura la localidad, características de instalación física y especificaciones de Equipos Inicial y Final.
-                        </DialogDescription>
+                    <DialogHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <DialogTitle>
+                                {editingItem ? 'Editar Biométrico Setup' : 'Registrar Biométrico Setup'}
+                            </DialogTitle>
+                            <DialogDescription>
+                                Configura la localidad, características de instalación física y especificaciones de Equipos Inicial y Final.
+                            </DialogDescription>
+                        </div>
+                        {editingItem && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenCedulaModal(editingItem)}
+                                className="border-indigo-300 hover:bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:text-indigo-300 font-semibold text-xs shrink-0 self-start sm:self-center"
+                            >
+                                <ClipboardCheck className="h-4 w-4 mr-1.5" />
+                                Cédula de Instalación ({editingItem.cedula?.porcentaje_avance ?? 0}%)
+                            </Button>
+                        )}
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-6 pt-2">
@@ -1717,6 +1789,39 @@ export default function BiometricosSetupIndexPage({
                             Cerrar
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Dedicado de Cédula de Instalación */}
+            <Dialog open={isCedulaModalOpen} onOpenChange={setIsCedulaModalOpen}>
+                <DialogContent className="w-[95vw] sm:max-w-[95vw] lg:max-w-[1100px] max-h-[92vh] overflow-y-auto p-6">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-base font-bold">
+                            <ShieldCheck className="h-5 w-5 text-indigo-600" />
+                            Cédula de Instalación: {cedulaModalItem?.localidad_nombre}
+                            {cedulaModalItem?.numero_localidad && (
+                                <Badge variant="outline" className="text-xs">
+                                    Localidad #{cedulaModalItem.numero_localidad}
+                                </Badge>
+                            )}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {cedulaModalItem?.ubicacion_fisica
+                                ? `Posición física en planta: ${cedulaModalItem.ubicacion_fisica}`
+                                : 'Seguimiento de etapas y sub-etapas dependientes para la instalación física y lógica.'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {cedulaModalItem && (
+                        <div className="pt-2">
+                            <CedulaInstalacionTab
+                                biometricoId={cedulaModalItem.id}
+                                biometricoNombre={cedulaModalItem.localidad_nombre}
+                                canManage={canManage}
+                                onViewFullPhoto={openLightbox}
+                            />
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
 

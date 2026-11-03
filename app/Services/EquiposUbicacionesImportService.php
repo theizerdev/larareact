@@ -3,14 +3,19 @@
 namespace App\Services;
 
 use App\Models\Empresa;
+use App\Models\RelojCedulaActividadCatalogo;
 use App\Models\RelojEquipoBiometrico;
 use App\Models\RelojUbicacion;
 use App\Models\Sucursal;
+use App\Services\RelojCedulaService;
 use Illuminate\Support\Facades\DB;
 use ZipArchive;
 
 class EquiposUbicacionesImportService
 {
+    public function __construct(
+        protected RelojCedulaService $cedulaService
+    ) {}
     /**
      * Analiza el archivo Excel (.xlsx) y devuelve la vista previa separada
      * para Ubicaciones (Pestaña 3) y Biométricos Setup (Pestaña 2).
@@ -53,12 +58,32 @@ class EquiposUbicacionesImportService
             }
         }
 
+        $cedulaStats = [
+            'detected' => false,
+            'sheet_title' => null,
+            'total_actividades' => 0,
+            'etapas' => 0,
+        ];
+
+        $cedulaSheet = $this->findCedulaSheet($sheets);
+        if ($cedulaSheet !== null) {
+            $sheetNamesFound['cedula'] = $cedulaSheet['title'];
+            $cedulaActivities = $this->cedulaService->parseRowsToActivities($cedulaSheet['rows']);
+            $cedulaStats = [
+                'detected' => true,
+                'sheet_title' => $cedulaSheet['title'],
+                'total_actividades' => count($cedulaActivities),
+                'etapas' => count(array_unique(array_column($cedulaActivities, 'etapa_num'))),
+            ];
+        }
+
         if (empty($ubicacionesRecords) && empty($biometricosRecords)) {
             return [
                 'success' => false,
                 'message' => 'No se encontraron datos compatibles con "Biométricos setup" ni "Ubicaciones (2)" en el archivo.',
                 'ubicaciones' => ['records' => [], 'stats' => ['total' => 0, 'nuevos' => 0, 'actualizar' => 0]],
                 'biometricos' => ['records' => [], 'stats' => ['total' => 0, 'nuevos' => 0, 'actualizar' => 0]],
+                'cedula' => $cedulaStats,
             ];
         }
 
@@ -77,6 +102,7 @@ class EquiposUbicacionesImportService
         return [
             'success' => true,
             'sheets_detected' => $sheetNamesFound,
+            'cedula' => $cedulaStats,
             'ubicaciones' => [
                 'records' => $ubicacionesRecords,
                 'stats' => $ubicacionesStats,
@@ -119,9 +145,19 @@ class EquiposUbicacionesImportService
             'ubicaciones_actualizadas' => 0,
             'biometricos_creados' => 0,
             'biometricos_actualizados' => 0,
+            'cedulas_sincronizadas' => 0,
         ];
 
-        DB::transaction(function () use ($ubicacionesData, $biometricosData, $empresaId, &$result) {
+        // Sincronizar catálogo de Cédula de Instalación si viene en el archivo
+        $cedulaSheet = $this->findCedulaSheet($sheets);
+        $catalogoCedula = null;
+        if ($cedulaSheet !== null) {
+            $catalogoCedula = $this->cedulaService->syncCatalogoFromRows($cedulaSheet['rows']);
+        } else {
+            $catalogoCedula = RelojCedulaActividadCatalogo::where('activo', true)->orderBy('orden')->get();
+        }
+
+        DB::transaction(function () use ($ubicacionesData, $biometricosData, $empresaId, $catalogoCedula, &$result) {
             // Mapa de sucursales para intentar vincular automáticamente si coincide nombre/ciudad
             $sucursales = Sucursal::withoutGlobalScopes()
                 ->where('empresa_id', $empresaId)
@@ -253,14 +289,23 @@ class EquiposUbicacionesImportService
                     'activo' => true,
                 ];
 
+                $targetEquipo = null;
                 if ($existingEquipo) {
                     $usedEquipoIds[$existingEquipo->id] = true;
                     $existingEquipo->update($payload);
+                    $targetEquipo = $existingEquipo;
                     $result['biometricos_actualizados']++;
                 } else {
                     $created = RelojEquipoBiometrico::withoutGlobalScopes()->create($payload);
                     $usedEquipoIds[$created->id] = true;
+                    $targetEquipo = $created;
                     $result['biometricos_creados']++;
+                }
+
+                if ($targetEquipo) {
+                    $grupoInst = $bRow['grupo_inst'] ?? null;
+                    $this->cedulaService->syncCedulaParaEquipo($targetEquipo, $grupoInst, $catalogoCedula);
+                    $result['cedulas_sincronizadas']++;
                 }
             }
         });
@@ -508,6 +553,7 @@ class EquiposUbicacionesImportService
             $responsableRaw = $getVal($cells, 'responsable', '', '');
             $teamRaw = $getVal($cells, 'team', 'AB', 'AB');
             $responsableFinal = $responsableRaw ?: $teamRaw;
+            $grupoInst = $getVal($cells, 'grupo_inst', 'Y', 'Y');
             $dimensiones = $getVal($cells, 'dimensiones', 'Q', 'Q');
             $instalacionFisica = $getVal($cells, 'instalacion_fisica', 'R', 'R');
             $actualMarca = $getVal($cells, 'actual_marca', 'O', 'O');
@@ -546,6 +592,7 @@ class EquiposUbicacionesImportService
                 'nuevo_mac_address' => $getVal($cells, 'nuevo_mac_address', 'Q', 'R') ?: null,
                 'nuevo_responsable' => $responsableFinal ?: null,
                 'nuevo_factible_acrilico' => $factibleAcrilico ?: null,
+                'grupo_inst' => $grupoInst ?: null,
             ];
 
             $matched = $this->findMatchingExistingEquipo(
@@ -649,6 +696,44 @@ class EquiposUbicacionesImportService
         }
 
         return null;
+    }
+
+    /**
+     * Encuentra la hoja "Cédula de Instalación" en el libro Excel.
+     */
+    public function findCedulaSheet(array $sheets): ?array
+    {
+        foreach ($sheets as $sheet) {
+            $normTitle = $this->normalizeKey($sheet['title']);
+            if (str_contains($normTitle, 'cedula') && str_contains($normTitle, 'instalacion')) {
+                return $sheet;
+            }
+        }
+
+        foreach ($sheets as $sheet) {
+            $normTitle = $this->normalizeKey($sheet['title']);
+            if (str_contains($normTitle, 'cedula')) {
+                return $sheet;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Extrae las actividades de la Cédula de Instalación a partir de sus filas.
+     */
+    public function extractCedulaActivitiesFromRows(array $rows): array
+    {
+        return $this->cedulaService->parseRowsToActivities($rows);
+    }
+
+    /**
+     * Sincroniza el catálogo maestro de actividades de la Cédula.
+     */
+    public function syncCedulaCatalogo(array $activities): array
+    {
+        return $this->cedulaService->syncCatalogoFromRows($activities)->toArray();
     }
 
     /**

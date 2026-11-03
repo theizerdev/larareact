@@ -32,6 +32,7 @@ class RelojEquipoBiometricoController extends Controller
             'sucursal:id,nombre,codigo_numeral,zona_horaria,direccion',
             'ubicacion:id,numero_localidad,planta,direccion,estado,ciudad,legacy',
             'empresa:id,razon_social',
+            'cedula',
         ]);
 
         if ($search) {
@@ -236,7 +237,8 @@ class RelojEquipoBiometricoController extends Controller
         $validated['instalacion_foto'] = $this->procesarFoto($request->input('instalacion_foto'), 'instalacion');
 
         try {
-            RelojEquipoBiometrico::create($validated);
+            $nuevoEquipo = RelojEquipoBiometrico::create($validated);
+            app(\App\Services\RelojCedulaService::class)->syncCedulaParaEquipo($nuevoEquipo);
 
             return back()->with('notification', [
                 'type' => 'success',

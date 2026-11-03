@@ -6,6 +6,7 @@ use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -113,6 +114,11 @@ class RelojEquipoBiometrico extends Model
     public function sucursal(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class, 'sucursal_id');
+    }
+
+    public function cedula(): HasOne
+    {
+        return $this->hasOne(RelojBiometricoCedula::class, 'reloj_equipo_biometrico_id');
     }
 }
 
