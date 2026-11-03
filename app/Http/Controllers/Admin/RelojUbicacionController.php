@@ -245,13 +245,21 @@ class RelojUbicacionController extends Controller
         }
 
         $res = $response['result'];
-        $msg = sprintf(
-            'Importación completada: Ubicaciones (%d nuevas, %d actualizadas) | Biométricos Setup (%d nuevos, %d actualizados).',
-            $res['ubicaciones_creadas'],
-            $res['ubicaciones_actualizadas'],
-            $res['biometricos_creados'],
-            $res['biometricos_actualizados']
-        );
+        if ($scope === 'biometricos') {
+            $msg = sprintf(
+                'Importación de Biométricos Setup completada: %d equipos registrados, %d actualizados.',
+                $res['biometricos_creados'],
+                $res['biometricos_actualizados']
+            );
+        } else {
+            $msg = sprintf(
+                'Importación completada: Ubicaciones (%d nuevas, %d actualizadas) | Biométricos Setup (%d nuevos, %d actualizados).',
+                $res['ubicaciones_creadas'],
+                $res['ubicaciones_actualizadas'],
+                $res['biometricos_creados'],
+                $res['biometricos_actualizados']
+            );
+        }
 
         return response()->json([
             'success' => true,

@@ -20,6 +20,7 @@ class RelojEquipoBiometrico extends Model
         return LogOptions::defaults()
             ->logOnly([
                 'empresa_id',
+                'sucursal_id',
                 'reloj_ubicacion_id',
                 'legacy',
                 'localidad_nombre',
@@ -48,6 +49,7 @@ class RelojEquipoBiometrico extends Model
 
     protected $fillable = [
         'empresa_id',
+        'sucursal_id',
         'reloj_ubicacion_id',
         'legacy',
         'localidad_nombre',
@@ -98,6 +100,11 @@ class RelojEquipoBiometrico extends Model
     public function ubicacion(): BelongsTo
     {
         return $this->belongsTo(RelojUbicacion::class, 'reloj_ubicacion_id');
+    }
+
+    public function sucursal(): BelongsTo
+    {
+        return $this->belongsTo(Sucursal::class, 'sucursal_id');
     }
 }
 

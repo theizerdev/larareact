@@ -58,7 +58,7 @@ interface EquiposUbicacionesImportModalProps {
 export default function EquiposUbicacionesImportModal({
     open,
     onOpenChange,
-    defaultScope = 'ambos',
+    defaultScope = 'biometricos',
 }: EquiposUbicacionesImportModalProps) {
     const [scope, setScope] = useState<ImportScope>(defaultScope);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -114,7 +114,9 @@ export default function EquiposUbicacionesImportModal({
             }
 
             setPreview(json);
-            if (json.ubicaciones.stats.total > 0) {
+            if (currentScope === 'biometricos' || json.ubicaciones.stats.total === 0) {
+                setActivePreviewTab('biometricos');
+            } else if (json.ubicaciones.stats.total > 0) {
                 setActivePreviewTab('ubicaciones');
             } else if (json.biometricos.stats.total > 0) {
                 setActivePreviewTab('biometricos');
@@ -167,86 +169,32 @@ export default function EquiposUbicacionesImportModal({
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2.5 text-xl">
                         <FileSpreadsheet className="h-6 w-6 text-emerald-600" />
-                        Importación Masiva: Equipos Biométricos & Ubicaciones
+                        Importación Masiva: Equipos Biométricos
                     </DialogTitle>
                     <DialogDescription>
-                        Sube el <strong>Archivo maestro de Equipos &amp; Ubicaciones.xlsx</strong>. El sistema detectará automáticamente la{' '}
-                        <strong>Pestaña 2 (Biométricos setup)</strong> y la <strong>Pestaña 3 (Ubicaciones (2))</strong>, separará los registros hacia cada módulo y los vinculará por su número de localidad (<code>Núm.</code>).
+                        Sube el <strong>Archivo maestro de Equipos &amp; Ubicaciones.xlsx</strong>. El sistema detectará automáticamente la pestaña{' '}
+                        <strong>Biométricos setup (2)</strong> e importará el inventario de equipos vinculándolos directamente con sus <strong>Sucursales (Plantas)</strong>.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-5 py-2">
-                    {/* Selector de Modo de Separación */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            1. Selecciona el alcance de importación
-                        </label>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setScope('ambos');
-                                    if (selectedFile) handleAnalyzeFile(selectedFile, 'ambos');
-                                }}
-                                className={cn(
-                                    'flex flex-col items-start gap-1.5 rounded-xl border p-3.5 text-left transition-all cursor-pointer',
-                                    scope === 'ambos'
-                                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                                        : 'border-border hover:bg-muted/40'
-                                )}
-                            >
-                                <div className="flex items-center gap-2 font-semibold text-sm">
-                                    <Layers className="h-4 w-4 text-primary" />
-                                    Ambas Pestañas (Separación Automática)
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Importa y separa simultáneamente <strong>Ubicaciones (2)</strong> y <strong>Biométricos setup</strong>, enlazándolos por <code>Núm.</code>
-                                </p>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setScope('ubicaciones');
-                                    if (selectedFile) handleAnalyzeFile(selectedFile, 'ubicaciones');
-                                }}
-                                className={cn(
-                                    'flex flex-col items-start gap-1.5 rounded-xl border p-3.5 text-left transition-all cursor-pointer',
-                                    scope === 'ubicaciones'
-                                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                                        : 'border-border hover:bg-muted/40'
-                                )}
-                            >
-                                <div className="flex items-center gap-2 font-semibold text-sm">
-                                    <MapPin className="h-4 w-4 text-indigo-600" />
-                                    Solo Pestaña 3: Ubicaciones (2)
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Procesa únicamente el catálogo de plantas, direcciones, estados, ciudades y legacy.
-                                </p>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setScope('biometricos');
-                                    if (selectedFile) handleAnalyzeFile(selectedFile, 'biometricos');
-                                }}
-                                className={cn(
-                                    'flex flex-col items-start gap-1.5 rounded-xl border p-3.5 text-left transition-all cursor-pointer',
-                                    scope === 'biometricos'
-                                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                                        : 'border-border hover:bg-muted/40'
-                                )}
-                            >
-                                <div className="flex items-center gap-2 font-semibold text-sm">
-                                    <Cpu className="h-4 w-4 text-emerald-600" />
-                                    Solo Pestaña 2: Biométricos setup
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Procesa únicamente el inventario de equipos actuales y nuevos biométricos.
-                                </p>
-                            </button>
+                    {/* Alcance de Importación: Biométricos setup */}
+                    <div className="flex items-center gap-3.5 rounded-xl border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 text-emerald-950 dark:text-emerald-200">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                            <Cpu className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 text-xs">
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold text-sm text-emerald-800 dark:text-emerald-300">
+                                    Inventario de Equipos Biométricos (Iniciales y Finales)
+                                </span>
+                                <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 text-[11px] font-medium">
+                                    Pestaña: Biométricos setup (2)
+                                </Badge>
+                            </div>
+                            <p className="text-muted-foreground mt-1">
+                                Procesa los equipos iniciales y nuevos por localidad y los vincula con el catálogo oficial de <strong>Sucursales</strong> mediante su identificador.
+                            </p>
                         </div>
                     </div>
 
@@ -314,46 +262,53 @@ export default function EquiposUbicacionesImportModal({
                         </div>
                     )}
 
-                    {/* Vista Previa de Datos Separados */}
+                    {/* Vista Previa de Datos */}
                     {preview && !analyzing && (
                         <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Resumen Módulo Ubicaciones */}
-                                <div
-                                    onClick={() => preview.ubicaciones.stats.total > 0 && setActivePreviewTab('ubicaciones')}
-                                    className={cn(
-                                        'rounded-xl border p-4 transition cursor-pointer',
-                                        activePreviewTab === 'ubicaciones'
-                                            ? 'border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20'
-                                            : 'border-border bg-card hover:bg-muted/30'
-                                    )}
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2 font-semibold text-sm">
-                                            <MapPin className="h-4 w-4 text-indigo-600" />
-                                            Módulo 1: Ubicaciones de Plantas
-                                        </div>
-                                        {preview.sheets_detected?.ubicaciones && (
-                                            <Badge variant="outline" className="text-[11px]">
-                                                Hoja: {preview.sheets_detected.ubicaciones}
-                                            </Badge>
+                            <div
+                                className={cn(
+                                    'grid gap-4',
+                                    scope === 'biometricos' ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+                                )}
+                            >
+                                {/* Resumen Módulo Ubicaciones (solo si no es exclusivamente biométricos) */}
+                                {scope !== 'biometricos' && (
+                                    <div
+                                        onClick={() => preview.ubicaciones.stats.total > 0 && setActivePreviewTab('ubicaciones')}
+                                        className={cn(
+                                            'rounded-xl border p-4 transition cursor-pointer',
+                                            activePreviewTab === 'ubicaciones'
+                                                ? 'border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20'
+                                                : 'border-border bg-card hover:bg-muted/30'
                                         )}
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2 font-semibold text-sm">
+                                                <MapPin className="h-4 w-4 text-indigo-600" />
+                                                Módulo 1: Ubicaciones de Plantas
+                                            </div>
+                                            {preview.sheets_detected?.ubicaciones && (
+                                                <Badge variant="outline" className="text-[11px]">
+                                                    Hoja: {preview.sheets_detected.ubicaciones}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                                            <div className="rounded-lg bg-background p-2 border">
+                                                <p className="text-lg font-bold">{preview.ubicaciones.stats.total}</p>
+                                                <p className="text-[11px] text-muted-foreground">Detectadas</p>
+                                            </div>
+                                            <div className="rounded-lg bg-emerald-500/10 p-2 border border-emerald-500/20">
+                                                <p className="text-lg font-bold text-emerald-600">{preview.ubicaciones.stats.nuevos}</p>
+                                                <p className="text-[11px] text-emerald-700 dark:text-emerald-400">Nuevas</p>
+                                            </div>
+                                            <div className="rounded-lg bg-amber-500/10 p-2 border border-amber-500/20">
+                                                <p className="text-lg font-bold text-amber-600">{preview.ubicaciones.stats.actualizar}</p>
+                                                <p className="text-[11px] text-amber-700 dark:text-amber-400">Actualizar</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-2 text-center pt-1">
-                                        <div className="rounded-lg bg-background p-2 border">
-                                            <p className="text-lg font-bold">{preview.ubicaciones.stats.total}</p>
-                                            <p className="text-[11px] text-muted-foreground">Detectadas</p>
-                                        </div>
-                                        <div className="rounded-lg bg-emerald-500/10 p-2 border border-emerald-500/20">
-                                            <p className="text-lg font-bold text-emerald-600">{preview.ubicaciones.stats.nuevos}</p>
-                                            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">Nuevas</p>
-                                        </div>
-                                        <div className="rounded-lg bg-amber-500/10 p-2 border border-amber-500/20">
-                                            <p className="text-lg font-bold text-amber-600">{preview.ubicaciones.stats.actualizar}</p>
-                                            <p className="text-[11px] text-amber-700 dark:text-amber-400">Actualizar</p>
-                                        </div>
-                                    </div>
-                                </div>
+                                )}
 
                                 {/* Resumen Módulo Biométricos Setup */}
                                 <div
@@ -368,11 +323,11 @@ export default function EquiposUbicacionesImportModal({
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2 font-semibold text-sm">
                                             <Cpu className="h-4 w-4 text-emerald-600" />
-                                            Módulo 2: Biométricos Setup
+                                            {scope === 'biometricos' ? 'Inventario de Biométricos Setup' : 'Módulo 2: Biométricos Setup'}
                                         </div>
                                         {preview.sheets_detected?.biometricos && (
-                                            <Badge variant="outline" className="text-[11px]">
-                                                Hoja: {preview.sheets_detected.biometricos}
+                                            <Badge variant="outline" className="text-[11px] bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                                                Hoja detectada: {preview.sheets_detected.biometricos}
                                             </Badge>
                                         )}
                                     </div>
@@ -397,18 +352,20 @@ export default function EquiposUbicacionesImportModal({
                             <div className="rounded-xl border overflow-hidden">
                                 <div className="flex items-center justify-between bg-muted/50 px-4 py-2.5 border-b">
                                     <div className="flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setActivePreviewTab('ubicaciones')}
-                                            className={cn(
-                                                'px-3 py-1 rounded-md text-xs font-semibold transition cursor-pointer',
-                                                activePreviewTab === 'ubicaciones'
-                                                    ? 'bg-primary text-primary-foreground'
-                                                    : 'text-muted-foreground hover:bg-muted'
-                                            )}
-                                        >
-                                            Vista Previa Ubicaciones ({preview.ubicaciones.stats.total})
-                                        </button>
+                                        {scope !== 'biometricos' && preview.ubicaciones.stats.total > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setActivePreviewTab('ubicaciones')}
+                                                className={cn(
+                                                    'px-3 py-1 rounded-md text-xs font-semibold transition cursor-pointer',
+                                                    activePreviewTab === 'ubicaciones'
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'text-muted-foreground hover:bg-muted'
+                                                )}
+                                            >
+                                                Vista Previa Ubicaciones ({preview.ubicaciones.stats.total})
+                                            </button>
+                                        )}
                                         <button
                                             type="button"
                                             onClick={() => setActivePreviewTab('biometricos')}
@@ -424,133 +381,134 @@ export default function EquiposUbicacionesImportModal({
                                     </div>
                                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                                         <Sparkles className="h-3.5 w-3.5 text-primary" />
-                                        Separación automática lista
+                                        {scope === 'biometricos' ? 'Equipos vinculados con Sucursales' : 'Separación automática lista'}
                                     </span>
-                                </div>
+                                </span>
+                            </div>
 
-                                <div className="max-h-[280px] overflow-y-auto">
-                                    {activePreviewTab === 'ubicaciones' ? (
-                                        <table className="w-full text-xs">
-                                            <thead className="bg-muted/30 sticky top-0 border-b">
-                                                <tr className="text-left text-muted-foreground">
-                                                    <th className="p-2.5 font-semibold">Núm.</th>
-                                                    <th className="p-2.5 font-semibold">Planta</th>
-                                                    <th className="p-2.5 font-semibold">Estado / Ciudad</th>
-                                                    <th className="p-2.5 font-semibold">Legacy</th>
-                                                    <th className="p-2.5 font-semibold">Dirección</th>
-                                                    <th className="p-2.5 font-semibold text-right">Acción</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y">
-                                                {preview.ubicaciones.records.slice(0, 60).map((row, i) => (
-                                                    <tr key={i} className="hover:bg-muted/20">
-                                                        <td className="p-2.5 font-mono font-semibold">{row.numero_localidad ?? '—'}</td>
-                                                        <td className="p-2.5 font-medium">{row.planta}</td>
-                                                        <td className="p-2.5 text-muted-foreground">
-                                                            {[row.ciudad, row.estado].filter(Boolean).join(', ') || '—'}
-                                                        </td>
-                                                        <td className="p-2.5">
-                                                            {row.legacy ? (
-                                                                <Badge variant="outline" className="text-[10px]">
-                                                                    {row.legacy}
-                                                                </Badge>
-                                                            ) : (
-                                                                '—'
+                            <div className="max-h-[280px] overflow-y-auto">
+                                {activePreviewTab === 'ubicaciones' ? (
+                                    <table className="w-full text-xs">
+                                        <thead className="bg-muted/30 sticky top-0 border-b">
+                                            <tr className="text-left text-muted-foreground">
+                                                <th className="p-2.5 font-semibold">Núm.</th>
+                                                <th className="p-2.5 font-semibold">Planta</th>
+                                                <th className="p-2.5 font-semibold">Estado / Ciudad</th>
+                                                <th className="p-2.5 font-semibold">Legacy</th>
+                                                <th className="p-2.5 font-semibold">Dirección</th>
+                                                <th className="p-2.5 font-semibold text-right">Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y">
+                                            {preview.ubicaciones.records.slice(0, 60).map((row, i) => (
+                                                <tr key={i} className="hover:bg-muted/20">
+                                                    <td className="p-2.5 font-mono font-semibold">{row.numero_localidad ?? '—'}</td>
+                                                    <td className="p-2.5 font-medium">{row.planta}</td>
+                                                    <td className="p-2.5 text-muted-foreground">
+                                                        {[row.ciudad, row.estado].filter(Boolean).join(', ') || '—'}
+                                                    </td>
+                                                    <td className="p-2.5">
+                                                        {row.legacy ? (
+                                                            <Badge variant="outline" className="text-[10px]">
+                                                                {row.legacy}
+                                                            </Badge>
+                                                        ) : (
+                                                            '—'
+                                                        )}
+                                                    </td>
+                                                    <td className="p-2.5 max-w-[260px] truncate text-muted-foreground" title={row.direccion || ''}>
+                                                        {row.direccion || '—'}
+                                                    </td>
+                                                    <td className="p-2.5 text-right">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={cn(
+                                                                'text-[10px]',
+                                                                row.action === 'create'
+                                                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600'
+                                                                    : 'border-amber-500/30 bg-amber-500/10 text-amber-600'
                                                             )}
-                                                        </td>
-                                                        <td className="p-2.5 max-w-[260px] truncate text-muted-foreground" title={row.direccion || ''}>
-                                                            {row.direccion || '—'}
-                                                        </td>
-                                                        <td className="p-2.5 text-right">
-                                                            <Badge
-                                                                variant="outline"
-                                                                className={cn(
-                                                                    'text-[10px]',
-                                                                    row.action === 'create'
-                                                                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600'
-                                                                        : 'border-amber-500/30 bg-amber-500/10 text-amber-600'
-                                                                )}
-                                                            >
-                                                                {row.action === 'create' ? 'Nuevo' : 'Actualizar'}
-                                                            </Badge>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    ) : (
-                                        <table className="w-full text-xs">
-                                            <thead className="bg-muted/30 sticky top-0 border-b">
-                                                <tr className="text-left text-muted-foreground">
-                                                    <th className="p-2.5 font-semibold">Núm.</th>
-                                                    <th className="p-2.5 font-semibold">Localidad</th>
-                                                    <th className="p-2.5 font-semibold">Ubicación Física</th>
-                                                    <th className="p-2.5 font-semibold">Equipo Actual (Serie / IP)</th>
-                                                    <th className="p-2.5 font-semibold">Nuevo Biométrico (Serie / IP)</th>
-                                                    <th className="p-2.5 font-semibold text-right">Acción</th>
+                                                        >
+                                                            {row.action === 'create' ? 'Nuevo' : 'Actualizar'}
+                                                        </Badge>
+                                                    </td>
                                                 </tr>
-                                            </thead>
-                                            <tbody className="divide-y">
-                                                {preview.biometricos.records.slice(0, 60).map((row, i) => (
-                                                    <tr key={i} className="hover:bg-muted/20">
-                                                        <td className="p-2.5 font-mono font-semibold">{row.numero_localidad ?? '—'}</td>
-                                                        <td className="p-2.5 font-medium">{row.localidad_nombre}</td>
-                                                        <td className="p-2.5">{row.ubicacion_fisica || '—'}</td>
-                                                        <td className="p-2.5 font-mono text-[11px]">
-                                                            {[row.actual_no_serie, row.actual_ip].filter(Boolean).join(' • ') || '—'}
-                                                        </td>
-                                                        <td className="p-2.5 font-mono text-[11px]">
-                                                            {[row.nuevo_no_serie, row.nuevo_ip].filter(Boolean).join(' • ') || 'Pendiente'}
-                                                        </td>
-                                                        <td className="p-2.5 text-right">
-                                                            <Badge
-                                                                variant="outline"
-                                                                className={cn(
-                                                                    'text-[10px]',
-                                                                    row.action === 'create'
-                                                                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600'
-                                                                        : 'border-amber-500/30 bg-amber-500/10 text-amber-600'
-                                                                )}
-                                                            >
-                                                                {row.action === 'create' ? 'Nuevo' : 'Actualizar'}
-                                                            </Badge>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    )}
-                                </div>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <table className="w-full text-xs">
+                                        <thead className="bg-muted/30 sticky top-0 border-b">
+                                            <tr className="text-left text-muted-foreground">
+                                                <th className="p-2.5 font-semibold">Núm.</th>
+                                                <th className="p-2.5 font-semibold">Localidad</th>
+                                                <th className="p-2.5 font-semibold">Ubicación Física</th>
+                                                <th className="p-2.5 font-semibold">Equipo Actual (Serie / IP)</th>
+                                                <th className="p-2.5 font-semibold">Nuevo Biométrico (Serie / IP)</th>
+                                                <th className="p-2.5 font-semibold text-right">Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y">
+                                            {preview.biometricos.records.slice(0, 60).map((row, i) => (
+                                                <tr key={i} className="hover:bg-muted/20">
+                                                    <td className="p-2.5 font-mono font-semibold">{row.numero_localidad ?? '—'}</td>
+                                                    <td className="p-2.5 font-medium">{row.localidad_nombre}</td>
+                                                    <td className="p-2.5">{row.ubicacion_fisica || '—'}</td>
+                                                    <td className="p-2.5 font-mono text-[11px]">
+                                                        {[row.actual_no_serie, row.actual_ip].filter(Boolean).join(' • ') || '—'}
+                                                    </td>
+                                                    <td className="p-2.5 font-mono text-[11px]">
+                                                        {[row.nuevo_no_serie, row.nuevo_ip].filter(Boolean).join(' • ') || 'Pendiente'}
+                                                    </td>
+                                                    <td className="p-2.5 text-right">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={cn(
+                                                                'text-[10px]',
+                                                                row.action === 'create'
+                                                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600'
+                                                                    : 'border-amber-500/30 bg-amber-500/10 text-amber-600'
+                                                            )}
+                                                        >
+                                                            {row.action === 'create' ? 'Nuevo' : 'Actualizar'}
+                                                        </Badge>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
                             </div>
                         </div>
+                        </div>
                     )}
-                </div>
+            </div>
 
-                <DialogFooter className="gap-2 pt-2">
-                    <Button type="button" variant="outline" onClick={() => handleClose(false)}>
-                        Cancelar
-                    </Button>
-                    <Button
-                        type="button"
-                        disabled={!preview || importing || analyzing}
-                        onClick={handleExecuteImport}
-                        className="gap-2"
-                    >
-                        {importing ? (
-                            <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Importando y separando datos...
-                            </>
-                        ) : (
-                            <>
-                                <CheckCircle2 className="h-4 w-4" />
-                                Confirmar e Importar Datos
-                            </>
-                        )}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            <DialogFooter className="gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => handleClose(false)}>
+                    Cancelar
+                </Button>
+                <Button
+                    type="button"
+                    disabled={!preview || importing || analyzing}
+                    onClick={handleExecuteImport}
+                    className="gap-2"
+                >
+                    {importing ? (
+                        <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Importando y separando datos...
+                        </>
+                    ) : (
+                        <>
+                            <CheckCircle2 className="h-4 w-4" />
+                            Confirmar e Importar Datos
+                        </>
+                    )}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+        </Dialog >
     );
 }
 

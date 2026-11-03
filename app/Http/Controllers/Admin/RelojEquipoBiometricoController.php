@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\RelojEquipoBiometrico;
 use App\Models\RelojUbicacion;
+use App\Models\Sucursal;
 use App\Services\EquiposUbicacionesImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,7 @@ class RelojEquipoBiometricoController extends Controller
     {
         $search = $request->input('search');
         $legacy = $request->input('legacy');
-        $ubicacionId = $request->input('reloj_ubicacion_id');
+        $ubicacionId = $request->input('sucursal_id') ?? $request->input('reloj_ubicacion_id');
         $numLocalidad = $request->input('numero_localidad');
         $actualInstalado = $request->input('actual_instalado');
         $nuevoInstalado = $request->input('nuevo_instalado');
@@ -28,6 +29,7 @@ class RelojEquipoBiometricoController extends Controller
         $perPage = (int) $request->input('perPage', 15);
 
         $query = RelojEquipoBiometrico::with([
+            'sucursal:id,nombre,codigo_numeral,zona_horaria,direccion',
             'ubicacion:id,numero_localidad,planta,direccion,estado,ciudad,legacy',
             'empresa:id,razon_social',
         ]);
@@ -64,7 +66,10 @@ class RelojEquipoBiometricoController extends Controller
         }
 
         if ($ubicacionId !== null && $ubicacionId !== '' && $ubicacionId !== 'all') {
-            $query->where('reloj_ubicacion_id', (int) $ubicacionId);
+            $query->where(function ($q) use ($ubicacionId) {
+                $q->where('sucursal_id', (int) $ubicacionId)
+                  ->orWhere('reloj_ubicacion_id', (int) $ubicacionId);
+            });
         }
 
         if ($numLocalidad !== null && $numLocalidad !== '' && $numLocalidad !== 'all') {
@@ -109,10 +114,22 @@ class RelojEquipoBiometricoController extends Controller
             'por_legacy' => $porLegacy,
         ];
 
-        $ubicacionesCatalogo = RelojUbicacion::orderByRaw('CASE WHEN numero_localidad IS NULL THEN 1 ELSE 0 END ASC')
-            ->orderBy('numero_localidad', 'asc')
-            ->orderBy('planta', 'asc')
-            ->get(['id', 'numero_localidad', 'planta', 'estado', 'ciudad', 'legacy', 'direccion']);
+        $sucursales = Sucursal::orderBy('id')->get(['id', 'nombre', 'codigo_numeral', 'zona_horaria', 'direccion']);
+
+        $ubicacionesCatalogo = RelojUbicacion::count() > 0
+            ? RelojUbicacion::orderByRaw('CASE WHEN numero_localidad IS NULL THEN 1 ELSE 0 END ASC')
+                ->orderBy('numero_localidad', 'asc')
+                ->orderBy('planta', 'asc')
+                ->get(['id', 'numero_localidad', 'planta', 'estado', 'ciudad', 'legacy', 'direccion'])
+            : $sucursales->map(fn ($s) => (object)[
+                'id' => $s->id,
+                'numero_localidad' => is_numeric($s->codigo_numeral) ? (int)$s->codigo_numeral : $s->id,
+                'planta' => $s->nombre,
+                'estado' => '',
+                'ciudad' => '',
+                'legacy' => '',
+                'direccion' => $s->direccion,
+            ]);
 
         $legaciesDisponibles = RelojEquipoBiometrico::whereNotNull('legacy')
             ->where('legacy', '!=', '')
@@ -124,6 +141,7 @@ class RelojEquipoBiometricoController extends Controller
         return Inertia::render('admin/Asistencia/BiometricosSetup/Index', [
             'biometricos' => $biometricos,
             'stats' => $stats,
+            'sucursales' => $sucursales,
             'ubicacionesCatalogo' => $ubicacionesCatalogo,
             'legaciesDisponibles' => $legaciesDisponibles,
             'empresas' => Empresa::where('status', true)
@@ -132,6 +150,7 @@ class RelojEquipoBiometricoController extends Controller
             'filters' => $request->only([
                 'search',
                 'legacy',
+                'sucursal_id',
                 'reloj_ubicacion_id',
                 'numero_localidad',
                 'actual_instalado',
@@ -146,6 +165,7 @@ class RelojEquipoBiometricoController extends Controller
     {
         $validated = $request->validate([
             'empresa_id' => 'nullable|exists:empresas,id',
+            'sucursal_id' => 'nullable|exists:sucursales,id',
             'reloj_ubicacion_id' => 'nullable|exists:reloj_ubicaciones,id',
             'legacy' => 'nullable|string|max:60',
             'localidad_nombre' => 'required|string|max:255',
@@ -189,6 +209,14 @@ class RelojEquipoBiometricoController extends Controller
             $validated['empresa_id'] = $request->user()?->empresa_id ?? Empresa::withoutGlobalScopes()->value('id');
         }
 
+        if (! empty($validated['sucursal_id'])) {
+            $sucursal = Sucursal::find($validated['sucursal_id']);
+            if ($sucursal) {
+                $validated['localidad_nombre'] = $validated['localidad_nombre'] ?: $sucursal->nombre;
+                $validated['numero_localidad'] = $validated['numero_localidad'] ?? (is_numeric($sucursal->codigo_numeral) ? (int)$sucursal->codigo_numeral : null);
+            }
+        }
+
         if (! empty($validated['reloj_ubicacion_id'])) {
             $ubicacion = RelojUbicacion::find($validated['reloj_ubicacion_id']);
             if ($ubicacion) {
@@ -222,6 +250,7 @@ class RelojEquipoBiometricoController extends Controller
     {
         $validated = $request->validate([
             'empresa_id' => 'nullable|exists:empresas,id',
+            'sucursal_id' => 'nullable|exists:sucursales,id',
             'reloj_ubicacion_id' => 'nullable|exists:reloj_ubicaciones,id',
             'legacy' => 'nullable|string|max:60',
             'localidad_nombre' => 'required|string|max:255',
@@ -260,6 +289,14 @@ class RelojEquipoBiometricoController extends Controller
 
             'activo' => 'boolean',
         ]);
+
+        if (! empty($validated['sucursal_id'])) {
+            $sucursal = Sucursal::find($validated['sucursal_id']);
+            if ($sucursal) {
+                $validated['localidad_nombre'] = $validated['localidad_nombre'] ?: $sucursal->nombre;
+                $validated['numero_localidad'] = $validated['numero_localidad'] ?? (is_numeric($sucursal->codigo_numeral) ? (int)$sucursal->codigo_numeral : null);
+            }
+        }
 
         $validated['actual_foto'] = $this->procesarFoto($request->input('actual_foto'), 'inicial', $biometrico->actual_foto);
         $validated['nuevo_foto'] = $this->procesarFoto($request->input('nuevo_foto'), 'final', $biometrico->nuevo_foto);

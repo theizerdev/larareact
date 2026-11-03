@@ -76,9 +76,18 @@ interface UbicacionOption {
     direccion: string | null;
 }
 
+interface SucursalOption {
+    id: number;
+    nombre: string;
+    codigo_numeral: string;
+    zona_horaria: string;
+    direccion?: string | null;
+}
+
 interface RelojEquipoBiometrico {
     id: number;
     empresa_id: number | null;
+    sucursal_id?: number | null;
     reloj_ubicacion_id: number | null;
     legacy: string | null;
     localidad_nombre: string;
@@ -116,6 +125,7 @@ interface RelojEquipoBiometrico {
     nuevo_foto: string | null;
 
     activo: boolean;
+    sucursal?: SucursalOption | null;
     ubicacion?: UbicacionOption | null;
 }
 
@@ -129,12 +139,14 @@ interface BiometricosSetupPageProps {
         pendientes_ubicacion: number;
         por_legacy: Record<string, number>;
     };
+    sucursales: SucursalOption[];
     ubicacionesCatalogo: UbicacionOption[];
     legaciesDisponibles: string[];
     empresas: { id: number; razon_social: string }[];
     filters: {
         search?: string;
         legacy?: string;
+        sucursal_id?: string;
         reloj_ubicacion_id?: string;
         numero_localidad?: string;
         actual_instalado?: string;
@@ -146,6 +158,7 @@ interface BiometricosSetupPageProps {
 
 const initialForm = {
     empresa_id: '' as string | number,
+    sucursal_id: '' as string | number,
     reloj_ubicacion_id: '' as string | number,
     legacy: '',
     localidad_nombre: '',
@@ -398,7 +411,8 @@ function PhotoDropzone({
 export default function BiometricosSetupIndexPage({
     biometricos,
     stats,
-    ubicacionesCatalogo,
+    sucursales = [],
+    ubicacionesCatalogo = [],
     legaciesDisponibles,
     empresas,
     filters,
@@ -414,7 +428,7 @@ export default function BiometricosSetupIndexPage({
 
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [legacyFilter, setLegacyFilter] = useState(filters.legacy || 'all');
-    const [ubicacionFilter, setUbicacionFilter] = useState(filters.reloj_ubicacion_id || 'all');
+    const [ubicacionFilter, setUbicacionFilter] = useState(filters.sucursal_id || filters.reloj_ubicacion_id || 'all');
     const [numLocalidadFilter, setNumLocalidadFilter] = useState(filters.numero_localidad || '');
     const [actualInstaladoFilter, setActualInstaladoFilter] = useState(filters.actual_instalado || 'all');
     const [nuevoInstaladoFilter, setNuevoInstaladoFilter] = useState(filters.nuevo_instalado || 'all');
@@ -443,6 +457,7 @@ export default function BiometricosSetupIndexPage({
                 cleanParams({
                     search: searchTerm,
                     legacy: legacyFilter === 'all' ? '' : legacyFilter,
+                    sucursal_id: ubicacionFilter === 'all' ? '' : ubicacionFilter,
                     reloj_ubicacion_id: ubicacionFilter === 'all' ? '' : ubicacionFilter,
                     numero_localidad: numLocalidadFilter,
                     actual_instalado: actualInstaladoFilter === 'all' ? '' : actualInstaladoFilter,
@@ -470,6 +485,7 @@ export default function BiometricosSetupIndexPage({
         setEditingItem(item);
         setData({
             empresa_id: item.empresa_id ?? (empresas[0]?.id || ''),
+            sucursal_id: item.sucursal_id ?? item.reloj_ubicacion_id ?? '',
             reloj_ubicacion_id: item.reloj_ubicacion_id ?? '',
             legacy: item.legacy || '',
             localidad_nombre: item.localidad_nombre || '',
@@ -508,24 +524,36 @@ export default function BiometricosSetupIndexPage({
         setIsModalOpen(true);
     };
 
-    const handleSelectUbicacionCatalogo = (val: string) => {
+    const handleSelectSucursal = (val: string) => {
         if (val === 'none') {
-            setData('reloj_ubicacion_id', '');
+            setData({
+                ...data,
+                sucursal_id: '',
+                reloj_ubicacion_id: '',
+            });
             return;
         }
-        const ubId = Number(val);
-        const found = ubicacionesCatalogo.find((u) => u.id === ubId);
+        const sucId = Number(val);
+        const found = sucursales.find((s) => s.id === sucId);
         if (found) {
             setData({
                 ...data,
+                sucursal_id: found.id,
                 reloj_ubicacion_id: found.id,
-                localidad_nombre: data.localidad_nombre || found.planta,
-                numero_localidad: found.numero_localidad ?? data.numero_localidad,
-                legacy: found.legacy || data.legacy,
+                localidad_nombre: found.nombre,
+                numero_localidad: isNaN(Number(found.codigo_numeral)) ? found.id : Number(found.codigo_numeral),
             });
         } else {
-            setData('reloj_ubicacion_id', ubId);
+            setData({
+                ...data,
+                sucursal_id: sucId,
+                reloj_ubicacion_id: sucId,
+            });
         }
+    };
+
+    const handleSelectUbicacionCatalogo = (val: string) => {
+        handleSelectSucursal(val);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -533,7 +561,8 @@ export default function BiometricosSetupIndexPage({
 
         const payload = {
             ...data,
-            reloj_ubicacion_id: data.reloj_ubicacion_id === '' ? null : Number(data.reloj_ubicacion_id),
+            sucursal_id: data.sucursal_id === '' ? null : Number(data.sucursal_id),
+            reloj_ubicacion_id: data.reloj_ubicacion_id === '' ? (data.sucursal_id === '' ? null : Number(data.sucursal_id)) : Number(data.reloj_ubicacion_id),
             numero_localidad: data.numero_localidad === '' ? null : Number(data.numero_localidad),
         };
 
@@ -612,10 +641,9 @@ export default function BiometricosSetupIndexPage({
                             )}
                         </div>
 
-                        {item.ubicacion && (
-                            <p className="text-[11px] text-muted-foreground truncate max-w-[290px]" title={item.ubicacion.direccion || ''}>
-                                {[item.ubicacion.ciudad, item.ubicacion.estado].filter(Boolean).join(', ')}
-                                {item.ubicacion.direccion ? ` — ${item.ubicacion.direccion}` : ''}
+                        {(item.sucursal?.direccion || item.ubicacion) && (
+                            <p className="text-[11px] text-muted-foreground truncate max-w-[290px]" title={item.sucursal?.direccion || item.ubicacion?.direccion || ''}>
+                                {item.sucursal?.direccion || [item.ubicacion?.ciudad, item.ubicacion?.estado].filter(Boolean).join(', ') + (item.ubicacion?.direccion ? ` — ${item.ubicacion.direccion}` : '')}
                             </p>
                         )}
                     </div>
@@ -1062,11 +1090,11 @@ export default function BiometricosSetupIndexPage({
                                     <SelectValue placeholder="Todas las plantas" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Todas las plantas</SelectItem>
-                                    {ubicacionesCatalogo.map((ub) => (
-                                        <SelectItem key={ub.id} value={String(ub.id)}>
-                                            {ub.numero_localidad ? `#${ub.numero_localidad} - ` : ''}
-                                            {ub.planta}
+                                    <SelectItem value="all">Todas las plantas ({sucursales.length || ubicacionesCatalogo.length || 68})</SelectItem>
+                                    {(sucursales.length > 0 ? sucursales : ubicacionesCatalogo).map((item: any) => (
+                                        <SelectItem key={item.id} value={String(item.id)}>
+                                            {item.codigo_numeral ? `#${item.codigo_numeral} - ` : (item.numero_localidad ? `#${item.numero_localidad} - ` : '')}
+                                            {item.nombre || item.planta}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -1150,20 +1178,20 @@ export default function BiometricosSetupIndexPage({
 
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                                 <div className="md:col-span-6 space-y-2">
-                                    <Label>Vincular con Catálogo de Ubicaciones</Label>
+                                    <Label>Vincular con Planta / Sucursal (Ubicación)</Label>
                                     <Select
-                                        value={data.reloj_ubicacion_id ? String(data.reloj_ubicacion_id) : 'none'}
-                                        onValueChange={handleSelectUbicacionCatalogo}
+                                        value={data.sucursal_id ? String(data.sucursal_id) : (data.reloj_ubicacion_id ? String(data.reloj_ubicacion_id) : 'none')}
+                                        onValueChange={handleSelectSucursal}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar planta del catálogo..." />
+                                            <SelectValue placeholder="Seleccionar planta del catálogo oficial..." />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="none">Sin vincular / Manual</SelectItem>
-                                            {ubicacionesCatalogo.map((ub) => (
-                                                <SelectItem key={ub.id} value={String(ub.id)}>
-                                                    {ub.numero_localidad ? `[#${ub.numero_localidad}] ` : ''}
-                                                    {ub.planta} {ub.legacy ? `(${ub.legacy})` : ''}
+                                            {(sucursales.length > 0 ? sucursales : ubicacionesCatalogo).map((item: any) => (
+                                                <SelectItem key={item.id} value={String(item.id)}>
+                                                    {item.codigo_numeral ? `[#${item.codigo_numeral}] ` : (item.numero_localidad ? `[#${item.numero_localidad}] ` : '')}
+                                                    {item.nombre || item.planta} {item.legacy ? `(${item.legacy})` : ''}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -1565,7 +1593,7 @@ export default function BiometricosSetupIndexPage({
             <EquiposUbicacionesImportModal
                 open={isImportModalOpen}
                 onOpenChange={setIsImportModalOpen}
-                defaultScope="ambos"
+                defaultScope="biometricos"
             />
 
             {/* Modal Lightbox para visualización ampliada de fotos */}
