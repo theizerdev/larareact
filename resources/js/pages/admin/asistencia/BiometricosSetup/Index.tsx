@@ -924,6 +924,7 @@ export default function BiometricosSetupIndexPage({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        {/* Oculto temporalmente: link a admin/asistencia/ubicaciones
                         {item.numero_localidad && (
                             <DropdownMenuItem asChild>
                                 <Link href={`/admin/asistencia/ubicaciones?search=${item.numero_localidad}`}>
@@ -932,6 +933,7 @@ export default function BiometricosSetupIndexPage({
                                 </Link>
                             </DropdownMenuItem>
                         )}
+                        */}
                         {canManage && (
                             <>
                                 <DropdownMenuItem onClick={() => handleEditClick(item)}>
@@ -971,12 +973,14 @@ export default function BiometricosSetupIndexPage({
                     colorClassName="bg-emerald-600"
                 >
                     <div className="flex flex-wrap items-center gap-2">
+                        {/* Oculto temporalmente: Catálogo de Ubicaciones
                         <Button variant="outline" asChild className="bg-white/10 text-white border-white/20 hover:bg-white/20">
                             <Link href="/admin/asistencia/ubicaciones">
                                 <MapPin className="mr-2 h-4 w-4" />
                                 Catálogo de Ubicaciones
                             </Link>
                         </Button>
+                        */}
                         {canManage && (
                             <>
                                 <Button
