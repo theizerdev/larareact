@@ -171,12 +171,12 @@ export default function EquiposUbicacionesImportModal({
                     </DialogTitle>
                     <DialogDescription>
                         Sube el <strong>Archivo maestro de Equipos &amp; Ubicaciones.xlsx</strong>. El sistema detectará automáticamente la pestaña{' '}
-                        <strong>Biométricos setup (2)</strong> e importará el inventario de equipos vinculándolos directamente con sus <strong>Sucursales (Plantas)</strong>.
+                        <strong>Inventario Total</strong> e importará el inventario de equipos vinculándolos directamente con sus <strong>Sucursales (Plantas)</strong>.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-5 py-2">
-                    {/* Alcance de Importación: Biométricos setup */}
+                    {/* Alcance de Importación: Inventario Total */}
                     <div className="flex items-center gap-3.5 rounded-xl border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 text-emerald-950 dark:text-emerald-200">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
                             <Cpu className="h-5 w-5" />
@@ -187,11 +187,11 @@ export default function EquiposUbicacionesImportModal({
                                     Inventario de Equipos Biométricos (Iniciales y Finales)
                                 </span>
                                 <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 text-[11px] font-medium">
-                                    Pestaña: Biométricos setup (2)
+                                    Pestaña: Inventario Total
                                 </Badge>
                             </div>
                             <p className="text-muted-foreground mt-1">
-                                Procesa los equipos iniciales y nuevos por localidad y los vincula con el catálogo oficial de <strong>Sucursales</strong> mediante su identificador.
+                                Procesa los equipos iniciales y nuevos por localidad (incluyendo observaciones, responsable y factibilidad de acrílico) vinculándolos con el catálogo oficial de <strong>Sucursales</strong>.
                             </p>
                         </div>
                     </div>
@@ -263,98 +263,107 @@ export default function EquiposUbicacionesImportModal({
                     {/* Vista Previa de Datos Separados */}
                     {preview && !analyzing && (
                         <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Resumen Módulo Ubicaciones */}
-                                <div
-                                    onClick={() => preview.ubicaciones.stats.total > 0 && setActivePreviewTab('ubicaciones')}
-                                    className={cn(
-                                        'rounded-xl border p-4 transition cursor-pointer',
-                                        activePreviewTab === 'ubicaciones'
-                                            ? 'border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20'
-                                            : 'border-border bg-card hover:bg-muted/30'
-                                    )}
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2 font-semibold text-sm">
-                                            <MapPin className="h-4 w-4 text-indigo-600" />
-                                            Módulo 1: Ubicaciones de Plantas
-                                        </div>
-                                        {preview.sheets_detected?.ubicaciones && (
-                                            <Badge variant="outline" className="text-[11px]">
-                                                Hoja: {preview.sheets_detected.ubicaciones}
-                                            </Badge>
+                            <div className={cn(
+                                'grid gap-4',
+                                scope === 'ambos' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
+                            )}>
+                                {/* Resumen Módulo Ubicaciones (solo si scope es 'ambos' o 'ubicaciones') */}
+                                {scope !== 'biometricos' && (
+                                    <div
+                                        onClick={() => preview.ubicaciones.stats.total > 0 && setActivePreviewTab('ubicaciones')}
+                                        className={cn(
+                                            'rounded-xl border p-4 transition cursor-pointer',
+                                            activePreviewTab === 'ubicaciones'
+                                                ? 'border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20'
+                                                : 'border-border bg-card hover:bg-muted/30'
                                         )}
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2 font-semibold text-sm">
+                                                <MapPin className="h-4 w-4 text-indigo-600" />
+                                                Módulo 1: Ubicaciones de Plantas
+                                            </div>
+                                            {preview.sheets_detected?.ubicaciones && (
+                                                <Badge variant="outline" className="text-[11px]">
+                                                    Hoja: {preview.sheets_detected.ubicaciones}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                                            <div className="rounded-lg bg-background p-2 border">
+                                                <p className="text-lg font-bold">{preview.ubicaciones.stats.total}</p>
+                                                <p className="text-[11px] text-muted-foreground">Detectadas</p>
+                                            </div>
+                                            <div className="rounded-lg bg-emerald-500/10 p-2 border border-emerald-500/20">
+                                                <p className="text-lg font-bold text-emerald-600">{preview.ubicaciones.stats.nuevos}</p>
+                                                <p className="text-[11px] text-emerald-700 dark:text-emerald-400">Nuevas</p>
+                                            </div>
+                                            <div className="rounded-lg bg-amber-500/10 p-2 border border-amber-500/20">
+                                                <p className="text-lg font-bold text-amber-600">{preview.ubicaciones.stats.actualizar}</p>
+                                                <p className="text-[11px] text-amber-700 dark:text-amber-400">Actualizar</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-2 text-center pt-1">
-                                        <div className="rounded-lg bg-background p-2 border">
-                                            <p className="text-lg font-bold">{preview.ubicaciones.stats.total}</p>
-                                            <p className="text-[11px] text-muted-foreground">Detectadas</p>
-                                        </div>
-                                        <div className="rounded-lg bg-emerald-500/10 p-2 border border-emerald-500/20">
-                                            <p className="text-lg font-bold text-emerald-600">{preview.ubicaciones.stats.nuevos}</p>
-                                            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">Nuevas</p>
-                                        </div>
-                                        <div className="rounded-lg bg-amber-500/10 p-2 border border-amber-500/20">
-                                            <p className="text-lg font-bold text-amber-600">{preview.ubicaciones.stats.actualizar}</p>
-                                            <p className="text-[11px] text-amber-700 dark:text-amber-400">Actualizar</p>
-                                        </div>
-                                    </div>
-                                </div>
+                                )}
 
                                 {/* Resumen Módulo Biométricos Setup */}
-                                <div
-                                    onClick={() => preview.biometricos.stats.total > 0 && setActivePreviewTab('biometricos')}
-                                    className={cn(
-                                        'rounded-xl border p-4 transition cursor-pointer',
-                                        activePreviewTab === 'biometricos'
-                                            ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20'
-                                            : 'border-border bg-card hover:bg-muted/30'
-                                    )}
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2 font-semibold text-sm">
-                                            <Cpu className="h-4 w-4 text-emerald-600" />
-                                            Módulo 2: Biométricos Setup
-                                        </div>
-                                        {preview.sheets_detected?.biometricos && (
-                                            <Badge variant="outline" className="text-[11px]">
-                                                Hoja: {preview.sheets_detected.biometricos}
-                                            </Badge>
+                                {scope !== 'ubicaciones' && (
+                                    <div
+                                        onClick={() => preview.biometricos.stats.total > 0 && setActivePreviewTab('biometricos')}
+                                        className={cn(
+                                            'rounded-xl border p-4 transition cursor-pointer',
+                                            activePreviewTab === 'biometricos'
+                                                ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20'
+                                                : 'border-border bg-card hover:bg-muted/30'
                                         )}
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2 font-semibold text-sm">
+                                                <Cpu className="h-4 w-4 text-emerald-600" />
+                                                Inventario de Biométricos Setup
+                                            </div>
+                                            {preview.sheets_detected?.biometricos && (
+                                                <Badge variant="outline" className="text-[11px]">
+                                                    Hoja: {preview.sheets_detected.biometricos}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                                            <div className="rounded-lg bg-background p-2 border">
+                                                <p className="text-lg font-bold">{preview.biometricos.stats.total}</p>
+                                                <p className="text-[11px] text-muted-foreground">Detectados</p>
+                                            </div>
+                                            <div className="rounded-lg bg-emerald-500/10 p-2 border border-emerald-500/20">
+                                                <p className="text-lg font-bold text-emerald-600">{preview.biometricos.stats.nuevos}</p>
+                                                <p className="text-[11px] text-emerald-700 dark:text-emerald-400">Nuevos</p>
+                                            </div>
+                                            <div className="rounded-lg bg-amber-500/10 p-2 border border-amber-500/20">
+                                                <p className="text-lg font-bold text-amber-600">{preview.biometricos.stats.actualizar}</p>
+                                                <p className="text-[11px] text-amber-700 dark:text-amber-400">Actualizar</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-2 text-center pt-1">
-                                        <div className="rounded-lg bg-background p-2 border">
-                                            <p className="text-lg font-bold">{preview.biometricos.stats.total}</p>
-                                            <p className="text-[11px] text-muted-foreground">Detectados</p>
-                                        </div>
-                                        <div className="rounded-lg bg-emerald-500/10 p-2 border border-emerald-500/20">
-                                            <p className="text-lg font-bold text-emerald-600">{preview.biometricos.stats.nuevos}</p>
-                                            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">Nuevos</p>
-                                        </div>
-                                        <div className="rounded-lg bg-amber-500/10 p-2 border border-amber-500/20">
-                                            <p className="text-lg font-bold text-amber-600">{preview.biometricos.stats.actualizar}</p>
-                                            <p className="text-[11px] text-amber-700 dark:text-amber-400">Actualizar</p>
-                                        </div>
-                                    </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Tabla de Vista Previa según la pestaña activa */}
                             <div className="rounded-xl border overflow-hidden">
                                 <div className="flex items-center justify-between bg-muted/50 px-4 py-2.5 border-b">
                                     <div className="flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setActivePreviewTab('ubicaciones')}
-                                            className={cn(
-                                                'px-3 py-1 rounded-md text-xs font-semibold transition cursor-pointer',
-                                                activePreviewTab === 'ubicaciones'
-                                                    ? 'bg-primary text-primary-foreground'
-                                                    : 'text-muted-foreground hover:bg-muted'
-                                            )}
-                                        >
-                                            Vista Previa Ubicaciones ({preview.ubicaciones.stats.total})
-                                        </button>
+                                        {scope !== 'biometricos' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setActivePreviewTab('ubicaciones')}
+                                                className={cn(
+                                                    'px-3 py-1 rounded-md text-xs font-semibold transition cursor-pointer',
+                                                    activePreviewTab === 'ubicaciones'
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'text-muted-foreground hover:bg-muted'
+                                                )}
+                                            >
+                                                Vista Previa Ubicaciones ({preview.ubicaciones.stats.total})
+                                            </button>
+                                        )}
                                         <button
                                             type="button"
                                             onClick={() => setActivePreviewTab('biometricos')}
@@ -370,7 +379,7 @@ export default function EquiposUbicacionesImportModal({
                                     </div>
                                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                                         <Sparkles className="h-3.5 w-3.5 text-primary" />
-                                        Separación automática lista
+                                        Mapeo listo para importar
                                     </span>
                                 </div>
 
@@ -431,6 +440,7 @@ export default function EquiposUbicacionesImportModal({
                                                     <th className="p-2.5 font-semibold">Núm.</th>
                                                     <th className="p-2.5 font-semibold">Localidad</th>
                                                     <th className="p-2.5 font-semibold">Ubicación Física</th>
+                                                    <th className="p-2.5 font-semibold">Resp. / Acrílico</th>
                                                     <th className="p-2.5 font-semibold">Equipo Actual (Serie / IP)</th>
                                                     <th className="p-2.5 font-semibold">Nuevo Biométrico (Serie / IP)</th>
                                                     <th className="p-2.5 font-semibold text-right">Acción</th>
@@ -442,6 +452,21 @@ export default function EquiposUbicacionesImportModal({
                                                         <td className="p-2.5 font-mono font-semibold">{row.numero_localidad ?? '—'}</td>
                                                         <td className="p-2.5 font-medium">{row.localidad_nombre}</td>
                                                         <td className="p-2.5">{row.ubicacion_fisica || '—'}</td>
+                                                        <td className="p-2.5">
+                                                            <div className="flex flex-col gap-0.5 text-[11px]">
+                                                                {row.actual_responsable && (
+                                                                    <span className="font-semibold text-emerald-600">
+                                                                        Resp: {row.actual_responsable}
+                                                                    </span>
+                                                                )}
+                                                                {row.actual_factible_acrilico && (
+                                                                    <span className="text-muted-foreground text-[10px]">
+                                                                        Acrílico: {row.actual_factible_acrilico}
+                                                                    </span>
+                                                                )}
+                                                                {!row.actual_responsable && !row.actual_factible_acrilico && '—'}
+                                                            </div>
+                                                        </td>
                                                         <td className="p-2.5 font-mono text-[11px]">
                                                             {[row.actual_no_serie, row.actual_ip].filter(Boolean).join(' • ') || '—'}
                                                         </td>

@@ -219,7 +219,11 @@ class RelojUbicacionController extends Controller
         $file = $request->file('file');
         $empresaId = $request->user()?->empresa_id;
 
-        $result = $importService->parsePreview($file->getRealPath(), $scope, $empresaId);
+        $path = $file->getRealPath() ?: $file->getPathname();
+        \Log::info("previewImport: path={$path}, size=" . filesize($path) . ", exists=" . (file_exists($path) ? '1' : '0') . ", scope={$scope}");
+
+        $result = $importService->parsePreview($path, $scope, $empresaId);
+        \Log::info("previewImport result: success=" . ($result['success'] ? '1' : '0') . ", msg=" . ($result['message'] ?? ''));
 
         return response()->json($result);
     }
@@ -237,8 +241,9 @@ class RelojUbicacionController extends Controller
         $scope = $request->input('scope', 'ambos');
         $file = $request->file('file');
         $empresaId = $request->user()?->empresa_id;
+        $path = $file->getRealPath() ?: $file->getPathname();
 
-        $response = $importService->importFromFile($file->getRealPath(), $scope, $empresaId);
+        $response = $importService->importFromFile($path, $scope, $empresaId);
 
         if (! ($response['success'] ?? false)) {
             return response()->json($response, 422);

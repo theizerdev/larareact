@@ -110,6 +110,8 @@ interface RelojEquipoBiometrico {
     actual_mac_address: string | null;
     actual_instalado: boolean;
     actual_comentario: string | null;
+    actual_responsable?: string | null;
+    actual_factible_acrilico?: string | null;
     actual_foto: string | null;
 
     // Equipo Final (Nuevo)
@@ -122,6 +124,8 @@ interface RelojEquipoBiometrico {
     nuevo_mac_address: string | null;
     nuevo_instalado: boolean;
     nuevo_comentario: string | null;
+    nuevo_responsable?: string | null;
+    nuevo_factible_acrilico?: string | null;
     nuevo_foto: string | null;
 
     activo: boolean;
@@ -181,6 +185,8 @@ const initialForm = {
     actual_mac_address: '',
     actual_instalado: true,
     actual_comentario: '',
+    actual_responsable: '',
+    actual_factible_acrilico: '',
     actual_foto: '',
 
     // Equipo Final
@@ -193,6 +199,8 @@ const initialForm = {
     nuevo_mac_address: '',
     nuevo_instalado: false,
     nuevo_comentario: '',
+    nuevo_responsable: '',
+    nuevo_factible_acrilico: '',
     nuevo_foto: '',
 
     activo: true,
@@ -506,6 +514,8 @@ export default function BiometricosSetupIndexPage({
             actual_mac_address: item.actual_mac_address || '',
             actual_instalado: Boolean(item.actual_instalado),
             actual_comentario: item.actual_comentario || '',
+            actual_responsable: item.actual_responsable || '',
+            actual_factible_acrilico: item.actual_factible_acrilico || '',
             actual_foto: item.actual_foto || '',
 
             nuevo_marca: item.nuevo_marca || '',
@@ -517,6 +527,8 @@ export default function BiometricosSetupIndexPage({
             nuevo_mac_address: item.nuevo_mac_address || '',
             nuevo_instalado: Boolean(item.nuevo_instalado),
             nuevo_comentario: item.nuevo_comentario || '',
+            nuevo_responsable: item.nuevo_responsable || '',
+            nuevo_factible_acrilico: item.nuevo_factible_acrilico || '',
             nuevo_foto: item.nuevo_foto || '',
 
             activo: Boolean(item.activo),
@@ -802,6 +814,20 @@ export default function BiometricosSetupIndexPage({
                                         “{item.actual_comentario}”
                                     </p>
                                 )}
+                                {(item.actual_responsable || item.actual_factible_acrilico) && (
+                                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                        {item.actual_responsable && (
+                                            <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                                Resp: {item.actual_responsable}
+                                            </span>
+                                        )}
+                                        {item.actual_factible_acrilico && (
+                                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-300 dark:border-amber-700">
+                                                Acrílico: {item.actual_factible_acrilico}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                )}
                                 {item.actual_foto && (
                                     <div
                                         className="mt-1 h-10 w-16 rounded-md overflow-hidden border bg-background cursor-pointer hover:opacity-85 transition-opacity"
@@ -833,6 +859,8 @@ export default function BiometricosSetupIndexPage({
                     item.nuevo_mac_address ||
                     item.nuevo_gateway ||
                     item.nuevo_comentario ||
+                    item.nuevo_responsable ||
+                    item.nuevo_factible_acrilico ||
                     item.nuevo_foto;
 
                 return (
@@ -905,6 +933,20 @@ export default function BiometricosSetupIndexPage({
                                 )}
                                 {item.nuevo_comentario && (
                                     <p className="text-[11px] text-muted-foreground italic pt-0.5">“{item.nuevo_comentario}”</p>
+                                )}
+                                {(item.nuevo_responsable || item.nuevo_factible_acrilico) && (
+                                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                        {item.nuevo_responsable && (
+                                            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium bg-emerald-100/50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">
+                                                Resp: {item.nuevo_responsable}
+                                            </span>
+                                        )}
+                                        {item.nuevo_factible_acrilico && (
+                                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-emerald-300 dark:border-emerald-700">
+                                                Acrílico: {item.nuevo_factible_acrilico}
+                                            </Badge>
+                                        )}
+                                    </div>
                                 )}
                                 {item.nuevo_foto && (
                                     <div
@@ -1419,6 +1461,34 @@ export default function BiometricosSetupIndexPage({
                                                 />
                                             </div>
 
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="actual_responsable">Responsable de Instalación</Label>
+                                                <Input
+                                                    id="actual_responsable"
+                                                    placeholder="Ej. T4 / Técnico / Proveedor..."
+                                                    value={data.actual_responsable}
+                                                    onChange={(e) => setData('actual_responsable', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="actual_factible_acrilico">Factible Acrílico</Label>
+                                                <Select
+                                                    value={data.actual_factible_acrilico || 'none'}
+                                                    onValueChange={(val) => setData('actual_factible_acrilico', val === 'none' ? '' : val)}
+                                                >
+                                                    <SelectTrigger id="actual_factible_acrilico">
+                                                        <SelectValue placeholder="Seleccionar..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">Por definir</SelectItem>
+                                                        <SelectItem value="Si">Sí</SelectItem>
+                                                        <SelectItem value="No">No</SelectItem>
+                                                        <SelectItem value="No aplica">No aplica</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
                                             <div className="sm:col-span-2 lg:col-span-3 space-y-1.5">
                                                 <Label htmlFor="actual_mac_address">Mac Address</Label>
                                                 <Input
@@ -1538,6 +1608,34 @@ export default function BiometricosSetupIndexPage({
                                                     value={data.nuevo_gateway}
                                                     onChange={(e) => setData('nuevo_gateway', e.target.value)}
                                                 />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nuevo_responsable">Responsable de Instalación</Label>
+                                                <Input
+                                                    id="nuevo_responsable"
+                                                    placeholder="Ej. T4 / Técnico / Proveedor..."
+                                                    value={data.nuevo_responsable}
+                                                    onChange={(e) => setData('nuevo_responsable', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nuevo_factible_acrilico">Factible Acrílico</Label>
+                                                <Select
+                                                    value={data.nuevo_factible_acrilico || 'none'}
+                                                    onValueChange={(val) => setData('nuevo_factible_acrilico', val === 'none' ? '' : val)}
+                                                >
+                                                    <SelectTrigger id="nuevo_factible_acrilico">
+                                                        <SelectValue placeholder="Seleccionar..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">Por definir</SelectItem>
+                                                        <SelectItem value="Si">Sí</SelectItem>
+                                                        <SelectItem value="No">No</SelectItem>
+                                                        <SelectItem value="No aplica">No aplica</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
 
                                             <div className="sm:col-span-2 lg:col-span-3 space-y-1.5">

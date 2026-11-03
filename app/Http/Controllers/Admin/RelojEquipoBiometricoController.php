@@ -48,12 +48,14 @@ class RelojEquipoBiometricoController extends Controller
                     ->orWhere('actual_mac_address', 'like', "%{$search}%")
                     ->orWhere('actual_gateway', 'like', "%{$search}%")
                     ->orWhere('actual_comentario', 'like', "%{$search}%")
+                    ->orWhere('actual_responsable', 'like', "%{$search}%")
                     ->orWhere('nuevo_marca', 'like', "%{$search}%")
                     ->orWhere('nuevo_modelo', 'like', "%{$search}%")
                     ->orWhere('nuevo_no_serie', 'like', "%{$search}%")
                     ->orWhere('nuevo_ip', 'like', "%{$search}%")
                     ->orWhere('nuevo_mac_address', 'like', "%{$search}%")
-                    ->orWhere('nuevo_comentario', 'like', "%{$search}%");
+                    ->orWhere('nuevo_comentario', 'like', "%{$search}%")
+                    ->orWhere('nuevo_responsable', 'like', "%{$search}%");
 
                 if (is_numeric($search)) {
                     $q->orWhere('numero_localidad', (int) $search);
@@ -188,6 +190,8 @@ class RelojEquipoBiometricoController extends Controller
             'actual_mac_address' => 'nullable|string|max:60',
             'actual_instalado' => 'boolean',
             'actual_comentario' => 'nullable|string|max:1000',
+            'actual_responsable' => 'nullable|string|max:150',
+            'actual_factible_acrilico' => 'nullable|string|max:50',
             'actual_foto' => 'nullable|string',
 
             // Equipo Final
@@ -199,6 +203,8 @@ class RelojEquipoBiometricoController extends Controller
             'nuevo_gateway' => 'nullable|string|max:60',
             'nuevo_instalado' => 'boolean',
             'nuevo_comentario' => 'nullable|string|max:1000',
+            'nuevo_responsable' => 'nullable|string|max:150',
+            'nuevo_factible_acrilico' => 'nullable|string|max:50',
             'nuevo_mac_address' => 'nullable|string|max:60',
             'nuevo_foto' => 'nullable|string',
 
@@ -273,6 +279,8 @@ class RelojEquipoBiometricoController extends Controller
             'actual_mac_address' => 'nullable|string|max:60',
             'actual_instalado' => 'boolean',
             'actual_comentario' => 'nullable|string|max:1000',
+            'actual_responsable' => 'nullable|string|max:150',
+            'actual_factible_acrilico' => 'nullable|string|max:50',
             'actual_foto' => 'nullable|string',
 
             // Equipo Final
@@ -284,6 +292,8 @@ class RelojEquipoBiometricoController extends Controller
             'nuevo_gateway' => 'nullable|string|max:60',
             'nuevo_instalado' => 'boolean',
             'nuevo_comentario' => 'nullable|string|max:1000',
+            'nuevo_responsable' => 'nullable|string|max:150',
+            'nuevo_factible_acrilico' => 'nullable|string|max:50',
             'nuevo_mac_address' => 'nullable|string|max:60',
             'nuevo_foto' => 'nullable|string',
 
