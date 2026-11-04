@@ -289,7 +289,7 @@ class SaleController extends Controller
         $totalCount = (int) (clone $query)->count();
         $totalAnuladas = (int) (clone $query)->where('estado', 'anulada')->count();
 
-        $sales = $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
+        $sales = $query->orderBy('created_at', 'desc')->paginate('500')->withQueryString();
 
         if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->query('format') === 'json')) {
             return response()->json([
