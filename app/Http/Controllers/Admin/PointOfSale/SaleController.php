@@ -240,6 +240,8 @@ class SaleController extends Controller
         $scope = $request->input('scope'); // 'shift', 'today', 'all'
         $cashRegisterId = $request->input('cash_register_id');
         $empleadoId = $request->input('empleado_id');
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
 
         $query = Sale::with(['user', 'items', 'payments', 'empleado']);
 
@@ -256,6 +258,18 @@ class SaleController extends Controller
 
         if ($status !== null && $status !== '') {
             $query->where('estado', $status);
+        }
+
+        if ($dateFrom) {
+            $tz = auth()->user()?->getTimezone() ?? 'America/Mexico_City';
+            $start = Carbon::parse($dateFrom, $tz)->startOfDay()->setTimezone('UTC');
+            $query->where('created_at', '>=', $start);
+        }
+
+        if ($dateTo) {
+            $tz = auth()->user()?->getTimezone() ?? 'America/Mexico_City';
+            $end = Carbon::parse($dateTo, $tz)->endOfDay()->setTimezone('UTC');
+            $query->where('created_at', '<=', $end);
         }
 
         // Filtro por Turno / Caja en curso o Ventas de Hoy
@@ -300,7 +314,7 @@ class SaleController extends Controller
                 'direccion' => $empresa->direccion,
                 'logo' => $empresa->logo ? (str_starts_with($empresa->logo, '/') || str_starts_with($empresa->logo, 'http') ? $empresa->logo : "/storage/{$empresa->logo}") : ($empresa->logo_mini ? (str_starts_with($empresa->logo_mini, '/') || str_starts_with($empresa->logo_mini, 'http') ? $empresa->logo_mini : "/storage/{$empresa->logo_mini}") : '/image/logo/5.png'),
             ] : null,
-            'filters' => $request->only(['search', 'status', 'perPage', 'scope']),
+            'filters' => $request->only(['search', 'status', 'perPage', 'scope', 'date_from', 'date_to']),
         ]);
     }
 
