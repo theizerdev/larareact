@@ -126,17 +126,20 @@ class EquiposUbicacionesImportService
             return $preview;
         }
 
+        $cedulaSheet = $this->findCedulaSheet($this->readWorkbookSheets($filePath));
+
         return $this->executeImport(
             $preview['ubicaciones']['records'] ?? [],
             $preview['biometricos']['records'] ?? [],
-            $empresaId
+            $empresaId,
+            $cedulaSheet['rows'] ?? null
         );
     }
 
     /**
      * Guarda en base de datos ambos conjuntos de datos ya separados y los enlaza por localidad.
      */
-    public function executeImport(array $ubicacionesData, array $biometricosData, ?int $empresaId = null): array
+    public function executeImport(array $ubicacionesData, array $biometricosData, ?int $empresaId = null, ?array $cedulaRows = null): array
     {
         $empresaId = $this->resolveEmpresaId($empresaId);
 
@@ -149,10 +152,9 @@ class EquiposUbicacionesImportService
         ];
 
         // Sincronizar catálogo de Cédula de Instalación si viene en el archivo
-        $cedulaSheet = $this->findCedulaSheet($sheets);
         $catalogoCedula = null;
-        if ($cedulaSheet !== null) {
-            $catalogoCedula = $this->cedulaService->syncCatalogoFromRows($cedulaSheet['rows']);
+        if (! empty($cedulaRows)) {
+            $catalogoCedula = $this->cedulaService->syncCatalogoFromRows($cedulaRows);
         } else {
             $catalogoCedula = RelojCedulaActividadCatalogo::where('activo', true)->orderBy('orden')->get();
         }
