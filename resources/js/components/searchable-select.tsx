@@ -38,24 +38,31 @@ export default function SearchableSelect({
     popoverContentClassName,
     disabled = false,
     id,
-    modal = true,
+    modal = false,
 }: SearchableSelectProps) {
     const { __ } = useTranslate();
     const [open, setOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const inputRef = React.useRef<HTMLInputElement>(null);
 
     const selectedOption = useMemo(
         () => options.find((opt) => String(opt.value) === String(value)),
         [options, value]
     );
 
+    const normalize = (str: string) =>
+        (str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
     const filteredOptions = useMemo(() => {
         if (!searchQuery.trim()) return options;
-        const q = searchQuery.toLowerCase().trim();
+        const q = normalize(searchQuery.trim());
         return options.filter(
             (opt) =>
-                opt.label.toLowerCase().includes(q) ||
-                (opt.description && opt.description.toLowerCase().includes(q))
+                normalize(opt.label).includes(q) ||
+                (opt.description && normalize(opt.description).includes(q))
         );
     }, [options, searchQuery]);
 
@@ -65,8 +72,15 @@ export default function SearchableSelect({
         setSearchQuery('');
     };
 
+    const handleOpenChange = (isOpen: boolean) => {
+        setOpen(isOpen);
+        if (!isOpen) {
+            setSearchQuery('');
+        }
+    };
+
     return (
-        <Popover modal={modal} open={open} onOpenChange={setOpen}>
+        <Popover modal={modal} open={open} onOpenChange={handleOpenChange}>
             <PopoverTrigger asChild>
                 <Button
                     id={id}
@@ -88,24 +102,47 @@ export default function SearchableSelect({
                 </Button>
             </PopoverTrigger>
             <PopoverContent
+                portal={false}
                 className={cn(
                     'w-[var(--radix-popover-trigger-width)] min-w-[200px] p-1.5 z-[100] shadow-md border bg-popover text-popover-foreground',
                     popoverContentClassName
                 )}
                 align="start"
                 sideOffset={4}
+                onOpenAutoFocus={(e) => {
+                    e.preventDefault();
+                    setTimeout(() => {
+                        inputRef.current?.focus();
+                    }, 50);
+                }}
                 onCloseAutoFocus={(e) => {
                     e.preventDefault();
                 }}
             >
-                <div className="flex items-center px-2 py-1 border-b mb-1 gap-1.5">
+                <div
+                    className="flex items-center px-2 py-1 border-b mb-1 gap-1.5"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <Input
+                        ref={inputRef}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (filteredOptions.length > 0) {
+                                    handleSelect(filteredOptions[0].value);
+                                }
+                            } else if (e.key === 'Escape') {
+                                e.preventDefault();
+                                setOpen(false);
+                            }
+                        }}
                         placeholder={__(searchPlaceholder)}
                         className="h-7 text-xs border-0 focus-visible:ring-0 shadow-none px-1"
-                        autoFocus
                     />
                     {searchQuery && (
                         <Button
@@ -113,7 +150,11 @@ export default function SearchableSelect({
                             variant="ghost"
                             size="icon"
                             className="h-5 w-5 shrink-0"
-                            onClick={() => setSearchQuery('')}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setSearchQuery('');
+                                inputRef.current?.focus();
+                            }}
                         >
                             <X className="h-3 w-3 text-muted-foreground" />
                         </Button>

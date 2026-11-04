@@ -34,8 +34,10 @@ import {
     ChevronRight,
     Box,
     Search,
+    Check,
+    AlertCircle,
 } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -225,6 +227,15 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
     const [newModeloCodigo, setNewModeloCodigo] = useState('');
     const [isSavingModelo, setIsSavingModelo] = useState(false);
 
+    // Sub-edición rápida de modelo en caliente
+    const [isEditModeloOpen, setIsEditModeloOpen] = useState(false);
+    const [editModeloId, setEditModeloId] = useState<string>('');
+    const [editModeloNombre, setEditModeloNombre] = useState<string>('');
+    const [editModeloCodigo, setEditModeloCodigo] = useState<string>('');
+    const [editModeloMarcaId, setEditModeloMarcaId] = useState<string>('');
+    const [editModeloCategoriaId, setEditModeloCategoriaId] = useState<string>('');
+    const [isSavingEditModelo, setIsSavingEditModelo] = useState(false);
+
     // Modal de Edición Rápida de Especificaciones del Producto
     const [isSpecsModalOpen, setIsSpecsModalOpen] = useState(false);
     const [specsTargetProducto, setSpecsTargetProducto] = useState<Producto | null>(null);
@@ -281,6 +292,36 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         if (selCategoriaId !== 'all' && m.categoria_id && String(m.categoria_id) !== String(selCategoriaId)) return false;
         return true;
     });
+
+    // Modelos disponibles para el selector: muestra los coincidentes y permite buscar/seleccionar cualquier otro
+    const modeloOptions = useMemo(() => {
+        if (selMarcaId === 'all' && selCategoriaId === 'all') {
+            return modelos.map((m) => ({
+                value: String(m.id),
+                label: m.nombre,
+                description: `${m.marca || ''}${m.categoria ? ` • ${m.categoria}` : ''}`,
+            }));
+        }
+        const matching = modelos.filter((m) => {
+            if (selMarcaId !== 'all' && String(m.marca_id) !== String(selMarcaId)) return false;
+            if (selCategoriaId !== 'all' && m.categoria_id && String(m.categoria_id) !== String(selCategoriaId)) return false;
+            return true;
+        });
+        const others = modelos.filter((m) => !matching.some((item) => item.id === m.id));
+
+        return [
+            ...matching.map((m) => ({
+                value: String(m.id),
+                label: m.nombre,
+                description: `${m.marca || ''}${m.categoria ? ` • ${m.categoria}` : ''}`,
+            })),
+            ...others.map((m) => ({
+                value: String(m.id),
+                label: `${m.nombre} (${m.marca || 'Otra marca'})`,
+                description: `${m.marca || ''}${m.categoria ? ` • ${m.categoria}` : ''}`,
+            })),
+        ];
+    }, [modelos, selMarcaId, selCategoriaId]);
 
     const filteredFamilias = familias.filter((f) => {
         if (selCategoriaId !== 'all' && f.categoria_id && String(f.categoria_id) !== selCategoriaId) return false;
@@ -669,6 +710,98 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         }
     };
 
+    const handleOpenEditModelo = () => {
+        const mod = modelos.find((m) => String(m.id) === String(data.modelo_id));
+        if (!mod) {
+            notifyError(__('Primero selecciona un modelo para editar.'));
+            return;
+        }
+        setEditModeloId(String(mod.id));
+        setEditModeloNombre(mod.nombre_comercial || mod.nombre);
+        setEditModeloCodigo(mod.codigo_modelo || '');
+        setEditModeloMarcaId(String(mod.marca_id || (marcas[0]?.id ? marcas[0].id : '')));
+        setEditModeloCategoriaId(String(mod.categoria_id || (categorias[0]?.id ? categorias[0].id : '')));
+        setIsEditModeloOpen(true);
+    };
+
+    const handleQuickUpdateModelo = async (e: React.FormEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const nombreTarget = editModeloNombre.trim();
+        if (!nombreTarget) {
+            notifyError(__('El nombre comercial del modelo es obligatorio.'));
+            return;
+        }
+        if (!editModeloMarcaId) {
+            notifyError(__('Debes seleccionar una marca para el modelo.'));
+            return;
+        }
+
+        setIsSavingEditModelo(true);
+        try {
+            const res = await fetch(`/admin/modelos/${editModeloId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    nombre_comercial: nombreTarget,
+                    codigo_modelo: editModeloCodigo.trim() || null,
+                    marca_id: editModeloMarcaId,
+                    categoria_id: editModeloCategoriaId || null,
+                    estado: true,
+                }),
+            });
+            const resData = await res.json();
+            if (res.ok && resData.data) {
+                const updatedMod: ModeloOption = {
+                    id: resData.data.id,
+                    nombre: resData.data.nombre || resData.data.nombre_comercial,
+                    nombre_comercial: resData.data.nombre_comercial,
+                    codigo_modelo: resData.data.codigo_modelo,
+                    marca_id: Number(resData.data.marca_id || editModeloMarcaId),
+                    familia_id: Number(resData.data.familia_id || 0),
+                    categoria_id: Number(resData.data.categoria_id || editModeloCategoriaId || 0),
+                    marca: resData.data.marca || '',
+                    familia: resData.data.familia || '',
+                    categoria: resData.data.categoria || '',
+                    specs_json: resData.data.specs_json || {},
+                };
+                setModelos((prev) => prev.map((m) => (m.id === updatedMod.id ? updatedMod : m)));
+
+                if (String(data.modelo_id) === String(updatedMod.id)) {
+                    if (updatedMod.marca_id) setSelMarcaId(String(updatedMod.marca_id));
+                    if (updatedMod.categoria_id) setSelCategoriaId(String(updatedMod.categoria_id));
+                    setData((prev) => {
+                        const oldMod = modelos.find((m) => String(m.id) === String(updatedMod.id));
+                        const wasDefaultName = !prev.nombre_variante || (oldMod && prev.nombre_variante === oldMod.nombre);
+                        const nextName = wasDefaultName ? updatedMod.nombre : prev.nombre_variante;
+                        return {
+                            ...prev,
+                            marca_id: updatedMod.marca_id ? String(updatedMod.marca_id) : prev.marca_id,
+                            categoria_id: updatedMod.categoria_id ? String(updatedMod.categoria_id) : prev.categoria_id,
+                            nombre_variante: nextName,
+                            sku: generateSkuSuggestion(updatedMod, nextName, prev.codigo_barras),
+                        };
+                    });
+                }
+                notifySuccess(__('Modelo actualizado correctamente.'));
+                setIsEditModeloOpen(false);
+            } else {
+                const errorMsg = resData.errors
+                    ? Object.values(resData.errors).flat().join(', ')
+                    : (resData.message || __('Error al actualizar el modelo.'));
+                notifyError(errorMsg);
+            }
+        } catch (err) {
+            notifyError(__('Error al actualizar el modelo.'));
+        } finally {
+            setIsSavingEditModelo(false);
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -689,9 +822,8 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
             return;
         }
 
-        // For repuestos, modelo_id is optional but nombre_variante is required
-        if (data.tipo_producto === 'repuesto' && !data.nombre_variante.trim()) {
-            notifyError(__('El nombre del repuesto es obligatorio.'));
+        if (!data.nombre_variante.trim()) {
+            notifyError(__('El nombre del producto es obligatorio.'));
             return;
         }
 
@@ -822,58 +954,70 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
         return map[condicion] || { label: condicion, color: 'text-slate-500' };
     };
 
+    const formatCurrency = (val: number | string) => {
+        return Number(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
     const columns: ColumnDef<Producto>[] = [
         {
-            header: __('Producto'),
+            header: __('Producto / Variante'),
             cell: (prod) => {
                 const typeConfig = getTypeConfig(prod);
                 const condConfig = getCondicionConfig(prod.condicion);
                 return (
-                    <div className="flex items-start gap-3 min-w-0 py-0.5">
+                    <div className="flex items-start gap-3.5 min-w-[260px] py-1 group">
                         {/* Icono tipo */}
                         <div className={cn(
-                            "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center border",
+                            "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border shadow-2xs transition-transform group-hover:scale-105",
                             prod.tipo_producto === 'repuesto' || prod.condicion === 'repuesto'
-                                ? 'bg-violet-50 border-violet-200 dark:bg-violet-950/40 dark:border-violet-800'
+                                ? 'bg-violet-50 border-violet-200/80 text-violet-600 dark:bg-violet-950/40 dark:border-violet-800 dark:text-violet-400'
                                 : prod.tipo_producto === 'servicio'
-                                    ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800'
-                                    : 'bg-blue-50 border-blue-200 dark:bg-blue-950/40 dark:border-blue-800'
+                                    ? 'bg-amber-50 border-amber-200/80 text-amber-600 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400'
+                                    : 'bg-blue-50 border-blue-200/80 text-blue-600 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-400'
                         )}>
                             {prod.tipo_producto === 'repuesto' || prod.condicion === 'repuesto'
-                                ? <Wrench className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                                ? <Wrench className="h-5 w-5" />
                                 : prod.tipo_producto === 'servicio'
-                                    ? <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                                    : <Box className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
+                                    ? <Zap className="h-5 w-5" />
+                                    : <Box className="h-5 w-5" />}
                         </div>
 
                         <div className="flex flex-col min-w-0 flex-1">
-                            {/* Nombre */}
+                            {/* Nombre con estilo legible y hover */}
                             <span
-                                className="font-semibold text-[13px] text-slate-900 dark:text-slate-100 leading-tight truncate"
+                                className="font-bold text-[13.5px] text-slate-900 dark:text-slate-100 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2"
                                 title={prod.nombre_variante}
                             >
                                 {prod.nombre_variante}
                             </span>
 
-                            {/* SKU + badges */}
-                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                <span className="inline-flex items-center gap-0.5 text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded">
-                                    <Hash className="h-2.5 w-2.5" />
+                            {/* SKU + Badges ordenados */}
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                <span className="inline-flex items-center gap-1 text-[10.5px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md border border-slate-200/70 dark:border-slate-700">
+                                    <Hash className="h-2.5 w-2.5 text-slate-400" />
                                     {prod.sku}
                                 </span>
+                                {prod.codigo_barras && (
+                                    <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded border border-dashed border-slate-200 dark:border-slate-800">
+                                        EAN: {prod.codigo_barras}
+                                    </span>
+                                )}
                                 <span className={cn(
-                                    'inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border',
+                                    'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border',
                                     typeConfig.className
                                 )}>
                                     {typeConfig.icon}
                                     {typeConfig.label}
                                 </span>
-                                <span className={cn('text-[10px] font-medium capitalize', condConfig.color)}>
-                                    • {condConfig.label}
+                                <span className={cn(
+                                    'inline-flex items-center text-[10.5px] font-medium px-1.5 py-0.5 rounded bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800 capitalize',
+                                    condConfig.color
+                                )}>
+                                    {condConfig.label}
                                 </span>
                                 {!prod.estado && (
-                                    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900 px-1.5 py-0.5 rounded">
-                                        <XCircle className="h-2.5 w-2.5" />
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900 px-1.5 py-0.5 rounded-md">
+                                        <XCircle className="h-3 w-3" />
                                         {__('Inactivo')}
                                     </span>
                                 )}
@@ -884,32 +1028,40 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
             },
         },
         {
-            header: __('Catálogo'),
+            header: __('Catálogo & Equipo'),
             cell: (prod) => {
                 const modelName = prod.modelo?.nombre_comercial;
+                const modelCode = prod.modelo?.codigo_modelo;
                 const brandName = prod.modelo?.marca?.nombre || prod.marca?.nombre;
                 const catName = prod.modelo?.categoria?.nombre || prod.categoria?.nombre;
                 return (
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1.5 min-w-[180px] py-1">
                         {modelName ? (
                             <div className="flex items-center gap-1.5">
-                                <Smartphone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                                <span className="text-[12px] font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[140px]" title={modelName}>
+                                <div className="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                                    <Smartphone className="h-3.5 w-3.5" />
+                                </div>
+                                <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-200 leading-tight" title={modelName}>
                                     {modelName}
                                 </span>
                             </div>
                         ) : (
-                            <span className="text-[11px] italic text-slate-400">{__('Sin modelo')}</span>
+                            <span className="text-[11px] italic text-slate-400">{__('Sin modelo asignado')}</span>
                         )}
-                        <div className="flex flex-wrap items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
                             {brandName && (
-                                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.5 rounded font-medium">
+                                <span className="text-[10.5px] bg-blue-50/70 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40 px-2 py-0.5 rounded-md font-semibold">
                                     {brandName}
                                 </span>
                             )}
                             {catName && (
-                                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded">
+                                <span className="text-[10.5px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-md font-medium border border-slate-200/50 dark:border-slate-700">
                                     {catName}
+                                </span>
+                            )}
+                            {modelCode && (
+                                <span className="text-[9.5px] font-mono text-muted-foreground bg-slate-50 dark:bg-slate-900 px-1 rounded">
+                                    {modelCode}
                                 </span>
                             )}
                         </div>
@@ -918,95 +1070,100 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
             },
         },
         {
-            header: __('Precios'),
-            cell: (prod) => (
-                <div className="flex flex-col gap-1 min-w-[110px]">
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-[10px] text-slate-400 font-medium">PVP</span>
-                        <span className="text-[14px] font-bold text-emerald-600 dark:text-emerald-400 leading-none">
-                            ${Number(prod.precio_venta).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </span>
-                    </div>
-                    {prod.precio_mayoreo > 0 && (
-                        <div className="flex items-center gap-1">
-                            <BadgePercent className="h-3 w-3 text-violet-400" />
-                            <span className="text-[11px] font-semibold text-violet-600 dark:text-violet-400">
-                                ${Number(prod.precio_mayoreo).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            header: __('Precios & Margen'),
+            cell: (prod) => {
+                const pVenta = Number(prod.precio_venta || 0);
+                const pCompra = Number(prod.precio_compra || 0);
+                const pMayoreo = Number(prod.precio_mayoreo || 0);
+                const ganancia = pVenta > pCompra && pCompra > 0 ? pVenta - pCompra : 0;
+                const margenPct = pCompra > 0 && pVenta > 0 ? Math.round(((pVenta - pCompra) / pVenta) * 100) : 0;
+
+                return (
+                    <div className="flex flex-col gap-1 min-w-[130px] py-1">
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[15px] font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                                ${formatCurrency(pVenta)}
                             </span>
-                            <span className="text-[9px] text-slate-400">{__('mayor.')}</span>
+                            {margenPct > 0 && (
+                                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/70 dark:border-emerald-800/60 px-1.5 py-0.5 rounded" title={`Ganancia bruta: $${formatCurrency(ganancia)}`}>
+                                    +{margenPct}%
+                                </span>
+                            )}
                         </div>
-                    )}
-                    <div className="flex items-center gap-1 pt-0.5 border-t border-slate-100 dark:border-slate-800">
-                        <span className="text-[9px] text-slate-400 uppercase tracking-wide">{__('costo')}</span>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                            ${Number(prod.precio_compra).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </span>
+
+                        {pMayoreo > 0 && (
+                            <div className="flex items-center gap-1 text-[11px] font-semibold text-violet-600 dark:text-violet-400 bg-violet-50/70 dark:bg-violet-950/40 px-1.5 py-0.5 rounded border border-violet-200/50 w-fit">
+                                <BadgePercent className="h-3 w-3 shrink-0" />
+                                <span>Mayor: ${formatCurrency(pMayoreo)}</span>
+                            </div>
+                        )}
+
+                        <div className="text-[10.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                            <span>{__('Costo:')}</span>
+                            <span className="font-semibold text-slate-600 dark:text-slate-300">${formatCurrency(pCompra)}</span>
+                        </div>
                     </div>
-                </div>
-            ),
+                );
+            },
         },
         {
-            header: __('Stock'),
+            header: __('Stock en Sucursal'),
             cell: (prod) => {
                 if (!prod.usa_inventario) {
                     return (
-                        <div className="flex flex-col gap-1">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                                <Archive className="h-3 w-3" />
-                                {__('Intangible')}
+                        <div className="flex flex-col gap-1 py-1">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full w-fit">
+                                <Archive className="h-3.5 w-3.5 text-slate-400" />
+                                {__('Sin control')}
                             </span>
-                            <span className="text-[9px] text-slate-400">{__('Sin control de stock')}</span>
+                            <span className="text-[10px] text-slate-400 pl-1">{__('Servicio / Intangible')}</span>
                         </div>
                     );
                 }
 
-                const pct = prod.stock_minimo > 0
-                    ? Math.min(100, Math.round((prod.stock / (prod.stock_minimo * 3)) * 100))
-                    : 100;
-                const isLow = prod.stock <= prod.stock_minimo;
-                const isEmpty = prod.stock === 0;
+                const stockNum = Number(prod.stock || 0);
+                const minNum = Number(prod.stock_minimo || 0);
+                const isEmpty = stockNum <= 0;
+                const isLow = !isEmpty && stockNum <= minNum;
+                const unit = prod.tipo_venta === 'granel' ? 'kg' : 'uds';
+                const pct = minNum > 0 ? Math.min(100, Math.round((stockNum / (minNum * 2.5)) * 100)) : (stockNum > 0 ? 100 : 0);
 
                 return (
-                    <div className="flex flex-col gap-1.5 min-w-[90px]">
-                        <div className="flex items-center justify-between">
-                            <span className={cn(
-                                'text-[13px] font-bold leading-none',
-                                isEmpty ? 'text-rose-600 dark:text-rose-400'
-                                    : isLow ? 'text-amber-600 dark:text-amber-400'
-                                        : 'text-slate-800 dark:text-slate-200'
-                            )}>
-                                {Number(prod.stock).toLocaleString('es-AR')}
+                    <div className="flex flex-col gap-1.5 min-w-[125px] py-1">
+                        {/* Badge de estado principal */}
+                        {isEmpty ? (
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-rose-700 bg-rose-50 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 px-2.5 py-0.5 rounded-full w-fit">
+                                <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                                {__('Agotado')} (0)
                             </span>
-                            <span className="text-[9px] text-slate-400 uppercase">
-                                {prod.tipo_venta === 'granel' ? 'kg' : 'u.'}
+                        ) : isLow ? (
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 px-2.5 py-0.5 rounded-full w-fit">
+                                <TrendingDown className="w-3.5 h-3.5 text-amber-500" />
+                                {stockNum} {unit} • {__('Stock Bajo')}
                             </span>
-                        </div>
+                        ) : (
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60 px-2.5 py-0.5 rounded-full w-fit">
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                {stockNum} {unit}
+                            </span>
+                        )}
 
-                        {/* Barra de stock */}
+                        {/* Barra de progreso visual */}
                         <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                             <div
                                 className={cn(
-                                    'h-full rounded-full transition-all',
+                                    'h-full rounded-full transition-all duration-300',
                                     isEmpty ? 'bg-rose-500'
-                                        : isLow ? 'bg-amber-400'
+                                        : isLow ? 'bg-amber-500'
                                             : 'bg-emerald-500'
                                 )}
-                                style={{ width: `${Math.max(2, pct)}%` }}
+                                style={{ width: `${Math.max(3, pct)}%` }}
                             />
                         </div>
 
-                        <div className="flex items-center gap-1">
-                            {isEmpty ? (
-                                <span className="text-[9px] font-bold text-rose-500 uppercase tracking-wide">{__('Agotado')}</span>
-                            ) : isLow ? (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-500">
-                                    <TrendingDown className="h-2.5 w-2.5" />
-                                    {__('Stock bajo')}
-                                </span>
-                            ) : (
-                                <span className="text-[9px] text-slate-400">{__('mín.')} {prod.stock_minimo}</span>
-                            )}
-                        </div>
+                        <span className="text-[10px] text-muted-foreground pl-0.5">
+                            {__('Mínimo sugerido:')} <strong className="text-slate-600 dark:text-slate-300">{minNum}</strong>
+                        </span>
                     </div>
                 );
             },
@@ -1015,37 +1172,61 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
             header: __('Acciones'),
             stopRowClick: true,
             cell: (prod) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52">
-                        <DropdownMenuItem onClick={() => handleEdit(prod)}>
-                            <Pencil className="mr-2 h-4 w-4 text-blue-500" />
-                            {__('Editar Producto')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={(e) => { e.stopPropagation(); handleOpenSpecsModal(prod); }}
-                        >
-                            <SlidersHorizontal className="mr-2 h-4 w-4 text-indigo-500" />
-                            {__('Ver Especificaciones')}
-                            {Object.keys(prod.variant_specs || {}).length > 0 && (
-                                <span className="ml-auto text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold">
-                                    {Object.keys(prod.variant_specs || {}).length}
-                                </span>
-                            )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            onClick={() => handleDelete(prod)}
-                            className="text-rose-600 dark:text-rose-400 focus:text-rose-600"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {__('Eliminar')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center gap-1">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg transition-colors"
+                        onClick={() => handleEdit(prod)}
+                        title={__('Editar Producto')}
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors relative"
+                        onClick={(e) => { e.stopPropagation(); handleOpenSpecsModal(prod); }}
+                        title={__('Especificaciones Técnicas')}
+                    >
+                        <SlidersHorizontal className="h-4 w-4" />
+                        {Object.keys(prod.variant_specs || {}).length > 0 && (
+                            <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">
+                                {Object.keys(prod.variant_specs || {}).length}
+                            </span>
+                        )}
+                    </Button>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                                <MoreVertical className="h-4 w-4 text-slate-500" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuItem onClick={() => handleEdit(prod)}>
+                                <Pencil className="mr-2 h-4 w-4 text-blue-500" />
+                                {__('Editar Producto')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); handleOpenSpecsModal(prod); }}
+                            >
+                                <SlidersHorizontal className="mr-2 h-4 w-4 text-indigo-500" />
+                                {__('Ver Especificaciones')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => handleDelete(prod)}
+                                className="text-rose-600 dark:text-rose-400 focus:text-rose-600"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {__('Eliminar Producto')}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             ),
         },
     ];
@@ -1372,7 +1553,7 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                         ctaLabel: __('Crear Producto'),
                         onCtaClick: handleCreate,
                     }}
-                    rowClassName={() => 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors'}
+                    rowClassName={() => 'hover:bg-blue-50/50 dark:hover:bg-slate-800/60 transition-colors group cursor-pointer'}
                     onRowClick={(prod) => handleEdit(prod)}
                 />
 
@@ -1380,14 +1561,14 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                 <Dialog
                     open={isCreateOpen}
                     onOpenChange={(open) => {
-                        if (!open && (isNewCategoriaOpen || isNewMarcaOpen || isNewFamiliaOpen || isNewModeloOpen)) {
+                        if (!open && (isNewCategoriaOpen || isNewMarcaOpen || isNewFamiliaOpen || isNewModeloOpen || isEditModeloOpen)) {
                             return;
                         }
                         setIsCreateOpen(open);
                     }}
                 >
                     <DialogContent
-                        className="sm:max-w-4xl max-h-[90vh] flex flex-col z-50"
+                        className="sm:max-w-5xl md:max-w-6xl xl:max-w-7xl w-[96vw] max-h-[92vh] flex flex-col z-50 p-6"
                         onPointerDownOutside={(e) => {
                             const originalTarget = ((e as any).detail?.originalEvent?.target || (e as any).target) as HTMLElement | undefined;
                             if (originalTarget?.closest?.('[data-radix-popper-content-wrapper], [data-radix-portal], [role="dialog"], [role="combobox"], [role="listbox"], [role="option"], [data-slot="popover-content"]')) {
@@ -1516,27 +1697,50 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                 {/* Modelo (col-span-4 - Obligatorio) */}
                                                 <div className="md:col-span-4 space-y-1.5">
                                                     <div className="flex items-center justify-between">
-                                                        <Label htmlFor="modelo_select" className="text-xs font-semibold text-blue-600 dark:text-blue-400 required">{__('Modelo Exacto')}</Label>
-                                                        <Button
-                                                            type="button"
-                                                            variant="link"
-                                                            size="sm"
-                                                            onClick={() => setIsNewModeloOpen(true)}
-                                                            className="h-auto p-0 text-[11px] text-blue-600 dark:text-blue-400 gap-1 font-semibold"
-                                                        >
-                                                            <Plus className="h-3 w-3" />
-                                                            {__('+ Nuevo Modelo')}
-                                                        </Button>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Label htmlFor="modelo_select" className="text-xs font-semibold text-blue-600 dark:text-blue-400 required">{__('Modelo Exacto')}</Label>
+                                                            {(selMarcaId !== 'all' || selCategoriaId !== 'all') && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => { setSelMarcaId('all'); setSelCategoriaId('all'); }}
+                                                                    className="text-[10px] text-muted-foreground hover:text-blue-600 underline font-normal"
+                                                                    title={__('Quitar filtros de marca y categoría para ver todos los modelos')}
+                                                                >
+                                                                    {__('Ver todos')}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {data.modelo_id && (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="link"
+                                                                    size="sm"
+                                                                    onClick={handleOpenEditModelo}
+                                                                    className="h-auto p-0 text-[11px] text-amber-600 dark:text-amber-400 gap-1 font-semibold hover:text-amber-700"
+                                                                    title={__('Editar el modelo seleccionado')}
+                                                                >
+                                                                    <Pencil className="h-3 w-3" />
+                                                                    {__('Editar')}
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                type="button"
+                                                                variant="link"
+                                                                size="sm"
+                                                                onClick={() => setIsNewModeloOpen(true)}
+                                                                className="h-auto p-0 text-[11px] text-blue-600 dark:text-blue-400 gap-1 font-semibold"
+                                                            >
+                                                                <Plus className="h-3 w-3" />
+                                                                {__('+ Nuevo')}
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                     <SearchableSelect
                                                         id="modelo_select"
                                                         value={data.modelo_id}
                                                         onChange={(val) => handleSelectModelo(val)}
-                                                        options={filteredModelos.map((m) => ({
-                                                            value: String(m.id),
-                                                            label: m.nombre,
-                                                            description: `${m.marca} • ${m.categoria}`
-                                                        }))}
+                                                        options={modeloOptions}
                                                         placeholder={__('Buscar y seleccionar modelo...')}
                                                         searchPlaceholder={__('Escribe para buscar...')}
                                                     />
@@ -1554,24 +1758,24 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
 
                                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                                                 {/* Código de Barras */}
-                                                <div className="md:col-span-4 space-y-1.5">
+                                                <div className="md:col-span-3 space-y-1.5">
                                                     <Label htmlFor="codigo_barras" className="text-xs font-medium">{__('Código (EAN / UPC / Barras)')}</Label>
                                                     <Input
                                                         id="codigo_barras"
                                                         value={data.codigo_barras}
                                                         onChange={(e) => {
-                                                            const val = e.target.value;
-                                                            const mod = modelos.find((m) => String(m.id) === data.modelo_id);
-                                                            setData((prev) => ({
-                                                                ...prev,
-                                                                codigo_barras: val,
-                                                                sku: generateSkuSuggestion(mod, prev.nombre_variante, val),
-                                                            }));
+                                                             const val = e.target.value;
+                                                             const mod = modelos.find((m) => String(m.id) === data.modelo_id);
+                                                             setData((prev) => ({
+                                                                 ...prev,
+                                                                 codigo_barras: val,
+                                                                 sku: generateSkuSuggestion(mod, prev.nombre_variante, val),
+                                                             }));
                                                         }}
                                                         onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                e.preventDefault();
-                                                            }
+                                                             if (e.key === 'Enter') {
+                                                                 e.preventDefault();
+                                                             }
                                                         }}
                                                         placeholder="Ej: 779123456789"
                                                         className="font-mono text-xs"
@@ -1580,13 +1784,27 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                 </div>
 
                                                 {/* Nombre del Producto */}
-                                                <div className="md:col-span-5 space-y-1.5">
+                                                <div className="md:col-span-6 space-y-1.5">
                                                     <div className="flex items-center justify-between">
                                                         <Label htmlFor="nombre_variante" className="text-xs required">{__('Nombre del Producto')}</Label>
-                                                        {data.tipo_producto === 'repuesto' && (
-                                                            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-200">
-                                                                ✏️ {__('Edición Habilitada')}
-                                                            </span>
+                                                        {data.modelo_id && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const mod = modelos.find((m) => String(m.id) === data.modelo_id);
+                                                                    if (mod) {
+                                                                        setData((prev) => ({
+                                                                            ...prev,
+                                                                            nombre_variante: mod.nombre,
+                                                                            sku: generateSkuSuggestion(mod, mod.nombre, prev.codigo_barras),
+                                                                        }));
+                                                                    }
+                                                                }}
+                                                                className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-normal"
+                                                                title={__('Restablecer al nombre original del modelo')}
+                                                            >
+                                                                {__('Restablecer a modelo')}
+                                                            </button>
                                                         )}
                                                     </div>
                                                     <Input
@@ -1601,14 +1819,8 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                                                                 sku: generateSkuSuggestion(mod, val, prev.codigo_barras),
                                                             }));
                                                         }}
-                                                        placeholder={data.tipo_producto === 'repuesto' ? __('ej: Pantalla OLED Incell iPhone 13 Pro Black') : __('Se genera automáticamente al seleccionar el modelo')}
-                                                        readOnly={data.tipo_producto !== 'repuesto'}
-                                                        className={cn(
-                                                            "text-xs font-medium",
-                                                            data.tipo_producto !== 'repuesto'
-                                                                ? "bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-700 dark:text-slate-300"
-                                                                : "bg-white dark:bg-slate-950 border-purple-300 focus:border-purple-600 text-purple-950 dark:text-purple-100 font-bold"
-                                                        )}
+                                                        placeholder={__('Nombre del producto o variante')}
+                                                        className="text-xs font-medium bg-background"
                                                     />
                                                     {errors.nombre_variante && <p className="text-xs text-rose-500">{errors.nombre_variante}</p>}
                                                 </div>
@@ -2244,6 +2456,86 @@ export default function Index({ productos, categorias: categoriasProp, marcas: m
                             <DialogFooter>
                                 <Button type="button" variant="outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsNewModeloOpen(false); }}>{__('Cancelar')}</Button>
                                 <Button type="submit" disabled={isSavingModelo}>{isSavingModelo ? __('Guardando...') : __('Crear Modelo')}</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Sub-Modal 5: Edición Rápida de Modelo */}
+                <Dialog open={isEditModeloOpen} onOpenChange={setIsEditModeloOpen}>
+                    <DialogContent
+                        className="sm:max-w-md z-[70]"
+                        onPointerDownOutside={(e) => e.preventDefault()}
+                        onInteractOutside={(e) => e.preventDefault()}
+                        onEscapeKeyDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsEditModeloOpen(false);
+                        }}
+                    >
+                        <form onSubmit={handleQuickUpdateModelo}>
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Pencil className="h-5 w-5 text-amber-500" />
+                                    {__('Editar Modelo de Equipo')}
+                                </DialogTitle>
+                                <DialogDescription>{__('Modifica los datos del modelo directamente en el catálogo.')}</DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit_mod_marca" className="required">{__('Marca')}</Label>
+                                    <Select value={editModeloMarcaId} onValueChange={setEditModeloMarcaId}>
+                                        <SelectTrigger id="edit_mod_marca">
+                                            <SelectValue placeholder={__('Selecciona una marca')} />
+                                        </SelectTrigger>
+                                        <SelectContent className="z-[80]">
+                                            {marcas.map((m) => (
+                                                <SelectItem key={m.id} value={String(m.id)}>{m.nombre}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit_mod_categoria">{__('Categoría')}</Label>
+                                    <Select value={editModeloCategoriaId} onValueChange={setEditModeloCategoriaId}>
+                                        <SelectTrigger id="edit_mod_categoria">
+                                            <SelectValue placeholder={__('Selecciona una categoría')} />
+                                        </SelectTrigger>
+                                        <SelectContent className="z-[80]">
+                                            {categorias.map((c) => (
+                                                <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit_mod_name" className="required">{__('Nombre Comercial de Modelo')}</Label>
+                                    <Input
+                                        id="edit_mod_name"
+                                        value={editModeloNombre}
+                                        onChange={(e) => setEditModeloNombre(e.target.value)}
+                                        placeholder="Ej: iPhone 13 Pro Max"
+                                        autoFocus
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit_mod_code">{__('Código Técnico (Opcional)')}</Label>
+                                    <Input
+                                        id="edit_mod_code"
+                                        value={editModeloCodigo}
+                                        onChange={(e) => setEditModeloCodigo(e.target.value)}
+                                        placeholder="Ej: A2643, SM-G998B"
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditModeloOpen(false); }}>{__('Cancelar')}</Button>
+                                <Button type="submit" disabled={isSavingEditModelo} className="bg-amber-600 hover:bg-amber-700 text-white">
+                                    {isSavingEditModelo ? __('Guardando...') : __('Guardar Cambios')}
+                                </Button>
                             </DialogFooter>
                         </form>
                     </DialogContent>
