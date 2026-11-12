@@ -45,6 +45,20 @@ return [
     // Nº de fotos de empleado que se descargan por corrida de sync de fotos.
     'photo_batch' => (int) env('BIOTIME_PHOTO_BATCH', 25),
 
+    // Subida de fotos por la sesión web de BioTime Cloud. La API REST no recibe
+    // fotos (bio_photo responde 403 y el empleado no tiene campo de foto), así
+    // que se usan las mismas importaciones de la interfaz web: Personal ›
+    // Empleado › Importar foto y Dispositivo › Bio-Photo › Importar bio-foto.
+    // Apagado por defecto: se enciende con BIOTIME_WEB_FOTOS=true. Si BioTime
+    // cambia su interfaz y deja de funcionar, las fotos quedan pendientes
+    // para el ZIP y basta apagarlo.
+    'web_fotos' => (bool) env('BIOTIME_WEB_FOTOS', false),
+
+    // La bio-foto importada queda «Pendiente» en BioTime hasta que alguien la
+    // aprueba. Con esto encendido la integración aprueba la que acaba de subir
+    // (nunca las pendientes de otras personas).
+    'web_aprobar_biofoto' => (bool) env('BIOTIME_WEB_APROBAR_BIOFOTO', true),
+
     // Fecha desde la que se traen marcajes en una sincronización completa
     // (`--full`). El endpoint de marcajes SIEMPRE se consulta con ventana
     // start_time/end_time acotada; nunca sin filtro. Los datos reales de esta

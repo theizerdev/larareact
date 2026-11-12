@@ -27,6 +27,7 @@ interface BiotimeEmpleado {
     link_status: 'auto' | 'manual' | 'unmatched';
     empleado_id: number | null;
     foto_exportada: string | null;
+    biophoto_path?: string | null;
     foto_biotime_url?: string;
     empleado?: { id: number; nombres: string; apellidos: string; documento_identidad: string; foto_empleado: string | null } | null;
 }
@@ -106,6 +107,15 @@ export default function BioTimeEmpleados({ empleados, stats, filters, empleados_
                             target.title = __('Sin foto en BioTime');
                         }}
                     />
+                    {r.biophoto_path && (
+                        <img
+                            src={`/admin/biotime/empleados/${r.id}/foto?tipo=bio`}
+                            loading="lazy"
+                            alt="Bio-foto"
+                            title="Bio-foto"
+                            className="-ml-3 mt-5 w-6 h-6 rounded-full object-cover border-2 border-emerald-500 shadow-sm bg-slate-100 dark:bg-slate-800"
+                        />
+                    )}
                 </div>
             ),
         },

@@ -442,6 +442,15 @@ class BioTimeController extends Controller
         $this->authorizeEmpresa($request, $biotimeEmpleado->empresa_id);
 
         $disco = Storage::disk('local');
+
+        // ?tipo=bio: la bio-foto (rostro para los relojes). Sólo se sirve la
+        // copia que dejó el sync de fotos; no se consulta a BioTime por vista.
+        if ($request->query('tipo') === 'bio') {
+            abort_unless(filled($biotimeEmpleado->biophoto_path) && $disco->exists($biotimeEmpleado->biophoto_path), 404);
+
+            return $this->foto($disco->get($biotimeEmpleado->biophoto_path), 'image/jpeg');
+        }
+
         $codigo = preg_replace('/[^A-Za-z0-9._-]/', '_', (string) $biotimeEmpleado->emp_code);
         $ruta = "biotime/fotos/{$biotimeEmpleado->empresa_id}/{$codigo}.jpg";
         $sinFoto = "biotime:sin_foto:{$biotimeEmpleado->empresa_id}:{$codigo}";

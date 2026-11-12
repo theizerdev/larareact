@@ -25,8 +25,9 @@ use Illuminate\Support\Facades\Storage;
  *   Un campo vacío aquí nunca borra el dato que BioTime sí tiene.
  * - El emp_code no se cambia después del alta: es el ID con el que la persona
  *   está enrolada en los relojes.
- * - La foto no viaja en el alta/edición (BioTime la ignora ahí): se intenta como
- *   bio-photo (< 25 KB) y, si BioTime no la acepta, queda pendiente para el ZIP.
+ * - La foto no viaja en el alta/edición (BioTime la ignora ahí): en BioTime
+ *   Cloud se sube por su interfaz web (BioTimeWebService) como foto de perfil
+ *   y bio-foto (< 25 KB); si no se puede, queda pendiente para el ZIP.
  *
  * Tras cada escritura el espejo se refresca con lo que quedó en BioTime, así
  * el siguiente sync no lo toma como un cambio hecho en el reloj.
@@ -43,6 +44,9 @@ class BioTimeEmpleadoPusher
     private const VACIOS = ['N/A'];
 
     private static int $silencio = 0;
+
+    /** Sólo para pruebas: sustituye la sesión web de BioTime. */
+    public ?BioTimeWebService $web = null;
 
     /**
      * Ejecuta $fn sin programar envíos: lo que escribe el sync de BioTime ya
@@ -294,6 +298,27 @@ class BioTimeEmpleadoPusher
         $fotoB64 = $this->fotoBase64($empleado);
         if ($fotoB64 === null) {
             return ' La foto no es una imagen válida para BioTime.';
+        }
+
+        // BioTime Cloud: la API no recibe fotos, se suben por su interfaz web
+        // (foto de perfil + bio-foto aprobada). Si falla, queda pendiente.
+        $web = $this->web ?? new BioTimeWebService(Empresa::find($empleado->empresa_id));
+        if ($web->disponible()) {
+            $jpg = base64_decode(substr($fotoB64, strpos($fotoB64, ',') + 1));
+            $perfil = $web->subirFotoPerfil((string) $bio->emp_code, $jpg);
+            $rostro = $perfil['success'] ? $web->subirBioFoto((string) $bio->emp_code, $jpg) : ['success' => false, 'error' => null];
+
+            if ($perfil['success'] && $rostro['success']) {
+                $bio->update(['foto_exportada' => $empleado->foto_empleado, 'foto_exportada_at' => now()]);
+                Log::channel('biotime')->info("BioTime: foto de perfil y bio-foto de {$bio->emp_code} subidas por la web.", ['empleado_id' => $empleado->id, 'empresa_id' => $empleado->empresa_id]);
+
+                return ' Foto de perfil y bio-foto enviadas a BioTime.';
+            }
+
+            $motivo = $perfil['success'] ? $rostro['error'] : $perfil['error'];
+            Log::channel('biotime')->notice("BioTime: la foto de {$bio->emp_code} no se pudo subir por la web ({$motivo}). Queda pendiente.", ['empleado_id' => $empleado->id, 'empresa_id' => $empleado->empresa_id]);
+
+            return ' La foto queda pendiente de enviarse a BioTime.';
         }
 
         $r = $cliente->uploadBioPhoto((string) $bio->emp_code, $fotoB64);

@@ -397,13 +397,34 @@ class BioTimeService
      */
     public function getEmployeePhoto(string $empCode): array
     {
+        return $this->fotoDe('photo', $empCode);
+    }
+
+    /**
+     * Bio-foto del empleado: la foto de rostro con la que los relojes de luz
+     * visible reconocen a la persona (la que toma el reloj al enrolar, o la que
+     * se importa y aprueba en BioTime). Vive aparte de la de perfil, en
+     * /files/biophoto/<carpeta de la compañía>/<emp_code>.jpg.
+     *
+     * @return array{success: bool, body: string|null, content_type: string|null, status: int|null}
+     */
+    public function getEmployeeBioPhoto(string $empCode): array
+    {
+        return $this->fotoDe('biophoto', $empCode);
+    }
+
+    /**
+     * @return array{success: bool, body: string|null, content_type: string|null, status: int|null}
+     */
+    private function fotoDe(string $tipo, string $empCode): array
+    {
         $codigo = rawurlencode(trim($empCode));
         if ($codigo === '') {
             return ['success' => false, 'body' => null, 'content_type' => null, 'status' => null];
         }
 
         if (! $this->company) {
-            return $this->getBinary($this->url("/files/photo/{$codigo}.jpg"));
+            return $this->getBinary($this->url("/files/{$tipo}/{$codigo}.jpg"));
         }
 
         $carpeta = $this->carpetaFotos();
@@ -411,7 +432,7 @@ class BioTimeService
             return ['success' => false, 'body' => null, 'content_type' => null, 'status' => null];
         }
 
-        return $this->getBinary($this->url("/files/photo/{$carpeta}/{$codigo}.jpg"));
+        return $this->getBinary($this->url("/files/{$tipo}/{$carpeta}/{$codigo}.jpg"));
     }
 
     /**

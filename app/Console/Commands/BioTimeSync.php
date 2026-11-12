@@ -11,7 +11,7 @@ class BioTimeSync extends Command
     protected $signature = 'biotime:sync
         {--empresa= : ID de una empresa concreta (por defecto: todas con biotime_active)}
         {--full : Backfill de marcajes desde config(biotime.backfill_from) en vez de incremental}
-        {--only= : Lista separada por comas: terminals,catalogs,employees,transactions,attendance}
+        {--only= : Lista separada por comas: terminals,catalogs,employees,photos,transactions,attendance}
         {--since= : Fecha/hora ISO que fuerza el inicio de la ventana de marcajes}';
 
     protected $description = 'Sincroniza (solo lectura) relojes, empleados, catálogos, marcajes, horarios, turnos, calendarios y permisos de BioTime hacia las tablas espejo biotime_*';

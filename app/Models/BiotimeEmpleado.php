@@ -35,6 +35,7 @@ class BiotimeEmpleado extends Model
         'payroll_num',
         'enable_att',
         'photo_path',
+        'biophoto_path',
         'photo_synced_at',
         'foto_exportada',
         'foto_exportada_at',

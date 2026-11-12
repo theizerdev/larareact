@@ -18,6 +18,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -34,7 +35,7 @@ use Illuminate\Support\Str;
 class BioTimeSyncService
 {
     /** Partes válidas del sync, en orden de dependencia. */
-    public const PARTS = ['terminals', 'catalogs', 'employees', 'transactions', 'attendance'];
+    public const PARTS = ['terminals', 'catalogs', 'employees', 'photos', 'transactions', 'attendance'];
 
     public function __construct(private readonly BioTimeService $client)
     {
@@ -75,6 +76,7 @@ class BioTimeSyncService
                     'terminals' => $this->syncTerminals($empresa),
                     'catalogs' => $this->syncCatalogs($empresa),
                     'employees' => $this->syncEmployees($empresa, forceProvision: true, forceUpdate: true),
+                    'photos' => $this->syncPhotos($empresa),
                     'transactions' => $this->syncTransactions($empresa, $full, $since),
                     'attendance' => $this->syncAttendance($empresa),
                     default => ['skipped' => "parte desconocida: {$part}"],
@@ -256,6 +258,117 @@ class BioTimeSyncService
         }
 
         return $resultado;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Fotos (perfil + bio-foto)                                          */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Trae de BioTime la foto de perfil y la bio-foto de cada empleado y deja
+     * una copia privada por empresa. Va por lotes (config biotime.photo_batch),
+     * empezando por quien lleva más tiempo sin revisarse, así que una empresa
+     * grande se recorre en varias corridas.
+     *
+     * Si el colaborador vinculado no tiene foto en Hoshō se le pone la de
+     * BioTime (la de perfil o, si no hay, la bio-foto). Una foto que ya existe
+     * en Hoshō nunca se reemplaza.
+     *
+     * @return array{revisados: int, fotos: int, biofotos: int, nuevas: int, colaboradores: int, sin_respuesta: int}
+     */
+    public function syncPhotos(Empresa $empresa, ?int $lote = null): array
+    {
+        $lote ??= max(1, (int) config('biotime.photo_batch', 25));
+        $r = ['revisados' => 0, 'fotos' => 0, 'biofotos' => 0, 'nuevas' => 0, 'colaboradores' => 0, 'sin_respuesta' => 0];
+
+        $pendientes = BiotimeEmpleado::query()
+            ->where('empresa_id', $empresa->id)
+            ->orderByRaw('photo_synced_at IS NOT NULL')
+            ->orderBy('photo_synced_at')
+            ->orderBy('id')
+            ->limit($lote)
+            ->get();
+
+        foreach ($pendientes as $bio) {
+            $perfil = $this->copiarFoto($empresa, $bio, 'fotos', 'photo_path', $this->client->getEmployeePhoto((string) $bio->emp_code), $r);
+            $rostro = $this->copiarFoto($empresa, $bio, 'biofotos', 'biophoto_path', $this->client->getEmployeeBioPhoto((string) $bio->emp_code), $r);
+
+            $r['revisados']++;
+            $r['fotos'] += $bio->photo_path ? 1 : 0;
+            $r['biofotos'] += $bio->biophoto_path ? 1 : 0;
+
+            $bio->photo_synced_at = now();
+            $bio->save();
+
+            if ($this->fotoAlColaborador($bio, $perfil ?? $rostro)) {
+                $r['colaboradores']++;
+            }
+        }
+
+        return $r;
+    }
+
+    /**
+     * Guarda la copia local de una foto de BioTime y devuelve su contenido
+     * (null si BioTime no la tiene o no respondió). Un 404 borra la copia; si
+     * BioTime no responde se conserva la que había.
+     *
+     * @param  array{success: bool, body: string|null, content_type: string|null, status: int|null}  $foto
+     * @param  array<string,int>  $r
+     */
+    private function copiarFoto(Empresa $empresa, BiotimeEmpleado $bio, string $carpeta, string $columna, array $foto, array &$r): ?string
+    {
+        $disco = Storage::disk('local');
+        $codigo = preg_replace('/[^A-Za-z0-9._-]/', '_', (string) $bio->emp_code);
+        $ruta = "biotime/{$carpeta}/{$empresa->id}/{$codigo}.jpg";
+
+        if ($foto['success']) {
+            if (! $disco->exists($ruta) || sha1((string) $disco->get($ruta)) !== sha1((string) $foto['body'])) {
+                $disco->put($ruta, $foto['body']);
+                $r['nuevas']++;
+            }
+            $bio->{$columna} = $ruta;
+
+            return $foto['body'];
+        }
+
+        if ($foto['status'] === 404) {
+            $disco->delete($ruta);
+            $bio->{$columna} = null;
+
+            return null;
+        }
+
+        $r['sin_respuesta']++;
+
+        return null;
+    }
+
+    /**
+     * Pone la foto de BioTime al colaborador vinculado que no tiene ninguna.
+     * Queda marcada como ya exportada: viene de BioTime, no hay que devolverla.
+     */
+    private function fotoAlColaborador(BiotimeEmpleado $bio, ?string $binario): bool
+    {
+        if ($binario === null || ! $bio->empleado_id || @getimagesizefromstring($binario) === false) {
+            return false;
+        }
+
+        $empleado = Empleado::withoutTenant()->find($bio->empleado_id);
+        if ($empleado === null || filled($empleado->foto_empleado)) {
+            return false;
+        }
+
+        $archivo = 'empleados/'.Str::random(40).'.jpg';
+        Storage::disk('public')->put($archivo, $binario);
+        $ruta = '/storage/'.$archivo;
+
+        BioTimeEmpleadoPusher::sinEnviar(fn () => $empleado->update(['foto_empleado' => $ruta]));
+        $bio->update(['foto_exportada' => $ruta, 'foto_exportada_at' => now()]);
+
+        Log::channel('biotime')->info("BioTime: foto de {$bio->emp_code} copiada al colaborador.", ['empleado_id' => $empleado->id, 'empresa_id' => $bio->empresa_id]);
+
+        return true;
     }
 
     /**
