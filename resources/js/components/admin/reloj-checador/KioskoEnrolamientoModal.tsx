@@ -51,7 +51,47 @@ interface Props {
     onSuccess: (updatedEmpleado: any) => void;
 }
 
-const LADO_MAXIMO = 1280;
+const FOTO_BIOTIME_ANCHO = 500;
+const FOTO_BIOTIME_ALTO = 480;
+
+function crearFotoBioTime(
+    origen: CanvasImageSource,
+    anchoOrigen: number,
+    altoOrigen: number,
+    espejo = false,
+): string | null {
+    const canvas = document.createElement('canvas');
+    canvas.width = FOTO_BIOTIME_ANCHO;
+    canvas.height = FOTO_BIOTIME_ALTO;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+        return null;
+    }
+
+    const proporcionDestino = FOTO_BIOTIME_ANCHO / FOTO_BIOTIME_ALTO;
+    let sx = 0;
+    let sy = 0;
+    let anchoRecorte = anchoOrigen;
+    let altoRecorte = altoOrigen;
+
+    if (anchoOrigen / altoOrigen > proporcionDestino) {
+        anchoRecorte = altoOrigen * proporcionDestino;
+        sx = (anchoOrigen - anchoRecorte) / 2;
+    } else {
+        altoRecorte = anchoOrigen / proporcionDestino;
+        sy = (altoOrigen - altoRecorte) / 2;
+    }
+
+    if (espejo) {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+    }
+
+    ctx.drawImage(origen, sx, sy, anchoRecorte, altoRecorte, 0, 0, canvas.width, canvas.height);
+
+    return canvas.toDataURL('image/jpeg', 0.88);
+}
 
 function DatoTarjeta({ etiqueta, valor, mono = false }: { etiqueta: string; valor: string | null | undefined; mono?: boolean }) {
     return (
@@ -269,19 +309,16 @@ export function KioskoEnrolamientoModal({
     const capturarSnapshot = (targetFoto: 1 | 2): string | null => {
         if (!videoRef.current) return null;
         const video = videoRef.current;
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return null;
+        const dataUrl = crearFotoBioTime(
+            video,
+            video.videoWidth || 640,
+            video.videoHeight || 480,
+            isMirrored,
+        );
 
-        if (isMirrored) {
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
+        if (!dataUrl) {
+            return null;
         }
-
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
 
         // Flash visual y sonido
         setFlashing(true);
@@ -385,12 +422,12 @@ export function KioskoEnrolamientoModal({
         lector.onload = () => {
             const img = new Image();
             img.onload = () => {
-                const escala = Math.min(1, LADO_MAXIMO / Math.max(img.width, img.height));
-                const canvas = document.createElement('canvas');
-                canvas.width = Math.round(img.width * escala);
-                canvas.height = Math.round(img.height * escala);
-                canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+                const dataUrl = crearFotoBioTime(img, img.width, img.height);
+
+                if (!dataUrl) {
+                    setErrorMsg('No fue posible procesar la fotografía seleccionada.');
+                    return;
+                }
 
                 if (archivoTarget === 1) {
                     setFoto1(dataUrl);
@@ -634,7 +671,10 @@ export function KioskoEnrolamientoModal({
                             {/* COLUMNA IZQUIERDA: VISOR DE ALTA RESOLUCIÓN */}
                             <div className="lg:col-span-7 flex flex-col justify-between space-y-4">
                                 {/* CONTENEDOR DEL VISOR DE CÁMARA */}
-                                <div className="relative w-full aspect-[4/3] max-h-[56vh] min-h-[380px] rounded-3xl overflow-hidden bg-slate-950 border-4 border-indigo-500/40 shadow-2xl flex items-center justify-center mx-auto">
+                                <div
+                                    className="relative w-full aspect-square rounded-3xl overflow-hidden bg-slate-950 border-4 border-indigo-500/40 shadow-2xl flex items-center justify-center mx-auto"
+                                    style={{ maxWidth: 'min(100%, 56vh)' }}
+                                >
                                     {cameraActive ? (
                                         <>
                                             <video
@@ -672,11 +712,11 @@ export function KioskoEnrolamientoModal({
                                                 </span>
                                             </div>
 
-                                            {/* GUÍA FACIAL EN ÓVALO AMPLIO */}
+                                            {/* Guía cuadrada para el recorte de la fotografía */}
                                             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-4">
                                                 <div
                                                     className={cn(
-                                                        'w-[60%] h-[78%] rounded-[50%] border-3 border-dashed transition-all duration-300 flex items-center justify-center',
+                                                        'w-[76%] aspect-square rounded-2xl border-3 border-dashed transition-all duration-300 flex items-center justify-center',
                                                         fotoActivaTarget === 1
                                                             ? 'border-indigo-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]'
                                                             : 'border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]'
@@ -691,8 +731,8 @@ export function KioskoEnrolamientoModal({
 
                                                 <span className="text-xs sm:text-sm font-bold text-white bg-black/75 px-5 py-1.5 rounded-full mt-3 backdrop-blur-md border border-white/15 shadow-xl">
                                                     {fotoActivaTarget === 1
-                                                        ? '🎯 Coloque su rostro de frente dentro del óvalo con buena luz'
-                                                        : '🎯 Mantenga la posición para la toma de verificación biométrica'}
+                                                        ? '🎯 Coloque su rostro de frente dentro del marco con buena luz'
+                                                        : '🎯 Mantenga la posición dentro del marco para la toma de verificación'}
                                                 </span>
                                             </div>
 
@@ -828,7 +868,7 @@ export function KioskoEnrolamientoModal({
                                         <div
                                             onClick={() => setFotoActivaTarget(1)}
                                             className={cn(
-                                                'relative aspect-[4/3] rounded-2xl border-3 overflow-hidden flex flex-col items-center justify-center p-2 cursor-pointer transition-all',
+                                                'relative aspect-square rounded-2xl border-3 overflow-hidden flex flex-col items-center justify-center p-2 cursor-pointer transition-all',
                                                 fotoActivaTarget === 1
                                                     ? 'border-indigo-600 ring-4 ring-indigo-500/20 shadow-md bg-indigo-50/20 dark:bg-indigo-950/20'
                                                     : 'border-border bg-card hover:border-border/80'
@@ -868,7 +908,7 @@ export function KioskoEnrolamientoModal({
                                         <div
                                             onClick={() => setFotoActivaTarget(2)}
                                             className={cn(
-                                                'relative aspect-[4/3] rounded-2xl border-3 overflow-hidden flex flex-col items-center justify-center p-2 cursor-pointer transition-all',
+                                                'relative aspect-square rounded-2xl border-3 overflow-hidden flex flex-col items-center justify-center p-2 cursor-pointer transition-all',
                                                 fotoActivaTarget === 2
                                                     ? 'border-emerald-600 ring-4 ring-emerald-500/20 shadow-md bg-emerald-50/20 dark:bg-emerald-950/20'
                                                     : 'border-border bg-card hover:border-border/80'
