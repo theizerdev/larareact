@@ -193,8 +193,8 @@ class RelojChecadorKioskoController extends Controller
         $empleados = Empleado::with(['turnoLaboral', 'departamento', 'cargo', 'empresa'])
             ->where('status', true)
             ->when($empresaId, fn ($query) => $query->where('empresa_id', $empresaId))
-            ->when(filled($filtros['nombres'] ?? null), fn ($query) => $query->where('nombres', 'like', '%'.trim($filtros['nombres']).'%'))
-            ->when(filled($filtros['apellidos'] ?? null), fn ($query) => $query->where('apellidos', 'like', '%'.trim($filtros['apellidos']).'%'))
+            ->when(filled($filtros['nombres'] ?? null), fn ($query) => $query->whereRaw('LOWER(nombres) LIKE ?', ['%'.mb_strtolower(trim($filtros['nombres']), 'UTF-8').'%']))
+            ->when(filled($filtros['apellidos'] ?? null), fn ($query) => $query->whereRaw('LOWER(apellidos) LIKE ?', ['%'.mb_strtolower(trim($filtros['apellidos']), 'UTF-8').'%']))
             ->when(filled($filtros['numero'] ?? null), function ($query) use ($filtros) {
                 $numero = trim($filtros['numero']);
                 $query->where(function ($query) use ($numero) {
@@ -202,7 +202,7 @@ class RelojChecadorKioskoController extends Controller
                         ->orWhere('documento_identidad', 'like', "%{$numero}%");
                 });
             })
-            ->when(filled($filtros['correo'] ?? null), fn ($query) => $query->where('correo', 'like', '%'.trim($filtros['correo']).'%'))
+            ->when(filled($filtros['correo'] ?? null), fn ($query) => $query->whereRaw('LOWER(correo) LIKE ?', ['%'.mb_strtolower(trim($filtros['correo']), 'UTF-8').'%']))
             ->orderBy('apellidos')
             ->orderBy('nombres')
             ->limit(50)
