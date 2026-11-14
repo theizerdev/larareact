@@ -52,6 +52,7 @@ class RelojChecadorKioskoEnrolamientoTest extends TestCase
             'apellidos' => 'Ramírez López',
             'documento_identidad' => '880011',
             'codigo_acceso' => '880011',
+            'correo' => 'carlos.ramirez@example.com',
             'departamento_id' => $depto->id,
             'genero' => 'M',
             'fecha_nacimiento' => '1992-08-15',
@@ -88,6 +89,34 @@ class RelojChecadorKioskoEnrolamientoTest extends TestCase
             ->assertJsonPath('empleado.genero', 'M')
             ->assertJsonPath('empleado.fecha_nacimiento', '1992-08-15')
             ->assertJsonPath('empleado.empresa_nombre', 'Smurfit Westrock Planta Test');
+    }
+
+    public function test_buscar_colaboradores_para_enrolamiento_acepta_filtros_combinables(): void
+    {
+        foreach ([
+            ['nombres' => 'Carl'],
+            ['apellidos' => 'López'],
+            ['numero' => '8800'],
+            ['correo' => '@example.com'],
+            [
+                'nombres' => 'Carlos',
+                'apellidos' => 'Ramírez',
+                'numero' => '880011',
+                'correo' => 'carlos.ramirez@example.com',
+            ],
+        ] as $filtros) {
+            $this->actingAs($this->user)
+                ->postJson('/admin/api/reloj-checador/buscar-enrolamiento', $filtros)
+                ->assertOk()
+                ->assertJsonPath('success', true)
+                ->assertJsonCount(1, 'empleados')
+                ->assertJsonPath('empleados.0.id', $this->empleado->id);
+        }
+
+        $this->actingAs($this->user)
+            ->postJson('/admin/api/reloj-checador/buscar-enrolamiento', [])
+            ->assertUnprocessable()
+            ->assertJsonPath('success', false);
     }
 
     public function test_buscar_empleado_detecta_si_esta_enrolado(): void

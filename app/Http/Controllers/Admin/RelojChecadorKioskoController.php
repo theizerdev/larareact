@@ -91,7 +91,7 @@ class RelojChecadorKioskoController extends Controller
                     $siguienteMarcaje = 'salida_comida';
                     break;
                 case 'salida_comida':
-                    $siguienteMarcaje = 'entrada_comida';
+                    $siguienteMarcaje = 'salida';
                     break;
                 case 'entrada_comida':
                     $siguienteMarcaje = 'salida';
@@ -117,8 +117,6 @@ class RelojChecadorKioskoController extends Controller
                     break;
             }
         }
-
-        $minutosDescanso = $empleado->turnoLaboral?->minutos_descanso ?? 30;
 
         $marcajesHoy = AsistenciaMarcaje::where('empleado_id', $empleado->id)
             ->whereDate('fecha_hora', Carbon::today())
@@ -149,7 +147,6 @@ class RelojChecadorKioskoController extends Controller
                 'area' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
-                'minutos_descanso' => $minutosDescanso,
                 'ultimo_marcaje_tipo' => $ultimoMarcaje?->tipo_marcaje,
                 'enrolado' => $estaEnrolado,
                 'enrolado_en' => $empleado->enrolado_en?->toIso8601String(),
@@ -169,7 +166,76 @@ class RelojChecadorKioskoController extends Controller
     }
 
     /**
-     * Registra una marca de reloj (Entrada, Salida Comida, Regreso Comida, Salida Final).
+     * Busca colaboradores para enrolamiento mediante filtros combinables.
+     */
+    public function buscarEmpleadosParaEnrolamiento(Request $request)
+    {
+        $user = $request->user();
+        if ($user && ! $user->can('asistencia.kiosko') && ! $user->can('asistencia.view') && ! $user->can('empleados.edit')) {
+            abort(403, 'No tiene permiso para buscar empleados para enrolamiento.');
+        }
+
+        $filtros = $request->validate([
+            'nombres' => 'nullable|string|max:100',
+            'apellidos' => 'nullable|string|max:100',
+            'numero' => 'nullable|string|max:50',
+            'correo' => 'nullable|string|max:150',
+        ]);
+
+        if (! collect($filtros)->contains(fn ($valor) => filled($valor))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ingrese al menos un filtro para buscar colaboradores.',
+            ], 422);
+        }
+
+        $empresaId = $user?->empresa_id ?? \App\Models\Empresa::value('id');
+        $empleados = Empleado::with(['turnoLaboral', 'departamento', 'cargo', 'empresa'])
+            ->where('status', true)
+            ->when($empresaId, fn ($query) => $query->where('empresa_id', $empresaId))
+            ->when(filled($filtros['nombres'] ?? null), fn ($query) => $query->where('nombres', 'like', '%'.trim($filtros['nombres']).'%'))
+            ->when(filled($filtros['apellidos'] ?? null), fn ($query) => $query->where('apellidos', 'like', '%'.trim($filtros['apellidos']).'%'))
+            ->when(filled($filtros['numero'] ?? null), function ($query) use ($filtros) {
+                $numero = trim($filtros['numero']);
+                $query->where(function ($query) use ($numero) {
+                    $query->where('codigo_acceso', 'like', "%{$numero}%")
+                        ->orWhere('documento_identidad', 'like', "%{$numero}%");
+                });
+            })
+            ->when(filled($filtros['correo'] ?? null), fn ($query) => $query->where('correo', 'like', '%'.trim($filtros['correo']).'%'))
+            ->orderBy('apellidos')
+            ->orderBy('nombres')
+            ->limit(50)
+            ->get()
+            ->map(fn (Empleado $empleado) => [
+                'id' => $empleado->id,
+                'nombre_completo' => $empleado->nombre_completo,
+                'nombres' => $empleado->nombres,
+                'apellidos' => $empleado->apellidos,
+                'correo' => $empleado->correo,
+                'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'numero' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso,
+                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
+                'departamento' => $empleado->departamento?->nombre,
+                'area' => $empleado->departamento?->nombre,
+                'cargo' => $empleado->cargo?->nombre,
+                'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
+                'enrolado' => ! empty($empleado->enrolado_en),
+                'enrolado_en' => $empleado->enrolado_en?->toIso8601String(),
+                'genero' => $empleado->genero,
+                'fecha_nacimiento' => $empleado->fecha_nacimiento?->format('Y-m-d'),
+                'empresa_nombre' => $empleado->empresa?->razon_social ?? $empleado->empresa?->nombre_comercial ?? 'Smurfit Westrock',
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'empleados' => $empleados,
+        ]);
+    }
+
+    /**
+     * Registra una marca de reloj (Entrada, Inicio de Comida, Descanso o Salida).
      */
     public function registrarMarcaje(Request $request, CalculoAsistenciaLftService $calculoService)
     {
@@ -196,13 +262,7 @@ class RelojChecadorKioskoController extends Controller
         $registro = app(RegistroMarcajeService::class);
         $duplicado = $registro->duplicadoReciente($empleado, $validated['tipo_marcaje']);
 
-        $minutosDescanso = $empleado->turnoLaboral?->minutos_descanso ?? 30;
-
         if ($duplicado) {
-            $horaRegresoEstimada = ($duplicado->tipo_marcaje === 'salida_comida')
-                ? Carbon::parse($duplicado->fecha_hora)->addMinutes($minutosDescanso)->format('h:i A')
-                : null;
-
             return response()->json([
                 'success' => true,
                 'message' => 'Marcaje registrado con éxito.',
@@ -211,8 +271,6 @@ class RelojChecadorKioskoController extends Controller
                     'tipo_nombre' => self::formatearTipoMarcaje($duplicado->tipo_marcaje),
                     'hora' => $duplicado->fecha_hora->format('H:i:s'),
                     'fecha' => $duplicado->fecha_hora->format('d/m/Y'),
-                    'minutos_descanso' => $minutosDescanso,
-                    'hora_regreso_estimada' => $horaRegresoEstimada,
                 ],
                 'empleado_nombre' => $empleado->nombre_completo,
             ]);
@@ -292,10 +350,6 @@ class RelojChecadorKioskoController extends Controller
         // WhatsApp al empleado, fuera de la petición (ver RegistroMarcajeService).
         $registro->notificarEnCola($empleado, $marcaje);
 
-        $horaRegresoEstimada = ($marcaje->tipo_marcaje === 'salida_comida')
-            ? Carbon::parse($marcaje->fecha_hora)->addMinutes($minutosDescanso)->format('h:i A')
-            : null;
-
         return response()->json([
             'success' => true,
             'message' => 'Marcaje registrado con éxito.',
@@ -304,8 +358,6 @@ class RelojChecadorKioskoController extends Controller
                 'tipo_nombre' => self::formatearTipoMarcaje($marcaje->tipo_marcaje),
                 'hora' => $marcaje->fecha_hora->format('H:i:s'),
                 'fecha' => $marcaje->fecha_hora->format('d/m/Y'),
-                'minutos_descanso' => $minutosDescanso,
-                'hora_regreso_estimada' => $horaRegresoEstimada,
             ],
             'empleado_nombre' => $empleado->nombre_completo,
         ]);

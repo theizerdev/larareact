@@ -98,6 +98,7 @@ interface EmpleadoFound {
     nombre_completo: string;
     nombres?: string;
     apellidos?: string;
+    correo?: string | null;
     documento_identidad: string;
     numero?: string | null;
     codigo_acceso?: string | null;
@@ -106,13 +107,19 @@ interface EmpleadoFound {
     area?: string;
     cargo?: string;
     turno?: string;
-    minutos_descanso?: number;
     ultimo_marcaje_tipo?: string | null;
     enrolado?: boolean;
     enrolado_en?: string | null;
     genero?: string | null;
     fecha_nacimiento?: string | null;
     empresa_nombre?: string | null;
+}
+
+interface FiltrosEnrolamiento {
+    nombres: string;
+    apellidos: string;
+    numero: string;
+    correo: string;
 }
 
 function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], empresa }: Props) {
@@ -178,6 +185,13 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
     const [documentInput, setDocumentInput] = useState('');
     const [loadingSearch, setLoadingSearch] = useState(false);
     const [empleado, setEmpleado] = useState<EmpleadoFound | null>(null);
+    const [filtrosEnrolamiento, setFiltrosEnrolamiento] = useState<FiltrosEnrolamiento>({
+        nombres: '',
+        apellidos: '',
+        numero: '',
+        correo: '',
+    });
+    const [resultadosEnrolamiento, setResultadosEnrolamiento] = useState<EmpleadoFound[] | null>(null);
     const [marcajesHoy, setMarcajesHoy] = useState<MarcajeItem[]>([]);
     const [ultimoMarcaje, setUltimoMarcaje] = useState<{ tipo: string; hora: string; tipo_nombre?: string } | null>(null);
     // Si la foto no carga se muestran las iniciales en lugar del texto alternativo.
@@ -188,12 +202,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [successCountdown, setSuccessCountdown] = useState<number>(4);
-    const [successExtraData, setSuccessExtraData] = useState<{
-        minutos_descanso?: number;
-        hora_regreso_estimada?: string | null;
-        es_offline?: boolean;
-        tipo?: string;
-    } | null>(null);
+    const [successExtraData, setSuccessExtraData] = useState<{ es_offline?: boolean } | null>(null);
 
     // Temporizador de Inactividad (Auto-Reset tras 15s de abandono)
     const [inactivityCountdown, setInactivityCountdown] = useState<number>(15);
@@ -756,6 +765,8 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
         if (ultimoCodigoRef.current) ultimoCodigoRef.current.at = Date.now();
         setDocumentInput('');
         setEmpleado(null);
+        setFiltrosEnrolamiento({ nombres: '', apellidos: '', numero: '', correo: '' });
+        setResultadosEnrolamiento(null);
         setUltimoMarcaje(null);
         setMarcajesHoy([]);
         setErrorMessage(null);
@@ -775,6 +786,65 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
             return decodeURIComponent(match[1]);
         }
         return '';
+    };
+
+    const actualizarFiltroEnrolamiento = (campo: keyof FiltrosEnrolamiento, valor: string) => {
+        setFiltrosEnrolamiento((prev) => ({ ...prev, [campo]: valor }));
+        setResultadosEnrolamiento(null);
+        setEmpleado(null);
+        setErrorMessage(null);
+    };
+
+    const buscarEmpleadosEnrolamiento = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!Object.values(filtrosEnrolamiento).some((valor) => valor.trim())) {
+            setErrorMessage('Ingrese al menos un filtro para buscar colaboradores.');
+            return;
+        }
+
+        setLoadingSearch(true);
+        setErrorMessage(null);
+        setEmpleado(null);
+        setResultadosEnrolamiento(null);
+
+        const token = getCsrfToken();
+        try {
+            const response = await fetch('/admin/api/reloj-checador/buscar-enrolamiento', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'X-XSRF-TOKEN': token,
+                },
+                body: JSON.stringify(filtrosEnrolamiento),
+            });
+
+            if (response.status === 401 || response.status === 419) {
+                setErrorMessage('Tu sesión expiró. Recarga la página e inicia sesión de nuevo.');
+                return;
+            }
+            if (response.status >= 500) {
+                setErrorMessage('Error del servidor. Intenta de nuevo en unos segundos.');
+                return;
+            }
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                setErrorMessage(data.message || 'No se pudo completar la búsqueda de colaboradores.');
+                return;
+            }
+
+            setResultadosEnrolamiento(data.empleados || []);
+            if (!data.empleados?.length) {
+                setErrorMessage('No se encontraron colaboradores con esos filtros.');
+            }
+        } catch {
+            setErrorMessage('No se pudo conectar con el servidor. Verifica la conexión a la red de la planta.');
+        } finally {
+            setLoadingSearch(false);
+        }
     };
 
     // Función Central de Búsqueda
@@ -938,9 +1008,6 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                 }
 
                 setSuccessExtraData({
-                    tipo: tipoFinal,
-                    minutos_descanso: data?.marcaje?.minutos_descanso || empleado.minutos_descanso || 30,
-                    hora_regreso_estimada: data?.marcaje?.hora_regreso_estimada,
                     es_offline: false,
                 });
 
@@ -971,9 +1038,6 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
             speakMessage(`Marcaje guardado en modo offline para ${primerNombre}.`);
 
             setSuccessExtraData({
-                tipo: tipoFinal,
-                minutos_descanso: empleado.minutos_descanso || 30,
-                hora_regreso_estimada: null,
                 es_offline: true,
             });
 
@@ -1131,7 +1195,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                             Registro de Marcajes
                                         </h3>
                                         <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
-                                            Cheque su entrada, salida de turno, inicio o fin de alimentos, descansos programados y horas extras de jornada.
+                                            Cheque su entrada, salida de turno, inicio de comida, descansos programados y horas extras de jornada.
                                         </p>
                                     </div>
 
@@ -1477,33 +1541,6 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                     </p>
                                 </div>
 
-                                {/* TARJETA ESPECIAL: CONTADOR Y HORA SUGERIDA DE REGRESO DE ALMUERZO */}
-                                {successExtraData?.tipo === 'salida_comida' && (
-                                    <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-800 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200 space-y-3 max-w-lg mx-auto">
-                                        <div className="flex items-center justify-center gap-2 font-bold text-sm sm:text-base">
-                                            <Utensils className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                                            <span>Tiempo de Comida Asignado: {successExtraData.minutos_descanso ?? 30} Minutos</span>
-                                        </div>
-
-                                        {successExtraData.hora_regreso_estimada ? (
-                                            <div className="bg-card py-3 px-4 rounded-xl border border-amber-200 dark:border-amber-900">
-                                                <div className="text-xs text-muted-foreground">Hora sugerida de regreso para marcar FIN DE COMIDA:</div>
-                                                <div className="text-2xl sm:text-3xl font-bold text-amber-700 dark:text-amber-300 font-mono tracking-wider mt-0.5">
-                                                    {successExtraData.hora_regreso_estimada} hrs
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="text-xs font-mono">
-                                                Dispones de {successExtraData.minutos_descanso ?? 30} minutos de descanso estipulado.
-                                            </div>
-                                        )}
-
-                                        <p className="text-xs opacity-90">
-                                            ¡Buen provecho! Al concluir tus alimentos, recuerda checar tu <strong className="underline">FIN DE COMIDA</strong> en este quiosco.
-                                        </p>
-                                    </div>
-                                )}
-
                                 {/* BARRA DE CUENTA REGRESIVA (4s) Y BOTÓN DE LIBERACIÓN INMEDIATA */}
                                 <div className="pt-2 space-y-3 max-w-md mx-auto">
                                     <div className="space-y-1">
@@ -1643,7 +1680,6 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                         {(() => {
                                             const hitoEntrada = marcajesHoy.find(m => m.tipo === 'entrada' || m.tipo === 'entrada_extraordinaria');
                                             const hitoInicioComida = marcajesHoy.find(m => m.tipo === 'salida_comida');
-                                            const hitoFinComida = marcajesHoy.find(m => m.tipo === 'entrada_comida');
                                             const hitoSalida = marcajesHoy.find(m => m.tipo === 'salida');
 
                                             const hitos = [
@@ -1660,13 +1696,6 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                     icon: Utensils,
                                                     marcaje: hitoInicioComida,
                                                     esSugerido: sugerenciaMarcaje === 'salida_comida',
-                                                },
-                                                {
-                                                    key: 'entrada_comida',
-                                                    label: 'Fin Comida',
-                                                    icon: UtensilsCrossed,
-                                                    marcaje: hitoFinComida,
-                                                    esSugerido: sugerenciaMarcaje === 'entrada_comida',
                                                 },
                                                 {
                                                     key: 'salida',
@@ -1689,7 +1718,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                         </span>
                                                     </div>
 
-                                                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2 pt-1">
+                                                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1">
                                                         {hitos.map((h) => {
                                                             const Icon = h.icon;
                                                             const tieneMarcaje = Boolean(h.marcaje);
@@ -1762,8 +1791,6 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                 {(() => {
                                                     const esDescansoActivo = sugerenciaMarcaje === 'descanso_fin' || empleado?.ultimo_marcaje_tipo === 'descanso_inicio';
                                                     const esIncidenteActivo = sugerenciaMarcaje === 'incidente_fin' || empleado?.ultimo_marcaje_tipo === 'incidente_inicio';
-                                                    const tieneUnicaOpcionComida = opcionesDisponibles.length === 1;
-                                                    const unicaOpcionComida = tieneUnicaOpcionComida ? opcionesDisponibles[0] : null;
 
                                                     return (
                                                         <>
@@ -1808,58 +1835,17 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                                 <span>TIEMPO EXTRA</span>
                                                             </Button>
 
-                                                            {/* BOTÓN INICIO COMIDA: CON MARCAJE RÁPIDO SI SOLO HAY 1 PLATILLO ACTIVO */}
-                                                            <div className="flex flex-col">
-                                                                <Button
-                                                                    onClick={() => {
-                                                                        if (tieneUnicaOpcionComida && unicaOpcionComida) {
-                                                                            handleRegisterMarcaje('salida_comida', {
-                                                                                comida_opcion: unicaOpcionComida.id ?? unicaOpcionComida._idx,
-                                                                            });
-                                                                        } else {
-                                                                            setIsComidaModalOpen(true);
-                                                                        }
-                                                                    }}
-                                                                    disabled={loadingSearch}
-                                                                    className={`${accionBase} gap-0.5 w-full ${
-                                                                        sugerenciaMarcaje === 'salida_comida'
-                                                                            ? 'bg-amber-500 hover:bg-amber-400 text-white ring-4 ring-amber-500/30 shadow-md'
-                                                                            : accionNeutra
-                                                                    }`}
-                                                                >
-                                                                    <Utensils className={`w-5 h-5 ${sugerenciaMarcaje === 'salida_comida' ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
-                                                                    <span>INICIO COMIDA</span>
-                                                                    {tieneUnicaOpcionComida && unicaOpcionComida ? (
-                                                                        <span className="text-[10px] opacity-80 font-medium truncate max-w-[130px]">
-                                                                            ⚡ Rápido: {unicaOpcionComida.nombre}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="text-[10px] opacity-75 font-normal">Salida a Comer</span>
-                                                                    )}
-                                                                </Button>
-                                                                {tieneUnicaOpcionComida && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => setIsComidaModalOpen(true)}
-                                                                        className="text-[10px] text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400 underline mt-1 text-center"
-                                                                    >
-                                                                        Ver menú / Sin consumo
-                                                                    </button>
-                                                                )}
-                                                            </div>
-
                                                             <Button
-                                                                onClick={() => handleRegisterMarcaje('entrada_comida')}
+                                                                onClick={() => handleRegisterMarcaje('salida_comida')}
                                                                 disabled={loadingSearch}
                                                                 className={`${accionBase} gap-0.5 ${
-                                                                    sugerenciaMarcaje === 'entrada_comida'
-                                                                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white ring-4 ring-indigo-500/30 shadow-md'
+                                                                    sugerenciaMarcaje === 'salida_comida'
+                                                                        ? 'bg-amber-500 hover:bg-amber-400 text-white ring-4 ring-amber-500/30 shadow-md'
                                                                         : accionNeutra
                                                                 }`}
                                                             >
-                                                                <LogIn className={`w-5 h-5 ${sugerenciaMarcaje === 'entrada_comida' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`} />
-                                                                <span>FIN COMIDA</span>
-                                                                <span className="text-[10px] opacity-75 font-normal">Regreso de Comer</span>
+                                                                <Utensils className={`w-5 h-5 ${sugerenciaMarcaje === 'salida_comida' ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
+                                                                <span>INICIO COMIDA</span>
                                                             </Button>
 
                                                             <Button
@@ -1979,54 +1965,100 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                         <div>
                                             <h3 className="font-semibold leading-tight">Identificación del Colaborador</h3>
                                             <Label className="text-xs text-muted-foreground font-normal">
-                                                Ingrese el número de nómina, documento o pase el gafete por el lector
+                                                Busque por nombre, apellido, número de empleado o correo
                                             </Label>
                                         </div>
                                     </div>
 
-                                    <input
-                                        ref={inputRef}
-                                        type="text"
-                                        value={documentInput}
-                                        onChange={(e) => setDocumentInput(e.target.value)}
-                                        placeholder="N° de empleado o documento..."
-                                        className="w-full text-center text-2xl sm:text-3xl font-mono font-bold tracking-widest bg-background border-2 border-input rounded-xl py-4 text-foreground placeholder:text-base placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/70 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/15 transition"
-                                        autoFocus
-                                    />
-
-                                    {/* TECLADO TÁCTIL */}
-                                    <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
-                                        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
-                                            <button key={num} type="button" onClick={() => handleNumpadPress(num)} className={teclaDigito}>
-                                                {num}
-                                            </button>
-                                        ))}
-                                        <button
-                                            type="button"
-                                            onClick={handleNumpadClear}
-                                            className="h-16 rounded-2xl text-xs sm:text-sm font-bold border-2 shadow-sm transition-all active:scale-90 flex items-center justify-center select-none bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-600 hover:text-white hover:border-rose-600 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900"
+                                    <form onSubmit={buscarEmpleadosEnrolamiento} className="space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="filtro-nombres">Nombres</Label>
+                                                <Input
+                                                    ref={inputRef}
+                                                    id="filtro-nombres"
+                                                    value={filtrosEnrolamiento.nombres}
+                                                    onChange={(e) => actualizarFiltroEnrolamiento('nombres', e.target.value)}
+                                                    placeholder="Nombres"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="filtro-apellidos">Apellidos</Label>
+                                                <Input
+                                                    id="filtro-apellidos"
+                                                    value={filtrosEnrolamiento.apellidos}
+                                                    onChange={(e) => actualizarFiltroEnrolamiento('apellidos', e.target.value)}
+                                                    placeholder="Apellidos"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="filtro-numero">Número de empleado</Label>
+                                                <Input
+                                                    id="filtro-numero"
+                                                    value={filtrosEnrolamiento.numero}
+                                                    onChange={(e) => actualizarFiltroEnrolamiento('numero', e.target.value)}
+                                                    placeholder="Número de empleado"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="filtro-correo">Correo</Label>
+                                                <Input
+                                                    id="filtro-correo"
+                                                    type="email"
+                                                    value={filtrosEnrolamiento.correo}
+                                                    onChange={(e) => actualizarFiltroEnrolamiento('correo', e.target.value)}
+                                                    placeholder="correo@empresa.com"
+                                                />
+                                            </div>
+                                        </div>
+                                        <Button
+                                            type="submit"
+                                            disabled={loadingSearch || !Object.values(filtrosEnrolamiento).some((valor) => valor.trim())}
+                                            className="w-full h-14 text-base sm:text-lg font-bold rounded-xl shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white"
                                         >
-                                            LIMPIAR
-                                        </button>
-                                        <button type="button" onClick={() => handleNumpadPress('0')} className={teclaDigito}>
-                                            0
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={handleNumpadDelete}
-                                            className="h-16 rounded-2xl border-2 shadow-sm transition-all active:scale-90 flex items-center justify-center select-none bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-500 hover:text-white hover:border-amber-500 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900"
-                                        >
-                                            <Delete className="w-6 h-6 sm:w-7 sm:h-7" />
-                                        </button>
-                                    </div>
+                                            {loadingSearch ? 'BUSCANDO COLABORADORES...' : 'BUSCAR COLABORADORES'}
+                                        </Button>
+                                    </form>
 
-                                    <Button
-                                        onClick={() => handleSearch()}
-                                        disabled={!documentInput.trim() || loadingSearch}
-                                        className="w-full h-14 text-base sm:text-lg font-bold rounded-xl shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white"
-                                    >
-                                        {loadingSearch ? 'LOCALIZANDO COLABORADOR...' : 'LOCALIZAR COLABORADOR'}
-                                    </Button>
+                                    {resultadosEnrolamiento && resultadosEnrolamiento.length > 0 && (
+                                        <div className="space-y-2" aria-label="Resultados de búsqueda">
+                                            <p className="text-xs font-semibold text-muted-foreground">
+                                                {resultadosEnrolamiento.length === 50
+                                                    ? 'Se muestran hasta 50 resultados; refine los filtros si es necesario.'
+                                                    : `${resultadosEnrolamiento.length} colaborador(es) encontrado(s)`}
+                                            </p>
+                                            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+                                                {resultadosEnrolamiento.map((resultado) => (
+                                                    <button
+                                                        key={resultado.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setEmpleado(resultado);
+                                                            setUltimoMarcaje(null);
+                                                            setMarcajesHoy([]);
+                                                            setErrorMessage(null);
+                                                        }}
+                                                        className={`w-full rounded-xl border p-3 text-left transition-colors ${
+                                                            empleado?.id === resultado.id
+                                                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
+                                                                : 'border-border hover:border-indigo-300 hover:bg-muted/50'
+                                                        }`}
+                                                    >
+                                                        <span className="flex items-center justify-between gap-2">
+                                                            <strong className="truncate text-sm">{resultado.nombre_completo}</strong>
+                                                            <Badge variant="outline" className="shrink-0 text-[10px]">
+                                                                {resultado.enrolado ? 'Enrolado' : 'Pendiente'}
+                                                            </Badge>
+                                                        </span>
+                                                        <span className="mt-1 block text-xs text-muted-foreground">
+                                                            No. {resultado.numero || resultado.codigo_acceso || resultado.documento_identidad}
+                                                            {resultado.correo ? ` · ${resultado.correo}` : ''}
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
 
@@ -2154,10 +2186,10 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                         <ScanFace className="w-10 h-10" />
                                     </div>
                                     <h3 className="text-lg font-semibold text-foreground">
-                                        En espera de ingreso de documento o QR
+                                        Busque un colaborador para iniciar
                                     </h3>
                                     <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                                        Ingrese el número de nómina en el teclado táctil de la izquierda o acerque su gafete al lector para cargar sus datos y proceder con la toma de fotografías biométricas.
+                                        Use uno o varios filtros de la izquierda y seleccione al colaborador para revisar su estado de enrolamiento.
                                     </p>
                                 </Card>
                             )}
