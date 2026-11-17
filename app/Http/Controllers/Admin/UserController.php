@@ -20,6 +20,12 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    private function canManageCompanyBranches(?User $user): bool
+    {
+        return $this->isSuperAdmin($user)
+            || (bool) $user?->hasRole('Administrador');
+    }
+
     private function isSuperAdmin(?User $user): bool
     {
         if (! $user) {
@@ -162,7 +168,7 @@ class UserController extends Controller
 
             if (! $isSuperAdmin) {
                 $validated['empresa_id'] = $currentUser?->empresa_id;
-                if ($currentUser?->sucursal_id) {
+                if ($currentUser?->sucursal_id && ! $this->canManageCompanyBranches($currentUser)) {
                     $validated['sucursal_id'] = $currentUser->sucursal_id;
                 }
             } else {
@@ -272,7 +278,7 @@ class UserController extends Controller
 
             if (! $isSuperAdmin) {
                 unset($validated['empresa_id']);
-                if ($currentUser?->sucursal_id) {
+                if ($currentUser?->sucursal_id && ! $this->canManageCompanyBranches($currentUser)) {
                     $validated['sucursal_id'] = $currentUser->sucursal_id;
                 }
             }
