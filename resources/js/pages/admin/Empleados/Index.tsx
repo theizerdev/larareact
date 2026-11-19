@@ -457,14 +457,61 @@ export default function EmpleadosIndexPage({
     // ── Formulario Inertia ─────────────────────────────────────────────────────
     const { data, setData, post, reset, errors, processing } = useForm(initialForm);
 
-    // ── Filtro de dependencias según selección ──────────────────────────────────
-    const filteredSucursales = sucursales.filter(s => s.empresa_id === Number(data.empresa_id));
-    const filteredDepartamentos = departamentos.filter(d => d.empresa_id === Number(data.empresa_id) && d.sucursal_id === Number(data.sucursal_id));
-    const filteredResponsables = responsables.filter(r => r.departamento_id === Number(data.departamento_id));
-    const filteredCargos = cargos.filter(c => c.departamento_id === Number(data.departamento_id));
+    // ── Filtro de dependencias según selección (Resiliente) ────────────────────
+    const filteredSucursales = data.empresa_id 
+        ? sucursales.filter(s => Number(s.empresa_id) === Number(data.empresa_id))
+        : sucursales;
+
+    const filteredDepartamentos = departamentos.filter(d => {
+        if (data.sucursal_id && d.sucursal_id) {
+            return Number(d.sucursal_id) === Number(data.sucursal_id);
+        }
+        if (data.empresa_id && d.empresa_id) {
+            return Number(d.empresa_id) === Number(data.empresa_id);
+        }
+        return true;
+    });
+
+    const filteredResponsables = data.departamento_id && data.departamento_id !== 'none'
+        ? responsables.filter(r => Number(r.departamento_id) === Number(data.departamento_id))
+        : responsables;
+
+    const filteredCargos = data.departamento_id && data.departamento_id !== 'none'
+        ? cargos.filter(c => Number(c.departamento_id) === Number(data.departamento_id))
+        : cargos;
 
     // Obtener información del responsable seleccionado
     const selectedResponsable = responsables.find(r => r.id === Number(data.responsable_id));
+
+    // ── Control de pestañas y errores ──────────────────────────────────────────
+    const getTabForError = (errorKey: string): string => {
+        const laboralFields = ['empresa_id', 'sucursal_id', 'departamento_id', 'cargo_id', 'responsable_id', 'jornada_laboral'];
+        const fotosFields = ['foto_empleado', 'foto_empleado_2', 'foto_documento', 'foto_documento_reverso'];
+        const vehiculosFields = ['vehiculos'];
+
+        if (laboralFields.includes(errorKey)) return 'laboral';
+        if (fotosFields.includes(errorKey)) return 'fotos';
+        if (vehiculosFields.includes(errorKey) || errorKey.startsWith('vehiculos.')) return 'vehiculos';
+        return 'general';
+    };
+
+    const tabErrorsCount = {
+        general: Object.keys(errors).filter(k => getTabForError(k) === 'general').length,
+        laboral: Object.keys(errors).filter(k => getTabForError(k) === 'laboral').length,
+        fotos: Object.keys(errors).filter(k => getTabForError(k) === 'fotos').length,
+        vehiculos: Object.keys(errors).filter(k => getTabForError(k) === 'vehiculos').length,
+    };
+
+    const handleFormErrors = (fieldErrors: Record<string, string>) => {
+        const firstKey = Object.keys(fieldErrors)[0];
+        if (firstKey) {
+            const targetTab = getTabForError(firstKey);
+            setActiveTab(targetTab);
+            notifyError(fieldErrors[firstKey] || __('Please review the highlighted fields.'));
+        } else {
+            notifyError(__('Please review the highlighted fields.'));
+        }
+    };
 
     // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -517,15 +564,19 @@ export default function EmpleadosIndexPage({
         setEditingEmpleado(null);
         reset();
 
-        // Autocompletar empresa, sucursal y usuario del autenticado
-        const companyId = auth.user?.empresa_id || appEmpresa?.id || '';
-        const branchId = auth.user?.sucursal_id || appSucursal?.id || '';
+        // Autocompletar empresa, sucursal y usuario del autenticado de forma robusta
+        const companyId = auth.user?.empresa_id || appEmpresa?.id || (empresas.length > 0 ? String(empresas[0].id) : '');
+        const matchingBranches = sucursales.filter(s => !companyId || s.empresa_id === Number(companyId));
+        const branchId = auth.user?.sucursal_id || appSucursal?.id || (matchingBranches.length > 0 ? String(matchingBranches[0].id) : (sucursales.length > 0 ? String(sucursales[0].id) : ''));
         const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
 
         setData(prev => ({
             ...prev,
             documento_identidad: randomCode,
             curp: '',
+            departamento_id: '',
+            responsable_id: '',
+            cargo_id: '',
             empresa_id: companyId,
             sucursal_id: branchId,
             user_id: auth.user?.id || '',
@@ -587,7 +638,7 @@ export default function EmpleadosIndexPage({
                     reset();
                     notifySuccess(__('Employee updated successfully.'));
                 },
-                onError: () => notifyError(__('Please review the highlighted fields.')),
+                onError: (fieldErrors: any) => handleFormErrors(fieldErrors),
             });
         } else {
             post('/admin/empleados', {
@@ -596,7 +647,7 @@ export default function EmpleadosIndexPage({
                     reset();
                     notifySuccess(__('Employee created successfully.'));
                 },
-                onError: () => notifyError(__('Please review the highlighted fields.')),
+                onError: (fieldErrors: any) => handleFormErrors(fieldErrors),
             });
         }
     };
@@ -966,22 +1017,42 @@ export default function EmpleadosIndexPage({
                         </DialogHeader>
 
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-2">
-                            <TabsList className="grid grid-cols-4 w-full mb-6">
-                                <TabsTrigger value="general" className="flex items-center gap-2">
+                            <TabsList className="grid grid-cols-4 w-full mb-6 h-11 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl">
+                                <TabsTrigger value="general" className="flex items-center justify-center gap-1.5 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-900 transition-all text-xs font-medium">
                                     <UserIcon className="h-4 w-4" />
-                                    {__('General')}
+                                    <span>{__('General')}</span>
+                                    {tabErrorsCount.general > 0 && (
+                                        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white leading-none">
+                                            {tabErrorsCount.general}
+                                        </span>
+                                    )}
                                 </TabsTrigger>
-                                <TabsTrigger value="laboral" className="flex items-center gap-2">
+                                <TabsTrigger value="laboral" className="flex items-center justify-center gap-1.5 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-900 transition-all text-xs font-medium">
                                     <Briefcase className="h-4 w-4" />
-                                    {__('Job Position')}
+                                    <span>{__('Job Position')}</span>
+                                    {tabErrorsCount.laboral > 0 && (
+                                        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white leading-none">
+                                            {tabErrorsCount.laboral}
+                                        </span>
+                                    )}
                                 </TabsTrigger>
-                                <TabsTrigger value="fotos" className="flex items-center gap-2">
+                                <TabsTrigger value="fotos" className="flex items-center justify-center gap-1.5 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-900 transition-all text-xs font-medium">
                                     <Camera className="h-4 w-4" />
-                                    {__('Photographs')}
+                                    <span>{__('Photographs')}</span>
+                                    {tabErrorsCount.fotos > 0 && (
+                                        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white leading-none">
+                                            {tabErrorsCount.fotos}
+                                        </span>
+                                    )}
                                 </TabsTrigger>
-                                <TabsTrigger value="vehiculos" className="flex items-center gap-2">
+                                <TabsTrigger value="vehiculos" className="flex items-center justify-center gap-1.5 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-900 transition-all text-xs font-medium">
                                     <Car className="h-4 w-4" />
-                                    {__('Vehicles')}
+                                    <span>{__('Vehicles')}</span>
+                                    {tabErrorsCount.vehiculos > 0 && (
+                                        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white leading-none">
+                                            {tabErrorsCount.vehiculos}
+                                        </span>
+                                    )}
                                 </TabsTrigger>
                             </TabsList>
 
@@ -1023,14 +1094,14 @@ export default function EmpleadosIndexPage({
                                                 Código de Acceso (8 dígitos)
                                             </Label>
                                             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                                                Auto de 8 dígitos
+                                                Auto-asignable
                                             </span>
                                         </div>
                                         <Input
                                             id="codigo_acceso"
                                             value={data.codigo_acceso}
                                             onChange={(e) => setData('codigo_acceso', e.target.value)}
-                                            placeholder="ej. 10100001"
+                                            placeholder="ej. 10100001 (Opcional)"
                                             maxLength={20}
                                             className="font-mono font-bold text-sm text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 focus:border-emerald-500"
                                         />
@@ -1043,7 +1114,7 @@ export default function EmpleadosIndexPage({
                                     <div className="md:col-span-1 p-4 rounded-xl border border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/30 space-y-2 transition-all shadow-sm">
                                         <div className="flex items-center justify-between mb-1">
                                             <Label htmlFor="documento_identidad" className="font-semibold text-xs text-indigo-950 dark:text-indigo-200">
-                                                Código de Empleado (6 dígitos) *
+                                                Código de Empleado (6 dígitos)
                                             </Label>
                                             <button
                                                 type="button"
@@ -1079,13 +1150,13 @@ export default function EmpleadosIndexPage({
                                                     CURP (Clave Única de Registro de Población)
                                                 </Label>
                                             </div>
-                                            {/* RENAPO button removed – external validation disabled */}
+                                            <span className="text-[10px] text-muted-foreground">Opcional</span>
                                         </div>
                                         <Input
                                             id="curp"
                                             value={data.curp || ''}
                                             onChange={(e) => setData('curp', e.target.value.toUpperCase())}
-                                            placeholder="ej. ABCD800101HDFRXX01"
+                                            placeholder="ej. ABCD800101HDFRXX01 (Opcional)"
                                             maxLength={18}
                                             className="font-mono uppercase text-sm h-11 bg-white dark:bg-slate-900 tracking-wider"
                                         />
@@ -1095,14 +1166,7 @@ export default function EmpleadosIndexPage({
                                                 return (
                                                     <div className="mt-2 text-xs text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-2 bg-emerald-100/80 dark:bg-emerald-950/60 p-2.5 rounded-lg border border-emerald-300 dark:border-emerald-800 shadow-sm">
                                                         <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                                                        <span>✓ CURP Válida • Entidad: <strong>{res.datos.entidadNombre}</strong> • Fecha Nacimiento: <strong>{res.datos.fechaNacimiento}</strong></span>
-                                                    </div>
-                                                );
-                                            } else if (data.curp.length === 18) {
-                                                return (
-                                                    <div className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/40 p-1.5 rounded border border-rose-200 dark:border-rose-800">
-                                                        <XCircle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
-                                                        <span>{res.error || 'CURP Inválida'}</span>
+                                                        <span>✓ Formato CURP detectado • Entidad: <strong>{res.datos.entidadNombre}</strong> • Fecha: <strong>{res.datos.fechaNacimiento}</strong></span>
                                                     </div>
                                                 );
                                             }
@@ -1248,22 +1312,24 @@ export default function EmpleadosIndexPage({
 
                                     {/* Departamento */}
                                     <div>
-                                        <Label htmlFor="departamento_id">{__('Department')} *</Label>
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="departamento_id">{__('Department')}</Label>
+                                            <span className="text-[10px] text-muted-foreground">Opcional</span>
+                                        </div>
                                         <Select
-                                            value={String(data.departamento_id)}
+                                            value={data.departamento_id ? String(data.departamento_id) : 'none'}
                                             onValueChange={(v) => {
                                                 setData(prev => ({
                                                     ...prev,
-                                                    departamento_id: v,
-                                                    responsable_id: '',
-                                                    cargo_id: '',
+                                                    departamento_id: v === 'none' ? '' : v,
                                                 }));
                                             }}
                                         >
                                             <SelectTrigger id="departamento_id" className="w-full">
-                                                <SelectValue placeholder={__('Select Department')} />
+                                                <SelectValue placeholder={__('Select Department (Optional)')} />
                                             </SelectTrigger>
                                             <SelectContent>
+                                                <SelectItem value="none">-- {__('Sin Departamento / Asignar después')} --</SelectItem>
                                                 {filteredDepartamentos.map((dep) => (
                                                     <SelectItem key={dep.id} value={String(dep.id)}>
                                                         {dep.nombre}
@@ -1278,16 +1344,19 @@ export default function EmpleadosIndexPage({
 
                                     {/* Cargo del empleado */}
                                     <div>
-                                        <Label htmlFor="cargo_id">{__('Position')}</Label>
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="cargo_id">{__('Position')}</Label>
+                                            <span className="text-[10px] text-muted-foreground">Opcional</span>
+                                        </div>
                                         <Select
-                                            value={String(data.cargo_id || '')}
-                                            onValueChange={(v) => setData('cargo_id', v)}
-                                            disabled={!data.departamento_id}
+                                            value={data.cargo_id ? String(data.cargo_id) : 'none'}
+                                            onValueChange={(v) => setData('cargo_id', v === 'none' ? '' : v)}
                                         >
                                             <SelectTrigger id="cargo_id" className="w-full">
-                                                <SelectValue placeholder={data.departamento_id ? __('Select Position') : __('Select Department First')} />
+                                                <SelectValue placeholder={__('Select Position (Optional)')} />
                                             </SelectTrigger>
                                             <SelectContent>
+                                                <SelectItem value="none">-- {__('Sin Cargo / Asignar después')} --</SelectItem>
                                                 {filteredCargos.map((cargo) => (
                                                     <SelectItem key={cargo.id} value={String(cargo.id)}>
                                                         {cargo.nombre}
@@ -1302,16 +1371,19 @@ export default function EmpleadosIndexPage({
 
                                     {/* Responsable / Supervisor */}
                                     <div>
-                                        <Label htmlFor="responsable_id">{__('Responsible')}</Label>
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="responsable_id">{__('Responsible')}</Label>
+                                            <span className="text-[10px] text-muted-foreground">Opcional</span>
+                                        </div>
                                         <Select
-                                            value={String(data.responsable_id || '')}
-                                            onValueChange={(v) => setData('responsable_id', v)}
-                                            disabled={!data.departamento_id}
+                                            value={data.responsable_id ? String(data.responsable_id) : 'none'}
+                                            onValueChange={(v) => setData('responsable_id', v === 'none' ? '' : v)}
                                         >
                                             <SelectTrigger id="responsable_id" className="w-full">
-                                                <SelectValue placeholder={data.departamento_id ? __('Select Responsible') : __('Select Department First')} />
+                                                <SelectValue placeholder={__('Select Responsible (Optional)')} />
                                             </SelectTrigger>
                                             <SelectContent>
+                                                <SelectItem value="none">-- {__('Sin Responsable / Asignar después')} --</SelectItem>
                                                 {filteredResponsables.map((resp) => (
                                                     <SelectItem key={resp.id} value={String(resp.id)}>
                                                         {resp.nombres} {resp.apellidos}

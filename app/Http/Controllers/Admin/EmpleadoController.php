@@ -90,7 +90,36 @@ class EmpleadoController extends Controller
     public function store(EmpleadoRequest $request)
     {
         $data = $request->validated();
+        $user = $request->user();
 
+        // Asignar Empresa y Sucursal por defecto si no vienen
+        if (empty($data['empresa_id'])) {
+            $data['empresa_id'] = $user?->empresa_id ?: (Empresa::value('id') ?: null);
+        }
+        if (empty($data['sucursal_id'])) {
+            $data['sucursal_id'] = $user?->sucursal_id 
+                ?: (Sucursal::where('empresa_id', $data['empresa_id'])->value('id') 
+                ?: (Sucursal::value('id') ?: null));
+        }
+
+        // Asignar user_id por defecto si no viene
+        if (empty($data['user_id'])) {
+            $data['user_id'] = $user?->id;
+        }
+
+        // Asignar estado activo por defecto
+        if (!isset($data['status'])) {
+            $data['status'] = 1;
+        }
+
+        // Limpiar campos nulos o strings vacíos para relaciones
+        foreach (['departamento_id', 'cargo_id', 'responsable_id', 'pais_telefono_id', 'telefono', 'correo', 'curp'] as $f) {
+            if (isset($data[$f]) && ($data[$f] === '' || $data[$f] === 'none' || $data[$f] === '0')) {
+                $data[$f] = null;
+            }
+        }
+
+        // Generar documento_identidad único si está vacío
         if (empty($data['documento_identidad'])) {
             do {
                 $code = (string) mt_rand(100000, 999999);
@@ -106,18 +135,21 @@ class EmpleadoController extends Controller
         $empleado = AccessCodeService::createWithRetry(fn () => Empleado::create($data));
 
         $primerVehiculo = null;
-        // Guardar vehículos
+        // Guardar vehículos de forma segura
         if ($request->has('vehiculos') && is_array($request->input('vehiculos'))) {
             foreach ($request->input('vehiculos') as $veh) {
+                if (empty($veh['placa']) && empty($veh['marca'])) {
+                    continue;
+                }
                 $fotoFrontal = isset($veh['foto_frontal']) ? $this->handleImageUpload($veh['foto_frontal'], null) : null;
                 $fotoTrasera = isset($veh['foto_trasera']) ? $this->handleImageUpload($veh['foto_trasera'], null) : null;
 
                 $vCreated = $empleado->vehiculos()->create([
-                    'tipo_vehiculo' => $veh['tipo_vehiculo'],
-                    'marca' => $veh['marca'],
-                    'modelo' => $veh['modelo'],
-                    'year' => $veh['year'],
-                    'placa' => $veh['placa'],
+                    'tipo_vehiculo' => $veh['tipo_vehiculo'] ?? 'Automóvil',
+                    'marca' => $veh['marca'] ?? 'Desconocida',
+                    'modelo' => $veh['modelo'] ?? 'S/M',
+                    'year' => !empty($veh['year']) ? $veh['year'] : date('Y'),
+                    'placa' => $veh['placa'] ?? 'S/P',
                     'foto_frontal' => $fotoFrontal,
                     'foto_trasera' => $fotoTrasera,
                     'empresa_id' => $empleado->empresa_id,
@@ -130,8 +162,12 @@ class EmpleadoController extends Controller
             }
         }
 
-        // Enviar Gafete / Carnet por WhatsApp al empleado automáticamente
-        $this->enviarCarnetWhatsAppInternal($empleado);
+        // Enviar Gafete / Carnet por WhatsApp al empleado automáticamente si tiene teléfono
+        try {
+            $this->enviarCarnetWhatsAppInternal($empleado);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('No se pudo enviar el carnet WhatsApp: ' . $e->getMessage());
+        }
 
         return back()->with('notification', [
             'type' => 'success',
@@ -305,6 +341,13 @@ class EmpleadoController extends Controller
             }
         }
 
+        // Limpiar campos nulos o strings vacíos para relaciones y opcionales
+        foreach (['departamento_id', 'cargo_id', 'responsable_id', 'pais_telefono_id', 'user_id', 'telefono', 'correo', 'curp'] as $f) {
+            if (array_key_exists($f, $data) && ($data[$f] === '' || $data[$f] === 'none' || $data[$f] === '0')) {
+                $data[$f] = null;
+            }
+        }
+
         $empleado->update($data);
 
         // Sincronizar vehículos
@@ -317,15 +360,18 @@ class EmpleadoController extends Controller
 
             if (is_array($request->input('vehiculos'))) {
                 foreach ($request->input('vehiculos') as $veh) {
+                    if (empty($veh['placa']) && empty($veh['marca'])) {
+                        continue;
+                    }
                     $fotoFrontal = isset($veh['foto_frontal']) ? $this->handleImageUpload($veh['foto_frontal'], null) : null;
                     $fotoTrasera = isset($veh['foto_trasera']) ? $this->handleImageUpload($veh['foto_trasera'], null) : null;
 
                     $empleado->vehiculos()->create([
-                        'tipo_vehiculo' => $veh['tipo_vehiculo'],
-                        'marca' => $veh['marca'],
-                        'modelo' => $veh['modelo'],
-                        'year' => $veh['year'],
-                        'placa' => $veh['placa'],
+                        'tipo_vehiculo' => $veh['tipo_vehiculo'] ?? 'Automóvil',
+                        'marca' => $veh['marca'] ?? 'Desconocida',
+                        'modelo' => $veh['modelo'] ?? 'S/M',
+                        'year' => !empty($veh['year']) ? $veh['year'] : date('Y'),
+                        'placa' => $veh['placa'] ?? 'S/P',
                         'foto_frontal' => $fotoFrontal,
                         'foto_trasera' => $fotoTrasera,
                         'empresa_id' => $empleado->empresa_id,
