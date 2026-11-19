@@ -145,6 +145,8 @@ export default function UsersIndexPage({
     auth, users, stats, roles, empresas, sucursales, paises, filters,
 }: UsersPageProps) {
     const { __ } = useTranslate();
+    const authRoles = Array.isArray(auth.user.roles) ? auth.user.roles as string[] : [];
+    const canManageCompanyBranches = Boolean(auth.user.is_super_admin) || authRoles.includes('Administrador');
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
@@ -228,7 +230,7 @@ export default function UsersIndexPage({
         setData({
             ...initialForm,
             empresa_id: auth.user.empresa_id || '',
-            sucursal_id: auth.user.sucursal_id || '',
+            sucursal_id: canManageCompanyBranches ? '' : (auth.user.sucursal_id || ''),
         });
         setIsModalOpen(true);
     };
@@ -800,7 +802,7 @@ return;
                                 <Select
                                     value={String(data.sucursal_id)}
                                     onValueChange={(v) => setData('sucursal_id', v)}
-                                    disabled={Boolean(!data.empresa_id || (!auth.user.is_super_admin && auth.user.sucursal_id))}
+                                    disabled={Boolean(!data.empresa_id || (!canManageCompanyBranches && auth.user.sucursal_id))}
                                 >
                                     <SelectTrigger id="sucursal_id" className="w-full">
                                         <SelectValue placeholder={data.empresa_id ? __('None') : __('Select a company first')} />
