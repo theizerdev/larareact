@@ -671,15 +671,20 @@ export default function EmpleadosIndexPage({
         });
     };
 
-    // Subida manual de archivos
-    const handleFileChange = (field: 'foto_empleado' | 'foto_documento' | 'foto_documento_reverso', file: File | null) => {
+    // Subida manual de archivos convertida a Base64
+    const handleFileChange = (field: 'foto_empleado' | 'foto_empleado_2' | 'foto_documento' | 'foto_documento_reverso', file: File | null) => {
         if (file) {
-            setData(field, file);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64 = e.target?.result as string;
+                setData(field, base64);
+            };
+            reader.readAsDataURL(file);
         }
     };
 
     // Captura desde cámara
-    const handleCameraCapture = (field: 'foto_empleado' | 'foto_documento' | 'foto_documento_reverso', base64Data: string) => {
+    const handleCameraCapture = (field: 'foto_empleado' | 'foto_empleado_2' | 'foto_documento' | 'foto_documento_reverso', base64Data: string) => {
         setData(field, base64Data);
         setActiveCameraField(null);
     };

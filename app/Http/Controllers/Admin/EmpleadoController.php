@@ -484,21 +484,40 @@ class EmpleadoController extends Controller
     {
         // 1. Si es un archivo subido directamente por multipart form
         if ($fieldName && request()->hasFile($fieldName) && request()->file($fieldName)->isValid()) {
-            $path = request()->file($fieldName)->store('empleados', 'public');
-            return '/storage/' . $path;
+            $uploaded = request()->file($fieldName);
+            try {
+                $ext = $uploaded->getClientOriginalExtension() ?: 'jpg';
+                $fileName = Str::random(40) . '.' . strtolower($ext);
+                $filePath = 'empleados/' . $fileName;
+
+                // Intentar leer directamente para evitar fallos de realpath() en Windows
+                $realPath = $uploaded->getRealPath() ?: $uploaded->getPathname();
+                if ($realPath && file_exists($realPath)) {
+                    $content = file_get_contents($realPath);
+                    if ($content !== false) {
+                        Storage::disk('public')->put($filePath, $content);
+                        return '/storage/' . $filePath;
+                    }
+                }
+
+                $path = $uploaded->store('empleados', 'public');
+                return '/storage/' . $path;
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("Error al guardar archivo subido {$fieldName}: " . $e->getMessage());
+            }
         }
 
         if (!$input) {
             return null;
         }
 
-        // 2. Si es una cadena Base64 de la webcam
+        // 2. Si es una cadena Base64 (webcam o upload del frontend)
         if (is_string($input) && preg_match('/^data:image\/(\w+);base64,/', $input, $type)) {
             $data = substr($input, strpos($input, ',') + 1);
             $type = strtolower($type[1]); // png, jpg, jpeg, webp
 
             if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
-                return null;
+                $type = 'jpg';
             }
 
             $data = str_replace(' ', '+', $data);
