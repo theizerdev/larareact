@@ -1,5 +1,4 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import type { ColumnDef } from '@/components/data-table';
 import {
     Truck,
     Plus,
@@ -25,6 +24,7 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { EntityAvatar } from '@/components/entity-avatar';
 import { FilterBar, FilterField } from '@/components/filter-bar';
@@ -247,6 +247,7 @@ export default function ProveedoresIndexPage({
     useEffect(() => {
         if (data.pais_id) {
             const selectedPais = paises.find((p) => p.id === Number(data.pais_id));
+
             if (selectedPais) {
                 // Opcional: Centrar en un punto predeterminado o según el país
             }
@@ -259,6 +260,7 @@ export default function ProveedoresIndexPage({
     useEffect(() => {
         if (isFirstMount.current) {
             isFirstMount.current = false;
+
             return;
         }
 
@@ -403,7 +405,9 @@ export default function ProveedoresIndexPage({
     };
 
     const handleDeleteClick = () => {
-        if (!deletingProveedor) return;
+        if (!deletingProveedor) {
+return;
+}
 
         router.delete(`/admin/proveedores/${deletingProveedor.id}`, {
             onSuccess: () => {
@@ -436,11 +440,14 @@ export default function ProveedoresIndexPage({
 
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en`);
+
             if (res.ok) {
                 const result = await res.json();
                 const countryCode = result.address?.country_code?.toUpperCase();
+
                 if (countryCode) {
                     const matchedPais = paises.find(p => p.codigo_iso2.toUpperCase() === countryCode);
+
                     if (matchedPais) {
                         setData(prev => ({
                             ...prev,
@@ -460,6 +467,7 @@ export default function ProveedoresIndexPage({
     const handleGetCurrentLocation = () => {
         if (!navigator.geolocation) {
             notifyError(__('Geolocation is not supported by your browser.'));
+
             return;
         }
 
@@ -544,10 +552,14 @@ export default function ProveedoresIndexPage({
             header: 'Phone',
             accessorKey: 'telefono',
             cell: (prov) => {
-                if (!prov.telefono) return <span className="text-muted-foreground">—</span>;
+                if (!prov.telefono) {
+return <span className="text-muted-foreground">—</span>;
+}
+
                 const prefix = prov.pais_telefono?.codigo_telefonico
                     ? `${prov.pais_telefono.codigo_telefonico} `
                     : '';
+
                 return (
                     <div className="flex items-center gap-1 text-sm font-mono">
                         <Phone className="w-3.5 h-3.5 text-muted-foreground" />
@@ -1344,7 +1356,10 @@ export default function ProveedoresIndexPage({
             {/* ══ Modal de Pre-registro ════════════════════════════ */}
             <Dialog open={isPreRegistroModalOpen} onOpenChange={(open) => {
                 setIsPreRegistroModalOpen(open);
-                if (!open) preRegistroForm.reset();
+
+                if (!open) {
+preRegistroForm.reset();
+}
             }}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>

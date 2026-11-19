@@ -115,6 +115,7 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
         if (empleadoId !== 'todos' && r.empleado_id.toString() !== empleadoId) {
             return false;
         }
+
         return true;
     });
 
@@ -135,6 +136,7 @@ export default function CalculoNominaIndex({ resumenesSemanales, stats, filters 
 
     const formatCurrency = (amount: number | string) => {
         const val = typeof amount === 'string' ? parseFloat(amount) : amount;
+
         return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0);
     };
 

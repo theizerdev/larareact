@@ -134,17 +134,30 @@ const DIA_MAP: Record<string, number> = {
 };
 
 function normalizeDiasLaborables(dias: any[]): number[] {
-    if (!Array.isArray(dias)) return [1, 2, 3, 4, 5];
+    if (!Array.isArray(dias)) {
+return [1, 2, 3, 4, 5];
+}
+
     const res = dias.map((d) => {
-        if (typeof d === 'number') return d;
+        if (typeof d === 'number') {
+return d;
+}
+
         if (typeof d === 'string') {
             const num = parseInt(d, 10);
-            if (!isNaN(num) && num >= 1 && num <= 7) return num;
+
+            if (!isNaN(num) && num >= 1 && num <= 7) {
+return num;
+}
+
             const key = d.trim().toLowerCase();
+
             return DIA_MAP[key] ?? null;
         }
+
         return null;
     }).filter((v): v is number => v !== null && v >= 1 && v <= 7);
+
     return res.length > 0 ? res : [1, 2, 3, 4, 5];
 }
 
@@ -201,6 +214,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
     const handleSelectRegimenAno = (ano: number) => {
         const info = CRONOGRAMA_OFICIAL[ano];
+
         if (info) {
             configForm.setData({
                 ...configForm.data,
@@ -267,8 +281,14 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
     const handleTipoJornadaChange = (tipo: 'diurna' | 'nocturna' | 'mixta' | 'personalizada') => {
         let horas = '8.00';
-        if (tipo === 'nocturna') horas = '7.00';
-        if (tipo === 'mixta') horas = '7.50';
+
+        if (tipo === 'nocturna') {
+horas = '7.00';
+}
+
+        if (tipo === 'mixta') {
+horas = '7.50';
+}
 
         turnoForm.setData({
             ...turnoForm.data,
@@ -279,6 +299,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
     const handleSaveTurno = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingTurno) {
             turnoForm.put(`/admin/asistencia/turnos/${editingTurno.id}`, {
                 preserveScroll: true,
@@ -305,7 +326,10 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
     const [deletingTurno, setDeletingTurno] = useState<TurnoLaboral | null>(null);
 
     const handleDeleteTurno = () => {
-        if (!deletingTurno) return;
+        if (!deletingTurno) {
+return;
+}
+
         router.delete(`/admin/asistencia/turnos/${deletingTurno.id}`, {
             preserveScroll: true,
             onSuccess: () => setDeletingTurno(null),
@@ -347,6 +371,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
     const handleSaveFestivo = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingFestivo) {
             festivoForm.put(`/admin/asistencia/festivos/${editingFestivo.id}`, {
                 preserveScroll: true,
@@ -369,7 +394,10 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
     const [deletingFestivo, setDeletingFestivo] = useState<DiaFestivo | null>(null);
 
     const handleDeleteFestivo = () => {
-        if (!deletingFestivo) return;
+        if (!deletingFestivo) {
+return;
+}
+
         router.delete(`/admin/asistencia/festivos/${deletingFestivo.id}`, {
             preserveScroll: true,
             onSuccess: () => setDeletingFestivo(null),
@@ -669,6 +697,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                     <th className="py-3 px-4">Semana / Concepto</th>
                                                     {[2026, 2027, 2028, 2029, 2030].map((ano) => {
                                                         const isActive = configForm.data.reforma_laboral_ano === ano;
+
                                                         return (
                                                             <th key={ano} className={`py-3 px-4 text-center transition-colors ${isActive ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black' : ''}`}>
                                                                 <div className="flex flex-col items-center gap-0.5">
@@ -735,6 +764,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                                                     </td>
                                                     {[2026, 2027, 2028, 2029, 2030].map((ano) => {
                                                         const isCurrent = configForm.data.reforma_laboral_ano === ano;
+
                                                         return (
                                                             <td key={ano} className="py-2.5 px-3 text-center">
                                                                 <Button
@@ -1610,6 +1640,7 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
                             <div className="grid grid-cols-4 gap-2">
                                 {DIAS_SEMANA.map((d) => {
                                     const selected = turnoForm.data.dias_laborables.includes(d.id);
+
                                     return (
                                         <button
                                             type="button"

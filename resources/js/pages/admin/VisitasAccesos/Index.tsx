@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useRef } from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import {
     ShieldCheck,
@@ -37,10 +36,16 @@ import {
     Briefcase,
     X
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import React, { useState, useEffect, useRef } from 'react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
+import { EntityAvatar } from '@/components/entity-avatar';
+import { FilterBar, FilterField } from '@/components/filter-bar';
+import { ModuleHeader } from '@/components/module-header';
+import { StatCard } from '@/components/stat-card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -50,26 +55,21 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import type { ColumnDef } from '@/components/data-table';
-import { DataTable } from '@/components/data-table';
-import { EntityAvatar } from '@/components/entity-avatar';
-import { FilterBar, FilterField } from '@/components/filter-bar';
-import { ModuleHeader } from '@/components/module-header';
-import { StatCard } from '@/components/stat-card';
 import { ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams } from '@/lib/utils';
@@ -77,23 +77,44 @@ import { notifySuccess, notifyError } from '@/utils/notifications';
 import { VisitasAccesosGrid, resolveAccesoDisplay } from './Partials/VisitasAccesosGrid';
 
 const formatImageUrl = (url?: string | null) => {
-    if (!url) return null;
-    if (url.startsWith('data:image/') || url.startsWith('http://') || url.startsWith('https://')) return url;
-    if (url.startsWith('/storage/')) return url;
-    if (url.startsWith('storage/')) return `/${url}`;
+    if (!url) {
+return null;
+}
+
+    if (url.startsWith('data:image/') || url.startsWith('http://') || url.startsWith('https://')) {
+return url;
+}
+
+    if (url.startsWith('/storage/')) {
+return url;
+}
+
+    if (url.startsWith('storage/')) {
+return `/${url}`;
+}
+
     return `/storage/${url.replace(/^\/+/, '')}`;
 };
 
 const getAgeFromBirthdate = (birthdateStr?: string | null) => {
-    if (!birthdateStr) return null;
+    if (!birthdateStr) {
+return null;
+}
+
     const birthDate = new Date(birthdateStr);
-    if (isNaN(birthDate.getTime())) return null;
+
+    if (isNaN(birthDate.getTime())) {
+return null;
+}
+
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
+
     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
         age--;
     }
+
     return age > 0 && age < 120 ? age : null;
 };
 
@@ -194,11 +215,13 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
     const startCamera = async () => {
         setError(null);
         setCaptured(null);
+
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: { width: 640, height: 480, facingMode: 'environment' }
             });
             setStream(mediaStream);
+
             if (videoRef.current) {
                 videoRef.current.srcObject = mediaStream;
             }
@@ -221,6 +244,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
             canvas.width = videoRef.current.videoWidth || 640;
             canvas.height = videoRef.current.videoHeight || 480;
             const ctx = canvas.getContext('2d');
+
             if (ctx) {
                 ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
                 const base64 = canvas.toDataURL('image/jpeg');
@@ -232,6 +256,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
 
     useEffect(() => {
         startCamera();
+
         return () => stopCamera();
     }, []);
 
@@ -336,6 +361,7 @@ export default function Index({
 
     const filteredResponsables = responsables.filter((r) => {
         const q = invResponsableQuery.toLowerCase();
+
         return !q || r.nombres?.toLowerCase().includes(q) || r.apellidos?.toLowerCase().includes(q) || r.departamento?.nombre?.toLowerCase().includes(q);
     });
 
@@ -346,6 +372,7 @@ export default function Index({
             }
         };
         document.addEventListener('mousedown', close);
+
         return () => document.removeEventListener('mousedown', close);
     }, []);
 
@@ -356,14 +383,22 @@ export default function Index({
     const [selectedInvEntity, setSelectedInvEntity] = useState<any>(null);
 
     useEffect(() => {
-        if (!invEntityQuery || invEntityQuery.length < 2) { setInvEntityResults([]); return; }
+        if (!invEntityQuery || invEntityQuery.length < 2) {
+ setInvEntityResults([]);
+
+ return; 
+}
+
         const t = setTimeout(() => {
             setIsSearchingInvEntity(true);
             fetch(`/admin/visitas-accesos/buscar-entidades?tipo_acceso=${invTipoAcceso}&query=${encodeURIComponent(invEntityQuery)}`)
                 .then(r => r.json())
-                .then(d => { setInvEntityResults(d); setIsSearchingInvEntity(false); })
+                .then(d => {
+ setInvEntityResults(d); setIsSearchingInvEntity(false); 
+})
                 .catch(() => setIsSearchingInvEntity(false));
         }, 300);
+
         return () => clearTimeout(t);
     }, [invEntityQuery, invTipoAcceso]);
 
@@ -510,7 +545,9 @@ export default function Index({
 
     // Polling en vivo para detectar cuando el Responsable presione "Autorizar" en su pantalla
     useEffect(() => {
-        if (!activeAuthToken || autorizacionRecibida?.status === 'autorizado') return;
+        if (!activeAuthToken || autorizacionRecibida?.status === 'autorizado') {
+return;
+}
 
         const interval = setInterval(() => {
             fetch(`/api/autorizar-acceso/${activeAuthToken}/check`)
@@ -572,6 +609,7 @@ export default function Index({
     useEffect(() => {
         if (!searchQuery || searchQuery.length < 2) {
             setSearchResults([]);
+
             return;
         }
 
@@ -593,6 +631,7 @@ export default function Index({
     useEffect(() => {
         if (!acompananteSearchTerm || acompananteSearchTerm.length < 2) {
             setAcompananteSearchResults([]);
+
             return;
         }
 
@@ -625,12 +664,15 @@ export default function Index({
             } else {
                 setData('proveedor_empleado_id', '');
             }
+
             setAcompanantesList([]);
             setData('acompanantes', []);
+
             return;
         }
 
         const mainId = ids[0];
+
         if (tipoAcceso === 'productor') {
             setData('productor_empleado_id', mainId);
             setData('proveedor_empleado_id', '');
@@ -660,18 +702,24 @@ export default function Index({
 
     const toggleProveedorEmpleadoSelection = (empIdStr: string) => {
         let updated: string[];
+
         if (selectedProveedorEmpleadoIds.includes(empIdStr)) {
             updated = selectedProveedorEmpleadoIds.filter((id) => id !== empIdStr);
         } else {
             updated = [...selectedProveedorEmpleadoIds, empIdStr];
         }
+
         setSelectedProveedorEmpleadoIds(updated);
         syncProveedorEmpleadosState(updated);
     };
 
     const selectAllProveedorEmpleados = () => {
         const list = tipoAcceso === 'productor' ? selectedEntity?.empleados_productor : selectedEntity?.empleados_proveedor;
-        if (!list) return;
+
+        if (!list) {
+return;
+}
+
         const allIds = list.map((emp: any) => emp.id.toString());
         setSelectedProveedorEmpleadoIds(allIds);
         syncProveedorEmpleadosState(allIds);
@@ -684,6 +732,7 @@ export default function Index({
 
     const handleSelectEntity = (entity: any) => {
         setSelectedEntity(entity);
+
         if (tipoAcceso === 'empleado') {
             setSelectedProveedorEmpleadoIds([]);
             setData((prev) => ({
@@ -781,6 +830,7 @@ export default function Index({
     const handleSolicitarWhatsapp = async (empleadoNombre: string, empleadoDocumento: string, esAcompanante: boolean = false) => {
         if (!data.responsable_id) {
             notifyError(__('Por favor seleccione primero un Responsable / Anfitrión para enviarle la solicitud de WhatsApp.'));
+
             return;
         }
 
@@ -788,7 +838,11 @@ export default function Index({
             const getCookie = (name: string) => {
                 const value = `; ${document.cookie}`;
                 const parts = value.split(`; ${name}=`);
-                if (parts.length === 2) return decodeURIComponent(parts.pop()?.split(';').shift() || '');
+
+                if (parts.length === 2) {
+return decodeURIComponent(parts.pop()?.split(';').shift() || '');
+}
+
                 return '';
             };
             const csrfToken = getCookie('XSRF-TOKEN');
@@ -810,11 +864,14 @@ export default function Index({
             });
 
             const resData = await response.json();
+
             if (resData && resData.success) {
                 if (resData.token) {
                     setActiveAuthToken(resData.token);
                 }
+
                 notifySuccess(__('Solicitud con enlace enviada al Responsable vía WhatsApp. Esperando su autorización en tiempo real...'));
+
                 if (resData.whatsapp_url) {
                     window.open(resData.whatsapp_url, '_blank');
                 }
@@ -905,6 +962,7 @@ export default function Index({
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'foto_frontal' | 'foto_trasera') => {
         const file = e.target.files?.[0];
+
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -922,9 +980,12 @@ export default function Index({
         esAcompanante: boolean = false,
         isDetalleModal: boolean = false
     ) => {
-        if (!jornada) return <span className="text-slate-400 italic text-xs">Sin jornada laboral asignada</span>;
+        if (!jornada) {
+return <span className="text-slate-400 italic text-xs">Sin jornada laboral asignada</span>;
+}
 
         let items: any[] = [];
+
         if (typeof jornada === 'string') {
             try {
                 items = JSON.parse(jornada);
@@ -943,7 +1004,10 @@ export default function Index({
         const hoyNombre = diasSemana[new Date().getDay()];
 
         const isDiaActivo = (j: any) => {
-            if (!j) return false;
+            if (!j) {
+return false;
+}
+
             return j.activo === true || j.activo === 1 || j.activo === '1' || j.activo === 'true';
         };
 
@@ -1023,6 +1087,7 @@ export default function Index({
                     {diasActivos.length > 0 ? (
                         diasActivos.map((d: any, idx: number) => {
                             const esHoy = d.dia?.toLowerCase() === hoyNombre.toLowerCase();
+
                             return (
                                 <Badge
                                     key={idx}
@@ -1046,8 +1111,12 @@ export default function Index({
 
     // Formatear correctamente la URL de imágenes de almacenamiento para evitar enlaces relativos rotos y errores 403 de directorio
     const formatImageUrl = (path?: string | null) => {
-        if (!path) return null;
+        if (!path) {
+return null;
+}
+
         const cleanPath = String(path).trim();
+
         if (
             !cleanPath ||
             cleanPath === 'null' ||
@@ -1068,6 +1137,7 @@ export default function Index({
         // Rechazar directorios o rutas sin extensión de imagen válida (.jpg, .jpeg, .png, .webp, .gif, .svg)
         const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
         const hasValidExt = validExtensions.some((ext) => cleanPath.toLowerCase().endsWith(ext));
+
         if (!hasValidExt) {
             return null;
         }
@@ -1075,23 +1145,30 @@ export default function Index({
         if (cleanPath.startsWith('/storage/')) {
             return cleanPath;
         }
+
         if (cleanPath.startsWith('storage/')) {
             return `/${cleanPath}`;
         }
+
         if (cleanPath.startsWith('/')) {
             return cleanPath;
         }
+
         return `/storage/${cleanPath}`;
     };
 
     // Obtener objeto del vehículo pre-registrado seleccionado
     const getVehiculoSeleccionadoObj = () => {
-        if (!selectedEntity || vehiculoSeleccionado === 'nuevo') return null;
+        if (!selectedEntity || vehiculoSeleccionado === 'nuevo') {
+return null;
+}
+
         const listaVehiculos = tipoAcceso === 'empleado'
             ? selectedEntity.vehiculos
             : tipoAcceso === 'productor'
                 ? selectedEntity.vehiculos_productor
                 : selectedEntity.vehiculos_proveedor;
+
         return listaVehiculos?.find((v: any) => v.id.toString() === vehiculoSeleccionado) || null;
     };
 
@@ -1189,6 +1266,7 @@ export default function Index({
                         </Badge>
                     );
                 }
+
                 if (isProd) {
                     return (
                         <Badge className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900 gap-1">
@@ -1196,6 +1274,7 @@ export default function Index({
                         </Badge>
                     );
                 }
+
                 if (isProv) {
                     return (
                         <Badge className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900 gap-1">
@@ -1203,6 +1282,7 @@ export default function Index({
                         </Badge>
                     );
                 }
+
                 return (
                     <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900 gap-1">
                         <User className="w-3 h-3" /> {__('Visitante Particular')}
@@ -1317,7 +1397,9 @@ export default function Index({
                 >
                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                         <Button
-                            onClick={() => { resetInvModal(); setIsCreateInvitacionOpen(true); }}
+                            onClick={() => {
+ resetInvModal(); setIsCreateInvitacionOpen(true); 
+}}
                             variant="secondary"
                             className="bg-white/10 hover:bg-white/20 text-white border border-white/20 w-full sm:w-auto font-bold"
                         >
@@ -1886,7 +1968,7 @@ export default function Index({
                                                 const isProd = selectedAccesoDetail.tipo_acceso === 'productor';
                                                 const isProv = selectedAccesoDetail.tipo_acceso === 'proveedor';
 
-                                                let veh = isProd
+                                                const veh = isProd
                                                     ? (selectedAccesoDetail.productor_vehiculo || selectedAccesoDetail.productor?.vehiculos?.[0] || selectedAccesoDetail.productor?.vehiculos_productor?.[0])
                                                     : isProv
                                                         ? (selectedAccesoDetail.proveedor_vehiculo || selectedAccesoDetail.proveedor?.vehiculos?.[0] || selectedAccesoDetail.proveedor?.vehiculos_proveedor?.[0])
@@ -3122,7 +3204,10 @@ export default function Index({
                 <Dialog
                     open={isCreateInvitacionOpen}
                     onOpenChange={(open) => {
-                        if (!open) resetInvModal();
+                        if (!open) {
+resetInvModal();
+}
+
                         setIsCreateInvitacionOpen(open);
                     }}
                 >
@@ -3215,7 +3300,9 @@ export default function Index({
                                         <Input
                                             placeholder={__('Buscar por nombre, apellido o departamento...')}
                                             value={invResponsableQuery}
-                                            onChange={(e) => { setInvResponsableQuery(e.target.value); setInvResponsableOpen(true); }}
+                                            onChange={(e) => {
+ setInvResponsableQuery(e.target.value); setInvResponsableOpen(true); 
+}}
                                             onFocus={() => setInvResponsableOpen(true)}
                                             className="pl-9 h-10 w-full bg-white dark:bg-slate-900 text-xs"
                                         />
@@ -3339,7 +3426,9 @@ export default function Index({
                                                         <div className="text-xs font-bold text-amber-900 dark:text-amber-300 truncate">{selectedInvEntity.razon_social || selectedInvEntity.nombre_comercial}</div>
                                                         <div className="text-[11px] text-slate-500">RFC/Doc: {selectedInvEntity.documento_identidad || 'N/A'}</div>
                                                     </div>
-                                                    <button type="button" onClick={() => { setSelectedInvEntity(null); invForm.setData('proveedor_id', ''); setInvEntityQuery(''); }} className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors">{__('Cambiar')}</button>
+                                                    <button type="button" onClick={() => {
+ setSelectedInvEntity(null); invForm.setData('proveedor_id', ''); setInvEntityQuery(''); 
+}} className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors">{__('Cambiar')}</button>
                                                 </div>
                                             ) : (
                                                 <div className="space-y-1.5">
@@ -3351,7 +3440,9 @@ export default function Index({
                                                     {invEntityResults.length > 0 && (
                                                         <div className="border rounded-xl bg-white dark:bg-slate-900 divide-y max-h-48 overflow-y-auto shadow-lg">
                                                             {invEntityResults.map((e: any) => (
-                                                                <button key={e.id} type="button" onClick={() => { setSelectedInvEntity(e); invForm.setData('proveedor_id', String(e.id)); setInvEntityQuery(''); setInvEntityResults([]); }} className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 text-left text-xs">
+                                                                <button key={e.id} type="button" onClick={() => {
+ setSelectedInvEntity(e); invForm.setData('proveedor_id', String(e.id)); setInvEntityQuery(''); setInvEntityResults([]); 
+}} className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 text-left text-xs">
                                                                     <Truck className="w-4 h-4 text-amber-500 flex-shrink-0" />
                                                                     <div>
                                                                         <div className="font-bold text-slate-800 dark:text-slate-200">{e.razon_social || e.nombre_comercial}</div>
@@ -3413,7 +3504,9 @@ export default function Index({
                                                         <div className="text-xs font-bold text-purple-900 dark:text-purple-300 truncate">{selectedInvEntity.nombre_comercial_rancho || selectedInvEntity.razon_social_rancho || selectedInvEntity.nombre_comercial}</div>
                                                         <div className="text-[11px] text-slate-500">RFC/Doc: {selectedInvEntity.documento_identidad || 'N/A'}</div>
                                                     </div>
-                                                    <button type="button" onClick={() => { setSelectedInvEntity(null); invForm.setData('productor_id', ''); setInvEntityQuery(''); }} className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors">{__('Cambiar')}</button>
+                                                    <button type="button" onClick={() => {
+ setSelectedInvEntity(null); invForm.setData('productor_id', ''); setInvEntityQuery(''); 
+}} className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors">{__('Cambiar')}</button>
                                                 </div>
                                             ) : (
                                                 <div className="space-y-1.5">
@@ -3425,7 +3518,9 @@ export default function Index({
                                                     {invEntityResults.length > 0 && (
                                                         <div className="border rounded-xl bg-white dark:bg-slate-900 divide-y max-h-48 overflow-y-auto shadow-lg">
                                                             {invEntityResults.map((e: any) => (
-                                                                <button key={e.id} type="button" onClick={() => { setSelectedInvEntity(e); invForm.setData('productor_id', String(e.id)); setInvEntityQuery(''); setInvEntityResults([]); }} className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 text-left text-xs">
+                                                                <button key={e.id} type="button" onClick={() => {
+ setSelectedInvEntity(e); invForm.setData('productor_id', String(e.id)); setInvEntityQuery(''); setInvEntityResults([]); 
+}} className="w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 text-left text-xs">
                                                                     <Sprout className="w-4 h-4 text-purple-500 flex-shrink-0" />
                                                                     <div>
                                                                         <div className="font-bold text-slate-800 dark:text-slate-200">{e.nombre_comercial_rancho || e.razon_social_rancho || e.nombre_comercial}</div>
@@ -3602,7 +3697,11 @@ export default function Index({
                 </Dialog>
 
                 {/* MODAL DE DETALLE COMPLETO DE ACOMPAÑANTE */}
-                <Dialog open={Boolean(selectedAcompananteDetail)} onOpenChange={(open) => { if (!open) setSelectedAcompananteDetail(null); }}>
+                <Dialog open={Boolean(selectedAcompananteDetail)} onOpenChange={(open) => {
+ if (!open) {
+setSelectedAcompananteDetail(null);
+} 
+}}>
                     <DialogContent className="max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-100 dark:border-slate-800 text-slate-900 dark:text-slate-100 max-h-[90vh] overflow-y-auto">
                         <DialogHeader className="space-y-1 text-left border-b border-slate-100 dark:border-slate-800 pb-4">
                             <div className="flex items-center justify-between">
@@ -3623,14 +3722,21 @@ export default function Index({
                             const matchDoc = selectedAcompananteDetail.curp || selectedAcompananteDetail.documento || selectedAcompananteDetail.documento_identidad;
 
                             const matchedEmp = (() => {
-                                if (!matchDoc) return null;
+                                if (!matchDoc) {
+return null;
+}
+
                                 const cleanDoc = String(matchDoc).trim().toLowerCase();
                                 const provEmps = selectedAccesoDetail?.proveedor?.empleados || selectedAccesoDetail?.proveedor?.proveedor_empleados || [];
                                 let found = provEmps.find((e: any) => String(e.documento_identidad || e.curp || '').trim().toLowerCase() === cleanDoc);
-                                if (found) return found;
+
+                                if (found) {
+return found;
+}
 
                                 const prodEmps = selectedAccesoDetail?.productor?.empleados || selectedAccesoDetail?.productor?.productor_empleados || [];
                                 found = prodEmps.find((e: any) => String(e.documento_identidad || e.curp || '').trim().toLowerCase() === cleanDoc);
+
                                 return found || null;
                             })();
 

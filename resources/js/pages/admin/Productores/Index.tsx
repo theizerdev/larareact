@@ -1,5 +1,5 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import type { ColumnDef } from '@/components/data-table';
+import { usePage } from '@inertiajs/react';
 import {
     Sprout,
     Plus,
@@ -24,15 +24,15 @@ import {
     Loader2,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
-import { useLocationGeocoding } from '@/hooks/use-location-geocoding';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { EntityAvatar } from '@/components/entity-avatar';
 import { FilterBar, FilterField } from '@/components/filter-bar';
-import MapboxMap, { MapAddressDetails } from '@/components/mapbox-map';
+import type { MapAddressDetails } from '@/components/mapbox-map';
+import MapboxMap from '@/components/mapbox-map';
 import { ModuleHeader } from '@/components/module-header';
 import Pagination from '@/components/pagination';
 import { StatCard } from '@/components/stat-card';
@@ -48,6 +48,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { CardGridSkeleton, GridEmptyState, ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
+import { useLocationGeocoding } from '@/hooks/use-location-geocoding';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn, cleanParams } from '@/lib/utils';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
@@ -215,6 +216,7 @@ export default function Index({
     useEffect(() => {
         if (isFirstMount.current) {
             isFirstMount.current = false;
+
             return;
         }
 
@@ -305,6 +307,7 @@ export default function Index({
     const handlePaisChange = (paisId: string) => {
         setData('pais_id', paisId);
         const selectedPais = paises.find((p) => String(p.id) === paisId);
+
         if (selectedPais && selectedPais.latitud && selectedPais.longitud) {
             setData((prev) => ({
                 ...prev,
@@ -362,14 +365,18 @@ export default function Index({
     // Form submission
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingProductor) {
             put(`/admin/productores/${editingProductor.id}`, {
                 onSuccess: (page: any) => {
                     const notif = page.props?.notification;
+
                     if (notif && notif.type === 'error') {
                         toast.error(notif.message || __('Error al actualizar productor'));
+
                         return;
                     }
+
                     setIsCreateModalOpen(false);
                     toast.success(__('Producer updated successfully'));
                 },
@@ -382,10 +389,13 @@ export default function Index({
             post('/admin/productores', {
                 onSuccess: (page: any) => {
                     const notif = page.props?.notification;
+
                     if (notif && notif.type === 'error') {
                         toast.error(notif.message || __('Error al crear productor'));
+
                         return;
                     }
+
                     setIsCreateModalOpen(false);
                     toast.success(__('Producer created successfully'));
                 },
@@ -403,10 +413,13 @@ export default function Index({
         preRegistroForm.post('/admin/productores/pre-registro', {
             onSuccess: (page: any) => {
                 const notif = page.props?.notification;
+
                 if (notif && notif.type === 'error') {
                     toast.error(notif.message || __('Could not send pre-registration invitation'));
+
                     return;
                 }
+
                 setIsPreRegistroModalOpen(false);
                 preRegistroForm.reset();
                 toast.success(__('Producer pre-registration link sent via WhatsApp'));
@@ -417,14 +430,20 @@ export default function Index({
 
     // Delete submission
     const handleDelete = () => {
-        if (!deletingProductor) return;
+        if (!deletingProductor) {
+return;
+}
+
         router.delete(`/admin/productores/${deletingProductor.id}`, {
             onSuccess: (page: any) => {
                 const notif = page.props?.notification;
+
                 if (notif && notif.type === 'error') {
                     toast.error(notif.message || __('Error al eliminar productor'));
+
                     return;
                 }
+
                 setIsDeleteModalOpen(false);
                 setDeletingProductor(null);
                 toast.success(__('Producer deleted successfully'));
@@ -1178,10 +1197,13 @@ export default function Index({
                                                 onChange={(e) => {
                                                     const val = e.target.value;
                                                     setData('estado', val);
+
                                                     if (val.trim().length >= 3) {
                                                         const p = paises.find((x) => String(x.id) === data.pais_id);
                                                         forwardGeocode({ estado: val, pais: p?.nombre }).then((r) => {
-                                                            if (r) setData((prev) => ({ ...prev, latitud: r.lat, longitud: r.lng }));
+                                                            if (r) {
+setData((prev) => ({ ...prev, latitud: r.lat, longitud: r.lng }));
+}
                                                         });
                                                     }
                                                 }}
@@ -1198,10 +1220,13 @@ export default function Index({
                                                 onChange={(e) => {
                                                     const val = e.target.value;
                                                     setData('codigo_postal', val);
+
                                                     if (val.trim().length >= 4) {
                                                         const p = paises.find((x) => String(x.id) === data.pais_id);
                                                         forwardGeocode({ codigo_postal: val, estado: data.estado, pais: p?.nombre }).then((r) => {
-                                                            if (r) setData((prev) => ({ ...prev, latitud: r.lat, longitud: r.lng }));
+                                                            if (r) {
+setData((prev) => ({ ...prev, latitud: r.lat, longitud: r.lng }));
+}
                                                         });
                                                     }
                                                 }}
@@ -1235,10 +1260,13 @@ export default function Index({
                                                 onChange={(e) => {
                                                     const val = e.target.value;
                                                     setData('direccion', val);
+
                                                     if (val.trim().length >= 4) {
                                                         const p = paises.find((x) => String(x.id) === data.pais_id);
                                                         forwardGeocode({ direccion: val, estado: data.estado, codigo_postal: data.codigo_postal, pais: p?.nombre }).then((r) => {
-                                                            if (r) setData((prev) => ({ ...prev, latitud: r.lat, longitud: r.lng }));
+                                                            if (r) {
+setData((prev) => ({ ...prev, latitud: r.lat, longitud: r.lng }));
+}
                                                         });
                                                     }
                                                 }}

@@ -127,6 +127,7 @@ function LiveBreakTimer({
         const interval = setInterval(() => {
             setNow(Date.now());
         }, 1000);
+
         return () => clearInterval(interval);
     }, []);
 
@@ -144,12 +145,14 @@ function LiveBreakTimer({
         if (hours > 0) {
             return `${hours}h ${mins}m`;
         }
+
         return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     };
 
     if (remainingSeconds > 0) {
         const formatted = formatTimeDuration(remainingSeconds);
         const suffix = remainingSeconds < 3600 ? ' min restantes' : ' restantes';
+
         return (
             <div>
                 <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 gap-1.5 px-2.5 py-1 font-semibold text-xs font-mono">
@@ -167,6 +170,7 @@ function LiveBreakTimer({
         const excessSeconds = Math.abs(remainingSeconds);
         const formatted = formatTimeDuration(excessSeconds);
         const suffix = excessSeconds < 3600 ? ' min' : '';
+
         return (
             <div>
                 <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 gap-1.5 px-2.5 py-1 font-semibold text-xs font-mono">
@@ -259,9 +263,13 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
     });
 
     const formatFechaHora = (fechaStr?: string) => {
-        if (!fechaStr) return '';
+        if (!fechaStr) {
+return '';
+}
+
         if (fechaStr.includes('T') || fechaStr.includes('Z')) {
             const dateObj = new Date(fechaStr);
+
             if (!isNaN(dateObj.getTime())) {
                 const datePart = dateObj.toLocaleDateString('es-MX', {
                     day: '2-digit',
@@ -274,9 +282,11 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                     second: '2-digit',
                     hour12: true
                 });
+
                 return `${datePart} ${timePart}`;
             }
         }
+
         return fechaStr;
     };
 
@@ -306,13 +316,34 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
     const handleExport = (formato: 'excel' | 'csv') => {
         const params = new URLSearchParams();
         params.set('formato', formato);
-        if (search) params.set('search', search);
-        if (tipoMarcaje && tipoMarcaje !== 'todos') params.set('tipo_marcaje', tipoMarcaje);
-        if (origen && origen !== 'todos') params.set('origen', origen);
-        if (sucursalId && sucursalId !== 'todas') params.set('sucursal_id', sucursalId);
-        if (responsableId && responsableId !== 'todos') params.set('responsable_id', responsableId);
-        if (fechaInicio) params.set('fecha_inicio', fechaInicio);
-        if (fechaFin) params.set('fecha_fin', fechaFin);
+
+        if (search) {
+params.set('search', search);
+}
+
+        if (tipoMarcaje && tipoMarcaje !== 'todos') {
+params.set('tipo_marcaje', tipoMarcaje);
+}
+
+        if (origen && origen !== 'todos') {
+params.set('origen', origen);
+}
+
+        if (sucursalId && sucursalId !== 'todas') {
+params.set('sucursal_id', sucursalId);
+}
+
+        if (responsableId && responsableId !== 'todos') {
+params.set('responsable_id', responsableId);
+}
+
+        if (fechaInicio) {
+params.set('fecha_inicio', fechaInicio);
+}
+
+        if (fechaFin) {
+params.set('fecha_fin', fechaFin);
+}
 
         window.open(`/admin/asistencia/bitacora/exportar?${params.toString()}`, '_blank');
     };
@@ -972,7 +1003,11 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                 {marcajes.links && <Pagination paginatedData={marcajes} filters={currentFilters} />}
             </div>
 
-            <Dialog open={!!selectedEmpleado} onOpenChange={(open) => { if (!open) setSelectedEmpleado(null); }}>
+            <Dialog open={!!selectedEmpleado} onOpenChange={(open) => {
+ if (!open) {
+setSelectedEmpleado(null);
+} 
+}}>
                 <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-base font-bold">

@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useRef } from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import {
     Users,
@@ -32,19 +31,14 @@ import {
     Link,
     Image
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter
-} from '@/components/ui/dialog';
+import React, { useState, useEffect, useRef } from 'react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
+import { EntityAvatar } from '@/components/entity-avatar';
+import { FilterBar, FilterField } from '@/components/filter-bar';
+import { ModuleHeader } from '@/components/module-header';
+import { StatCard } from '@/components/stat-card';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -55,26 +49,32 @@ import {
     AlertDialogHeader,
     AlertDialogTitle
 } from '@/components/ui/alert-dialog';
-import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter
+} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
-import { cn, cleanParams } from '@/lib/utils';
-import { useTranslate } from '@/hooks/use-translate';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import type { ColumnDef } from '@/components/data-table';
-import { DataTable } from '@/components/data-table';
-import { EntityAvatar } from '@/components/entity-avatar';
-import { FilterBar, FilterField } from '@/components/filter-bar';
-import { ModuleHeader } from '@/components/module-header';
-import { StatCard } from '@/components/stat-card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
-import { VisitasTemporalesGrid } from './Partials/VisitasTemporalesGrid';
+import { useTranslate } from '@/hooks/use-translate';
+import { cn, cleanParams } from '@/lib/utils';
 import { notifySuccess, notifyError } from '@/utils/notifications';
+import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
+import { VisitasTemporalesGrid } from './Partials/VisitasTemporalesGrid';
 
 interface Pais {
     id: number;
@@ -186,11 +186,13 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
     const startCamera = async () => {
         setError(null);
         setCaptured(null);
+
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: { width: 640, height: 480, facingMode: 'user' }
             });
             setStream(mediaStream);
+
             if (videoRef.current) {
                 videoRef.current.srcObject = mediaStream;
             }
@@ -213,6 +215,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
             canvas.width = videoRef.current.videoWidth || 640;
             canvas.height = videoRef.current.videoHeight || 480;
             const ctx = canvas.getContext('2d');
+
             if (ctx) {
                 ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
                 const base64 = canvas.toDataURL('image/jpeg');
@@ -224,6 +227,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
 
     useEffect(() => {
         startCamera();
+
         return () => stopCamera();
     }, []);
 
@@ -382,13 +386,19 @@ export default function Index({
     }, [tipoServicios]);
 
     const handleCreateServiceType = async () => {
-        if (!newServiceType.trim()) return;
+        if (!newServiceType.trim()) {
+return;
+}
 
         try {
             const getCookie = (name: string) => {
                 const value = `; ${document.cookie}`;
                 const parts = value.split(`; ${name}=`);
-                if (parts.length === 2) return decodeURIComponent(parts.pop()?.split(';').shift() || '');
+
+                if (parts.length === 2) {
+return decodeURIComponent(parts.pop()?.split(';').shift() || '');
+}
+
                 return '';
             };
             const csrfToken = getCookie('XSRF-TOKEN');
@@ -408,6 +418,7 @@ export default function Index({
             }
 
             const resData = await response.json();
+
             if (resData && resData.success) {
                 const createdType = resData.tipo_servicio;
 
@@ -475,11 +486,13 @@ export default function Index({
             if (suggestRef.current && !suggestRef.current.contains(event.target as Node)) {
                 setShowResponsibleSuggestions(false);
             }
+
             if (preRegistroSuggestRef.current && !preRegistroSuggestRef.current.contains(event.target as Node)) {
                 setShowPreRegistroSuggestions(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
+
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
@@ -564,6 +577,7 @@ export default function Index({
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingVisit) {
             put(`/admin/visitas-temporales/${editingVisit.id}`, {
                 onSuccess: () => {
@@ -591,6 +605,7 @@ export default function Index({
         if (event && typeof event.stopPropagation === 'function') {
             event.stopPropagation();
         }
+
         router.patch(`/admin/visitas-temporales/${visit.id}/toggle-status`, {}, {
             preserveScroll: true,
             onSuccess: () => {
@@ -616,7 +631,10 @@ export default function Index({
 
     const insertFormat = (type: 'bold' | 'italic' | 'underline' | 'list' | 'list-ordered' | 'link' | 'image') => {
         const textarea = textareaRef.current;
-        if (!textarea) return;
+
+        if (!textarea) {
+return;
+}
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
@@ -624,6 +642,7 @@ export default function Index({
         const selectedText = text.substring(start, end);
 
         let replacement = '';
+
         switch (type) {
             case 'bold':
                 replacement = `**${selectedText || 'bold'}**`;
@@ -663,10 +682,14 @@ export default function Index({
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'foto_carnet') => {
         const file = e.target.files?.[0];
-        if (!file) return;
+
+        if (!file) {
+return;
+}
 
         if (file.size > 3 * 1024 * 1024) {
             alert(__('The image must not exceed 3MB.'));
+
             return;
         }
 
@@ -859,6 +882,7 @@ export default function Index({
         ? []
         : (empleados || []).filter(e => {
             const fullName = `${e.nombres || ''} ${e.apellidos || ''}`.toLowerCase();
+
             return fullName.includes((responsibleSearch || '').trim().toLowerCase());
         });
 
@@ -866,6 +890,7 @@ export default function Index({
         ? []
         : (empleados || []).filter(e => {
             const fullName = `${e.nombres || ''} ${e.apellidos || ''}`.toLowerCase();
+
             return fullName.includes((preRegistroResponsibleSearch || '').trim().toLowerCase());
         });
 
@@ -1020,6 +1045,7 @@ export default function Index({
             {/* ─── Create / Edit Modal Dialog ────────────────────────────────────────── */}
             <Dialog open={isModalOpen} onOpenChange={(open) => {
                 setIsModalOpen(open);
+
                 if (!open) {
                     reset();
                     setActiveCameraField(null);
@@ -1187,6 +1213,7 @@ export default function Index({
                                                 onChange={(e) => {
                                                     setResponsibleSearch(e.target.value);
                                                     setShowResponsibleSuggestions(true);
+
                                                     if (!e.target.value) {
                                                         setData(prev => ({
                                                             ...prev,

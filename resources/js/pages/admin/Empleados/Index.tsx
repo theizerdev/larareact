@@ -27,18 +27,14 @@ import {
     Sparkles,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ImportWizardModal } from '@/components/admin/empleados/ImportWizardModal';
-import { validarCurp } from '@/utils/curpValidator';
-import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { EntityAvatar } from '@/components/entity-avatar';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
-import { ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
-import { EmpleadosGrid } from './Partials/EmpleadosGrid';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -68,12 +64,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
 import { useTranslate } from '@/hooks/use-translate';
 import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
+import { validarCurp } from '@/utils/curpValidator';
 import { notifySuccess, notifyError } from '@/utils/notifications';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
+import { EmpleadosGrid } from './Partials/EmpleadosGrid';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -243,11 +243,13 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
     const startCamera = async () => {
         setError(null);
         setCaptured(null);
+
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: { width: 640, height: 480, facingMode: 'user' }
             });
             setStream(mediaStream);
+
             if (videoRef.current) {
                 videoRef.current.srcObject = mediaStream;
             }
@@ -270,6 +272,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
             canvas.width = videoRef.current.videoWidth || 640;
             canvas.height = videoRef.current.videoHeight || 480;
             const ctx = canvas.getContext('2d');
+
             if (ctx) {
                 ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
                 const base64 = canvas.toDataURL('image/jpeg');
@@ -281,6 +284,7 @@ function CameraWidget({ onCapture, onCancel }: CameraWidgetProps) {
 
     useEffect(() => {
         startCamera();
+
         return () => stopCamera();
     }, []);
 
@@ -494,9 +498,11 @@ export default function EmpleadosIndexPage({
         if (data.sucursal_id && d.sucursal_id) {
             return Number(d.sucursal_id) === Number(data.sucursal_id);
         }
+
         if (data.empresa_id && d.empresa_id) {
             return Number(d.empresa_id) === Number(data.empresa_id);
         }
+
         return true;
     });
 
@@ -517,9 +523,18 @@ export default function EmpleadosIndexPage({
         const fotosFields = ['foto_empleado', 'foto_empleado_2', 'foto_documento', 'foto_documento_reverso'];
         const vehiculosFields = ['vehiculos'];
 
-        if (laboralFields.includes(errorKey)) return 'laboral';
-        if (fotosFields.includes(errorKey)) return 'fotos';
-        if (vehiculosFields.includes(errorKey) || errorKey.startsWith('vehiculos.')) return 'vehiculos';
+        if (laboralFields.includes(errorKey)) {
+return 'laboral';
+}
+
+        if (fotosFields.includes(errorKey)) {
+return 'fotos';
+}
+
+        if (vehiculosFields.includes(errorKey) || errorKey.startsWith('vehiculos.')) {
+return 'vehiculos';
+}
+
         return 'general';
     };
 
@@ -532,6 +547,7 @@ export default function EmpleadosIndexPage({
 
     const handleFormErrors = (fieldErrors: Record<string, string>) => {
         const firstKey = Object.keys(fieldErrors)[0];
+
         if (firstKey) {
             const targetTab = getTabForError(firstKey);
             setActiveTab(targetTab);
@@ -548,10 +564,12 @@ export default function EmpleadosIndexPage({
     const handleConsultarRenapo = async () => {
         if (!data.curp || data.curp.length !== 18) {
             notifyError(__('Please enter a valid 18-character CURP.'));
+
             return;
         }
 
         setLoadingRenapo(true);
+
         try {
             const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
             const res = await fetch('/admin/empleados/validar-curp', {
@@ -565,6 +583,7 @@ export default function EmpleadosIndexPage({
             });
 
             const result = await res.json();
+
             if (res.ok && result.success) {
                 if (result.nombres) {
                     const apellidosCombined = [result.primer_apellido, result.segundo_apellido].filter(Boolean).join(' ');
@@ -688,7 +707,9 @@ export default function EmpleadosIndexPage({
     };
 
     const handleDeleteConfirm = () => {
-        if (!deletingEmpleado) return;
+        if (!deletingEmpleado) {
+return;
+}
 
         router.delete(`/admin/empleados/${deletingEmpleado.id}`, {
             onSuccess: () => {
@@ -718,19 +739,33 @@ export default function EmpleadosIndexPage({
     };
 
     const formatImageUrl = (url: string | null | undefined): string | null => {
-        if (!url) return null;
+        if (!url) {
+return null;
+}
+
         if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('http://') || url.startsWith('https://')) {
             return url;
         }
+
         const cleanUrl = url.replace(/^\/?(storage\/)+/, '');
+
         return `/storage/${cleanUrl}`;
     };
 
     // Resolver preview de imagen
     const getImageSrc = (fieldVal: any) => {
-        if (!fieldVal) return null;
-        if (fieldVal instanceof File) return URL.createObjectURL(fieldVal);
-        if (typeof fieldVal === 'string') return formatImageUrl(fieldVal);
+        if (!fieldVal) {
+return null;
+}
+
+        if (fieldVal instanceof File) {
+return URL.createObjectURL(fieldVal);
+}
+
+        if (typeof fieldVal === 'string') {
+return formatImageUrl(fieldVal);
+}
+
         return null;
     };
 
@@ -828,7 +863,10 @@ export default function EmpleadosIndexPage({
             header: __('Responsible / Manager'),
             hideOn: 'mobile',
             cell: (emp) => {
-                if (!emp.responsable) return <span className="text-xs text-muted-foreground">—</span>;
+                if (!emp.responsable) {
+return <span className="text-xs text-muted-foreground">—</span>;
+}
+
                 return (
                     <div className="text-xs">
                         <p className="font-medium text-slate-800 dark:text-slate-200">
@@ -1224,6 +1262,7 @@ export default function EmpleadosIndexPage({
                                         />
                                         {data.curp && data.curp.length > 0 && (() => {
                                             const res = validarCurp(data.curp);
+
                                             if (res.isValid && res.datos) {
                                                 return (
                                                     <div className="mt-2 text-xs text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-2 bg-emerald-100/80 dark:bg-emerald-950/60 p-2.5 rounded-lg border border-emerald-300 dark:border-emerald-800 shadow-sm">
@@ -1232,6 +1271,7 @@ export default function EmpleadosIndexPage({
                                                     </div>
                                                 );
                                             }
+
                                             return null;
                                         })()}
                                         {errors.curp && (
@@ -1934,6 +1974,7 @@ export default function EmpleadosIndexPage({
                                                 )}
                                                 <input type="file" accept="image/*" ref={fileInputVehiculoFrontalRef} className="hidden" onChange={(e) => {
                                                     const file = e.target.files?.[0];
+
                                                     if (file) {
                                                         const reader = new FileReader();
                                                         reader.readAsDataURL(file);
@@ -1969,6 +2010,7 @@ export default function EmpleadosIndexPage({
                                                 )}
                                                 <input type="file" accept="image/*" ref={fileInputVehiculoTraseraRef} className="hidden" onChange={(e) => {
                                                     const file = e.target.files?.[0];
+
                                                     if (file) {
                                                         const reader = new FileReader();
                                                         reader.readAsDataURL(file);
@@ -1983,8 +2025,10 @@ export default function EmpleadosIndexPage({
                                             <Button type="button" size="sm" onClick={() => {
                                                 if (!newVehicle.tipo_vehiculo || !newVehicle.marca || !newVehicle.modelo || !newVehicle.year || !newVehicle.placa) {
                                                     alert(__('All vehicle fields are required.'));
+
                                                     return;
                                                 }
+
                                                 setData('vehiculos', [...(data.vehiculos || []), newVehicle]);
                                                 setNewVehicle({ tipo_vehiculo: '', marca: '', modelo: '', year: '', placa: '', foto_frontal: '', foto_trasera: '' });
                                                 setShowVehicleForm(false);
@@ -2069,7 +2113,10 @@ export default function EmpleadosIndexPage({
             {/* ══ Modal de Pre-registro de Empleado ════════════════════ */}
             <Dialog open={isPreRegistroModalOpen} onOpenChange={(open) => {
                 setIsPreRegistroModalOpen(open);
-                if (!open) preRegistroForm.reset();
+
+                if (!open) {
+preRegistroForm.reset();
+}
             }}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>

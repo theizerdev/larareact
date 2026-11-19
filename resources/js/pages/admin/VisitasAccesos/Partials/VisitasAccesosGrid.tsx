@@ -334,7 +334,7 @@ export function VisitasAccesosGrid<T extends VisitaAccesoGridItem>({
                                             {acompanantesCount > 0 && (
                                                 <Button
                                                     type="button"
-                                                    size="xs"
+                                                    size="sm"
                                                     variant="outline"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
