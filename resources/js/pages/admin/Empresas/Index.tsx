@@ -15,6 +15,13 @@ import {
     X,
     Clock,
     Loader2,
+    Search,
+    Compass,
+    Check,
+    FileText,
+    UserCheck,
+    Globe,
+    Sparkles,
 } from 'lucide-react';
 import React, { useState, Suspense, lazy, useRef } from 'react';
 import { usePage } from '@inertiajs/react';
@@ -596,489 +603,644 @@ formData.append('logo_mini', logoMiniFile);
                 </div>
             </div>
 
-            {/* ── Modal de Creación / Edición ───────────────────────────────────────── */}
+            {/* ── Modal de Creación / Edición Modernizado ───────────────────────────── */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-[720px] lg:max-w-[900px] max-h-[90vh] overflow-y-auto">
-                    <form onSubmit={handleSubmit}>
-                        <DialogHeader>
-                            <DialogTitle>
-                                {editingEmpresa ? __('Edit Company') : __('New Company')}
-                            </DialogTitle>
-                            <DialogDescription>
-                                {__('Complete the company information across the available sections.')}
-                            </DialogDescription>
-                        </DialogHeader>
+                <DialogContent className="sm:max-w-[780px] lg:max-w-[1020px] p-0 overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-2xl backdrop-blur-xl bg-white/95 dark:bg-slate-950/95 max-h-[92vh] flex flex-col">
+                    <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+                        {/* Header Moderno con Gradiente y Badges */}
+                        <div className="relative px-6 pt-6 pb-5 border-b border-slate-100 dark:border-slate-800/80 bg-gradient-to-r from-indigo-500/5 via-blue-500/5 to-transparent">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3.5">
+                                    <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25 ring-4 ring-indigo-500/10">
+                                        <Building2 className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <DialogTitle className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                                                {editingEmpresa ? __('Edit Company') : __('New Company')}
+                                            </DialogTitle>
+                                            {editingEmpresa && (
+                                                <span
+                                                    className={cn(
+                                                        'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold',
+                                                        data.status
+                                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/60'
+                                                            : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400'
+                                                    )}
+                                                >
+                                                    <span className={cn('w-1.5 h-1.5 rounded-full', data.status ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400')} />
+                                                    {data.status ? __('Active') : __('Inactive')}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                            {editingEmpresa
+                                                ? __('Update corporate details, tax identification, Leaflet GPS, and branding.')
+                                                : __('Register a new corporate entity in the database with location mapping.')}
+                                        </DialogDescription>
+                                    </div>
+                                </div>
+                            </div>
 
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
-                            {/* ── Navbar de tabs ── */}
-                            <TabsList className={`grid w-full mb-6 ${editingEmpresa ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                                <TabsTrigger value="general" className="flex items-center gap-2">
-                                    <Building2 className="h-4 w-4" />
-                                    {__('General')}
-                                </TabsTrigger>
-                                <TabsTrigger value="ubicacion" className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4" />
-                                    {__('Location')}
-                                </TabsTrigger>
-                                {editingEmpresa && (
-                                    <TabsTrigger value="logos" className="flex items-center gap-2">
-                                        <ImageIcon className="h-4 w-4" />
-                                        {__('Logos')}
+                            {/* Tabs Segmentados Modernos */}
+                            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-5">
+                                <TabsList className={`grid w-full p-1.5 bg-slate-100/90 dark:bg-slate-900/90 rounded-2xl border border-slate-200/70 dark:border-slate-800/70 ${editingEmpresa ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                                    <TabsTrigger
+                                        value="general"
+                                        className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all"
+                                    >
+                                        <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                        {__('General Info')}
                                     </TabsTrigger>
-                                )}
-                            </TabsList>
-
-                            {/* ══ Tab 1: Información General ══════════════════════════════════════ */}
-                            <TabsContent value="general" className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* 1. Razón social de la empresa */}
-                                    <div>
-                                        <Label htmlFor="razon_social">{__('Company Name')} *</Label>
-                                        <Input
-                                            id="razon_social"
-                                            value={data.razon_social}
-                                            onChange={(e) => setData('razon_social', e.target.value)}
-                                            placeholder="Ej: Empresa S.A. de C.V."
-                                        />
-                                        {errors.razon_social && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.razon_social}</p>
-                                        )}
-                                    </div>
-
-                                    {/* 2. Nombre comercial */}
-                                    <div>
-                                        <Label htmlFor="nombre_comercial">{__('Trade Name')}</Label>
-                                        <Input
-                                            id="nombre_comercial"
-                                            value={data.nombre_comercial || ''}
-                                            onChange={(e) => setData('nombre_comercial', e.target.value)}
-                                            placeholder="Ej: Nombre Comercial"
-                                        />
-                                        {errors.nombre_comercial && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.nombre_comercial}</p>
-                                        )}
-                                    </div>
-
-                                    {/* 3. Registro federal de contribuyentes (RFC) */}
-                                    <div>
-                                        <Label htmlFor="documento">{__('Registro federal de contribuyentes (RFC)')} *</Label>
-                                        <Input
-                                            id="documento"
-                                            value={data.documento}
-                                            onChange={(e) => setData('documento', e.target.value)}
-                                            placeholder="RFC..."
-                                        />
-                                        {errors.documento && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.documento}</p>
-                                        )}
-                                    </div>
-
-                                    {/* 4. Representante legal */}
-                                    <div>
-                                        <Label htmlFor="representante_legal">{__('Legal Representative')}</Label>
-                                        <Input
-                                            id="representante_legal"
-                                            value={data.representante_legal || ''}
-                                            onChange={(e) => setData('representante_legal', e.target.value)}
-                                            placeholder="Nombre completo"
-                                        />
-                                        {errors.representante_legal && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.representante_legal}</p>
-                                        )}
-                                    </div>
-
-                                    {/* 5. Curp del representante legal */}
-                                    <div>
-                                        <Label htmlFor="curp_representante_legal">{__('Curp del representante legal')}</Label>
-                                        <Input
-                                            id="curp_representante_legal"
-                                            value={data.curp_representante_legal || ''}
-                                            onChange={(e) => setData('curp_representante_legal', e.target.value)}
-                                            placeholder="CURP (18 caracteres)"
-                                            maxLength={18}
-                                        />
-                                        {errors.curp_representante_legal && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.curp_representante_legal}</p>
-                                        )}
-                                    </div>
-
-                                    {/* 6. Teléfono */}
-                                    <div>
-                                        <Label htmlFor="telefono">{__('Phone')}</Label>
-                                        <PhoneInputGroup
-                                            paises={paises}
-                                            selectedPaisId={data.pais_telefono_id}
-                                            phoneValue={data.telefono || ''}
-                                            onPaisChange={(v) => setData('pais_telefono_id', v)}
-                                            onPhoneChange={(v) => setData('telefono', v)}
-                                            placeholder="000-0000000"
-                                            error={errors.telefono}
-                                        />
-                                    </div>
-
-                                    {/* 7. Correo electrónico */}
-                                    <div>
-                                        <Label htmlFor="email">{__('Email')}</Label>
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            value={data.email || ''}
-                                            onChange={(e) => setData('email', e.target.value)}
-                                            placeholder="correo@empresa.com"
-                                        />
-                                        {errors.email && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-                                        )}
-                                    </div>
-
-                                    {/* 8. Status */}
-                                    <div>
-                                        <Label htmlFor="status">{__('Status')}</Label>
-                                        <div className="flex items-center space-x-2 pt-2">
-                                            <Switch
-                                                id="status"
-                                                checked={data.status}
-                                                onCheckedChange={(checked) => setData('status', checked)}
-                                            />
-                                            <span className="text-sm text-muted-foreground">
-                                                {data.status ? __('Active') : __('Inactive')}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </TabsContent>
-
-                            {/* ══ Tab 3: Ubicación ══════════════════════════════════════════════════ */}
-                            <TabsContent value="ubicacion" className="space-y-4">
-                                {/* País de la empresa */}
-                                <div>
-                                    <Label htmlFor="pais_id">{__('Country')}</Label>
-                                    <Select
-                                        value={String(data.pais_id)}
-                                        onValueChange={(v) => {
-                                            // Si cambia el país, limpiar coordenadas para centrar el mapa en él
-                                            setData({
-                                                ...data,
-                                                pais_id:  v,
-                                                latitud:  null,
-                                                longitud: null,
-                                                direccion: '',
-                                            });
-                                        }}
+                                    <TabsTrigger
+                                        value="ubicacion"
+                                        className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all"
                                     >
-                                        <SelectTrigger id="pais_id" className="w-full">
-                                            <SelectValue placeholder={__('Select a country')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="">{__('None')}</SelectItem>
-                                            {paises.map((pais) => (
-                                                <SelectItem key={pais.id} value={String(pais.id)}>
-                                                    {pais.nombre}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.pais_id && (
-                                        <p className="text-red-500 text-xs mt-1">{errors.pais_id}</p>
-                                    )}
-                                </div>
-
-                                {/* Coordenadas manuales */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="latitud">{__('Latitude')}</Label>
-                                        <Input
-                                            id="latitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.latitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('latitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="10.48801"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="longitud">{__('Longitude')}</Label>
-                                        <Input
-                                            id="longitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.longitud ?? ''}
-                                            onChange={(e) =>
-                                                setData('longitud', e.target.value ? parseFloat(e.target.value) : null)
-                                            }
-                                            placeholder="-66.87919"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Dirección */}
-                                <div>
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor="direccion">{__('Address')}</Label>
-                                        {isGeocoding && (
-                                            <span className="text-[11px] text-indigo-500 flex items-center gap-1">
-                                                <Loader2 className="w-3 h-3 animate-spin" />
-                                                {__('Locating on map...')}
-                                            </span>
+                                        <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                        {__('Location & Map')}
+                                        {data.latitud && data.longitud && (
+                                            <span className="w-2 h-2 rounded-full bg-blue-500 inline-block ml-1" />
                                         )}
-                                    </div>
-                                    <Textarea
-                                        id="direccion"
-                                        value={data.direccion || ''}
-                                        onChange={(e) => handleAddressChange(e.target.value)}
-                                        placeholder={__('Type an address to auto-locate on map or click the map directly...')}
-                                        rows={2}
-                                        className="mt-1"
-                                    />
-                                </div>
-
-                                {/* Zona Horaria */}
-                                <div>
-                                    <Label htmlFor="zona_horaria">{__('Time Zone (Auto-detected from map)')}</Label>
-                                    <Input
-                                        id="zona_horaria"
-                                        value={data.zona_horaria || ''}
-                                        onChange={(e) => setData('zona_horaria', e.target.value)}
-                                        placeholder="Ej: America/Mexico_City, America/Tijuana, America/Mazatlan"
-                                        className="font-mono text-xs"
-                                    />
-                                    {errors.zona_horaria && (
-                                        <p className="text-red-500 text-xs mt-1">{errors.zona_horaria}</p>
-                                    )}
-                                </div>
-
-                                {/* Mapa Leaflet */}
-                                <div
-                                    style={{ height: '380px', width: '100%' }}
-                                    className="rounded-md overflow-hidden border flex items-center justify-center bg-slate-100 dark:bg-slate-800"
-                                >
-                                    <Suspense
-                                        fallback={
-                                            <p className="text-slate-500 text-sm">{__('Loading map...')}</p>
-                                        }
-                                    >
-                                        {isModalOpen && activeTab === 'ubicacion' && (
-                                            <EmpresaMapComponent
-                                                center={mapCenter}
-                                                zoom={mapZoom}
-                                                style={{ height: '100%', width: '100%' }}
-                                                markerPosition={
-                                                    data.latitud && data.longitud
-                                                        ? [data.latitud, data.longitud]
-                                                        : null
-                                                }
-                                                onLocationSelected={handleLocationSelected}
-                                            />
-                                        )}
-                                    </Suspense>
-                                </div>
-
-                                <p className="text-xs text-muted-foreground">
-                                    {__('Click on the map to set the exact location. The address will be obtained automatically.')}
-                                </p>
-                            </TabsContent>
-                            {/* ══ Tab 4: Logos ═══════════════════════════════════════════════════════ */}
-                            {editingEmpresa && (
-                                <TabsContent value="logos" className="space-y-6">
-                                    <p className="text-sm text-muted-foreground">
-                                        {__('Upload the company logos. The main logo is used in reports and documents. The mini logo (favicon) is used in the browser tab and small display areas.')}
-                                    </p>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        {/* Logo principal */}
-                                        <div className="space-y-3">
-                                            <Label className="flex items-center gap-2">
-                                                <ImageIcon className="h-4 w-4 text-indigo-500" />
-                                                {__('Main Logo')}
-                                                <span className="text-xs text-muted-foreground ml-1">({__('Reports & Documents')})</span>
-                                            </Label>
-
-                                            {/* Preview / Drop zone */}
-                                            <div
-                                                onClick={() => logoInputRef.current?.click()}
-                                                onDragOver={(e) => e.preventDefault()}
-                                                onDrop={(e) => {
-                                                    e.preventDefault();
-                                                    const file = e.dataTransfer.files[0];
-
-                                                    if (file) {
-handleLogoFileChange(file, 'logo');
-}
-                                                }}
-                                                className="relative group cursor-pointer rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-200 overflow-hidden bg-slate-50 dark:bg-slate-900/40 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20"
-                                                style={{ minHeight: '180px' }}
-                                            >
-                                                {logoPreview ? (
-                                                    <>
-                                                        <img
-                                                            src={logoPreview}
-                                                            alt="Logo principal"
-                                                            className="w-full h-44 object-contain p-4"
-                                                        />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                            <div className="text-white text-center">
-                                                                <Upload className="h-6 w-6 mx-auto mb-1" />
-                                                                <p className="text-xs">{__('Click to change')}</p>
-                                                            </div>
-                                                        </div>
-                                                        {logoFile && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
- e.stopPropagation(); setLogoFile(null); setLogoPreview(editingEmpresa?.logo || null); 
-}}
-                                                                className="absolute top-2 right-2 bg-white dark:bg-slate-800 rounded-full p-1 shadow hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-500 hover:text-red-500 transition-colors"
-                                                            >
-                                                                <X className="h-3.5 w-3.5" />
-                                                            </button>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <div className="flex flex-col items-center justify-center h-44 gap-2 text-slate-400">
-                                                        <div className="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                                                            <ImageIcon className="h-7 w-7 text-indigo-400" />
-                                                        </div>
-                                                        <p className="text-xs font-medium">{__('Click or drag to upload')}</p>
-                                                        <p className="text-xs text-slate-300">PNG, JPG, WEBP · max 5MB</p>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <input
-                                                ref={logoInputRef}
-                                                type="file"
-                                                accept="image/jpeg,image/png,image/jpg,image/webp"
-                                                className="hidden"
-                                                onChange={(e) => handleLogoFileChange(e.target.files?.[0] ?? null, 'logo')}
-                                            />
-
-                                            {logoFile && (
-                                                <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1">
-                                                    <Upload className="h-3 w-3" />
-                                                    {logoFile.name} ({(logoFile.size / 1024).toFixed(0)} KB)
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* Logo mini (favicon) */}
-                                        <div className="space-y-3">
-                                            <Label className="flex items-center gap-2">
-                                                <ImageIcon className="h-4 w-4 text-purple-500" />
-                                                {__('Mini Logo')}
-                                                <span className="text-xs text-muted-foreground ml-1">({__('Favicon & small areas')})</span>
-                                            </Label>
-
-                                            <div
-                                                onClick={() => logoMiniInputRef.current?.click()}
-                                                onDragOver={(e) => e.preventDefault()}
-                                                onDrop={(e) => {
-                                                    e.preventDefault();
-                                                    const file = e.dataTransfer.files[0];
-
-                                                    if (file) {
-handleLogoFileChange(file, 'logo_mini');
-}
-                                                }}
-                                                className="relative group cursor-pointer rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all duration-200 overflow-hidden bg-slate-50 dark:bg-slate-900/40 hover:bg-purple-50/40 dark:hover:bg-purple-950/20"
-                                                style={{ minHeight: '180px' }}
-                                            >
-                                                {logoMiniPreview ? (
-                                                    <>
-                                                        <img
-                                                            src={logoMiniPreview}
-                                                            alt="Logo mini"
-                                                            className="w-full h-44 object-contain p-4"
-                                                        />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                            <div className="text-white text-center">
-                                                                <Upload className="h-6 w-6 mx-auto mb-1" />
-                                                                <p className="text-xs">{__('Click to change')}</p>
-                                                            </div>
-                                                        </div>
-                                                        {logoMiniFile && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
- e.stopPropagation(); setLogoMiniFile(null); setLogoMiniPreview(editingEmpresa?.logo_mini || null); 
-}}
-                                                                className="absolute top-2 right-2 bg-white dark:bg-slate-800 rounded-full p-1 shadow hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-500 hover:text-red-500 transition-colors"
-                                                            >
-                                                                <X className="h-3.5 w-3.5" />
-                                                            </button>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <div className="flex flex-col items-center justify-center h-44 gap-2 text-slate-400">
-                                                        <div className="w-14 h-14 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                                                            <ImageIcon className="h-7 w-7 text-purple-400" />
-                                                        </div>
-                                                        <p className="text-xs font-medium">{__('Click or drag to upload')}</p>
-                                                        <p className="text-xs text-slate-300">PNG, JPG, WEBP · max 2MB</p>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <input
-                                                ref={logoMiniInputRef}
-                                                type="file"
-                                                accept="image/jpeg,image/png,image/jpg,image/webp"
-                                                className="hidden"
-                                                onChange={(e) => handleLogoFileChange(e.target.files?.[0] ?? null, 'logo_mini')}
-                                            />
-
-                                            {logoMiniFile && (
-                                                <p className="text-xs text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1">
-                                                    <Upload className="h-3 w-3" />
-                                                    {logoMiniFile.name} ({(logoMiniFile.size / 1024).toFixed(0)} KB)
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Botón de subida de logos */}
-                                    <div className="flex justify-end pt-2 border-t">
-                                        <Button
-                                            type="button"
-                                            onClick={handleUploadLogos}
-                                            disabled={uploadingLogos || (!logoFile && !logoMiniFile)}
-                                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                                    </TabsTrigger>
+                                    {editingEmpresa && (
+                                        <TabsTrigger
+                                            value="logos"
+                                            className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all"
                                         >
-                                            {uploadingLogos ? (
-                                                <>
-                                                    <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                    </svg>
-                                                    {__('Uploading...')}
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Upload className="h-4 w-4 mr-2" />
-                                                    {__('Upload Logos')}
-                                                </>
+                                            <ImageIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                            {__('Logos & Branding')}
+                                            {(logoFile || logoMiniFile) && (
+                                                <span className="w-2 h-2 rounded-full bg-purple-500 inline-block ml-1" />
                                             )}
-                                        </Button>
+                                        </TabsTrigger>
+                                    )}
+                                </TabsList>
+                            </Tabs>
+                        </div>
+
+                        {/* Modal Body Scrolleable */}
+                        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+                            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                                {/* ══ Tab 1: General ══════════════════════════════════════════════════ */}
+                                <TabsContent value="general" className="mt-0 space-y-5">
+                                    {/* 1. Identidad Fiscal & Comercial */}
+                                    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-5 space-y-4">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-slate-800/60">
+                                            <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                                {__('Fiscal & Commercial Identity')}
+                                            </h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {/* Razón social */}
+                                            <div className="space-y-1.5 md:col-span-2">
+                                                <Label htmlFor="razon_social" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                    {__('Company Name')} <span className="text-rose-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="razon_social"
+                                                    value={data.razon_social}
+                                                    onChange={(e) => setData('razon_social', e.target.value)}
+                                                    placeholder="Ej: Smurfit Westrock México S.A. de C.V."
+                                                    className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                                />
+                                                {errors.razon_social && (
+                                                    <p className="text-rose-500 text-xs mt-1 font-medium">{errors.razon_social}</p>
+                                                )}
+                                            </div>
+
+                                            {/* Nombre comercial */}
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nombre_comercial" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                    {__('Trade Name')}
+                                                </Label>
+                                                <Input
+                                                    id="nombre_comercial"
+                                                    value={data.nombre_comercial || ''}
+                                                    onChange={(e) => setData('nombre_comercial', e.target.value)}
+                                                    placeholder="Ej: Smurfit Westrock"
+                                                    className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                                />
+                                                {errors.nombre_comercial && (
+                                                    <p className="text-rose-500 text-xs mt-1 font-medium">{errors.nombre_comercial}</p>
+                                                )}
+                                            </div>
+
+                                            {/* RFC / Documento */}
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="documento" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                    {__('Registro federal de contribuyentes (RFC)')} <span className="text-rose-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="documento"
+                                                    value={data.documento}
+                                                    onChange={(e) => setData('documento', e.target.value)}
+                                                    placeholder="RFC123456ABC"
+                                                    className="h-11 rounded-xl uppercase font-mono bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                                />
+                                                {errors.documento && (
+                                                    <p className="text-rose-500 text-xs mt-1 font-medium">{errors.documento}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 2. Representación Legal */}
+                                    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-5 space-y-4">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-slate-800/60">
+                                            <UserCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                                {__('Legal Representation')}
+                                            </h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {/* Representante legal */}
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="representante_legal" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                    {__('Legal Representative')}
+                                                </Label>
+                                                <Input
+                                                    id="representante_legal"
+                                                    value={data.representante_legal || ''}
+                                                    onChange={(e) => setData('representante_legal', e.target.value)}
+                                                    placeholder="Nombre y apellidos"
+                                                    className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                                />
+                                                {errors.representante_legal && (
+                                                    <p className="text-rose-500 text-xs mt-1 font-medium">{errors.representante_legal}</p>
+                                                )}
+                                            </div>
+
+                                            {/* CURP */}
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="curp_representante_legal" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                    {__('Curp del representante legal')}
+                                                </Label>
+                                                <Input
+                                                    id="curp_representante_legal"
+                                                    value={data.curp_representante_legal || ''}
+                                                    onChange={(e) => setData('curp_representante_legal', e.target.value)}
+                                                    placeholder="CURP (18 caracteres)"
+                                                    maxLength={18}
+                                                    className="h-11 rounded-xl uppercase font-mono bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                                />
+                                                {errors.curp_representante_legal && (
+                                                    <p className="text-rose-500 text-xs mt-1 font-medium">{errors.curp_representante_legal}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 3. Contacto & Estado */}
+                                    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-5 space-y-4">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-slate-800/60">
+                                            <Phone className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                                {__('Contact & Organization Status')}
+                                            </h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {/* Teléfono */}
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="telefono" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                    {__('Phone')}
+                                                </Label>
+                                                <PhoneInputGroup
+                                                    paises={paises}
+                                                    selectedPaisId={data.pais_telefono_id}
+                                                    phoneValue={data.telefono || ''}
+                                                    onPaisChange={(v) => setData('pais_telefono_id', v)}
+                                                    onPhoneChange={(v) => setData('telefono', v)}
+                                                    placeholder="000-0000000"
+                                                    error={errors.telefono}
+                                                />
+                                            </div>
+
+                                            {/* Correo electrónico */}
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="email" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                    {__('Email')}
+                                                </Label>
+                                                <div className="relative">
+                                                    <Input
+                                                        id="email"
+                                                        type="email"
+                                                        value={data.email || ''}
+                                                        onChange={(e) => setData('email', e.target.value)}
+                                                        placeholder="contacto@empresa.com"
+                                                        className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 pl-10"
+                                                    />
+                                                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                                                </div>
+                                                {errors.email && (
+                                                    <p className="text-rose-500 text-xs mt-1 font-medium">{errors.email}</p>
+                                                )}
+                                            </div>
+
+                                            {/* Status Switch Box */}
+                                            <div className="md:col-span-2 flex items-center justify-between p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
+                                                <div className="space-y-0.5">
+                                                    <Label htmlFor="status" className="text-sm font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+                                                        {__('Company Operational Status')}
+                                                    </Label>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                        {data.status
+                                                            ? __('Company is active. Branches, kiosks, and employees can operate normally.')
+                                                            : __('Company is inactive. Access and operational services are disabled.')}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span
+                                                        className={cn(
+                                                            'text-xs font-bold px-2.5 py-1 rounded-full',
+                                                            data.status
+                                                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                                                        )}
+                                                    >
+                                                        {data.status ? __('Active') : __('Inactive')}
+                                                    </span>
+                                                    <Switch
+                                                        id="status"
+                                                        checked={data.status}
+                                                        onCheckedChange={(checked) => setData('status', checked)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </TabsContent>
-                            )}
 
-                        </Tabs>
+                                {/* ══ Tab 2: Ubicación & Leaflet JS ══════════════════════════════════ */}
+                                <TabsContent value="ubicacion" className="mt-0 space-y-5">
+                                    {/* Selector de País y Dirección */}
+                                    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-4 space-y-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="pais_id" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                                    <Globe className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                    {__('Country')}
+                                                </Label>
+                                                <Select
+                                                    value={String(data.pais_id)}
+                                                    onValueChange={(v) => {
+                                                        setData({
+                                                            ...data,
+                                                            pais_id: v,
+                                                            latitud: null,
+                                                            longitud: null,
+                                                            direccion: '',
+                                                        });
+                                                    }}
+                                                >
+                                                    <SelectTrigger id="pais_id" className="w-full h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs sm:text-sm">
+                                                        <SelectValue placeholder={__('Select a country')} />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="rounded-xl shadow-xl max-h-60">
+                                                        <SelectItem value="">{__('None')}</SelectItem>
+                                                        {paises.map((pais) => (
+                                                            <SelectItem key={pais.id} value={String(pais.id)} className="rounded-lg">
+                                                                {pais.nombre}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors.pais_id && (
+                                                    <p className="text-rose-500 text-xs font-medium">{errors.pais_id}</p>
+                                                )}
+                                            </div>
 
-                        <DialogFooter className="mt-6 pt-6 border-t">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setIsModalOpen(false)}
-                                disabled={processing}
-                            >
-                                {__('Cancel')}
-                            </Button>
-                            <Button type="submit" disabled={processing}>
-                                {processing ? __('Saving...') : __('Save Changes')}
-                            </Button>
-                        </DialogFooter>
+                                            <div className="space-y-1.5 sm:col-span-2">
+                                                <div className="flex items-center justify-between">
+                                                    <Label htmlFor="direccion" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                                        <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                                        {__('Address & Headquarters')}
+                                                    </Label>
+                                                    {isGeocoding && (
+                                                        <span className="text-[11px] text-indigo-600 dark:text-indigo-400 flex items-center gap-1 font-medium">
+                                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                                            {__('Locating...')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <Textarea
+                                                    id="direccion"
+                                                    value={data.direccion || ''}
+                                                    onChange={(e) => handleAddressChange(e.target.value)}
+                                                    placeholder={__('Type an address or click directly on the map to pin headquarters...')}
+                                                    rows={1}
+                                                    className="h-11 min-h-[44px] rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 resize-none text-xs sm:text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Visor Leaflet JS Moderno */}
+                                    <div className="relative rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-md bg-slate-100 dark:bg-slate-900">
+                                        <div style={{ height: '400px', width: '100%' }}>
+                                            <Suspense
+                                                fallback={
+                                                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-50 dark:bg-slate-900 text-slate-400">
+                                                        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                                                        <p className="text-xs font-medium">{__('Loading Leaflet Map...')}</p>
+                                                    </div>
+                                                }
+                                            >
+                                                {isModalOpen && activeTab === 'ubicacion' && (
+                                                    <EmpresaMapComponent
+                                                        center={mapCenter}
+                                                        zoom={mapZoom}
+                                                        style={{ height: '100%', width: '100%' }}
+                                                        markerPosition={
+                                                            data.latitud && data.longitud
+                                                                ? [data.latitud, data.longitud]
+                                                                : null
+                                                        }
+                                                        onLocationSelected={handleLocationSelected}
+                                                    />
+                                                )}
+                                            </Suspense>
+                                        </div>
+                                    </div>
+
+                                    {/* Coordenadas & Zona Horaria */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="space-y-1.5 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                                            <Label htmlFor="latitud" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                                <Compass className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                                {__('Latitude')}
+                                            </Label>
+                                            <Input
+                                                id="latitud"
+                                                type="number"
+                                                step="any"
+                                                value={data.latitud ?? ''}
+                                                onChange={(e) =>
+                                                    setData('latitud', e.target.value ? parseFloat(e.target.value) : null)
+                                                }
+                                                placeholder="19.92"
+                                                className="h-9 rounded-lg font-mono text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                                            <Label htmlFor="longitud" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                                <Compass className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                                {__('Longitude')}
+                                            </Label>
+                                            <Input
+                                                id="longitud"
+                                                type="number"
+                                                step="any"
+                                                value={data.longitud ?? ''}
+                                                onChange={(e) =>
+                                                    setData('longitud', e.target.value ? parseFloat(e.target.value) : null)
+                                                }
+                                                placeholder="-102.01"
+                                                className="h-9 rounded-lg font-mono text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                                            <Label htmlFor="zona_horaria" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                                <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                {__('Time Zone (Auto)')}
+                                            </Label>
+                                            <Input
+                                                id="zona_horaria"
+                                                value={data.zona_horaria || ''}
+                                                onChange={(e) => setData('zona_horaria', e.target.value)}
+                                                placeholder="America/Mexico_City"
+                                                className="h-9 rounded-lg font-mono text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                            />
+                                            {errors.zona_horaria && (
+                                                <p className="text-rose-500 text-[11px] font-medium">{errors.zona_horaria}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </TabsContent>
+
+                                {/* ══ Tab 3: Logos ═══════════════════════════════════════════════════════ */}
+                                {editingEmpresa && (
+                                    <TabsContent value="logos" className="mt-0 space-y-5">
+                                        <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-4">
+                                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                                {__('Upload corporate logos. The main logo is used in reports, kiosk navbar, and official documents. The mini logo is used in small badges and avatar containers.')}
+                                            </p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                            {/* Logo principal */}
+                                            <div className="space-y-2.5 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                                        <ImageIcon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                                        {__('Main Logo')}
+                                                    </Label>
+                                                    <span className="text-[10px] text-slate-400">PNG, JPG, WEBP · max 5MB</span>
+                                                </div>
+
+                                                <div
+                                                    onClick={() => logoInputRef.current?.click()}
+                                                    onDragOver={(e) => e.preventDefault()}
+                                                    onDrop={(e) => {
+                                                        e.preventDefault();
+                                                        const file = e.dataTransfer.files[0];
+                                                        if (file) handleLogoFileChange(file, 'logo');
+                                                    }}
+                                                    className="relative group cursor-pointer rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all duration-200 overflow-hidden bg-slate-50 dark:bg-slate-900/60 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 flex items-center justify-center min-h-[170px]"
+                                                >
+                                                    {logoPreview ? (
+                                                        <>
+                                                            <img
+                                                                src={logoPreview}
+                                                                alt="Logo principal"
+                                                                className="w-full h-36 object-contain p-3"
+                                                            />
+                                                            <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                <div className="text-white text-center">
+                                                                    <Upload className="h-5 w-5 mx-auto mb-1" />
+                                                                    <p className="text-xs font-semibold">{__('Click to change')}</p>
+                                                                </div>
+                                                            </div>
+                                                            {logoFile && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setLogoFile(null);
+                                                                        setLogoPreview(editingEmpresa?.logo || null);
+                                                                    }}
+                                                                    className="absolute top-2 right-2 bg-white dark:bg-slate-800 rounded-full p-1.5 shadow-md hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-500 hover:text-rose-500 transition-colors"
+                                                                >
+                                                                    <X className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex flex-col items-center justify-center py-6 gap-2 text-slate-400">
+                                                            <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center">
+                                                                <ImageIcon className="h-6 w-6 text-indigo-500" />
+                                                            </div>
+                                                            <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{__('Click or drag to upload')}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <input
+                                                    ref={logoInputRef}
+                                                    type="file"
+                                                    accept="image/jpeg,image/png,image/jpg,image/webp"
+                                                    className="hidden"
+                                                    onChange={(e) => handleLogoFileChange(e.target.files?.[0] ?? null, 'logo')}
+                                                />
+
+                                                {logoFile && (
+                                                    <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1.5 pt-1">
+                                                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                                        {logoFile.name} ({(logoFile.size / 1024).toFixed(0)} KB)
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            {/* Logo mini (favicon) */}
+                                            <div className="space-y-2.5 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                                        <ImageIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                                        {__('Mini Logo (Favicon)')}
+                                                    </Label>
+                                                    <span className="text-[10px] text-slate-400">PNG, JPG, WEBP · max 2MB</span>
+                                                </div>
+
+                                                <div
+                                                    onClick={() => logoMiniInputRef.current?.click()}
+                                                    onDragOver={(e) => e.preventDefault()}
+                                                    onDrop={(e) => {
+                                                        e.preventDefault();
+                                                        const file = e.dataTransfer.files[0];
+                                                        if (file) handleLogoFileChange(file, 'logo_mini');
+                                                    }}
+                                                    className="relative group cursor-pointer rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-400 transition-all duration-200 overflow-hidden bg-slate-50 dark:bg-slate-900/60 hover:bg-purple-50/30 dark:hover:bg-purple-950/20 flex items-center justify-center min-h-[170px]"
+                                                >
+                                                    {logoMiniPreview ? (
+                                                        <>
+                                                            <img
+                                                                src={logoMiniPreview}
+                                                                alt="Logo mini"
+                                                                className="w-full h-36 object-contain p-3"
+                                                            />
+                                                            <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                <div className="text-white text-center">
+                                                                    <Upload className="h-5 w-5 mx-auto mb-1" />
+                                                                    <p className="text-xs font-semibold">{__('Click to change')}</p>
+                                                                </div>
+                                                            </div>
+                                                            {logoMiniFile && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setLogoMiniFile(null);
+                                                                        setLogoMiniPreview(editingEmpresa?.logo_mini || null);
+                                                                    }}
+                                                                    className="absolute top-2 right-2 bg-white dark:bg-slate-800 rounded-full p-1.5 shadow-md hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-500 hover:text-rose-500 transition-colors"
+                                                                >
+                                                                    <X className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex flex-col items-center justify-center py-6 gap-2 text-slate-400">
+                                                            <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center">
+                                                                <ImageIcon className="h-6 w-6 text-purple-500" />
+                                                            </div>
+                                                            <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{__('Click or drag to upload')}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <input
+                                                    ref={logoMiniInputRef}
+                                                    type="file"
+                                                    accept="image/jpeg,image/png,image/jpg,image/webp"
+                                                    className="hidden"
+                                                    onChange={(e) => handleLogoFileChange(e.target.files?.[0] ?? null, 'logo_mini')}
+                                                />
+
+                                                {logoMiniFile && (
+                                                    <p className="text-xs text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1.5 pt-1">
+                                                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                                        {logoMiniFile.name} ({(logoMiniFile.size / 1024).toFixed(0)} KB)
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Botón de subida de logos */}
+                                        <div className="flex justify-end pt-3 border-t border-slate-200/80 dark:border-slate-800">
+                                            <Button
+                                                type="button"
+                                                onClick={handleUploadLogos}
+                                                disabled={uploadingLogos || (!logoFile && !logoMiniFile)}
+                                                className="rounded-xl px-5 h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs sm:text-sm shadow-md shadow-indigo-600/25 flex items-center gap-2"
+                                            >
+                                                {uploadingLogos ? (
+                                                    <>
+                                                        <Loader2 className="animate-spin h-4 w-4" />
+                                                        {__('Uploading...')}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Upload className="h-4 w-4" />
+                                                        {__('Upload Selected Logos')}
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </TabsContent>
+                                )}
+                            </Tabs>
+                        </div>
+
+                        {/* Footer Moderno con Botones de Acción */}
+                        <div className="px-6 py-4 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 flex items-center justify-between">
+                            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                <span>{__('All required fields must be filled before saving')}</span>
+                            </div>
+                            <div className="flex items-center gap-2.5 ml-auto">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsModalOpen(false)}
+                                    disabled={processing}
+                                    className="rounded-xl px-5 h-10 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs sm:text-sm"
+                                >
+                                    {__('Cancel')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="rounded-xl px-6 h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm shadow-md shadow-indigo-600/25 transition-all flex items-center gap-2"
+                                >
+                                    {processing ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span>{__('Saving...')}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check className="w-4 h-4" />
+                                            <span>{editingEmpresa ? __('Save Changes') : __('Create Company')}</span>
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
                     </form>
                 </DialogContent>
             </Dialog>

@@ -1,4 +1,4 @@
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import {
     GitBranch,
     Plus,
@@ -12,8 +12,15 @@ import {
     MapPin,
     Building2,
     Clock,
+    Search,
+    Loader2,
+    Sparkles,
+    Compass,
+    Layers,
+    Globe,
+    Check,
 } from 'lucide-react';
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
@@ -57,6 +64,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
+import { useLocationGeocoding } from '@/hooks/use-location-geocoding';
 
 const SucursalMapComponent = lazy(() => {
     return import('../Empresas/Partials/MapComponent').then((mod) => ({ default: mod.default }));
@@ -184,6 +192,34 @@ export default function SucursalesIndexPage({
     // ── Formulario Inertia ─────────────────────────────────────────────────────
     const { data, setData, post, put, processing, errors, reset } = useForm(initialForm);
 
+    const coordsSourceRef = useRef<'manual' | 'map' | 'auto'>('auto');
+    const pageProps = usePage().props as any;
+    const mapboxApiKey = pageProps.mapbox_api_key || pageProps.auth?.user?.empresa?.mapbox_api_key;
+    const { forwardGeocode, isGeocoding: geocoding } = useLocationGeocoding({
+        mapboxApiKey,
+        debounceMs: 700,
+    });
+
+    const handleForceGeocode = async () => {
+        if (!data.direccion || data.direccion.trim().length < 3) {
+            notifyError(__('Please enter a valid address to locate on the map.'));
+            return;
+        }
+        coordsSourceRef.current = 'auto';
+        const result = await forwardGeocode(data.direccion);
+        if (result) {
+            setData((prev) => ({
+                ...prev,
+                latitud: result.lat,
+                longitud: result.lng,
+                ...(result.zona_horaria ? { zona_horaria: result.zona_horaria } : {}),
+            }));
+            notifySuccess(__('Address located on map successfully.'));
+        } else {
+            notifyError(__('Could not locate address. Please check or click directly on the map.'));
+        }
+    };
+
     // ── Mapa ───────────────────────────────────────────────────────────────────
     const paisSeleccionado = paises.find((p) => p.id === Number(data.pais_telefono_id));
     const mapCenter: [number, number] =
@@ -266,6 +302,7 @@ return;
     };
 
     const handleLocationSelected = (lat: number, lng: number, address?: string, timezone?: string) => {
+        coordsSourceRef.current = 'map';
         setData((prev) => ({
             ...prev,
             latitud:  lat,
@@ -522,274 +559,419 @@ return;
                 </div>
             </div>
 
-            {/* ── Modal Creación / Edición ────────────────────────────────────────────── */}
+            {/* ── Modal Creación / Edición Modernizado ─────────────────────────────────── */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-[720px] lg:max-w-[900px] max-h-[90vh] overflow-y-auto">
-                    <form onSubmit={handleSubmit}>
-                        <DialogHeader>
-                            <DialogTitle>
-                                {editingSucursal ? __('Edit Branch') : __('New Branch')}
-                            </DialogTitle>
-                            <DialogDescription>
-                                {__('Complete the branch information across the available sections.')}
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
-                            <TabsList className="grid grid-cols-2 w-full mb-6">
-                                <TabsTrigger value="general" className="flex items-center gap-2">
-                                    <GitBranch className="h-4 w-4" />
-                                    {__('General')}
-                                </TabsTrigger>
-                                <TabsTrigger value="ubicacion" className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4" />
-                                    {__('Location')}
-                                </TabsTrigger>
-                            </TabsList>
-
-                            {/* ══ Tab 1: General ══════════════════════════════════════════════════ */}
-                            <TabsContent value="general" className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                                    {/* Empresa */}
+                <DialogContent className="sm:max-w-[760px] lg:max-w-[980px] p-0 overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-2xl backdrop-blur-xl bg-white/95 dark:bg-slate-950/95 max-h-[92vh] flex flex-col">
+                    <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+                        {/* Header Moderno con Gradiente y Badges */}
+                        <div className="relative px-6 pt-6 pb-5 border-b border-slate-100 dark:border-slate-800/80 bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-transparent">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3.5">
+                                    <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 ring-4 ring-emerald-500/10">
+                                        <GitBranch className="h-5 w-5" />
+                                    </div>
                                     <div>
-                                        <Label htmlFor="empresa_id">{__('Company')} *</Label>
-                                        <Select
-                                            value={String(data.empresa_id)}
-                                            onValueChange={(v) => setData('empresa_id', v)}
-                                        >
-                                            <SelectTrigger id="empresa_id" className="w-full h-10 text-sm">
-                                                <SelectValue placeholder={__('Select a company')} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {empresas.map((emp) => (
-                                                    <SelectItem key={emp.id} value={String(emp.id)}>
-                                                        <div className="flex items-center gap-2">
-                                                            {emp.logo_mini || emp.logo ? (
-                                                                <img
-                                                                    src={emp.logo_mini || emp.logo || ''}
-                                                                    alt={emp.razon_social}
-                                                                    className="w-4 h-4 rounded object-cover"
-                                                                />
-                                                            ) : (
-                                                                <Building2 className="w-4 h-4 text-muted-foreground" />
-                                                            )}
-                                                            {emp.razon_social}
-                                                        </div>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.empresa_id && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.empresa_id}</p>
+                                        <div className="flex items-center gap-2">
+                                            <DialogTitle className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                                                {editingSucursal ? __('Edit Branch') : __('New Branch')}
+                                            </DialogTitle>
+                                            {editingSucursal && (
+                                                <span
+                                                    className={cn(
+                                                        'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold',
+                                                        data.status
+                                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/60'
+                                                            : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400'
+                                                    )}
+                                                >
+                                                    <span className={cn('w-1.5 h-1.5 rounded-full', data.status ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400')} />
+                                                    {data.status ? __('Active') : __('Inactive')}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                            {editingSucursal
+                                                ? __('Update branch details, contacts, and Leaflet GPS coordinates.')
+                                                : __('Register a new physical branch and configure its location on the map.')}
+                                        </DialogDescription>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tabs Segmentados Modernos */}
+                            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-5">
+                                <TabsList className="grid grid-cols-2 w-full p-1.5 bg-slate-100/90 dark:bg-slate-900/90 rounded-2xl border border-slate-200/70 dark:border-slate-800/70">
+                                    <TabsTrigger
+                                        value="general"
+                                        className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all"
+                                    >
+                                        <GitBranch className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                        {__('General Info')}
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                        value="ubicacion"
+                                        className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all"
+                                    >
+                                        <MapPin className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                                        {__('Location & Map')}
+                                        {data.latitud && data.longitud && (
+                                            <span className="w-2 h-2 rounded-full bg-teal-500 inline-block ml-1" />
                                         )}
-                                    </div>
+                                    </TabsTrigger>
+                                </TabsList>
+                            </Tabs>
+                        </div>
 
-                                    {/* Nombre */}
-                                    <div>
-                                        <Label htmlFor="nombre">{__('Branch Name')} *</Label>
-                                        <Input
-                                            id="nombre"
-                                            value={data.nombre}
-                                            onChange={(e) => setData('nombre', e.target.value)}
-                                            placeholder="Ej: Sucursal Centro"
-                                            className="h-10 text-sm"
-                                        />
-                                        {errors.nombre && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
-                                        )}
-                                    </div>
+                        {/* Modal Body scrolleable */}
+                        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+                            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                                {/* ══ Tab 1: General ══════════════════════════════════════════════════ */}
+                                <TabsContent value="general" className="mt-0 space-y-5">
+                                    {/* Sección: Datos de la Sucursal */}
+                                    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-5 space-y-4">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-slate-800/60">
+                                            <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                                {__('Branch Identification')}
+                                            </h4>
+                                        </div>
 
-                                    {/* Numeral Planta (Código de Acceso) */}
-                                    <div>
-                                        <Label htmlFor="codigo_numeral">Numeral Planta (Ej: 01 Purépero, 02 Tuxcueca) *</Label>
-                                        <Input
-                                            id="codigo_numeral"
-                                            value={data.codigo_numeral}
-                                            onChange={(e) => setData('codigo_numeral', e.target.value)}
-                                            placeholder="01"
-                                            maxLength={2}
-                                            className="h-10 text-sm font-semibold text-emerald-700 dark:text-emerald-400"
-                                        />
-                                        {errors.codigo_numeral && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.codigo_numeral}</p>
-                                        )}
-                                    </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {/* Empresa */}
+                                            <div className="space-y-1.5 md:col-span-2">
+                                                <Label htmlFor="empresa_id" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                    {__('Company')} <span className="text-rose-500">*</span>
+                                                </Label>
+                                                <Select
+                                                    value={String(data.empresa_id)}
+                                                    onValueChange={(v) => setData('empresa_id', v)}
+                                                >
+                                                    <SelectTrigger id="empresa_id" className="w-full h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                                                        <SelectValue placeholder={__('Select a company')} />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="rounded-xl shadow-xl">
+                                                        {empresas.map((emp) => (
+                                                            <SelectItem key={emp.id} value={String(emp.id)} className="rounded-lg">
+                                                                <div className="flex items-center gap-2.5">
+                                                                    {emp.logo_mini || emp.logo ? (
+                                                                        <img
+                                                                            src={emp.logo_mini || emp.logo || ''}
+                                                                            alt={emp.razon_social}
+                                                                            className="w-5 h-5 rounded-md object-contain border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-0.5"
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                                                            <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                                                                        </div>
+                                                                    )}
+                                                                    <span className="font-medium text-slate-800 dark:text-slate-200">{emp.razon_social}</span>
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors.empresa_id && (
+                                                    <p className="text-rose-500 text-xs mt-1 font-medium">{errors.empresa_id}</p>
+                                                )}
+                                            </div>
 
-                                    {/* Teléfono */}
-                                    <div className="md:col-span-2">
-                                        <Label htmlFor="telefono">{__('Phone')}</Label>
-                                        <PhoneInputGroup
-                                            paises={paises}
-                                            selectedPaisId={data.pais_telefono_id}
-                                            phoneValue={data.telefono || ''}
-                                            onPaisChange={(v) => setData('pais_telefono_id', v)}
-                                            onPhoneChange={(v) => setData('telefono', v)}
-                                            placeholder="000-0000000"
-                                            error={errors.telefono}
-                                        />
-                                    </div>
+                                            {/* Nombre de la Sucursal */}
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="nombre" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                    {__('Branch Name')} <span className="text-rose-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="nombre"
+                                                    value={data.nombre}
+                                                    onChange={(e) => setData('nombre', e.target.value)}
+                                                    placeholder="Ej: Planta Purépero, Cedis Guadalajara"
+                                                    className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                                />
+                                                {errors.nombre && (
+                                                    <p className="text-rose-500 text-xs mt-1 font-medium">{errors.nombre}</p>
+                                                )}
+                                            </div>
 
-                                    {/* Status */}
-                                    <div className="md:col-span-2">
-                                        <Label htmlFor="status">{__('Status')}</Label>
-                                        <div className="flex items-center space-x-2 pt-2">
-                                            <Switch
-                                                id="status"
-                                                checked={data.status}
-                                                onCheckedChange={(checked) => setData('status', checked)}
-                                            />
-                                            <span className="text-sm text-muted-foreground">
-                                                {data.status ? __('Active') : __('Inactive')}
-                                            </span>
+                                            {/* Numeral Planta (Código de Acceso Kiosko) */}
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center justify-between">
+                                                    <Label htmlFor="codigo_numeral" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                        Numeral Planta (Kiosko) <span className="text-rose-500">*</span>
+                                                    </Label>
+                                                    <span className="text-[10px] text-slate-400 font-medium">Ej: 01, 02, 10</span>
+                                                </div>
+                                                <div className="relative">
+                                                    <Input
+                                                        id="codigo_numeral"
+                                                        value={data.codigo_numeral}
+                                                        onChange={(e) => setData('codigo_numeral', e.target.value)}
+                                                        placeholder="01"
+                                                        maxLength={2}
+                                                        className="h-11 rounded-xl font-mono text-center font-bold tracking-widest text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-base"
+                                                    />
+                                                </div>
+                                                {errors.codigo_numeral && (
+                                                    <p className="text-rose-500 text-xs mt-1 font-medium">{errors.codigo_numeral}</p>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </TabsContent>
 
-                            {/* ══ Tab 2: Ubicación ══════════════════════════════════════════════════ */}
-                            <TabsContent value="ubicacion" className="space-y-4">
-                                {/* Dirección */}
-                                <div>
-                                    <Label htmlFor="direccion">{__('Address')}</Label>
-                                    <Textarea
-                                        id="direccion"
-                                        value={data.direccion || ''}
-                                        onChange={(e) => setData('direccion', e.target.value)}
-                                        placeholder={__('Street and number, or click on the map...')}
-                                        rows={2}
-                                    />
-                                    {errors.direccion && (
-                                        <p className="text-red-500 text-xs mt-1">{errors.direccion}</p>
-                                    )}
-                                </div>
+                                    {/* Sección: Contacto & Operación */}
+                                    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-5 space-y-4">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-slate-800/60">
+                                            <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                                {__('Contact & Operation')}
+                                            </h4>
+                                        </div>
 
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleForceGeocode}
-                                        disabled={geocoding}
-                                    >
-                                        <MapPin className="mr-2 h-4 w-4" />
-                                        {geocoding ? __('Locating...') : __('Locate address on map')}
-                                    </Button>
-                                    <span className="text-xs text-muted-foreground">
-                                        {__('Or click / drag the marker on the map for precise coordinates.')}
-                                    </span>
-                                </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {/* Teléfono */}
+                                            <div className="space-y-1.5 md:col-span-2">
+                                                <Label htmlFor="telefono" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                    {__('Phone')}
+                                                </Label>
+                                                <PhoneInputGroup
+                                                    paises={paises}
+                                                    selectedPaisId={data.pais_telefono_id}
+                                                    phoneValue={data.telefono || ''}
+                                                    onPaisChange={(v) => setData('pais_telefono_id', v)}
+                                                    onPhoneChange={(v) => setData('telefono', v)}
+                                                    placeholder="000-0000000"
+                                                    error={errors.telefono}
+                                                />
+                                            </div>
 
-                                {/* Coordenadas (prevalecen sobre la dirección) */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
-                                        <Label htmlFor="latitud">{__('Latitude')}</Label>
-                                        <Input
-                                            id="latitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.latitud ?? ''}
-                                            onChange={(e) => {
-                                                coordsSourceRef.current = 'manual';
-                                                setData('latitud', e.target.value ? parseFloat(e.target.value) : null);
-                                            }}
-                                            placeholder="19.92"
-                                        />
-                                        {errors.latitud && <p className="text-red-500 text-xs mt-1">{errors.latitud}</p>}
+                                            {/* Status Switch Box */}
+                                            <div className="md:col-span-2 flex items-center justify-between p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
+                                                <div className="space-y-0.5">
+                                                    <Label htmlFor="status" className="text-sm font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+                                                        {__('Branch Operational Status')}
+                                                    </Label>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                        {data.status
+                                                            ? __('Branch is enabled and visible for attendance kiosks, visits and departments.')
+                                                            : __('Branch is inactive. Kiosks and services are temporarily suspended for this site.')}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span
+                                                        className={cn(
+                                                            'text-xs font-bold px-2.5 py-1 rounded-full',
+                                                            data.status
+                                                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                                                        )}
+                                                    >
+                                                        {data.status ? __('Active') : __('Inactive')}
+                                                    </span>
+                                                    <Switch
+                                                        id="status"
+                                                        checked={data.status}
+                                                        onCheckedChange={(checked) => setData('status', checked)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <Label htmlFor="longitud">{__('Longitude')}</Label>
-                                        <Input
-                                            id="longitud"
-                                            type="number"
-                                            step="any"
-                                            value={data.longitud ?? ''}
-                                            onChange={(e) => {
-                                                coordsSourceRef.current = 'manual';
-                                                setData('longitud', e.target.value ? parseFloat(e.target.value) : null);
-                                            }}
-                                            placeholder="-102.01"
-                                        />
-                                        {errors.longitud && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.longitud}</p>
+                                </TabsContent>
+
+                                {/* ══ Tab 2: Ubicación & MapLibre GL ══════════════════════════════════ */}
+                                <TabsContent value="ubicacion" className="mt-0 space-y-5">
+                                    {/* Barra de Búsqueda y Dirección */}
+                                    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="direccion" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                                <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                {__('Address & Geocoding')}
+                                            </Label>
+                                            <span className="text-[11px] text-slate-400">
+                                                {__('Auto-geocodes on map click')}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <div className="relative flex-1">
+                                                <Textarea
+                                                    id="direccion"
+                                                    value={data.direccion || ''}
+                                                    onChange={(e) => setData('direccion', e.target.value)}
+                                                    placeholder={__('Street, neighborhood, postal code, city... or click anywhere on the map.')}
+                                                    rows={2}
+                                                    className="rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 resize-none text-xs sm:text-sm"
+                                                />
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={handleForceGeocode}
+                                                disabled={geocoding}
+                                                className="sm:w-44 h-auto py-2.5 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium text-xs flex sm:flex-col items-center justify-center gap-1.5 shadow-sm text-slate-700 dark:text-slate-300"
+                                            >
+                                                {geocoding ? (
+                                                    <>
+                                                        <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                                                        <span>{__('Locating...')}</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Search className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                                        <span>{__('Locate on Map')}</span>
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                        {errors.direccion && (
+                                            <p className="text-rose-500 text-xs font-medium">{errors.direccion}</p>
                                         )}
                                     </div>
-                                    <div>
-                                        <Label htmlFor="zona_horaria">{__('Time Zone')}</Label>
-                                        <Select
-                                            value={data.zona_horaria || 'America/Mexico_City'}
-                                            onValueChange={(v) => setData('zona_horaria', v)}
-                                        >
-                                            <SelectTrigger id="zona_horaria" className="w-full text-xs font-mono">
-                                                <SelectValue placeholder="Seleccionar zona horaria" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="America/Mexico_City">America/Mexico_City (Centro: CDMX, GDL, MTY)</SelectItem>
-                                                <SelectItem value="America/Tijuana">America/Tijuana (Noroeste: BC - Tijuana, Mexicali)</SelectItem>
-                                                <SelectItem value="America/Hermosillo">America/Hermosillo (Sonora - Sin horario estacional)</SelectItem>
-                                                <SelectItem value="America/Ciudad_Juarez">America/Ciudad_Juarez (Chihuahua Frontera)</SelectItem>
-                                                <SelectItem value="America/Chihuahua">America/Chihuahua (Chihuahua Estatal)</SelectItem>
-                                                <SelectItem value="America/Mazatlan">America/Mazatlan (Pacífico: Sinaloa, BCS, Nayarit)</SelectItem>
-                                                <SelectItem value="America/Cancun">America/Cancun (Sureste: Quintana Roo)</SelectItem>
-                                                <SelectItem value="America/Monterrey">America/Monterrey (Nuevo León)</SelectItem>
-                                                <SelectItem value="America/Bogota">America/Bogota (Colombia / UTC-5)</SelectItem>
-                                                <SelectItem value="America/Lima">America/Lima (Perú / UTC-5)</SelectItem>
-                                                <SelectItem value="America/New_York">America/New_York (US Eastern / UTC-5)</SelectItem>
-                                                <SelectItem value="America/Los_Angeles">America/Los_Angeles (US Pacific / UTC-8)</SelectItem>
-                                                <SelectItem value="UTC">UTC (Universal Coordinated Time)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.zona_horaria && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.zona_horaria}</p>
-                                        )}
-                                    </div>
-                                </div>
 
-                                {/* Mapa */}
-                                <div
-                                    style={{ height: '380px', width: '100%' }}
-                                    className="rounded-md overflow-hidden border flex items-center justify-center bg-slate-100 dark:bg-slate-800"
-                                >
-                                    <Suspense
-                                        fallback={
-                                            <p className="text-slate-500 text-sm">{__('Loading map...')}</p>
-                                        }
-                                    >
-                                        {isModalOpen && activeTab === 'ubicacion' && (
-                                            <SucursalMapComponent
-                                                center={mapCenter}
-                                                zoom={mapZoom}
-                                                style={{ height: '100%', width: '100%' }}
-                                                markerPosition={
-                                                    data.latitud && data.longitud
-                                                        ? [data.latitud, data.longitud]
-                                                        : null
+                                    {/* Visor Leaflet JS Moderno */}
+                                    <div className="relative rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-md bg-slate-100 dark:bg-slate-900">
+                                        <div style={{ height: '400px', width: '100%' }}>
+                                            <Suspense
+                                                fallback={
+                                                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-50 dark:bg-slate-900 text-slate-400">
+                                                        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+                                                        <p className="text-xs font-medium">{__('Loading map...')}</p>
+                                                    </div>
                                                 }
-                                                onLocationSelected={handleLocationSelected}
+                                            >
+                                                {isModalOpen && activeTab === 'ubicacion' && (
+                                                    <SucursalMapComponent
+                                                        center={mapCenter}
+                                                        zoom={mapZoom}
+                                                        style={{ height: '100%', width: '100%' }}
+                                                        markerPosition={
+                                                            data.latitud && data.longitud
+                                                                ? [data.latitud, data.longitud]
+                                                                : null
+                                                        }
+                                                        onLocationSelected={handleLocationSelected}
+                                                    />
+                                                )}
+                                            </Suspense>
+                                        </div>
+                                    </div>
+
+                                    {/* Fila de Coordenadas y Zona Horaria */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        {/* Latitud */}
+                                        <div className="space-y-1.5 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                                            <Label htmlFor="latitud" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                                <Compass className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                                                {__('Latitude')}
+                                            </Label>
+                                            <Input
+                                                id="latitud"
+                                                type="number"
+                                                step="any"
+                                                value={data.latitud ?? ''}
+                                                onChange={(e) => {
+                                                    coordsSourceRef.current = 'manual';
+                                                    setData('latitud', e.target.value ? parseFloat(e.target.value) : null);
+                                                }}
+                                                placeholder="19.9213"
+                                                className="h-9 rounded-lg font-mono text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
                                             />
-                                        )}
-                                    </Suspense>
-                                </div>
+                                            {errors.latitud && <p className="text-rose-500 text-[11px] font-medium">{errors.latitud}</p>}
+                                        </div>
 
-                                <p className="text-xs text-muted-foreground">
-                                    {__('Click on the map to set the exact location. The address will be obtained automatically.')}
-                                </p>
-                            </TabsContent>
-                        </Tabs>
+                                        {/* Longitud */}
+                                        <div className="space-y-1.5 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                                            <Label htmlFor="longitud" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                                <Compass className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                                                {__('Longitude')}
+                                            </Label>
+                                            <Input
+                                                id="longitud"
+                                                type="number"
+                                                step="any"
+                                                value={data.longitud ?? ''}
+                                                onChange={(e) => {
+                                                    coordsSourceRef.current = 'manual';
+                                                    setData('longitud', e.target.value ? parseFloat(e.target.value) : null);
+                                                }}
+                                                placeholder="-102.0152"
+                                                className="h-9 rounded-lg font-mono text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                            />
+                                            {errors.longitud && <p className="text-rose-500 text-[11px] font-medium">{errors.longitud}</p>}
+                                        </div>
 
-                        <DialogFooter className="mt-6 pt-6 border-t">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setIsModalOpen(false)}
-                                disabled={processing}
-                            >
-                                {__('Cancel')}
-                            </Button>
-                            <Button type="submit" disabled={processing}>
-                                {processing ? __('Saving...') : __('Save Changes')}
-                            </Button>
-                        </DialogFooter>
+                                        {/* Zona Horaria */}
+                                        <div className="space-y-1.5 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                                            <Label htmlFor="zona_horaria" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                                <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                                {__('Time Zone')}
+                                            </Label>
+                                            <Select
+                                                value={data.zona_horaria || 'America/Mexico_City'}
+                                                onValueChange={(v) => setData('zona_horaria', v)}
+                                            >
+                                                <SelectTrigger id="zona_horaria" className="w-full h-9 rounded-lg text-xs font-mono bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                                                    <SelectValue placeholder="Zona horaria" />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-xl shadow-xl max-h-60">
+                                                    <SelectItem value="America/Mexico_City">America/Mexico_City (Centro)</SelectItem>
+                                                    <SelectItem value="America/Tijuana">America/Tijuana (Noroeste)</SelectItem>
+                                                    <SelectItem value="America/Hermosillo">America/Hermosillo (Sonora)</SelectItem>
+                                                    <SelectItem value="America/Ciudad_Juarez">America/Ciudad_Juarez</SelectItem>
+                                                    <SelectItem value="America/Chihuahua">America/Chihuahua</SelectItem>
+                                                    <SelectItem value="America/Mazatlan">America/Mazatlan (Pacífico)</SelectItem>
+                                                    <SelectItem value="America/Cancun">America/Cancun (Sureste)</SelectItem>
+                                                    <SelectItem value="America/Monterrey">America/Monterrey</SelectItem>
+                                                    <SelectItem value="America/Bogota">America/Bogota (UTC-5)</SelectItem>
+                                                    <SelectItem value="America/Lima">America/Lima (UTC-5)</SelectItem>
+                                                    <SelectItem value="America/New_York">America/New_York (UTC-5)</SelectItem>
+                                                    <SelectItem value="America/Los_Angeles">America/Los_Angeles (UTC-8)</SelectItem>
+                                                    <SelectItem value="UTC">UTC (Universal)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.zona_horaria && (
+                                                <p className="text-rose-500 text-[11px] font-medium">{errors.zona_horaria}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+                        </div>
+
+                        {/* Footer Moderno con Botones de Acción */}
+                        <div className="px-6 py-4 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 flex items-center justify-between">
+                            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                <span>{__('All required fields must be filled before saving')}</span>
+                            </div>
+                            <div className="flex items-center gap-2.5 ml-auto">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsModalOpen(false)}
+                                    disabled={processing}
+                                    className="rounded-xl px-5 h-10 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs sm:text-sm"
+                                >
+                                    {__('Cancel')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="rounded-xl px-6 h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm shadow-md shadow-emerald-600/25 transition-all flex items-center gap-2"
+                                >
+                                    {processing ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span>{__('Saving...')}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check className="w-4 h-4" />
+                                            <span>{editingSucursal ? __('Save Changes') : __('Create Branch')}</span>
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
                     </form>
                 </DialogContent>
             </Dialog>

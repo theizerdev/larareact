@@ -36,8 +36,11 @@ class RelojChecadorKioskoController extends Controller
             ?? 'America/Mexico_City';
 
         return Inertia::render('admin/reloj-checador/Kiosko', [
-            'configuracion' => $configuracion,
-            'zona_horaria'  => $zonaHoraria,
+            'configuracion'   => $configuracion,
+            'zona_horaria'    => $zonaHoraria,
+            'sucursal_nombre' => $sucursal?->nombre,
+            'empresa_nombre'  => $empresa?->nombre_comercial ?? $empresa?->razon_social ?? 'Smurfit Westrock México',
+            'empresa_logo'    => $empresa?->logo ? Storage::url($empresa->logo) : null,
         ]);
     }
 

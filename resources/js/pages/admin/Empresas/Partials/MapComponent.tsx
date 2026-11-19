@@ -1,34 +1,42 @@
 import React, { useCallback, useRef } from 'react';
-import MapboxMap, { MapAddressDetails } from '@/components/mapbox-map';
+import LeafletMap, { LeafletAddressDetails } from '@/components/leaflet-map';
 import { getTimezoneFromCoordinates } from '@/hooks/use-location-geocoding';
 
 interface MapComponentProps {
-    center?: [number, number];
+    center?: [number | string | null | undefined, number | string | null | undefined];
     zoom?: number;
     style?: React.CSSProperties;
-    markerPosition: [number, number] | null;
+    markerPosition: [number | string | null | undefined, number | string | null | undefined] | null;
     onLocationSelected: (lat: number, lng: number, address?: string, timezone?: string) => void;
 }
 
 // Re-exportar para retrocompatibilidad
 export const getTimezoneFromCoords = getTimezoneFromCoordinates;
 
+const safeCoord = (val: any, fallback: number = 0): number => {
+    if (val === null || val === undefined || val === '') return fallback;
+    const num = typeof val === 'number' ? val : parseFloat(String(val));
+    return isNaN(num) ? fallback : num;
+};
+
 const EmpresaMapComponent: React.FC<MapComponentProps> = ({
     markerPosition,
-    zoom = 9,
-    onLocationSelected
+    center,
+    zoom = 13,
+    onLocationSelected,
 }) => {
-    const lat = markerPosition ? markerPosition[0] : 0;
-    const lng = markerPosition ? markerPosition[1] : 0;
+    const rawLat = markerPosition ? markerPosition[0] : (center ? center[0] : null);
+    const rawLng = markerPosition ? markerPosition[1] : (center ? center[1] : null);
+
+    const lat = safeCoord(rawLat, 19.9213);
+    const lng = safeCoord(rawLng, -102.0152);
 
     const onLocationSelectedRef = useRef(onLocationSelected);
     onLocationSelectedRef.current = onLocationSelected;
 
-    const handleMapChange = useCallback(async (newLat: number, newLng: number, details?: MapAddressDetails) => {
-        // Obtener zona horaria según coordenadas
-        const tz = await getTimezoneFromCoordinates(newLat, newLng);
+    const handleMapChange = useCallback(async (newLat: number, newLng: number, details?: LeafletAddressDetails) => {
+        const tz = details?.zona_horaria || (await getTimezoneFromCoordinates(newLat, newLng));
 
-        // Notificar coordenadas, dirección y zona horaria
         onLocationSelectedRef.current(
             newLat,
             newLng,
@@ -38,14 +46,14 @@ const EmpresaMapComponent: React.FC<MapComponentProps> = ({
     }, []);
 
     return (
-        <div className="relative w-full h-full" style={{ minHeight: '320px' }}>
-            <MapboxMap
+        <div className="relative w-full h-full min-h-[380px] rounded-2xl overflow-hidden">
+            <LeafletMap
                 lat={lat}
                 lng={lng}
                 zoom={zoom}
                 onChange={handleMapChange}
                 interactive={true}
-                className="h-full w-full border-none rounded-none"
+                className="h-full w-full rounded-2xl"
             />
         </div>
     );
