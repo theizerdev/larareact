@@ -2,24 +2,42 @@
 
 namespace App\Traits;
 
+use App\Services\PermissionSyncService;
 use Spatie\Permission\Models\Permission;
 
 trait PermissionOrganizer
 {
     /**
-     * Get permissions grouped by sector and module
+     * Get permissions grouped by sector (ordered) and module.
      */
     public function getPermissionsBySector()
     {
-        $permissions = Permission::orderBy('sector')->orderBy('module')->orderBy('name')->get();
+        $syncService = app(PermissionSyncService::class);
+        $sectorMeta = $syncService->sectorMeta();
 
-        return $permissions->groupBy('sector')->map(function ($sectorPermissions) {
-            return $sectorPermissions->groupBy('module');
+        $permissions = Permission::where('guard_name', 'web')
+            ->orderBy('module')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Permission $permission) => [
+                'id' => $permission->id,
+                'name' => $permission->name,
+                'slug' => $permission->slug ?: $permission->name,
+                'sector' => $permission->sector ?: 'sistema',
+                'module' => $permission->module ?: 'general',
+            ]);
+
+        $grouped = $permissions->groupBy('sector')->map(function ($sectorPermissions) {
+            return $sectorPermissions->groupBy('module')->map(fn ($modulePerms) => $modulePerms->values());
+        });
+
+        return $grouped->sortBy(function ($_, $sectorKey) use ($sectorMeta) {
+            return sprintf('%03d_%s', $sectorMeta[$sectorKey]['order'] ?? 500, $sectorKey);
         });
     }
 
     /**
-     * Get all unique sectors from permissions
+     * Get all unique sectors from permissions.
      */
     public function getSectors()
     {
@@ -27,7 +45,7 @@ trait PermissionOrganizer
     }
 
     /**
-     * Get all unique modules from permissions
+     * Get all unique modules from permissions.
      */
     public function getModules()
     {
@@ -35,18 +53,12 @@ trait PermissionOrganizer
     }
 
     /**
-     * Get module display name
+     * Get module display name.
      */
     public function getModuleDisplayName(string $module): string
     {
-        return match ($module) {
-            'dashboard' => 'Dashboard',
-            'usuarios' => 'Usuarios',
-            'roles' => 'Roles',
-            'empresas' => 'Empresas',
-            'sucursales' => 'Sucursales',
+        $moduleMeta = app(PermissionSyncService::class)->moduleMeta();
 
-            default => ucfirst($module)
-        };
+        return $moduleMeta[$module] ?? ucfirst(str_replace('_', ' ', $module));
     }
 }

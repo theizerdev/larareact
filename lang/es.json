@@ -2599,5 +2599,20 @@
     "shift: 8 hours": "turno: 8 horas",
     "REVIEW": "REVISIÓN",
     "RECORDED": "REGISTRADO",
-    "Innovación Móvil integrates technology to transform business processes. Shigoto is its platform for workforce time and attendance, supplier onboarding and operational compliance, designed for organizations that require audit-ready evidence.": "Innovación Móvil integra tecnología para transformar procesos de negocio. Shigoto es su plataforma de marcaje de jornada laboral, alta de proveedores y cumplimiento operativo, diseñada para organizaciones que requieren evidencia lista para auditoría."
+    "Innovación Móvil integrates technology to transform business processes. Shigoto is its platform for workforce time and attendance, supplier onboarding and operational compliance, designed for organizations that require audit-ready evidence.": "Innovación Móvil integra tecnología para transformar procesos de negocio. Shigoto es su plataforma de marcaje de jornada laboral, alta de proveedores y cumplimiento operativo, diseñada para organizaciones que requieren evidencia lista para auditoría.",
+    "visitas": "Visitas",
+    "asistencia": "Asistencia",
+    "control_acceso": "Control de Acceso",
+    "sox": "Cumplimiento SOX",
+    "biotime": "BioTime PRO",
+    "visitas_temporales": "Visitas Temporales",
+    "proveedores": "Proveedores",
+    "productores": "Productores",
+    "sistema": "Sistema",
+    "general": "General",
+    "Grid": "Cuadrícula",
+    "List": "Lista",
+    "Sync Permissions": "Sincronizar Permisos",
+    "Duplicate Role": "Duplicar Rol",
+    "All": "Todos"
 }
