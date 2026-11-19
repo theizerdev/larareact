@@ -14,12 +14,14 @@ import {
     Tag,
     Hash,
 } from 'lucide-react';
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useRef, useState, Suspense, lazy } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
+import { EntityAvatar } from '@/components/entity-avatar';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
+import Pagination from '@/components/pagination';
 import { StatCard } from '@/components/stat-card';
 import {
     AlertDialog,
@@ -31,6 +33,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -49,14 +52,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { CardGridSkeleton, GridEmptyState, ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
+import { useTranslate } from '@/hooks/use-translate';
 import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
-import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 
 const DepartamentoMapComponent = lazy(() => {
     return import('../Empresas/Partials/MapComponent').then((mod) => ({ default: mod.default }));
@@ -170,6 +174,7 @@ export default function DepartamentosIndexPage({
     ];
 
     // ── Estados ────────────────────────────────────────────────────────────────
+    const [viewMode, setViewMode]                       = useViewMode('smurfit_departamentos_view_mode', 'grid');
     const [isModalOpen, setIsModalOpen]                 = useState(false);
     const [editingDepartamento, setEditingDepartamento] = useState<Departamento | null>(null);
     const [deletingDepartamento, setDeletingDepartamento] = useState<Departamento | null>(null);
@@ -180,6 +185,13 @@ export default function DepartamentosIndexPage({
     const [searchTerm, setSearchTerm]         = useState(filters.search || '');
     const [statusFilter, setStatusFilter]     = useState(filters.status || '');
     const [perPageFilter, setPerPageFilter]   = useState(filters.perPage || '10');
+    const isFirstRender = useRef(true);
+
+    const currentFilters = cleanParams({
+        search:  searchTerm,
+        status:  statusFilter,
+        perPage: perPageFilter,
+    });
 
     // ── Hooks de navegación ────────────────────────────────────────────────────
     React.useEffect(() => {
@@ -187,12 +199,19 @@ export default function DepartamentosIndexPage({
         const unbindFinish = router.on('finish', () => setIsTableLoading(false));
 
         return () => {
- unbindStart(); unbindFinish(); 
-};
+            unbindStart();
+            unbindFinish();
+        };
     }, []);
 
     // Debounce de filtros
     React.useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+
+            return;
+        }
+
         const timer = setTimeout(() => {
             router.get(
                 window.location.pathname,
@@ -207,6 +226,12 @@ export default function DepartamentosIndexPage({
 
         return () => clearTimeout(timer);
     }, [searchTerm, statusFilter, perPageFilter]);
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setStatusFilter('');
+        setPerPageFilter('10');
+    };
 
     // ── Formulario Inertia ─────────────────────────────────────────────────────
     const { data, setData, post, put, processing, errors, reset } = useForm(initialForm);
@@ -330,13 +355,20 @@ return;
             className: 'font-medium',
             cell: (dep) => (
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                        <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <div>
-                        <p className="font-medium text-sm">{dep.nombre}</p>
+                    <EntityAvatar
+                        name={dep.nombre}
+                        status={dep.status === 1 ? 'active' : 'inactive'}
+                        size="md"
+                        shape="rounded"
+                    />
+                    <div className="min-w-0">
+                        <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
+                            {dep.nombre}
+                        </p>
                         {dep.codigo && (
-                            <p className="text-xs text-muted-foreground">{__('Code')}: {dep.codigo}</p>
+                            <p className="text-xs text-muted-foreground font-mono">
+                                {__('Code')}: {dep.codigo}
+                            </p>
                         )}
                     </div>
                 </div>
@@ -382,9 +414,16 @@ return;
             header: __('System User'),
             hideOn: 'mobile',
             cell: (dep) => (
-                <span className="text-xs font-medium text-muted-foreground">
-                    {dep.user?.name ?? '—'}
-                </span>
+                dep.user ? (
+                    <div className="flex items-center gap-2">
+                        <EntityAvatar name={dep.user.name} size="xs" shape="circle" showStatusDot={false} />
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                            {dep.user.name}
+                        </span>
+                    </div>
+                ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                )
             ),
         },
         {
@@ -484,24 +523,27 @@ return;
                     />
                 </div>
 
-                {/* Filtros */}
-                <FilterBar>
-                    <div className="flex flex-wrap items-end gap-4">
+                {/* Filtros + Conmutador Cuadrícula / Lista */}
+                <FilterBar className="rounded-2xl">
+                    <div className="flex flex-1 flex-wrap items-end gap-4">
                         <FilterField label={__('Search')}>
                             <Input
                                 placeholder={__('Search by name, code, responsible...')}
-                                className="w-full md:w-80"
+                                className="w-full md:w-80 rounded-xl"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </FilterField>
                         <FilterField label={__('Status')}>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full md:w-40">
+                            <Select
+                                value={statusFilter || 'all'}
+                                onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full md:w-40 rounded-xl">
                                     <SelectValue placeholder={__('All')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{__('All')}</SelectItem>
+                                    <SelectItem value="all">{__('All')}</SelectItem>
                                     <SelectItem value="1">{__('Active')}</SelectItem>
                                     <SelectItem value="0">{__('Inactive')}</SelectItem>
                                 </SelectContent>
@@ -509,7 +551,7 @@ return;
                         </FilterField>
                         <FilterField label={__('Records per page')}>
                             <Select value={perPageFilter} onValueChange={setPerPageFilter}>
-                                <SelectTrigger className="w-full md:w-40">
+                                <SelectTrigger className="w-full md:w-36 rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -521,25 +563,215 @@ return;
                             </Select>
                         </FilterField>
                     </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end">
+                        <ViewModeToggle value={viewMode} onChange={setViewMode} />
+                    </div>
                 </FilterBar>
 
-                {/* Tabla */}
-                <div className="w-full">
-                    <DataTable
-                        data={departamentos}
-                        columns={columns}
-                        isLoading={isTableLoading}
-                        onRowClick={(dep) => handleEditClick(dep)}
-                        emptyState={{
-                            title: 'No departments found',
-                            description: searchTerm || statusFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any departments yet.',
-                            ctaLabel: 'New Department',
-                            onCtaClick: handleCreateClick,
-                        }}
-                    />
-                </div>
+                {/* Contenido Principal: Cuadrícula o Lista */}
+                {viewMode === 'grid' ? (
+                    <div className="space-y-4">
+                        {isTableLoading ? (
+                            <CardGridSkeleton />
+                        ) : departamentos.data.length === 0 ? (
+                            <GridEmptyState
+                                icon={<Layers className="h-6 w-6" />}
+                                title={__('No departments found')}
+                                description={
+                                    searchTerm || statusFilter
+                                        ? __('Try clearing your search filters or changing your query.')
+                                        : __('You have not registered any departments yet.')
+                                }
+                                hasActiveFilters={Boolean(searchTerm || statusFilter)}
+                                onResetFilters={handleResetFilters}
+                                ctaLabel={__('New Department')}
+                                onCtaClick={handleCreateClick}
+                            />
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                                {departamentos.data.map((dep) => (
+                                    <div
+                                        key={dep.id}
+                                        onClick={() => handleEditClick(dep)}
+                                        className="group relative rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-card text-card-foreground shadow-xs hover:shadow-md hover:border-indigo-200/80 dark:hover:border-indigo-800/60 transition-all overflow-hidden flex flex-col justify-between cursor-pointer"
+                                    >
+                                        <div
+                                            className={cn(
+                                                'h-1.5 w-full bg-gradient-to-r',
+                                                dep.status === 1
+                                                    ? 'from-indigo-500 via-violet-500 to-emerald-500'
+                                                    : 'from-slate-400 to-slate-500'
+                                            )}
+                                        />
+
+                                        <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                                            <div className="space-y-4">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex items-start gap-3.5 min-w-0">
+                                                        <EntityAvatar
+                                                            name={dep.nombre}
+                                                            status={dep.status === 1 ? 'active' : 'inactive'}
+                                                            size="lg"
+                                                            shape="rounded"
+                                                        />
+                                                        <div className="min-w-0">
+                                                            <h3 className="font-bold text-base text-slate-900 dark:text-white truncate">
+                                                                {dep.nombre}
+                                                            </h3>
+                                                            {dep.codigo && (
+                                                                <p className="text-xs font-mono text-indigo-600 dark:text-indigo-400 truncate">
+                                                                    {__('Code')}: {dep.codigo}
+                                                                </p>
+                                                            )}
+                                                            {dep.descripcion && (
+                                                                <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                                                    {dep.descripcion}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div onClick={(e) => e.stopPropagation()}>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0">
+                                                                    <MoreVertical className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-44 rounded-xl">
+                                                                <DropdownMenuItem onClick={() => handleEditClick(dep)}>
+                                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                                    {__('Edit')}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleToggleStatus(dep)}>
+                                                                    <ToggleRight className="mr-2 h-4 w-4" />
+                                                                    {dep.status === 1 ? __('Deactivate') : __('Activate')}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => setDeletingDepartamento(dep)}
+                                                                    className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    {__('Delete')}
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <span
+                                                        className={cn(
+                                                            'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border',
+                                                            dep.status === 1
+                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900'
+                                                                : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                                                        )}
+                                                    >
+                                                        {dep.status === 1 ? __('Active') : __('Inactive')}
+                                                    </span>
+                                                    {dep.piso && (
+                                                        <Badge variant="secondary" className="text-[11px] rounded-full gap-1">
+                                                            <Hash className="h-3 w-3" />
+                                                            {__('Floor')}: {dep.piso}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+
+                                                <div className="rounded-xl bg-slate-50/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 p-3 space-y-1.5 text-xs text-muted-foreground">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="flex items-center gap-1.5 truncate font-medium text-slate-700 dark:text-slate-300">
+                                                            <Building2 className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                                                            <span className="truncate">{dep.empresa?.razon_social ?? '—'}</span>
+                                                        </span>
+                                                        <span className="flex items-center gap-1 truncate shrink-0">
+                                                            <Tag className="h-3 w-3 text-violet-500 shrink-0" />
+                                                            {dep.sucursal?.nombre ?? '—'}
+                                                        </span>
+                                                    </div>
+                                                    {dep.responsable && (
+                                                        <div className="flex items-center gap-1.5 truncate">
+                                                            <User className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                                            <span className="truncate">
+                                                                {__('Responsible')}: {dep.responsable}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {dep.ubicacion && (
+                                                        <div className="flex items-center gap-1.5 truncate">
+                                                            <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                                                            <span className="truncate">{dep.ubicacion}</span>
+                                                        </div>
+                                                    )}
+                                                    {dep.user && (
+                                                        <div className="flex items-center gap-2 pt-0.5">
+                                                            <EntityAvatar
+                                                                name={dep.user.name}
+                                                                size="xs"
+                                                                shape="circle"
+                                                                showStatusDot={false}
+                                                            />
+                                                            <span className="truncate text-[11px] font-medium">
+                                                                {dep.user.name}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="pt-3 mt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Switch
+                                                        checked={dep.status === 1}
+                                                        onCheckedChange={() => handleToggleStatus(dep)}
+                                                    />
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        {dep.status === 1 ? __('Active') : __('Inactive')}
+                                                    </span>
+                                                </div>
+
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleEditClick(dep)}
+                                                    className="h-8 px-3 rounded-xl text-xs gap-1.5 hover:border-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-300"
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                    {__('Edit')}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <Pagination paginatedData={departamentos} filters={currentFilters} />
+                    </div>
+                ) : (
+                    <div className="w-full">
+                        <DataTable
+                            data={departamentos}
+                            columns={columns}
+                            filters={currentFilters}
+                            isLoading={isTableLoading}
+                            onRowClick={(dep) => handleEditClick(dep)}
+                            emptyState={{
+                                title: 'No departments found',
+                                description: searchTerm || statusFilter
+                                    ? 'Try clearing your search filters or changing your query.'
+                                    : 'You have not registered any departments yet.',
+                                ctaLabel: 'New Department',
+                                onCtaClick: handleCreateClick,
+                            }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* ── Modal Creación / Edición ────────────────────────────────────────────── */}

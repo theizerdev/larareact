@@ -1,29 +1,24 @@
-import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { ModuleHeader } from '@/components/module-header';
-import { StatCard } from '@/components/stat-card';
-import { FilterBar, FilterField } from '@/components/filter-bar';
-import { 
-    Clock, 
-    Calendar, 
-    LogIn, 
-    LogOut, 
-    Utensils, 
-    Coffee, 
-    Search, 
-    RotateCcw, 
-    Eye, 
-    Building2, 
-    UserCheck, 
-    ListOrdered, 
-    ShieldCheck, 
-    Camera, 
-    MapPin, 
-    FileText, 
-    Timer, 
-    AlertTriangle, 
-    CheckCircle2, 
+import {
+    Clock,
+    Calendar,
+    LogIn,
+    LogOut,
+    Utensils,
+    Coffee,
+    Search,
+    RotateCcw,
+    Eye,
+    Building2,
+    UserCheck,
+    ListOrdered,
+    ShieldCheck,
+    Camera,
+    MapPin,
+    FileText,
+    Timer,
+    AlertTriangle,
+    CheckCircle2,
     Hourglass,
     Download,
     FileSpreadsheet,
@@ -31,16 +26,24 @@ import {
     ExternalLink,
     Scale,
     ShieldAlert,
-    Bell
+    Bell,
 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { EntityAvatar } from '@/components/entity-avatar';
+import { FilterBar, FilterField } from '@/components/filter-bar';
+import { ModuleHeader } from '@/components/module-header';
+import Pagination from '@/components/pagination';
+import { StatCard } from '@/components/stat-card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { GridEmptyState, ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
+import { cleanParams, cn } from '@/lib/utils';
 import type { Paginated } from '@/types/app';
-import Pagination from '@/components/pagination';
 
 interface TiempoRestanteInfo {
     estado: 'en_curso' | 'excedido' | 'completado' | 'normal';
@@ -88,6 +91,7 @@ interface EmpleadoBitacora {
     nombres: string;
     apellidos: string;
     documento_identidad: string;
+    foto_empleado?: string | null;
     departamento?: { nombre: string };
     cargo?: { nombre: string };
     responsable?: { nombres: string; apellidos: string };
@@ -215,7 +219,26 @@ interface Props {
     };
 }
 
+function resolveBitacoraAvatarStatus(emp: EmpleadoBitacora): 'active' | 'inactive' | 'warning' | 'danger' {
+    const lftEstado = emp.semana_lft?.semaforos.normal.estado;
+
+    if (lftEstado === 'rojo') {
+        return 'danger';
+    }
+
+    if (lftEstado === 'amarillo') {
+        return 'warning';
+    }
+
+    if (emp.ultimo_marcaje?.tipo_marcaje === 'salida') {
+        return 'inactive';
+    }
+
+    return 'active';
+}
+
 export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = [], responsables = [], filters }: Props) {
+    const [viewMode, setViewMode] = useViewMode('smurfit_asistencia_bitacora_view_mode', 'grid');
     const [search, setSearch] = useState(filters.search || '');
     const [tipoMarcaje, setTipoMarcaje] = useState(filters.tipo_marcaje || 'todos');
     const [origen, setOrigen] = useState(filters.origen || 'todos');
@@ -224,6 +247,16 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
     const [fechaInicio, setFechaInicio] = useState(filters.fecha_inicio || '');
     const [fechaFin, setFechaFin] = useState(filters.fecha_fin || '');
     const [selectedEmpleado, setSelectedEmpleado] = useState<EmpleadoBitacora | null>(null);
+
+    const currentFilters = cleanParams({
+        search: search || undefined,
+        tipo_marcaje: tipoMarcaje !== 'todos' ? tipoMarcaje : undefined,
+        origen: origen !== 'todos' ? origen : undefined,
+        sucursal_id: sucursalId !== 'todas' ? sucursalId : undefined,
+        responsable_id: responsableId !== 'todos' ? responsableId : undefined,
+        fecha_inicio: fechaInicio || undefined,
+        fecha_fin: fechaFin || undefined,
+    });
 
     const formatFechaHora = (fechaStr?: string) => {
         if (!fechaStr) return '';
@@ -524,170 +557,197 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                         </FilterField>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-3 border-t border-muted/50 text-xs text-muted-foreground">
-                        <span className="font-medium">Accesos rápidos:</span>
-                        <button onClick={() => setQuickDate('today')} className="hover:underline text-indigo-600 font-medium">Hoy</button>
-                        <span>•</span>
-                        <button onClick={() => setQuickDate('week')} className="hover:underline text-indigo-600 font-medium">Esta Semana</button>
-                        <span>•</span>
-                        <button onClick={() => setQuickDate('month')} className="hover:underline text-indigo-600 font-medium">Este Mes</button>
-                        <Button size="sm" onClick={handleFilter} className="ml-auto bg-indigo-600 h-7 text-xs">Filtrar</Button>
-                        <Button size="sm" variant="outline" onClick={handleReset} className="h-7"><RotateCcw className="w-3.5 h-3.5" /></Button>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-muted/50 text-xs text-muted-foreground w-full">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium">Accesos rápidos:</span>
+                            <button type="button" onClick={() => setQuickDate('today')} className="hover:underline text-indigo-600 font-medium">Hoy</button>
+                            <span>•</span>
+                            <button type="button" onClick={() => setQuickDate('week')} className="hover:underline text-indigo-600 font-medium">Esta Semana</button>
+                            <span>•</span>
+                            <button type="button" onClick={() => setQuickDate('month')} className="hover:underline text-indigo-600 font-medium">Este Mes</button>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button size="sm" onClick={handleFilter} className="bg-indigo-600 h-8 text-xs rounded-xl">Filtrar</Button>
+                            <Button size="sm" variant="outline" onClick={handleReset} className="h-8 rounded-xl" title="Limpiar filtros"><RotateCcw className="w-3.5 h-3.5" /></Button>
+                            <ViewModeToggle value={viewMode} onChange={setViewMode} />
+                        </div>
                     </div>
                 </FilterBar>
 
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
-                        <div className="flex items-center gap-2">
-                            <ShieldCheck className="w-5 h-5 text-indigo-600" />
-                            <CardTitle className="text-base font-semibold">Bitácora de Asistencia por Empleado</CardTitle>
-                        </div>
-                        <Badge variant="secondary" className="font-mono text-xs">
-                            {marcajes.total || marcajes.data.length} empleados auditados
-                        </Badge>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
-                                    <tr>
-                                        <th className="px-4 py-3.5">Empleado</th>
-                                        <th className="px-4 py-3.5">Último Evento</th>
-                                        <th className="px-4 py-3.5">Estado / Tiempo Restante</th>
-                                        <th className="px-4 py-3.5">Semáforo LFT (Semana)</th>
-                                        <th className="px-4 py-3.5">Eventos en Período</th>
-                                        <th className="px-4 py-3.5">Origen & Sucursal</th>
-                                        <th className="px-4 py-3.5 text-right">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                    {marcajes.data.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                                                <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                                                <p className="font-medium">No se encontraron empleados con marcajes en el período.</p>
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        marcajes.data.map((emp) => {
-                                            const ultimo = emp.ultimo_marcaje;
-                                            const badge = ultimo ? getBadgeStyle(ultimo.tipo_marcaje) : null;
-                                            const origenBadge = ultimo ? getOrigenBadge(ultimo.origen) : null;
-                                            const IconComp = badge?.icon;
-                                            const infoTiempo = emp.tiempo_restante_info;
-                                            const initials = `${emp.nombres.charAt(0)}${emp.apellidos.charAt(0)}`.toUpperCase();
+                {viewMode === 'grid' ? (
+                    <div className="space-y-4">
+                        {marcajes.data.length === 0 ? (
+                            <GridEmptyState
+                                icon={<Clock className="h-6 w-6" />}
+                                title="No se encontraron empleados con marcajes en el período"
+                                description="Intenta ajustar los filtros de fechas, sucursal o empleado."
+                                hasActiveFilters={Boolean(
+                                    search ||
+                                        tipoMarcaje !== 'todos' ||
+                                        origen !== 'todos' ||
+                                        sucursalId !== 'todas' ||
+                                        responsableId !== 'todos' ||
+                                        fechaInicio ||
+                                        fechaFin
+                                )}
+                                onResetFilters={handleReset}
+                            />
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                                {marcajes.data.map((emp) => {
+                                    const fullName = `${emp.nombres} ${emp.apellidos}`.trim();
+                                    const ultimo = emp.ultimo_marcaje;
+                                    const badge = ultimo ? getBadgeStyle(ultimo.tipo_marcaje) : null;
+                                    const origenBadge = ultimo ? getOrigenBadge(ultimo.origen) : null;
+                                    const IconComp = badge?.icon;
+                                    const infoTiempo = emp.tiempo_restante_info;
+                                    const avatarStatus = resolveBitacoraAvatarStatus(emp);
 
-                                            return (
-                                                <tr key={emp.id} className="hover:bg-muted/40 transition-colors">
-                                                    <td className="px-4 py-3.5">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-full bg-indigo-600/10 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-xs shrink-0 border border-indigo-600/20">
-                                                                {initials}
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-semibold text-slate-900 dark:text-slate-100">{emp.nombres} {emp.apellidos}</div>
-                                                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                                                    <span className="font-mono font-medium">N° {emp.documento_identidad}</span>
-                                                                    <span>•</span>
-                                                                    <span>{emp.departamento?.nombre || 'General'}</span>
-                                                                </div>
+                                    const stripClass =
+                                        avatarStatus === 'danger'
+                                            ? 'from-rose-500 to-red-600'
+                                            : avatarStatus === 'warning'
+                                              ? 'from-amber-500 to-orange-500'
+                                              : avatarStatus === 'inactive'
+                                                ? 'from-slate-400 to-slate-500'
+                                                : 'from-indigo-500 via-blue-500 to-emerald-500';
+
+                                    return (
+                                        <div
+                                            key={emp.id}
+                                            className="group relative rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-card text-card-foreground shadow-xs hover:shadow-md hover:border-indigo-200/80 dark:hover:border-indigo-800/60 transition-all overflow-hidden flex flex-col justify-between"
+                                        >
+                                            <div className={cn('h-1.5 w-full bg-gradient-to-r', stripClass)} />
+
+                                            <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                                                <div className="space-y-4">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex items-start gap-3.5 min-w-0">
+                                                            <EntityAvatar
+                                                                name={fullName}
+                                                                firstName={emp.nombres}
+                                                                lastName={emp.apellidos}
+                                                                seed={emp.documento_identidad || fullName}
+                                                                src={emp.foto_empleado}
+                                                                status={avatarStatus}
+                                                                size="lg"
+                                                                shape="circle"
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <h3 className="font-bold text-base text-slate-900 dark:text-white truncate">
+                                                                    {fullName}
+                                                                </h3>
+                                                                <p className="text-xs font-mono text-muted-foreground truncate">
+                                                                    N° {emp.documento_identidad}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground truncate">
+                                                                    {emp.departamento?.nombre || 'General'}
+                                                                    {emp.cargo?.nombre ? ` • ${emp.cargo.nombre}` : ''}
+                                                                </p>
                                                             </div>
                                                         </div>
-                                                    </td>
-                                                    <td className="px-4 py-3.5">
+
+                                                        <Badge variant="outline" className="text-[11px] font-mono shrink-0 rounded-full">
+                                                            {emp.conteo_eventos.total} eventos
+                                                        </Badge>
+                                                    </div>
+
+                                                    {/* Último evento + Estado/Tiempo */}
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
                                                         {ultimo && badge && IconComp ? (
-                                                            <div className="space-y-1">
-                                                                <Badge className={`inline-flex items-center gap-1.5 px-2.5 py-1 font-medium border ${badge.class}`}>
-                                                                    <IconComp className="w-3.5 h-3.5 shrink-0" />
-                                                                    <span>{badge.label}</span>
-                                                                </Badge>
-                                                                <div className="font-mono text-xs text-slate-600">{formatFechaHora(ultimo.fecha_hora)}</div>
-                                                            </div>
-                                                        ) : <span className="text-xs text-muted-foreground">Sin registros</span>}
-                                                    </td>
-                                                    <td className="px-4 py-3.5">
-                                                        {infoTiempo && ultimo ? (
-                                                            ultimo.tipo_marcaje === 'salida' ? (
-                                                                <div>
+                                                            <Badge className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 font-medium border rounded-full text-[11px] ${badge.class}`}>
+                                                                <IconComp className="w-3 h-3 shrink-0" />
+                                                                <span>{badge.label}</span>
+                                                            </Badge>
+                                                        ) : (
+                                                            <span className="text-xs text-muted-foreground">Sin registros</span>
+                                                        )}
+                                                        {ultimo && (
+                                                            <span className="font-mono text-[11px] text-muted-foreground">
+                                                                {formatFechaHora(ultimo.fecha_hora)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {infoTiempo && ultimo && (
+                                                        <div>
+                                                            {ultimo.tipo_marcaje === 'salida' ? (
+                                                                <div className="flex items-center justify-between gap-2">
                                                                     <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 font-medium text-xs">
                                                                         Jornada Finalizada
                                                                     </Badge>
                                                                     {infoTiempo.subtexto && (
-                                                                        <div className="text-[11px] text-slate-500 mt-1">{infoTiempo.subtexto}</div>
+                                                                        <span className="text-[11px] text-slate-500">{infoTiempo.subtexto}</span>
                                                                     )}
                                                                 </div>
                                                             ) : (
-                                                                <LiveBreakTimer fechaHora={ultimo.fecha_hora} fechaHoraIso={ultimo.fecha_hora_iso} limiteMinutos={infoTiempo.limite_minutos ?? 15} subtexto={infoTiempo.subtexto} />
-                                                            )
-                                                        ) : <span className="text-xs text-muted-foreground">-</span>}
-                                                    </td>
-                                                    <td className="px-4 py-3.5">
-                                                        {emp.semana_lft ? (() => {
+                                                                <LiveBreakTimer
+                                                                    fechaHora={ultimo.fecha_hora}
+                                                                    fechaHoraIso={ultimo.fecha_hora_iso}
+                                                                    limiteMinutos={infoTiempo.limite_minutos ?? 15}
+                                                                    subtexto={infoTiempo.subtexto}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Semáforo LFT + Origen/GPS */}
+                                                    <div className="rounded-xl bg-slate-50/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 p-3 space-y-2 text-xs">
+                                                        {emp.semana_lft && (() => {
                                                             const sem = emp.semana_lft;
                                                             const norm = sem.semaforos.normal;
                                                             const dbl = sem.semaforos.tex_doble;
                                                             const trp = sem.semaforos.tex_triple;
 
-                                                            let badgeStyle = "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700";
-                                                            let dotColor = "bg-slate-400";
+                                                            let badgeStyle = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700';
+                                                            let dotColor = 'bg-slate-400';
                                                             let alertText = `${norm.horas}h / ${norm.limite}h`;
 
                                                             if (norm.estado === 'rojo') {
-                                                                badgeStyle = "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40 font-bold";
-                                                                dotColor = "bg-rose-500 animate-pulse";
+                                                                badgeStyle = 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40 font-bold';
+                                                                dotColor = 'bg-rose-500 animate-pulse';
                                                                 alertText = `${norm.horas}h (🔴 DG)`;
                                                             } else if (norm.estado === 'amarillo') {
-                                                                badgeStyle = "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 font-bold";
-                                                                dotColor = "bg-amber-500 animate-pulse";
+                                                                badgeStyle = 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 font-bold';
+                                                                dotColor = 'bg-amber-500 animate-pulse';
                                                                 alertText = `${norm.horas}h (🟡 Resp)`;
                                                             } else if (norm.estado === 'verde') {
-                                                                badgeStyle = "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 font-bold";
-                                                                dotColor = "bg-emerald-500";
+                                                                badgeStyle = 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 font-bold';
+                                                                dotColor = 'bg-emerald-500';
                                                                 alertText = `${norm.horas}h (🟢 RH)`;
                                                             }
 
                                                             return (
-                                                                <div className="space-y-1">
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <Badge variant="outline" className={`text-xs gap-1.5 py-0.5 px-2 font-mono ${badgeStyle}`} title={norm.label}>
-                                                                            <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                                                                            <span>{alertText}</span>
+                                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                                    <Badge variant="outline" className={`text-[11px] gap-1.5 py-0.5 px-2 font-mono ${badgeStyle}`} title={norm.label}>
+                                                                        <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                                                                        <span>LFT: {alertText}</span>
+                                                                    </Badge>
+                                                                    {dbl.horas > 0 && (
+                                                                        <Badge variant="outline" className="py-0 px-1.5 font-mono text-[10px] font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20">
+                                                                            TEX 2x: {dbl.horas}h
                                                                         </Badge>
-                                                                    </div>
-                                                                    <div className="flex flex-wrap items-center gap-1 text-[10px]">
-                                                                        {dbl.horas > 0 && (
-                                                                            <Badge variant="outline" className={`py-0 px-1 font-mono font-semibold ${
-                                                                                dbl.estado === 'rojo' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold' :
-                                                                                dbl.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/30 font-bold' :
-                                                                                'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20'
-                                                                            }`} title={`TEX Doble: ${dbl.horas}h`}>
-                                                                                TEX 2x: {dbl.horas}h
-                                                                            </Badge>
-                                                                        )}
-                                                                        {trp.horas > 0 && (
-                                                                            <Badge variant="outline" className="py-0 px-1 font-mono font-bold bg-rose-600/20 text-rose-700 dark:text-rose-300 border-rose-600/40 animate-pulse" title={`TEX Triple: ${trp.horas}h`}>
-                                                                                TEX 3x: {trp.horas}h
-                                                                            </Badge>
-                                                                        )}
-                                                                    </div>
+                                                                    )}
+                                                                    {trp.horas > 0 && (
+                                                                        <Badge variant="outline" className="py-0 px-1.5 font-mono text-[10px] font-bold bg-rose-600/20 text-rose-700 dark:text-rose-300 border-rose-600/40 animate-pulse">
+                                                                            TEX 3x: {trp.horas}h
+                                                                        </Badge>
+                                                                    )}
                                                                 </div>
                                                             );
-                                                        })() : <span className="text-xs text-muted-foreground">—</span>}
-                                                    </td>
-                                                    <td className="px-4 py-3.5">
-                                                        <Badge variant="outline" className="text-xs font-mono">{emp.conteo_eventos.total} eventos</Badge>
-                                                    </td>
-                                                    <td className="px-4 py-3.5">
-                                                        {ultimo && origenBadge ? (
-                                                            <div className="space-y-1">
-                                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                                    <Badge variant="outline" className={`capitalize font-normal border text-xs ${origenBadge.class}`}>{origenBadge.label}</Badge>
+                                                        })()}
+
+                                                        {ultimo && origenBadge && (
+                                                            <div className="flex flex-wrap items-center justify-between gap-2 text-muted-foreground">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Badge variant="outline" className={`capitalize font-normal border text-[11px] ${origenBadge.class}`}>
+                                                                        {origenBadge.label}
+                                                                    </Badge>
                                                                     {ultimo.latitud && ultimo.longitud && (
                                                                         <a
                                                                             href={`https://www.google.com/maps?q=${ultimo.latitud},${ultimo.longitud}`}
                                                                             target="_blank"
                                                                             rel="noreferrer"
-                                                                            title={`Ver GPS en Google Maps (${ultimo.latitud}, ${ultimo.longitud})`}
                                                                             className="text-blue-600 hover:text-blue-700 dark:text-blue-400 inline-flex items-center gap-0.5 text-[10px] font-mono bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-900 hover:underline"
                                                                         >
                                                                             <MapPin className="w-3 h-3 text-blue-500" />
@@ -695,23 +755,221 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                                                                         </a>
                                                                     )}
                                                                 </div>
-                                                                <div className="flex items-center gap-1 text-xs text-slate-500"><Building2 className="w-3 h-3" /> {ultimo.sucursal?.nombre || 'General'}</div>
+                                                                <span className="flex items-center gap-1 text-[11px] truncate">
+                                                                    <Building2 className="w-3 h-3 shrink-0" />
+                                                                    {ultimo.sucursal?.nombre || 'General'}
+                                                                </span>
                                                             </div>
-                                                        ) : <span className="text-xs text-muted-foreground">-</span>}
-                                                    </td>
-                                                    <td className="px-4 py-3.5 text-right">
-                                                        <Button size="sm" onClick={() => setSelectedEmpleado(emp)} className="h-8 gap-1.5"><Eye className="w-3.5 h-3.5" /> Auditar</Button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </CardContent>
-                </Card>
-                {marcajes.links && <Pagination paginatedData={marcajes} />}
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="pt-3 mt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3">
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        {emp.responsable
+                                                            ? `Resp: ${emp.responsable.nombres} ${emp.responsable.apellidos}`
+                                                            : emp.sucursal?.nombre || 'General'}
+                                                    </span>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => setSelectedEmpleado(emp)}
+                                                        className="h-8 gap-1.5 rounded-xl"
+                                                    >
+                                                        <Eye className="w-3.5 h-3.5" />
+                                                        Auditar
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
+                            <div className="flex items-center gap-2">
+                                <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                                <CardTitle className="text-base font-semibold">Bitácora de Asistencia por Empleado</CardTitle>
+                            </div>
+                            <Badge variant="secondary" className="font-mono text-xs">
+                                {marcajes.total || marcajes.data.length} empleados auditados
+                            </Badge>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
+                                        <tr>
+                                            <th className="px-4 py-3.5">Empleado</th>
+                                            <th className="px-4 py-3.5">Último Evento</th>
+                                            <th className="px-4 py-3.5">Estado / Tiempo Restante</th>
+                                            <th className="px-4 py-3.5">Semáforo LFT (Semana)</th>
+                                            <th className="px-4 py-3.5">Eventos en Período</th>
+                                            <th className="px-4 py-3.5">Origen & Sucursal</th>
+                                            <th className="px-4 py-3.5 text-right">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {marcajes.data.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                                                    <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                                                    <p className="font-medium">No se encontraron empleados con marcajes en el período.</p>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            marcajes.data.map((emp) => {
+                                                const ultimo = emp.ultimo_marcaje;
+                                                const badge = ultimo ? getBadgeStyle(ultimo.tipo_marcaje) : null;
+                                                const origenBadge = ultimo ? getOrigenBadge(ultimo.origen) : null;
+                                                const IconComp = badge?.icon;
+                                                const infoTiempo = emp.tiempo_restante_info;
+
+                                                return (
+                                                    <tr key={emp.id} className="hover:bg-muted/40 transition-colors">
+                                                        <td className="px-4 py-3.5">
+                                                            <div className="flex items-center gap-3">
+                                                                <EntityAvatar
+                                                                    name={`${emp.nombres} ${emp.apellidos}`}
+                                                                    firstName={emp.nombres}
+                                                                    lastName={emp.apellidos}
+                                                                    seed={emp.documento_identidad}
+                                                                    src={emp.foto_empleado}
+                                                                    status={resolveBitacoraAvatarStatus(emp)}
+                                                                    size="md"
+                                                                    shape="circle"
+                                                                />
+                                                                <div>
+                                                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{emp.nombres} {emp.apellidos}</div>
+                                                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                                                                        <span className="font-mono font-medium">N° {emp.documento_identidad}</span>
+                                                                        <span>•</span>
+                                                                        <span>{emp.departamento?.nombre || 'General'}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3.5">
+                                                            {ultimo && badge && IconComp ? (
+                                                                <div className="space-y-1">
+                                                                    <Badge className={`inline-flex items-center gap-1.5 px-2.5 py-1 font-medium border ${badge.class}`}>
+                                                                        <IconComp className="w-3.5 h-3.5 shrink-0" />
+                                                                        <span>{badge.label}</span>
+                                                                    </Badge>
+                                                                    <div className="font-mono text-xs text-slate-600">{formatFechaHora(ultimo.fecha_hora)}</div>
+                                                                </div>
+                                                            ) : <span className="text-xs text-muted-foreground">Sin registros</span>}
+                                                        </td>
+                                                        <td className="px-4 py-3.5">
+                                                            {infoTiempo && ultimo ? (
+                                                                ultimo.tipo_marcaje === 'salida' ? (
+                                                                    <div>
+                                                                        <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 font-medium text-xs">
+                                                                            Jornada Finalizada
+                                                                        </Badge>
+                                                                        {infoTiempo.subtexto && (
+                                                                            <div className="text-[11px] text-slate-500 mt-1">{infoTiempo.subtexto}</div>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <LiveBreakTimer fechaHora={ultimo.fecha_hora} fechaHoraIso={ultimo.fecha_hora_iso} limiteMinutos={infoTiempo.limite_minutos ?? 15} subtexto={infoTiempo.subtexto} />
+                                                                )
+                                                            ) : <span className="text-xs text-muted-foreground">-</span>}
+                                                        </td>
+                                                        <td className="px-4 py-3.5">
+                                                            {emp.semana_lft ? (() => {
+                                                                const sem = emp.semana_lft;
+                                                                const norm = sem.semaforos.normal;
+                                                                const dbl = sem.semaforos.tex_doble;
+                                                                const trp = sem.semaforos.tex_triple;
+
+                                                                let badgeStyle = "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700";
+                                                                let dotColor = "bg-slate-400";
+                                                                let alertText = `${norm.horas}h / ${norm.limite}h`;
+
+                                                                if (norm.estado === 'rojo') {
+                                                                    badgeStyle = "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40 font-bold";
+                                                                    dotColor = "bg-rose-500 animate-pulse";
+                                                                    alertText = `${norm.horas}h (🔴 DG)`;
+                                                                } else if (norm.estado === 'amarillo') {
+                                                                    badgeStyle = "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 font-bold";
+                                                                    dotColor = "bg-amber-500 animate-pulse";
+                                                                    alertText = `${norm.horas}h (🟡 Resp)`;
+                                                                } else if (norm.estado === 'verde') {
+                                                                    badgeStyle = "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 font-bold";
+                                                                    dotColor = "bg-emerald-500";
+                                                                    alertText = `${norm.horas}h (🟢 RH)`;
+                                                                }
+
+                                                                return (
+                                                                    <div className="space-y-1">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <Badge variant="outline" className={`text-xs gap-1.5 py-0.5 px-2 font-mono ${badgeStyle}`} title={norm.label}>
+                                                                                <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                                                                                <span>{alertText}</span>
+                                                                            </Badge>
+                                                                        </div>
+                                                                        <div className="flex flex-wrap items-center gap-1 text-[10px]">
+                                                                            {dbl.horas > 0 && (
+                                                                                <Badge variant="outline" className={`py-0 px-1 font-mono font-semibold ${
+                                                                                    dbl.estado === 'rojo' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold' :
+                                                                                    dbl.estado === 'amarillo' ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/30 font-bold' :
+                                                                                    'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20'
+                                                                                }`} title={`TEX Doble: ${dbl.horas}h`}>
+                                                                                    TEX 2x: {dbl.horas}h
+                                                                                </Badge>
+                                                                            )}
+                                                                            {trp.horas > 0 && (
+                                                                                <Badge variant="outline" className="py-0 px-1 font-mono font-bold bg-rose-600/20 text-rose-700 dark:text-rose-300 border-rose-600/40 animate-pulse" title={`TEX Triple: ${trp.horas}h`}>
+                                                                                    TEX 3x: {trp.horas}h
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })() : <span className="text-xs text-muted-foreground">—</span>}
+                                                        </td>
+                                                        <td className="px-4 py-3.5">
+                                                            <Badge variant="outline" className="text-xs font-mono">{emp.conteo_eventos.total} eventos</Badge>
+                                                        </td>
+                                                        <td className="px-4 py-3.5">
+                                                            {ultimo && origenBadge ? (
+                                                                <div className="space-y-1">
+                                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                                        <Badge variant="outline" className={`capitalize font-normal border text-xs ${origenBadge.class}`}>{origenBadge.label}</Badge>
+                                                                        {ultimo.latitud && ultimo.longitud && (
+                                                                            <a
+                                                                                href={`https://www.google.com/maps?q=${ultimo.latitud},${ultimo.longitud}`}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                title={`Ver GPS en Google Maps (${ultimo.latitud}, ${ultimo.longitud})`}
+                                                                                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 inline-flex items-center gap-0.5 text-[10px] font-mono bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-900 hover:underline"
+                                                                            >
+                                                                                <MapPin className="w-3 h-3 text-blue-500" />
+                                                                                GPS
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1 text-xs text-slate-500"><Building2 className="w-3 h-3" /> {ultimo.sucursal?.nombre || 'General'}</div>
+                                                                </div>
+                                                            ) : <span className="text-xs text-muted-foreground">-</span>}
+                                                        </td>
+                                                        <td className="px-4 py-3.5 text-right">
+                                                            <Button size="sm" onClick={() => setSelectedEmpleado(emp)} className="h-8 gap-1.5"><Eye className="w-3.5 h-3.5" /> Auditar</Button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+                {marcajes.links && <Pagination paginatedData={marcajes} filters={currentFilters} />}
             </div>
 
             <Dialog open={!!selectedEmpleado} onOpenChange={(open) => { if (!open) setSelectedEmpleado(null); }}>
@@ -731,9 +989,16 @@ export default function AsistenciaBitacoraIndex({ marcajes, stats, sucursales = 
                             {/* Card Header de Empleado */}
                             <div className="rounded-xl p-4 bg-gradient-to-br from-indigo-500/10 via-slate-50 dark:via-slate-900 to-purple-500/10 border border-indigo-200 dark:border-indigo-900/50 flex flex-wrap items-center justify-between gap-4">
                                 <div className="flex items-center gap-3.5">
-                                    <div className="w-12 h-12 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-sm shadow-md shrink-0">
-                                        {`${selectedEmpleado.nombres.charAt(0)}${selectedEmpleado.apellidos.charAt(0)}`.toUpperCase()}
-                                    </div>
+                                    <EntityAvatar
+                                        name={`${selectedEmpleado.nombres} ${selectedEmpleado.apellidos}`}
+                                        firstName={selectedEmpleado.nombres}
+                                        lastName={selectedEmpleado.apellidos}
+                                        seed={selectedEmpleado.documento_identidad}
+                                        src={selectedEmpleado.foto_empleado}
+                                        status={resolveBitacoraAvatarStatus(selectedEmpleado)}
+                                        size="lg"
+                                        shape="circle"
+                                    />
                                     <div>
                                         <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
                                             {selectedEmpleado.nombres} {selectedEmpleado.apellidos}

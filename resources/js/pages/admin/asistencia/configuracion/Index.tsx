@@ -1,7 +1,4 @@
-import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { ModuleHeader } from '@/components/module-header';
 import { 
     Clock, 
     ShieldCheck, 
@@ -29,16 +26,22 @@ import {
     TrendingDown,
     Activity
 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { EntityAvatar } from '@/components/entity-avatar';
+import { ModuleHeader } from '@/components/module-header';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { GridEmptyState, ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
+import { cn } from '@/lib/utils';
 import { notifySuccess } from '@/utils/notifications';
 
 interface ConfiguracionAsistencia {
@@ -155,6 +158,8 @@ const CRONOGRAMA_OFICIAL: Record<number, { normales: number; tex_doble: number; 
 
 export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, diasFestivos }: Props) {
     const [activeTab, setActiveTab] = useState('politicas');
+    const [turnosViewMode, setTurnosViewMode] = useViewMode('smurfit_asistencia_turnos_view_mode', 'grid');
+    const [festivosViewMode, setFestivosViewMode] = useViewMode('smurfit_asistencia_festivos_view_mode', 'grid');
 
     // Formulario de Configuración General y Reforma Laboral
     const configForm = useForm({
@@ -1139,162 +1144,369 @@ export default function ConfiguracionAsistenciaIndex({ configuracion, turnos, di
 
                     {/* PESTAÑA 2: TURNOS Y JORNADAS LABORALES */}
                     <TabsContent value="turnos" className="space-y-4">
-                        <div className="flex items-center justify-between p-4 rounded-xl border bg-card">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border bg-card">
                             <div>
                                 <h3 className="text-base font-semibold">Catálogo de Turnos Laborales</h3>
                                 <p className="text-muted-foreground text-xs">Clasificación de jornadas en Diurna (max 8h), Nocturna (max 7h) y Mixta (max 7.5h) según el tipo de jornada.</p>
                             </div>
-                            <Button onClick={openTurnoCreate} className="gap-2">
-                                <Plus className="w-4 h-4" />
-                                <span>Nuevo Turno</span>
-                            </Button>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <ViewModeToggle value={turnosViewMode} onChange={setTurnosViewMode} />
+                                <Button onClick={openTurnoCreate} className="gap-2 rounded-xl">
+                                    <Plus className="w-4 h-4" />
+                                    <span>Nuevo Turno</span>
+                                </Button>
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {turnos.map((t) => (
-                                <Card key={t.id} className={`relative transition-all duration-200 ${!t.status ? 'opacity-60' : ''}`}>
-                                    <CardHeader className="pb-2">
-                                        <div className="flex items-start justify-between">
-                                            <div>
-                                                <CardTitle className="text-base font-bold">{t.nombre}</CardTitle>
-                                                <Badge className={`mt-1 text-xs capitalize ${
-                                                    t.tipo_jornada === 'diurna' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                    t.tipo_jornada === 'nocturna' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400' :
-                                                    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                }`}>
-                                                    Jornada {t.tipo_jornada} ({t.horas_diarias_ley}h)
-                                                </Badge>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openTurnoEdit(t)}>
-                                                    <Pencil className="w-4 h-4" />
-                                                </Button>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-500 hover:text-rose-600" onClick={() => setDeletingTurno(t)}>
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 text-xs">
-                                        <div className="flex justify-between py-1 border-b">
-                                            <span className="text-muted-foreground">Horario Entrada / Salida:</span>
-                                            <span className="font-semibold">{t.hora_entrada.substring(0, 5)} - {t.hora_salida.substring(0, 5)} hrs</span>
-                                        </div>
-                                        <div className="flex justify-between py-1 border-b">
-                                            <span className="text-muted-foreground">Tiempo de Descanso:</span>
-                                            <span className="font-semibold">{t.minutos_descanso} min ({t.descanso_pagado ? 'Pagado' : 'No pagado'})</span>
-                                        </div>
-                                        <div className="pt-1">
-                                            <span className="text-muted-foreground block mb-1">Días Laborables:</span>
-                                            <div className="flex flex-wrap gap-1">
-                                                {(() => {
-                                                    const norm = normalizeDiasLaborables(t.dias_laborables);
-                                                    return DIAS_SEMANA.map((d) => {
-                                                        const isLab = norm.includes(d.id);
-                                                        return (
-                                                            <span key={d.id} className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                                                                isLab ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
+                        {turnos.length === 0 ? (
+                            <GridEmptyState
+                                icon={<Clock className="h-6 w-6" />}
+                                title="Sin turnos configurados"
+                                description="Registra un turno laboral para asignar horarios, descansos y días laborables."
+                                ctaLabel="Nuevo Turno"
+                                onCtaClick={openTurnoCreate}
+                            />
+                        ) : turnosViewMode === 'grid' ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {turnos.map((t) => {
+                                    const stripClass =
+                                        t.tipo_jornada === 'diurna'
+                                            ? 'from-amber-400 to-orange-500'
+                                            : t.tipo_jornada === 'nocturna'
+                                              ? 'from-indigo-500 to-violet-600'
+                                              : 'from-emerald-500 to-teal-600';
+
+                                    return (
+                                        <Card key={t.id} className={cn('relative overflow-hidden transition-all duration-200 rounded-2xl', !t.status && 'opacity-65')}>
+                                            <div className={cn('h-1.5 w-full bg-gradient-to-r', t.status ? stripClass : 'from-slate-400 to-slate-500')} />
+                                            <CardHeader className="pb-2">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="flex items-start gap-3 min-w-0">
+                                                        <EntityAvatar
+                                                            name={t.nombre}
+                                                            status={t.status ? 'active' : 'inactive'}
+                                                            size="md"
+                                                            shape="rounded"
+                                                        />
+                                                        <div className="min-w-0">
+                                                            <CardTitle className="text-base font-bold truncate">{t.nombre}</CardTitle>
+                                                            <Badge className={`mt-1 text-xs capitalize ${
+                                                                t.tipo_jornada === 'diurna' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                                t.tipo_jornada === 'nocturna' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400' :
+                                                                'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
                                                             }`}>
-                                                                {d.label.substring(0, 3)}
-                                                            </span>
-                                                        );
-                                                    });
-                                                })()}
-                                            </div>
-                                        </div>
+                                                                Jornada {t.tipo_jornada} ({t.horas_diarias_ley}h)
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openTurnoEdit(t)}>
+                                                            <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-500 hover:text-rose-600" onClick={() => setDeletingTurno(t)}>
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardHeader>
+                                            <CardContent className="space-y-3 text-xs">
+                                                <div className="flex justify-between py-1 border-b">
+                                                    <span className="text-muted-foreground">Horario Entrada / Salida:</span>
+                                                    <span className="font-semibold">{t.hora_entrada.substring(0, 5)} - {t.hora_salida.substring(0, 5)} hrs</span>
+                                                </div>
+                                                <div className="flex justify-between py-1 border-b">
+                                                    <span className="text-muted-foreground">Tiempo de Descanso:</span>
+                                                    <span className="font-semibold">{t.minutos_descanso} min ({t.descanso_pagado ? 'Pagado' : 'No pagado'})</span>
+                                                </div>
+                                                <div className="pt-1">
+                                                    <span className="text-muted-foreground block mb-1">Días Laborables:</span>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {(() => {
+                                                            const norm = normalizeDiasLaborables(t.dias_laborables);
 
-                                        <div className="pt-2 flex justify-between items-center border-t">
-                                            <span className="text-muted-foreground">Estado:</span>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => handleToggleTurno(t)}
-                                                className={t.status ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}
-                                            >
-                                                {t.status ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <XCircle className="w-4 h-4 mr-1" />}
-                                                {t.status ? 'Activo' : 'Inactivo'}
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
+                                                            return DIAS_SEMANA.map((d) => {
+                                                                const isLab = norm.includes(d.id);
+
+                                                                return (
+                                                                    <span key={d.id} className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                                                                        isLab ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
+                                                                    }`}>
+                                                                        {d.label.substring(0, 3)}
+                                                                    </span>
+                                                                );
+                                                            });
+                                                        })()}
+                                                    </div>
+                                                </div>
+
+                                                <div className="pt-2 flex justify-between items-center border-t">
+                                                    <span className="text-muted-foreground">Estado:</span>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => handleToggleTurno(t)}
+                                                        className={t.status ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}
+                                                    >
+                                                        {t.status ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <XCircle className="w-4 h-4 mr-1" />}
+                                                        {t.status ? 'Activo' : 'Inactivo'}
+                                                    </Button>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <Card>
+                                <CardContent className="p-0 overflow-x-auto">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
+                                            <tr>
+                                                <th className="px-4 py-3">Turno</th>
+                                                <th className="px-4 py-3">Horario</th>
+                                                <th className="px-4 py-3">Descanso</th>
+                                                <th className="px-4 py-3">Días Laborables</th>
+                                                <th className="px-4 py-3">Estado</th>
+                                                <th className="px-4 py-3 text-right">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y">
+                                            {turnos.map((t) => {
+                                                const norm = normalizeDiasLaborables(t.dias_laborables);
+
+                                                return (
+                                                    <tr key={t.id} className={cn('hover:bg-muted/50 transition-colors', !t.status && 'opacity-65')}>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <EntityAvatar
+                                                                    name={t.nombre}
+                                                                    status={t.status ? 'active' : 'inactive'}
+                                                                    size="sm"
+                                                                    shape="rounded"
+                                                                />
+                                                                <div>
+                                                                    <div className="font-semibold">{t.nombre}</div>
+                                                                    <Badge className={`mt-0.5 text-[10px] capitalize ${
+                                                                        t.tipo_jornada === 'diurna' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                                        t.tipo_jornada === 'nocturna' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400' :
+                                                                        'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                                    }`}>
+                                                                        {t.tipo_jornada} ({t.horas_diarias_ley}h)
+                                                                    </Badge>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3 font-mono text-xs">
+                                                            {t.hora_entrada.substring(0, 5)} - {t.hora_salida.substring(0, 5)} hrs
+                                                        </td>
+                                                        <td className="px-4 py-3 text-xs">
+                                                            {t.minutos_descanso} min ({t.descanso_pagado ? 'Pagado' : 'No pagado'})
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {DIAS_SEMANA.map((d) => (
+                                                                    <span
+                                                                        key={d.id}
+                                                                        className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                                                            norm.includes(d.id)
+                                                                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                                                : 'bg-muted text-muted-foreground'
+                                                                        }`}
+                                                                    >
+                                                                        {d.label.substring(0, 3)}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() => handleToggleTurno(t)}
+                                                                className={t.status ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}
+                                                            >
+                                                                {t.status ? <CheckCircle2 className="w-4 h-4 mr-1" /> : <XCircle className="w-4 h-4 mr-1" />}
+                                                                {t.status ? 'Activo' : 'Inactivo'}
+                                                            </Button>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right space-x-1">
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openTurnoEdit(t)}>
+                                                                <Pencil className="w-4 h-4" />
+                                                            </Button>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-500 hover:text-rose-600" onClick={() => setDeletingTurno(t)}>
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </CardContent>
+                            </Card>
+                        )}
                     </TabsContent>
 
                     {/* PESTAÑA 3: DÍAS FESTIVOS Y DESCANSOS OBLIGATORIOS */}
                     <TabsContent value="festivos" className="space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border bg-card">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border bg-card">
                             <div>
                                 <h3 className="text-base font-semibold">Días Festivos Obligatorios</h3>
                                 <p className="text-muted-foreground text-xs">Los días festivos trabajados se pagan al 200% adicional (Pago Triple total).</p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Button onClick={handlePrecargarLft} variant="outline" className="gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <ViewModeToggle value={festivosViewMode} onChange={setFestivosViewMode} />
+                                <Button onClick={handlePrecargarLft} variant="outline" className="gap-2 rounded-xl">
                                     <Sparkles className="w-4 h-4" />
                                     <span>Precargar Festivos Oficiales</span>
                                 </Button>
-                                <Button onClick={openFestivoCreate} className="gap-2">
+                                <Button onClick={openFestivoCreate} className="gap-2 rounded-xl">
                                     <Plus className="w-4 h-4" />
                                     <span>Agregar Festivo</span>
                                 </Button>
                             </div>
                         </div>
 
-                        <Card>
-                            <CardContent className="p-0 overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
-                                        <tr>
-                                            <th className="px-4 py-3">Fecha</th>
-                                            <th className="px-4 py-3">Descripción</th>
-                                            <th className="px-4 py-3">Origen</th>
-                                            <th className="px-4 py-3">Pago Adicional</th>
-                                            <th className="px-4 py-3 text-right">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {diasFestivos.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                                                    No hay días festivos registrados. Haz clic en "Precargar Festivos Oficiales" para cargar los oficiales de Ley.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            diasFestivos.map((f) => (
-                                                <tr key={f.id} className="hover:bg-muted/50 transition-colors">
-                                                    <td className="px-4 py-3 font-semibold">
-                                                        {f.fecha.substring(0, 10)}
-                                                    </td>
-                                                    <td className="px-4 py-3">{f.descripcion}</td>
-                                                    <td className="px-4 py-3">
+                        {festivosViewMode === 'grid' ? (
+                            diasFestivos.length === 0 ? (
+                                <GridEmptyState
+                                    icon={<Calendar className="h-6 w-6" />}
+                                    title="Sin días festivos registrados"
+                                    description='No hay días festivos registrados. Haz clic en "Precargar Festivos Oficiales" para cargar los oficiales de Ley.'
+                                    ctaLabel="Precargar Festivos Oficiales"
+                                    onCtaClick={handlePrecargarLft}
+                                />
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {diasFestivos.map((f) => (
+                                        <div
+                                            key={f.id}
+                                            className="group relative rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-card text-card-foreground shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between"
+                                        >
+                                            <div
+                                                className={cn(
+                                                    'h-1.5 w-full bg-gradient-to-r',
+                                                    f.es_oficial_lft ? 'from-emerald-500 to-teal-500' : 'from-indigo-500 to-violet-500'
+                                                )}
+                                            />
+                                            <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                                                <div className="space-y-3">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex items-start gap-3 min-w-0">
+                                                            <EntityAvatar
+                                                                name={f.descripcion}
+                                                                status={f.es_oficial_lft ? 'active' : 'warning'}
+                                                                size="lg"
+                                                                shape="rounded"
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <h4 className="font-bold text-sm text-slate-900 dark:text-white line-clamp-2">
+                                                                    {f.descripcion}
+                                                                </h4>
+                                                                <p className="text-xs font-mono text-muted-foreground mt-0.5 flex items-center gap-1">
+                                                                    <Calendar className="h-3 w-3 text-indigo-500" />
+                                                                    {f.fecha.substring(0, 10)}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-1 shrink-0">
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openFestivoEdit(f)}>
+                                                                <Pencil className="w-4 h-4" />
+                                                            </Button>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-500 hover:text-rose-600" onClick={() => setDeletingFestivo(f)}>
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                                                         {f.es_oficial_lft ? (
-                                                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-[11px]">
+                                                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-[11px] rounded-full">
                                                                 Oficial Ley
                                                             </Badge>
                                                         ) : (
-                                                            <Badge variant="outline" className="text-[11px]">
+                                                            <Badge variant="outline" className="text-[11px] rounded-full">
                                                                 Corporativo / Especial
                                                             </Badge>
                                                         )}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold">
-                                                        +{f.pago_porcentaje}% (Pago Triple)
-                                                    </td>
-                                                    <td className="px-4 py-3 text-right space-x-2">
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openFestivoEdit(f)}>
-                                                            <Pencil className="w-4 h-4" />
-                                                        </Button>
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-500 hover:text-rose-600" onClick={() => setDeletingFestivo(f)}>
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
+                                                        <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                                                            +{f.pago_porcentaje}% (Pago Triple)
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )
+                        ) : (
+                            <Card>
+                                <CardContent className="p-0 overflow-x-auto">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground border-b">
+                                            <tr>
+                                                <th className="px-4 py-3">Fecha</th>
+                                                <th className="px-4 py-3">Descripción</th>
+                                                <th className="px-4 py-3">Origen</th>
+                                                <th className="px-4 py-3">Pago Adicional</th>
+                                                <th className="px-4 py-3 text-right">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y">
+                                            {diasFestivos.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                                                        No hay días festivos registrados. Haz clic en "Precargar Festivos Oficiales" para cargar los oficiales de Ley.
                                                     </td>
                                                 </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </CardContent>
-                        </Card>
+                                            ) : (
+                                                diasFestivos.map((f) => (
+                                                    <tr key={f.id} className="hover:bg-muted/50 transition-colors">
+                                                        <td className="px-4 py-3 font-semibold font-mono text-xs">
+                                                            {f.fecha.substring(0, 10)}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <EntityAvatar
+                                                                    name={f.descripcion}
+                                                                    status={f.es_oficial_lft ? 'active' : 'warning'}
+                                                                    size="sm"
+                                                                    shape="rounded"
+                                                                />
+                                                                <span className="font-medium">{f.descripcion}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {f.es_oficial_lft ? (
+                                                                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-[11px]">
+                                                                    Oficial Ley
+                                                                </Badge>
+                                                            ) : (
+                                                                <Badge variant="outline" className="text-[11px]">
+                                                                    Corporativo / Especial
+                                                                </Badge>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-bold">
+                                                            +{f.pago_porcentaje}% (Pago Triple)
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right space-x-2">
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openFestivoEdit(f)}>
+                                                                <Pencil className="w-4 h-4" />
+                                                            </Button>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-500 hover:text-rose-600" onClick={() => setDeletingFestivo(f)}>
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </CardContent>
+                            </Card>
+                        )}
                     </TabsContent>
                 </Tabs>
             </div>

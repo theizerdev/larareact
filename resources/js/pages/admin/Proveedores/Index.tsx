@@ -25,10 +25,13 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { toast } from 'sonner';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { ModuleHeader } from '@/components/module-header';
-import { FilterBar, FilterField } from '@/components/filter-bar';
 import { DataTable } from '@/components/data-table';
+import { EntityAvatar } from '@/components/entity-avatar';
+import { FilterBar, FilterField } from '@/components/filter-bar';
+import { ModuleHeader } from '@/components/module-header';
+import Pagination from '@/components/pagination';
 import { StatCard } from '@/components/stat-card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -39,8 +42,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { CardGridSkeleton, GridEmptyState, ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
 import { useTranslate } from '@/hooks/use-translate';
-import { cn } from '@/lib/utils';
+import { cn, cleanParams } from '@/lib/utils';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import ProveedorEmpleadosModal from './Partials/ProveedorEmpleadosModal';
 import ProveedorVehiculosModal from './Partials/ProveedorVehiculosModal';
@@ -208,10 +212,25 @@ export default function ProveedoresIndexPage({
     };
 
     // Filtros
+    const [viewMode, setViewMode] = useViewMode('smurfit_proveedores_view_mode', 'grid');
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [paisFilter, setPaisFilter] = useState(filters.pais_id || '');
     const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '10');
+
+    const currentFilters = cleanParams({
+        search: searchTerm,
+        status: statusFilter,
+        pais_id: paisFilter,
+        perPage: perPageFilter,
+    });
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setStatusFilter('');
+        setPaisFilter('');
+        setPerPageFilter('10');
+    };
 
     // Configuración del Mapa
     const [mapCenter, setMapCenter] = useState<[number, number]>([19.4326, -99.1332]); // Centro por defecto (Ciudad de México o ajustable)
@@ -475,9 +494,18 @@ export default function ProveedoresIndexPage({
             className: 'font-medium',
             cell: (prov) => (
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded bg-[#104a29]/10 flex items-center justify-center">
-                        <Truck className="w-5 h-5 text-[#104a29]" />
-                    </div>
+                    <EntityAvatar
+                        name={prov.razon_social || prov.nombre_comercial}
+                        status={
+                            prov.status === 'activo'
+                                ? 'active'
+                                : prov.status === 'en_revision'
+                                  ? 'warning'
+                                  : 'danger'
+                        }
+                        size="sm"
+                        shape="rounded"
+                    />
                     <div>
                         <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{prov.razon_social}</p>
                         <p className="text-xs text-muted-foreground">{prov.nombre_comercial}</p>
@@ -684,25 +712,28 @@ export default function ProveedoresIndexPage({
                     />
                 </div>
 
-                {/* ── Barra de Filtros ── */}
-                <FilterBar>
-                    <div className="flex flex-wrap items-end gap-4">
+                {/* ── Barra de Filtros + Conmutador Cuadrícula / Lista ── */}
+                <FilterBar className="rounded-2xl">
+                    <div className="flex flex-1 flex-wrap items-end gap-4">
                         <FilterField label={__('Search')}>
                             <Input
                                 placeholder={__('Search by name, document, email...')}
-                                className="w-full md:w-80"
+                                className="w-full md:w-72 rounded-xl"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </FilterField>
 
                         <FilterField label={__('Status')}>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full md:w-44">
+                            <Select
+                                value={statusFilter || 'all'}
+                                onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full md:w-44 rounded-xl">
                                     <SelectValue placeholder={__('All')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{__('All')}</SelectItem>
+                                    <SelectItem value="all">{__('All')}</SelectItem>
                                     <SelectItem value="activo">{__('Active')}</SelectItem>
                                     <SelectItem value="suspendido">{__('Suspended')}</SelectItem>
                                     <SelectItem value="en_revision">{__('Under review')}</SelectItem>
@@ -711,12 +742,15 @@ export default function ProveedoresIndexPage({
                         </FilterField>
 
                         <FilterField label={__('Country')}>
-                            <Select value={paisFilter} onValueChange={setPaisFilter}>
-                                <SelectTrigger className="w-full md:w-52">
+                            <Select
+                                value={paisFilter || 'all'}
+                                onValueChange={(v) => setPaisFilter(v === 'all' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full md:w-48 rounded-xl">
                                     <SelectValue placeholder={__('All')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{__('All')}</SelectItem>
+                                    <SelectItem value="all">{__('All')}</SelectItem>
                                     {paises.map((p) => (
                                         <SelectItem key={p.id} value={String(p.id)}>
                                             {p.nombre}
@@ -728,7 +762,7 @@ export default function ProveedoresIndexPage({
 
                         <FilterField label={__('Records per page')}>
                             <Select value={perPageFilter} onValueChange={setPerPageFilter}>
-                                <SelectTrigger className="w-full md:w-28">
+                                <SelectTrigger className="w-full md:w-28 rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -740,25 +774,283 @@ export default function ProveedoresIndexPage({
                             </Select>
                         </FilterField>
                     </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end">
+                        <ViewModeToggle
+                            value={viewMode}
+                            onChange={setViewMode}
+                            activeColorClassName="text-emerald-700 dark:text-emerald-400"
+                        />
+                    </div>
                 </FilterBar>
 
-                {/* ── Tabla de Datos ── */}
-                <div className="w-full">
-                    <DataTable
-                        data={proveedores as any}
-                        columns={columns}
-                        isLoading={isTableLoading}
-                        onRowClick={(prov) => handleEditClick(prov)}
-                        emptyState={{
-                            title: __('No suppliers found'),
-                            description: searchTerm || statusFilter || paisFilter
-                                ? __('Try clearing your search filters or changing your query.')
-                                : __('You have not registered any suppliers yet.'),
-                            ctaLabel: __('New Supplier'),
-                            onCtaClick: handleCreateClick,
-                        }}
-                    />
-                </div>
+                {/* ── Cuadrícula o Tabla de Datos ── */}
+                {viewMode === 'grid' ? (
+                    <div className="space-y-4">
+                        {isTableLoading ? (
+                            <CardGridSkeleton />
+                        ) : proveedores.data.length === 0 ? (
+                            <GridEmptyState
+                                icon={<Truck className="h-6 w-6" />}
+                                title={__('No suppliers found')}
+                                description={
+                                    searchTerm || statusFilter || paisFilter
+                                        ? __('Try clearing your search filters or changing your query.')
+                                        : __('You have not registered any suppliers yet.')
+                                }
+                                hasActiveFilters={Boolean(searchTerm || statusFilter || paisFilter)}
+                                onResetFilters={handleResetFilters}
+                                ctaLabel={__('New Supplier')}
+                                onCtaClick={handleCreateClick}
+                            />
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                                {proveedores.data.map((prov) => {
+                                    const badgeStyle =
+                                        prov.status === 'activo'
+                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900'
+                                            : prov.status === 'en_revision'
+                                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900'
+                                              : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900';
+
+                                    const statusLabel =
+                                        prov.status === 'activo'
+                                            ? __('Active')
+                                            : prov.status === 'en_revision'
+                                              ? __('Under review')
+                                              : __('Suspended');
+
+                                    const stripClass =
+                                        prov.status === 'activo'
+                                            ? 'from-emerald-600 via-teal-500 to-green-500'
+                                            : prov.status === 'en_revision'
+                                              ? 'from-amber-500 to-orange-500'
+                                              : 'from-rose-500 to-red-600';
+
+                                    const avatarStatus =
+                                        prov.status === 'activo'
+                                            ? 'active'
+                                            : prov.status === 'en_revision'
+                                              ? 'warning'
+                                              : 'danger';
+
+                                    const phonePrefix = prov.pais_telefono?.codigo_telefonico
+                                        ? `${prov.pais_telefono.codigo_telefonico} `
+                                        : '';
+
+                                    return (
+                                        <div
+                                            key={prov.id}
+                                            onClick={() => handleEditClick(prov)}
+                                            className="group relative rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-card text-card-foreground shadow-xs hover:shadow-md hover:border-emerald-200/80 dark:hover:border-emerald-800/60 transition-all overflow-hidden flex flex-col justify-between cursor-pointer"
+                                        >
+                                            <div className={cn('h-1.5 w-full bg-gradient-to-r', stripClass)} />
+
+                                            <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                                                <div className="space-y-4">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex items-start gap-3.5 min-w-0">
+                                                            <EntityAvatar
+                                                                name={prov.razon_social || prov.nombre_comercial}
+                                                                status={avatarStatus}
+                                                                size="lg"
+                                                                shape="rounded"
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <h3 className="font-bold text-base text-slate-900 dark:text-white truncate">
+                                                                    {prov.razon_social}
+                                                                </h3>
+                                                                {prov.nombre_comercial && (
+                                                                    <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 truncate">
+                                                                        {prov.nombre_comercial}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div onClick={(e) => e.stopPropagation()}>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0">
+                                                                        <MoreVertical className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-52 rounded-xl">
+                                                                    <DropdownMenuItem onClick={() => handleEditClick(prov)}>
+                                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                                        {__('Edit')}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => router.get(`/admin/proveedores/${prov.id}/carnet`)}>
+                                                                        <QrCode className="mr-2 h-4 w-4 text-rose-600" />
+                                                                        {__('Gafete Rojo / Carnet')}
+                                                                    </DropdownMenuItem>
+                                                                    {prov.telefono && (
+                                                                        <DropdownMenuItem onClick={() => handleSendCarnetWhatsApp(prov)}>
+                                                                            <Send className="mr-2 h-4 w-4 text-emerald-600" />
+                                                                            {__('Enviar Gafete por WhatsApp')}
+                                                                        </DropdownMenuItem>
+                                                                    )}
+                                                                    <DropdownMenuItem onClick={() => handleManageEmployeesClick(prov)}>
+                                                                        <UserIcon className="mr-2 h-4 w-4 text-[#104a29]" />
+                                                                        {__('Employees')}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleManageVehiclesClick(prov)}>
+                                                                        <Car className="mr-2 h-4 w-4 text-[#104a29]" />
+                                                                        {__('Vehicles')}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => setDeletingProveedor(prov)}
+                                                                        className="text-rose-600 focus:text-rose-600 dark:text-rose-400"
+                                                                    >
+                                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                                        {__('Delete')}
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <button
+                                                                    type="button"
+                                                                    className={cn(
+                                                                        'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border cursor-pointer hover:opacity-85 transition-opacity',
+                                                                        badgeStyle
+                                                                    )}
+                                                                >
+                                                                    {statusLabel}
+                                                                </button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="start">
+                                                                <DropdownMenuItem onClick={() => handleToggleStatus(prov, 'activo')} className="flex items-center gap-2">
+                                                                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                                                                    {__('Active')}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleToggleStatus(prov, 'suspendido')} className="flex items-center gap-2">
+                                                                    <XCircle className="w-4 h-4 text-rose-500" />
+                                                                    {__('Suspended')}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleToggleStatus(prov, 'en_revision')} className="flex items-center gap-2">
+                                                                    <Activity className="w-4 h-4 text-amber-500" />
+                                                                    {__('Under review')}
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+
+                                                        <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono text-[11px] rounded-full border border-emerald-500/20">
+                                                            CÓD: {prov.codigo_acceso || prov.documento_identidad || 'N/A'}
+                                                        </Badge>
+                                                        {prov.rfc && (
+                                                            <Badge variant="outline" className="font-mono text-[10px] rounded-full">
+                                                                RFC: {prov.rfc}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="rounded-xl bg-slate-50/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 p-3 space-y-1.5 text-xs text-muted-foreground">
+                                                        {prov.responsable && (
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                    <EntityAvatar
+                                                                        name={prov.responsable}
+                                                                        size="xs"
+                                                                        shape="circle"
+                                                                        showStatusDot={false}
+                                                                    />
+                                                                    <span className="truncate font-medium text-slate-700 dark:text-slate-300">
+                                                                        {prov.responsable}
+                                                                    </span>
+                                                                </div>
+                                                                {prov.curp && (
+                                                                    <span className="font-mono text-[10px] shrink-0">
+                                                                        {prov.curp}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center justify-between gap-2 pt-0.5">
+                                                            <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                                                                <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
+                                                                {prov.telefono ? `${phonePrefix}${prov.telefono}` : '—'}
+                                                            </span>
+                                                            {prov.pais?.nombre && (
+                                                                <span className="flex items-center gap-1 truncate text-[11px]">
+                                                                    <Globe className="h-3 w-3 text-indigo-500 shrink-0" />
+                                                                    {prov.pais.nombre}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="pt-3 mt-1 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2"
+                                                >
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleManageEmployeesClick(prov)}
+                                                            className="h-8 px-2.5 rounded-xl text-xs gap-1 text-slate-600 dark:text-slate-300"
+                                                        >
+                                                            <UserIcon className="h-3.5 w-3.5 text-[#104a29]" />
+                                                            {__('Employees')}
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleManageVehiclesClick(prov)}
+                                                            className="h-8 px-2.5 rounded-xl text-xs gap-1 text-slate-600 dark:text-slate-300"
+                                                        >
+                                                            <Car className="h-3.5 w-3.5 text-[#104a29]" />
+                                                            {__('Vehicles')}
+                                                        </Button>
+                                                    </div>
+
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleEditClick(prov)}
+                                                        className="h-8 px-3 rounded-xl text-xs gap-1.5 hover:border-emerald-300 hover:text-emerald-700 dark:hover:text-emerald-300"
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                        {__('Edit')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        <Pagination paginatedData={proveedores as any} filters={currentFilters} />
+                    </div>
+                ) : (
+                    <div className="w-full">
+                        <DataTable
+                            data={proveedores as any}
+                            columns={columns}
+                            filters={currentFilters}
+                            isLoading={isTableLoading}
+                            onRowClick={(prov) => handleEditClick(prov)}
+                            emptyState={{
+                                title: __('No suppliers found'),
+                                description: searchTerm || statusFilter || paisFilter
+                                    ? __('Try clearing your search filters or changing your query.')
+                                    : __('You have not registered any suppliers yet.'),
+                                ctaLabel: __('New Supplier'),
+                                onCtaClick: handleCreateClick,
+                            }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* ══ Ventana Modal de Creación / Edición ════════════════════════════ */}

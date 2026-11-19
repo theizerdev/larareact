@@ -14,18 +14,17 @@ import {
     Clock,
     Search,
     Loader2,
-    Sparkles,
     Compass,
-    Layers,
-    Globe,
     Check,
 } from 'lucide-react';
 import React, { useState, Suspense, lazy, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
+import { EntityAvatar } from '@/components/entity-avatar';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
+import Pagination from '@/components/pagination';
 import { StatCard } from '@/components/stat-card';
 import {
     AlertDialog,
@@ -37,14 +36,13 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogHeader,
     DialogTitle,
-    DialogFooter,
 } from '@/components/ui/dialog';
 import {
     DropdownMenu,
@@ -55,16 +53,17 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { CardGridSkeleton, GridEmptyState, ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
+import { useLocationGeocoding } from '@/hooks/use-location-geocoding';
+import { useTranslate } from '@/hooks/use-translate';
 import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
-import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
-import { useLocationGeocoding } from '@/hooks/use-location-geocoding';
 
 const SucursalMapComponent = lazy(() => {
     return import('../Empresas/Partials/MapComponent').then((mod) => ({ default: mod.default }));
@@ -139,7 +138,7 @@ const initialForm = {
 // ─── Página principal ──────────────────────────────────────────────────────────
 
 export default function SucursalesIndexPage({
-    auth, sucursales, stats, empresas, paises, filters,
+    sucursales, stats, empresas, paises, filters,
 }: SucursalesPageProps) {
     const { __ } = useTranslate();
 
@@ -149,6 +148,7 @@ export default function SucursalesIndexPage({
     ];
 
     // ── Estados ────────────────────────────────────────────────────────────────
+    const [viewMode, setViewMode]                 = useViewMode('smurfit_sucursales_view_mode', 'grid');
     const [isModalOpen, setIsModalOpen]           = useState(false);
     const [editingSucursal, setEditingSucursal]   = useState<Sucursal | null>(null);
     const [deletingSucursal, setDeletingSucursal] = useState<Sucursal | null>(null);
@@ -160,6 +160,14 @@ export default function SucursalesIndexPage({
     const [statusFilter, setStatusFilter]     = useState(filters.status || '');
     const [empresaFilter, setEmpresaFilter]   = useState(filters.empresa_id || '');
     const [perPageFilter, setPerPageFilter]   = useState(filters.perPage || '10');
+    const isFirstRender = useRef(true);
+
+    const currentFilters = cleanParams({
+        search:     searchTerm,
+        status:     statusFilter,
+        empresa_id: empresaFilter,
+        perPage:    perPageFilter,
+    });
 
     // ── Hooks de navegación ────────────────────────────────────────────────────
     React.useEffect(() => {
@@ -167,12 +175,19 @@ export default function SucursalesIndexPage({
         const unbindFinish = router.on('finish', () => setIsTableLoading(false));
 
         return () => {
- unbindStart(); unbindFinish(); 
-};
+            unbindStart();
+            unbindFinish();
+        };
     }, []);
 
     // Debounce de filtros
     React.useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+
+            return;
+        }
+
         const timer = setTimeout(() => {
             router.get(
                 window.location.pathname,
@@ -189,6 +204,13 @@ export default function SucursalesIndexPage({
         return () => clearTimeout(timer);
     }, [searchTerm, statusFilter, empresaFilter, perPageFilter]);
 
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setStatusFilter('');
+        setEmpresaFilter('');
+        setPerPageFilter('10');
+    };
+
     // ── Formulario Inertia ─────────────────────────────────────────────────────
     const { data, setData, post, put, processing, errors, reset } = useForm(initialForm);
 
@@ -203,10 +225,13 @@ export default function SucursalesIndexPage({
     const handleForceGeocode = async () => {
         if (!data.direccion || data.direccion.trim().length < 3) {
             notifyError(__('Please enter a valid address to locate on the map.'));
+
             return;
         }
+
         coordsSourceRef.current = 'auto';
         const result = await forwardGeocode(data.direccion);
+
         if (result) {
             setData((prev) => ({
                 ...prev,
@@ -321,11 +346,16 @@ return;
             className: 'font-medium',
             cell: (sucursal) => (
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                        <GitBranch className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                    </div>
-                    <div>
-                        <p className="font-medium text-sm">{sucursal.nombre}</p>
+                    <EntityAvatar
+                        name={sucursal.nombre}
+                        status={sucursal.status ? 'active' : 'inactive'}
+                        size="md"
+                        shape="rounded"
+                    />
+                    <div className="min-w-0">
+                        <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
+                            {sucursal.nombre}
+                        </p>
                         {sucursal.direccion && (
                             <p className="text-xs text-muted-foreground truncate max-w-[200px]">{sucursal.direccion}</p>
                         )}
@@ -339,11 +369,14 @@ return;
             hideOn: 'mobile',
             cell: (sucursal) => (
                 <div className="flex items-center gap-2">
-                    {sucursal.empresa?.logo_mini || sucursal.empresa?.logo ? (
-                        <img
-                            src={sucursal.empresa.logo_mini || sucursal.empresa.logo || ''}
-                            alt={sucursal.empresa.razon_social}
-                            className="w-6 h-6 rounded object-cover border"
+                    {sucursal.empresa ? (
+                        <EntityAvatar
+                            name={sucursal.empresa.razon_social}
+                            src={sucursal.empresa.logo_mini || sucursal.empresa.logo}
+                            size="xs"
+                            shape="rounded"
+                            showStatusDot={false}
+                            imageFit="contain"
                         />
                     ) : (
                         <div className="w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
@@ -486,24 +519,27 @@ return;
                     />
                 </div>
 
-                {/* Filtros */}
-                <FilterBar>
-                    <div className="flex flex-wrap items-end gap-4">
+                {/* Filtros + Conmutador Cuadrícula / Lista */}
+                <FilterBar className="rounded-2xl">
+                    <div className="flex flex-1 flex-wrap items-end gap-4">
                         <FilterField label={__('Search')}>
                             <Input
                                 placeholder={__('Search by name, phone, address...')}
-                                className="w-full md:w-80"
+                                className="w-full md:w-72 rounded-xl"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </FilterField>
                         <FilterField label={__('Company')}>
-                            <Select value={empresaFilter} onValueChange={setEmpresaFilter}>
-                                <SelectTrigger className="w-full md:w-56">
+                            <Select
+                                value={empresaFilter || 'all'}
+                                onValueChange={(v) => setEmpresaFilter(v === 'all' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full md:w-52 rounded-xl">
                                     <SelectValue placeholder={__('All companies')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{__('All companies')}</SelectItem>
+                                    <SelectItem value="all">{__('All companies')}</SelectItem>
                                     {empresas.map((emp) => (
                                         <SelectItem key={emp.id} value={String(emp.id)}>
                                             {emp.razon_social}
@@ -513,12 +549,15 @@ return;
                             </Select>
                         </FilterField>
                         <FilterField label={__('Status')}>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full md:w-40">
+                            <Select
+                                value={statusFilter || 'all'}
+                                onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full md:w-36 rounded-xl">
                                     <SelectValue placeholder={__('All')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{__('All')}</SelectItem>
+                                    <SelectItem value="all">{__('All')}</SelectItem>
                                     <SelectItem value="1">{__('Active')}</SelectItem>
                                     <SelectItem value="0">{__('Inactive')}</SelectItem>
                                 </SelectContent>
@@ -526,7 +565,7 @@ return;
                         </FilterField>
                         <FilterField label={__('Records per page')}>
                             <Select value={perPageFilter} onValueChange={setPerPageFilter}>
-                                <SelectTrigger className="w-full md:w-40">
+                                <SelectTrigger className="w-full md:w-32 rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -538,25 +577,210 @@ return;
                             </Select>
                         </FilterField>
                     </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end">
+                        <ViewModeToggle
+                            value={viewMode}
+                            onChange={setViewMode}
+                            activeColorClassName="text-violet-600 dark:text-violet-400"
+                        />
+                    </div>
                 </FilterBar>
 
-                {/* Tabla */}
-                <div className="w-full">
-                    <DataTable
-                        data={sucursales}
-                        columns={columns}
-                        isLoading={isTableLoading}
-                        onRowClick={(sucursal) => handleEditClick(sucursal)}
-                        emptyState={{
-                            title: 'No branches found',
-                            description: searchTerm || statusFilter || empresaFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any branches yet.',
-                            ctaLabel: 'New Branch',
-                            onCtaClick: handleCreateClick,
-                        }}
-                    />
-                </div>
+                {/* Contenido Principal: Cuadrícula o Lista */}
+                {viewMode === 'grid' ? (
+                    <div className="space-y-4">
+                        {isTableLoading ? (
+                            <CardGridSkeleton />
+                        ) : sucursales.data.length === 0 ? (
+                            <GridEmptyState
+                                icon={<GitBranch className="h-6 w-6" />}
+                                title={__('No branches found')}
+                                description={
+                                    searchTerm || statusFilter || empresaFilter
+                                        ? __('Try clearing your search filters or changing your query.')
+                                        : __('You have not registered any branches yet.')
+                                }
+                                hasActiveFilters={Boolean(searchTerm || statusFilter || empresaFilter)}
+                                onResetFilters={handleResetFilters}
+                                ctaLabel={__('New Branch')}
+                                onCtaClick={handleCreateClick}
+                            />
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                                {sucursales.data.map((sucursal) => (
+                                    <div
+                                        key={sucursal.id}
+                                        onClick={() => handleEditClick(sucursal)}
+                                        className="group relative rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-card text-card-foreground shadow-xs hover:shadow-md hover:border-violet-200/80 dark:hover:border-violet-800/60 transition-all overflow-hidden flex flex-col justify-between cursor-pointer"
+                                    >
+                                        <div
+                                            className={cn(
+                                                'h-1.5 w-full bg-gradient-to-r',
+                                                sucursal.status
+                                                    ? 'from-violet-500 via-indigo-500 to-emerald-500'
+                                                    : 'from-slate-400 to-slate-500'
+                                            )}
+                                        />
+
+                                        <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                                            <div className="space-y-4">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex items-start gap-3.5 min-w-0">
+                                                        <EntityAvatar
+                                                            name={sucursal.nombre}
+                                                            status={sucursal.status ? 'active' : 'inactive'}
+                                                            size="lg"
+                                                            shape="rounded"
+                                                        />
+                                                        <div className="min-w-0">
+                                                            <h3 className="font-bold text-base text-slate-900 dark:text-white truncate">
+                                                                {sucursal.nombre}
+                                                            </h3>
+                                                            {sucursal.empresa && (
+                                                                <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground truncate">
+                                                                    <EntityAvatar
+                                                                        name={sucursal.empresa.razon_social}
+                                                                        src={sucursal.empresa.logo_mini || sucursal.empresa.logo}
+                                                                        size="xs"
+                                                                        shape="rounded"
+                                                                        showStatusDot={false}
+                                                                        imageFit="contain"
+                                                                    />
+                                                                    <span className="truncate font-medium text-slate-700 dark:text-slate-300">
+                                                                        {sucursal.empresa.razon_social}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div onClick={(e) => e.stopPropagation()}>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0">
+                                                                    <MoreVertical className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-44 rounded-xl">
+                                                                <DropdownMenuItem onClick={() => handleEditClick(sucursal)}>
+                                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                                    {__('Edit')}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleToggleStatus(sucursal)}>
+                                                                    <ToggleRight className="mr-2 h-4 w-4" />
+                                                                    {sucursal.status ? __('Deactivate') : __('Activate')}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => setDeletingSucursal(sucursal)}
+                                                                    className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    {__('Delete')}
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <span
+                                                        className={cn(
+                                                            'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border',
+                                                            sucursal.status
+                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900'
+                                                                : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                                                        )}
+                                                    >
+                                                        {sucursal.status ? __('Active') : __('Inactive')}
+                                                    </span>
+                                                    {sucursal.codigo_numeral && (
+                                                        <Badge variant="secondary" className="font-mono text-[11px] rounded-full">
+                                                            #{sucursal.codigo_numeral}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+
+                                                <div className="rounded-xl bg-slate-50/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 p-3 space-y-1.5 text-xs text-muted-foreground">
+                                                    <div className="flex items-start gap-2">
+                                                        <MapPin className="h-3.5 w-3.5 text-violet-500 shrink-0 mt-0.5" />
+                                                        <span className="line-clamp-2">
+                                                            {sucursal.direccion || __('No address registered')}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                                                        <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                                                            <Phone className="h-3 w-3 text-emerald-600" />
+                                                            {sucursal.telefono || '—'}
+                                                        </span>
+                                                        <span className="flex items-center gap-1 font-mono text-[11px]">
+                                                            <Clock className="h-3 w-3 text-blue-500" />
+                                                            {sucursal.zona_horaria || __('Default')}
+                                                        </span>
+                                                    </div>
+                                                    {sucursal.latitud && sucursal.longitud && (
+                                                        <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-500">
+                                                            <Compass className="h-3 w-3 text-indigo-500" />
+                                                            <span>
+                                                                {Number(sucursal.latitud).toFixed(4)}, {Number(sucursal.longitud).toFixed(4)}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="pt-3 mt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Switch
+                                                        checked={sucursal.status}
+                                                        onCheckedChange={() => handleToggleStatus(sucursal)}
+                                                    />
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        {sucursal.status ? __('Active') : __('Inactive')}
+                                                    </span>
+                                                </div>
+
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleEditClick(sucursal)}
+                                                    className="h-8 px-3 rounded-xl text-xs gap-1.5 hover:border-violet-300 hover:text-violet-700 dark:hover:text-violet-300"
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                    {__('Edit')}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <Pagination paginatedData={sucursales} filters={currentFilters} />
+                    </div>
+                ) : (
+                    <div className="w-full">
+                        <DataTable
+                            data={sucursales}
+                            columns={columns}
+                            filters={currentFilters}
+                            isLoading={isTableLoading}
+                            onRowClick={(sucursal) => handleEditClick(sucursal)}
+                            emptyState={{
+                                title: 'No branches found',
+                                description: searchTerm || statusFilter || empresaFilter
+                                    ? 'Try clearing your search filters or changing your query.'
+                                    : 'You have not registered any branches yet.',
+                                ctaLabel: 'New Branch',
+                                onCtaClick: handleCreateClick,
+                            }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* ── Modal Creación / Edición Modernizado ─────────────────────────────────── */}

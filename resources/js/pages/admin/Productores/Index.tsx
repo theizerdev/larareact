@@ -29,27 +29,30 @@ import { toast } from 'sonner';
 import { useLocationGeocoding } from '@/hooks/use-location-geocoding';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { ModuleHeader } from '@/components/module-header';
-import { FilterBar, FilterField } from '@/components/filter-bar';
 import { DataTable } from '@/components/data-table';
+import { EntityAvatar } from '@/components/entity-avatar';
+import { FilterBar, FilterField } from '@/components/filter-bar';
+import MapboxMap, { MapAddressDetails } from '@/components/mapbox-map';
+import { ModuleHeader } from '@/components/module-header';
+import Pagination from '@/components/pagination';
 import { StatCard } from '@/components/stat-card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { CardGridSkeleton, GridEmptyState, ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
 import { useTranslate } from '@/hooks/use-translate';
-import { cn } from '@/lib/utils';
+import { cn, cleanParams } from '@/lib/utils';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import ProductorEmpleadosModal from './Partials/ProductorEmpleadosModal';
 import ProductorVehiculosModal from './Partials/ProductorVehiculosModal';
-import MapboxMap, { MapAddressDetails } from '@/components/mapbox-map';
 
 interface Pais {
     id: number;
@@ -181,11 +184,30 @@ export default function Index({
     const [activeTab, setActiveTab] = useState('general');
 
     // Filter states
+    const [viewMode, setViewMode] = useViewMode('smurfit_productores_view_mode', 'grid');
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [paisFilter, setPaisFilter] = useState(filters.pais_id || '');
     const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '10');
     const [isTableLoading, setIsTableLoading] = useState(false);
+
+    const currentFilters = cleanParams({
+        search: searchTerm,
+        status: statusFilter,
+        pais_id: paisFilter,
+        perPage: perPageFilter,
+    });
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setStatusFilter('');
+        setPaisFilter('');
+        setPerPageFilter('10');
+    };
+
+    const toggleCardSelection = (id: number, checked: boolean) => {
+        setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((item) => item !== id)));
+    };
 
     // Debounced filter effect
     const isFirstMount = useRef(true);
@@ -439,19 +461,28 @@ export default function Index({
         {
             accessorKey: 'razon_social',
             header: __('Rancho'),
-            cell: (productor: Productor) => (
-                <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-[#104a29]/10 text-[#104a29] dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center font-bold">
-                        <Sprout className="h-5 w-5" />
-                    </div>
-                    <div>
-                        <div className="font-semibold text-slate-900 dark:text-white">
-                            {productor.razon_social}
+            cell: (productor: Productor) => {
+                const rawStatus = (productor.status || '').toLowerCase();
+                const isActive = rawStatus === 'activo' || rawStatus === 'active';
+                const isReview = rawStatus === 'en_revision' || rawStatus === 'under_review' || rawStatus === 'pending';
+
+                return (
+                    <div className="flex items-center gap-3">
+                        <EntityAvatar
+                            name={productor.razon_social || productor.nombre_comercial}
+                            status={isActive ? 'active' : isReview ? 'warning' : 'danger'}
+                            size="sm"
+                            shape="rounded"
+                        />
+                        <div>
+                            <div className="font-semibold text-slate-900 dark:text-white">
+                                {productor.razon_social}
+                            </div>
+                            <div className="text-xs text-slate-500">{productor.nombre_comercial}</div>
                         </div>
-                        <div className="text-xs text-slate-500">{productor.nombre_comercial}</div>
                     </div>
-                </div>
-            ),
+                );
+            },
         },
         {
             accessorKey: 'codigo_acceso',
@@ -659,23 +690,26 @@ export default function Index({
                     />
                 </div>
 
-                <FilterBar>
-                    <div className="flex flex-wrap items-end gap-4">
+                <FilterBar className="rounded-2xl">
+                    <div className="flex flex-1 flex-wrap items-end gap-4">
                         <FilterField label={__('Buscar')}>
                             <Input
                                 placeholder={__('Search by rancho, RFC, responsible, phone...')}
-                                className="w-full md:w-80"
+                                className="w-full md:w-72 rounded-xl"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </FilterField>
                         <FilterField label={__('Estado')}>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full md:w-44">
+                            <Select
+                                value={statusFilter || 'all'}
+                                onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full md:w-44 rounded-xl">
                                     <SelectValue placeholder={__('Todos')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{__('Todos')}</SelectItem>
+                                    <SelectItem value="all">{__('Todos')}</SelectItem>
                                     <SelectItem value="activo">{__('Activo')}</SelectItem>
                                     <SelectItem value="suspendido">{__('Suspendido')}</SelectItem>
                                     <SelectItem value="en_revision">{__('En Revisión')}</SelectItem>
@@ -683,12 +717,15 @@ export default function Index({
                             </Select>
                         </FilterField>
                         <FilterField label={__('Country')}>
-                            <Select value={paisFilter} onValueChange={setPaisFilter}>
-                                <SelectTrigger className="w-full md:w-52">
+                            <Select
+                                value={paisFilter || 'all'}
+                                onValueChange={(v) => setPaisFilter(v === 'all' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full md:w-48 rounded-xl">
                                     <SelectValue placeholder={__('All')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{__('All')}</SelectItem>
+                                    <SelectItem value="all">{__('All')}</SelectItem>
                                     {paises.map((p) => (
                                         <SelectItem key={p.id} value={String(p.id)}>
                                             {p.nombre}
@@ -699,7 +736,7 @@ export default function Index({
                         </FilterField>
                         <FilterField label={__('Records per page')}>
                             <Select value={perPageFilter} onValueChange={setPerPageFilter}>
-                                <SelectTrigger className="w-full md:w-28">
+                                <SelectTrigger className="w-full md:w-28 rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -711,17 +748,274 @@ export default function Index({
                             </Select>
                         </FilterField>
                     </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end">
+                        <ViewModeToggle
+                            value={viewMode}
+                            onChange={setViewMode}
+                            activeColorClassName="text-blue-700 dark:text-blue-400"
+                        />
+                    </div>
                 </FilterBar>
 
-                <div className="w-full">
-                    <DataTable
-                        columns={columns}
-                        data={productores as any}
-                        selectedIds={selectedIds}
-                        onSelectionChange={setSelectedIds}
-                        isLoading={isTableLoading}
-                    />
-                </div>
+                {viewMode === 'grid' ? (
+                    <div className="space-y-4">
+                        {isTableLoading ? (
+                            <CardGridSkeleton />
+                        ) : productores.data.length === 0 ? (
+                            <GridEmptyState
+                                icon={<Sprout className="h-6 w-6" />}
+                                title={__('No producers found')}
+                                description={
+                                    searchTerm || statusFilter || paisFilter
+                                        ? __('Try clearing your search filters or changing your query.')
+                                        : __('You have not registered any producers yet.')
+                                }
+                                hasActiveFilters={Boolean(searchTerm || statusFilter || paisFilter)}
+                                onResetFilters={handleResetFilters}
+                                ctaLabel={__('New Producer')}
+                                onCtaClick={handleOpenCreateModal}
+                            />
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                                {productores.data.map((productor) => {
+                                    const rawStatus = (productor.status || '').toLowerCase();
+                                    const isActive = rawStatus === 'activo' || rawStatus === 'active';
+                                    const isReview = rawStatus === 'en_revision' || rawStatus === 'under_review' || rawStatus === 'pending';
+                                    const isSelected = selectedIds.includes(productor.id);
+
+                                    const statusText = isActive
+                                        ? __('Activo')
+                                        : isReview
+                                          ? __('En Revisión')
+                                          : __('Suspendido');
+
+                                    const avatarStatus = isActive ? 'active' : isReview ? 'warning' : 'danger';
+                                    const stripClass = isActive
+                                        ? 'from-blue-600 via-emerald-500 to-teal-500'
+                                        : isReview
+                                          ? 'from-amber-500 to-orange-500'
+                                          : 'from-rose-500 to-red-600';
+
+                                    return (
+                                        <div
+                                            key={productor.id}
+                                            onClick={() => handleOpenEditModal(productor)}
+                                            className={cn(
+                                                'group relative rounded-2xl border bg-card text-card-foreground shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between cursor-pointer',
+                                                isSelected
+                                                    ? 'border-blue-500 ring-1 ring-blue-500/40'
+                                                    : 'border-slate-200/80 dark:border-slate-800 hover:border-blue-200/80 dark:hover:border-blue-800/60'
+                                            )}
+                                        >
+                                            <div className={cn('h-1.5 w-full bg-gradient-to-r', stripClass)} />
+
+                                            <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                                                <div className="space-y-4">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex items-start gap-3 min-w-0">
+                                                            <div
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="pt-1 shrink-0"
+                                                            >
+                                                                <Checkbox
+                                                                    checked={isSelected}
+                                                                    onCheckedChange={(checked) =>
+                                                                        toggleCardSelection(productor.id, Boolean(checked))
+                                                                    }
+                                                                    aria-label={__('Select row')}
+                                                                />
+                                                            </div>
+                                                            <EntityAvatar
+                                                                name={productor.razon_social || productor.nombre_comercial}
+                                                                status={avatarStatus}
+                                                                size="lg"
+                                                                shape="rounded"
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <h3 className="font-bold text-base text-slate-900 dark:text-white truncate">
+                                                                    {productor.razon_social}
+                                                                </h3>
+                                                                {productor.nombre_comercial && (
+                                                                    <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 truncate">
+                                                                        {productor.nombre_comercial}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div onClick={(e) => e.stopPropagation()}>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0">
+                                                                        <MoreVertical className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-52 rounded-xl">
+                                                                    <DropdownMenuItem onClick={() => setSelectedProductorForEmployees(productor)}>
+                                                                        <Users className="h-4 w-4 mr-2 text-emerald-600" />
+                                                                        {__('Colaboradores')}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => setSelectedProductorForVehicles(productor)}>
+                                                                        <Car className="h-4 w-4 mr-2 text-indigo-600" />
+                                                                        {__('Vehículos')}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleToggleStatus(productor)}>
+                                                                        <ToggleRight className="h-4 w-4 mr-2 text-amber-600" />
+                                                                        {isActive ? __('Suspender') : __('Activar')}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleOpenEditModal(productor)}>
+                                                                        <Pencil className="h-4 w-4 mr-2 text-slate-600" />
+                                                                        {__('Editar Productor')}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => router.get(`/admin/productores/${productor.id}/carnet`)}>
+                                                                        <QrCode className="h-4 w-4 mr-2 text-blue-600" />
+                                                                        {__('Gafete Azul / Carnet')}
+                                                                    </DropdownMenuItem>
+                                                                    {productor.telefono && (
+                                                                        <DropdownMenuItem onClick={() => handleSendCarnetWhatsApp(productor)}>
+                                                                            <Send className="h-4 w-4 mr-2 text-emerald-600" />
+                                                                            {__('Enviar Gafete por WhatsApp')}
+                                                                        </DropdownMenuItem>
+                                                                    )}
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => {
+                                                                            setDeletingProductor(productor);
+                                                                            setIsDeleteModalOpen(true);
+                                                                        }}
+                                                                        className="text-red-600 focus:text-red-600"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                                        {__('Eliminar')}
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                        <span
+                                                            className={cn(
+                                                                'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold',
+                                                                isActive && 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50',
+                                                                !isActive && !isReview && 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400 border border-red-200 dark:border-red-900/50',
+                                                                isReview && 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50'
+                                                            )}
+                                                        >
+                                                            <span
+                                                                className={cn(
+                                                                    'h-1.5 w-1.5 rounded-full shrink-0',
+                                                                    isActive && 'bg-emerald-500',
+                                                                    !isActive && !isReview && 'bg-red-500',
+                                                                    isReview && 'bg-amber-500'
+                                                                )}
+                                                            />
+                                                            {statusText}
+                                                        </span>
+                                                        <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono text-[11px] rounded-full border border-emerald-500/20">
+                                                            CÓD: {productor.codigo_acceso || productor.documento_identidad || 'N/A'}
+                                                        </Badge>
+                                                        {productor.rfc && (
+                                                            <Badge variant="outline" className="font-mono text-[10px] rounded-full">
+                                                                RFC: {productor.rfc}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="rounded-xl bg-slate-50/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 p-3 space-y-1.5 text-xs text-muted-foreground">
+                                                        {productor.responsable && (
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                    <EntityAvatar
+                                                                        name={productor.responsable}
+                                                                        size="xs"
+                                                                        shape="circle"
+                                                                        showStatusDot={false}
+                                                                    />
+                                                                    <span className="truncate font-medium text-slate-700 dark:text-slate-300">
+                                                                        {productor.responsable}
+                                                                    </span>
+                                                                </div>
+                                                                {productor.curp && (
+                                                                    <span className="font-mono text-[10px] shrink-0">
+                                                                        {productor.curp}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center justify-between gap-2 pt-0.5">
+                                                            <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                                                                <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
+                                                                {productor.telefono
+                                                                    ? `${productor.pais_telefono?.codigo_telefonico ? `${productor.pais_telefono.codigo_telefonico} ` : ''}${productor.telefono}`
+                                                                    : '—'}
+                                                            </span>
+                                                            {(productor.estado || productor.pais?.nombre) && (
+                                                                <span className="flex items-center gap-1 truncate text-[11px]">
+                                                                    <MapPin className="h-3 w-3 text-blue-500 shrink-0" />
+                                                                    {productor.estado || productor.pais?.nombre}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="pt-3 mt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2"
+                                                >
+                                                    <Switch
+                                                        checked={isActive}
+                                                        onCheckedChange={(checked) => {
+                                                            const targetStatus = checked ? 'activo' : 'suspendido';
+                                                            handleToggleStatus(productor, targetStatus);
+                                                        }}
+                                                    />
+
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setSelectedProductorForEmployees(productor)}
+                                                            className="h-8 px-2.5 rounded-xl text-xs gap-1"
+                                                        >
+                                                            <Users className="h-3.5 w-3.5 text-emerald-600" />
+                                                            {__('Colaboradores')}
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleOpenEditModal(productor)}
+                                                            className="h-8 px-3 rounded-xl text-xs gap-1.5 hover:border-blue-300 hover:text-blue-700 dark:hover:text-blue-300"
+                                                        >
+                                                            <Pencil className="h-3.5 w-3.5" />
+                                                            {__('Edit')}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        <Pagination paginatedData={productores} filters={currentFilters} />
+                    </div>
+                ) : (
+                    <div className="w-full">
+                        <DataTable
+                            columns={columns}
+                            data={productores as any}
+                            selectedIds={selectedIds}
+                            onSelectionChange={setSelectedIds}
+                            filters={currentFilters}
+                            isLoading={isTableLoading}
+                        />
+                    </div>
+                )}
             </div>
 
             <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>

@@ -64,14 +64,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
+import { EntityAvatar } from '@/components/entity-avatar';
+import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
-import { FilterBar, FilterField } from '@/components/filter-bar';
-import { DataTable } from '@/components/data-table';
-import type { ColumnDef } from '@/components/data-table';
-import { notifySuccess, notifyError } from '@/utils/notifications';
+import { ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
 import { useTranslate } from '@/hooks/use-translate';
 import { cleanParams } from '@/lib/utils';
+import { notifySuccess, notifyError } from '@/utils/notifications';
+import { VisitasAccesosGrid, resolveAccesoDisplay } from './Partials/VisitasAccesosGrid';
 
 const formatImageUrl = (url?: string | null) => {
     if (!url) return null;
@@ -404,12 +407,30 @@ export default function Index({
     };
 
     // Estados de filtros y tabla
+    const [viewMode, setViewMode] = useViewMode('smurfit_visitas_accesos_view_mode', 'grid');
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [tipoAccesoFilter, setTipoAccesoFilter] = useState(filters.tipo_acceso || 'all');
     const [medioAccesoFilter, setMedioAccesoFilter] = useState(filters.medio_acceso || 'all');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
     const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '10');
     const [isTableLoading, setIsTableLoading] = useState(false);
+    const isFirstFilterRender = useRef(true);
+
+    const currentFilters = cleanParams({
+        search: searchTerm,
+        tipo_acceso: tipoAccesoFilter === 'all' ? '' : tipoAccesoFilter,
+        medio_acceso: medioAccesoFilter === 'all' ? '' : medioAccesoFilter,
+        status: statusFilter === 'all' ? '' : statusFilter,
+        perPage: perPageFilter,
+    });
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setTipoAccesoFilter('all');
+        setMedioAccesoFilter('all');
+        setStatusFilter('all');
+        setPerPageFilter('10');
+    };
 
     // Modal estado creación
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -524,6 +545,12 @@ export default function Index({
 
     // Filtros de tabla
     useEffect(() => {
+        if (isFirstFilterRender.current) {
+            isFirstFilterRender.current = false;
+
+            return;
+        }
+
         const timer = setTimeout(() => {
             router.get(
                 window.location.pathname,
@@ -1090,54 +1117,29 @@ export default function Index({
             id: 'visitante',
             header: __('Persona / Entidad'),
             cell: (item) => {
-                const isProv = item.tipo_acceso === 'proveedor' || (item.tipo_acceso !== 'empleado' && item.tipo_acceso !== 'productor' && (!!item.proveedor_id || !!item.proveedor || !!item.proveedor_empleado));
-                const isProd = item.tipo_acceso === 'productor' || (item.tipo_acceso !== 'empleado' && (!!item.productor_id || !!item.productor || !!item.productor_empleado));
-                const isEmp = item.tipo_acceso === 'empleado' || !!item.empleado_id || !!item.empleado;
-                const isVisitante = !isProv && !isProd && !isEmp;
-
-                const nombre = isVisitante
-                    ? (item.visitante_nombre || 'Visitante Particular')
-                    : isEmp
-                        ? `${item.empleado?.nombres || ''} ${item.empleado?.apellidos || ''}`.trim() || 'Empleado'
-                        : isProd
-                            ? (item.productor_empleado
-                                ? `${item.productor_empleado?.nombres || ''} ${item.productor_empleado?.apellidos || ''}`.trim()
-                                : item.productor?.nombre_comercial_rancho || item.productor?.razon_social_rancho || item.productor?.nombre_comercial || item.productor?.razon_social || item.visitante_nombre || '-')
-                            : (item.proveedor_empleado
-                                ? `${item.proveedor_empleado?.nombres || ''} ${item.proveedor_empleado?.apellidos || ''}`.trim()
-                                : item.proveedor?.nombre_comercial || item.proveedor?.razon_social || item.visitante_nombre || '-');
-
-                const doc = isVisitante
-                    ? (item.codigo_visitante ? `CÓD: ${item.codigo_visitante}` : item.visitante_documento)
-                    : isEmp
-                        ? (item.empleado?.codigo_acceso ? `CÓD: ${item.empleado.codigo_acceso}` : item.empleado?.documento_identidad)
-                        : isProd
-                            ? (item.productor?.codigo_acceso ? `CÓD: ${item.productor.codigo_acceso}` : item.productor_empleado?.documento_identidad || item.productor?.documento_identidad || item.visitante_documento)
-                            : (item.proveedor?.codigo_acceso ? `CÓD: ${item.proveedor.codigo_acceso}` : item.proveedor_empleado?.documento_identidad || item.proveedor?.documento_identidad || item.visitante_documento);
-
-                const rawAvatar = isVisitante
-                    ? item.foto_carnet
-                    : isEmp
-                        ? item.empleado?.foto_empleado
-                        : isProd
-                            ? (item.productor_empleado?.foto_carnet || (item.productor_empleado as any)?.foto_empleado || item.foto_carnet)
-                            : (item.proveedor_empleado?.foto_carnet || (item.proveedor_empleado as any)?.foto_empleado || item.foto_carnet);
-                const avatar = formatImageUrl(rawAvatar);
+                const info = resolveAccesoDisplay(item, formatImageUrl);
+                const isProv = info.kind === 'proveedor';
+                const isProd = info.kind === 'productor';
+                const isEmp = info.kind === 'empleado';
+                const isVisitante = info.kind === 'visitante';
                 const tieneAcompanantes = item.acompanantes && item.acompanantes.length > 0;
 
                 return (
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSelectedAccesoDetail(item)}>
-                        <div className="w-10 h-10 rounded-full border overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                            {avatar ? (
-                                <img src={avatar} alt={nombre} className="w-full h-full object-cover" />
-                            ) : (
-                                <User className="w-5 h-5 text-slate-400" />
-                            )}
-                        </div>
+                        <EntityAvatar
+                            name={info.nombre}
+                            firstName={info.firstName}
+                            lastName={info.lastName}
+                            seed={info.doc || info.nombre}
+                            src={info.avatarUrl}
+                            status={item.status === 1 ? 'active' : 'inactive'}
+                            size="md"
+                            shape="circle"
+                        />
                         <div className="flex flex-col">
                             <div className="flex items-center gap-2">
                                 <span className="font-semibold text-slate-800 dark:text-slate-200 hover:text-[#104a29]">
-                                    {nombre}
+                                    {info.nombre}
                                 </span>
 
                                 {tieneAcompanantes && (
@@ -1156,14 +1158,14 @@ export default function Index({
                                 )}
                             </div>
                             <span className="text-xs text-muted-foreground font-mono">
-                                Doc: {doc || '-'}
+                                Doc: {info.doc || '-'}
                                 {isVisitante && (
                                     <span className="ml-1 text-emerald-700 dark:text-emerald-400 font-sans font-medium">({item.visitante_empresa || 'Particular'})</span>
                                 )}
                                 {isProd && item.productor && (
                                     <span className="ml-1 text-purple-600 dark:text-purple-400">({item.productor.nombre_comercial_rancho || item.productor.razon_social_rancho || item.productor.nombre_comercial})</span>
                                 )}
-                                {!isEmp && !isProd && !isVisitante && item.proveedor && (
+                                {!isEmp && !isProd && !isVisitante && isProv && item.proveedor && (
                                     <span className="ml-1 text-amber-600 dark:text-amber-400">({item.proveedor.nombre_comercial || item.proveedor.razon_social})</span>
                                 )}
                             </span>
@@ -1369,13 +1371,13 @@ export default function Index({
                     />
                 </div>
 
-                {/* Barra de Filtros */}
-                <FilterBar>
-                    <div className="flex flex-wrap items-end gap-4">
+                {/* Barra de Filtros + Conmutador Cuadrícula / Lista */}
+                <FilterBar className="rounded-2xl">
+                    <div className="flex flex-1 flex-wrap items-end gap-4">
                         <FilterField label={__('Buscar Acceso')}>
                             <Input
                                 placeholder={__('Buscar por código (80000001+), DNI, Nombre...')}
-                                className="w-full md:w-80 bg-white dark:bg-slate-900"
+                                className="w-full md:w-72 bg-white dark:bg-slate-900 rounded-xl"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -1383,7 +1385,7 @@ export default function Index({
 
                         <FilterField label={__('Tipo Acceso')}>
                             <Select value={tipoAccesoFilter} onValueChange={setTipoAccesoFilter}>
-                                <SelectTrigger className="w-full md:w-40 bg-white dark:bg-slate-900">
+                                <SelectTrigger className="w-full md:w-40 bg-white dark:bg-slate-900 rounded-xl">
                                     <SelectValue placeholder={__('Todos')} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1398,7 +1400,7 @@ export default function Index({
 
                         <FilterField label={__('Medio Acceso')}>
                             <Select value={medioAccesoFilter} onValueChange={setMedioAccesoFilter}>
-                                <SelectTrigger className="w-full md:w-40 bg-white dark:bg-slate-900">
+                                <SelectTrigger className="w-full md:w-40 bg-white dark:bg-slate-900 rounded-xl">
                                     <SelectValue placeholder={__('Todos')} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1411,7 +1413,7 @@ export default function Index({
 
                         <FilterField label={__('Estatus')}>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full md:w-40 bg-white dark:bg-slate-900">
+                                <SelectTrigger className="w-full md:w-40 bg-white dark:bg-slate-900 rounded-xl">
                                     <SelectValue placeholder={__('Todos')} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1422,16 +1424,44 @@ export default function Index({
                             </Select>
                         </FilterField>
                     </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end">
+                        <ViewModeToggle
+                            value={viewMode}
+                            onChange={setViewMode}
+                            activeColorClassName="text-emerald-700 dark:text-emerald-400"
+                        />
+                    </div>
                 </FilterBar>
 
-                {/* Tabla Data */}
-                <DataTable
-                    columns={columns}
-                    data={accesos}
-                    isLoading={isTableLoading}
-                    filters={filters}
-                    onRowClick={(item) => setSelectedAccesoDetail(item)}
-                />
+                {/* Contenido Principal: Cuadrícula o Lista */}
+                {viewMode === 'grid' ? (
+                    <VisitasAccesosGrid
+                        accesos={accesos}
+                        isLoading={isTableLoading}
+                        filters={currentFilters}
+                        hasActiveFilters={Boolean(
+                            searchTerm ||
+                                tipoAccesoFilter !== 'all' ||
+                                medioAccesoFilter !== 'all' ||
+                                statusFilter !== 'all'
+                        )}
+                        onResetFilters={handleResetFilters}
+                        onCreateClick={handleCreateClick}
+                        onViewDetail={setSelectedAccesoDetail}
+                        onViewAcompanantes={setSelectedItemForAcompanantes}
+                        onMarcarSalida={handleMarcarSalida}
+                        formatImageUrl={formatImageUrl}
+                    />
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={accesos}
+                        isLoading={isTableLoading}
+                        filters={currentFilters}
+                        onRowClick={(item) => setSelectedAccesoDetail(item)}
+                    />
+                )}
 
                 {/* MODAL DETALLE COMPLETO Y PROFESIONAL DE ACCESO */}
                 <Dialog open={!!selectedAccesoDetail} onOpenChange={() => setSelectedAccesoDetail(null)}>

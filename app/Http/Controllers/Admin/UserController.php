@@ -28,7 +28,9 @@ class UserController extends Controller
         $status = $request->input('status');
         $roleName = $request->input('role');
         $empresaId = $request->input('empresa_id');
-        $perPage = $request->input('perPage', 10);
+        $perPage = max(1, min(100, (int) $request->input('perPage', 12)));
+        $sortBy = (string) $request->input('sortBy', 'created_at');
+        $sortDir = strtolower((string) $request->input('sortDir', 'desc')) === 'asc' ? 'asc' : 'desc';
 
         $soxConfig = ConfiguracionSox::current($empresaId);
 
@@ -55,7 +57,14 @@ class UserController extends Controller
             $query->role($roleName);
         }
 
-        $users = $query->latest()->paginate($perPage)->withQueryString();
+        match ($sortBy) {
+            'name' => $query->orderBy('name', $sortDir)->orderBy('id', 'asc'),
+            'email' => $query->orderBy('email', $sortDir)->orderBy('id', 'asc'),
+            'status' => $query->orderBy('status', $sortDir)->orderBy('name', 'asc'),
+            default => $query->orderBy('created_at', $sortDir)->orderBy('id', $sortDir),
+        };
+
+        $users = $query->paginate($perPage)->withQueryString();
 
         // Enrich items with SOX status attributes
         $users->getCollection()->transform(function (User $user) use ($soxConfig) {
@@ -63,6 +72,9 @@ class UserController extends Controller
             $user->setAttribute('lockout_remaining_minutes', $user->lockoutRemainingMinutes());
             $user->setAttribute('days_remaining', $user->daysUntilPasswordExpires($soxConfig->password_expires_days));
             $user->setAttribute('is_expired', $user->isPasswordExpired($soxConfig->password_expires_days));
+            $user->setAttribute('is_super_admin', $user->isSuperAdmin());
+            $user->setAttribute('created_at_human', $user->created_at?->diffForHumans());
+
             return $user;
         });
 
@@ -70,7 +82,11 @@ class UserController extends Controller
             'total' => User::count(),
             'activos' => User::where('status', 'activo')->count(),
             'inactivos' => User::where('status', 'inactivo')->count(),
+            'suspendidos' => User::where('status', 'suspendido')->count(),
+            'bloqueados' => User::whereNotNull('locked_until')->where('locked_until', '>', now())->count(),
         ];
+
+        $actor = $request->user();
 
         return inertia('admin/Usuarios/Index', [
             'users' => $users,
@@ -86,7 +102,14 @@ class UserController extends Controller
             'paises' => Pais::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
-            'filters' => $request->only(['search', 'status', 'role', 'empresa_id', 'perPage']),
+            'filters' => $request->only(['search', 'status', 'role', 'empresa_id', 'perPage', 'sortBy', 'sortDir']),
+            'can' => [
+                'create' => $actor ? ($actor->isSuperAdmin() || $actor->can('users.create')) : false,
+                'edit' => $actor ? ($actor->isSuperAdmin() || $actor->can('users.edit')) : false,
+                'delete' => $actor ? ($actor->isSuperAdmin() || $actor->can('users.delete')) : false,
+                'sox' => $actor ? ($actor->isSuperAdmin() || $actor->can('sox.view') || $actor->can('users.view')) : false,
+                'sox_manage' => $actor ? ($actor->isSuperAdmin() || $actor->can('sox.manage') || $actor->can('users.edit')) : false,
+            ],
         ]);
     }
 

@@ -1,14 +1,18 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { Map, Plus, Globe, CheckCircle, XCircle, Trash2, MoreVertical, Pencil, ToggleRight } from 'lucide-react';
-import React, { useState, Suspense, lazy } from 'react';
+import { Map, Plus, Globe, CheckCircle, XCircle, Trash2, MoreVertical, Pencil, ToggleRight, Clock, Phone } from 'lucide-react';
+import React, { useRef, useState, Suspense, lazy } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
+import { EntityAvatar } from '@/components/entity-avatar';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
+import Pagination from '@/components/pagination';
 import { StatCard } from '@/components/stat-card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -26,13 +30,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CardGridSkeleton, GridEmptyState, ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
+import { useTranslate } from '@/hooks/use-translate';
 import { cn, cleanParams } from '@/lib/utils';
+import { bulkDestroy } from '@/routes/admin/paises';
 import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
-import { useTranslate } from '@/hooks/use-translate';
-import { bulkDestroy } from '@/routes/admin/paises';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
 
 const MapComponent = lazy(() => {
     // Importamos el componente del mapa
@@ -86,7 +91,7 @@ interface PaisesPageProps {
  * @param {PaisesPageProps} props - Las propiedades inyectadas por Inertia.
  * @returns {JSX.Element}
  */
-export default function PaisesIndexPage({ auth, paises, stats, filters }: PaisesPageProps) {
+export default function PaisesIndexPage({ paises, stats, filters }: PaisesPageProps) {
     const { __ } = useTranslate();
 
     const breadcrumbs = [
@@ -94,6 +99,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
         { title: __('Countries'), href: '/admin/paises' },
     ];
 
+    const [viewMode, setViewMode] = useViewMode('smurfit_paises_view_mode', 'grid');
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [editingPais, setEditingPais] = React.useState<Pais | null>(null);
     // Estado local para manejar los filtros con debounce
@@ -102,6 +108,15 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
     const [perPageFilter, setPerPageFilter] = React.useState(filters.perPage || '10');
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isTableLoading, setIsTableLoading] = React.useState(false);
+    const isFirstRender = useRef(true);
+
+    const currentFilters = cleanParams({
+        search: searchTerm,
+        status: statusFilter,
+        perPage: perPageFilter,
+        sortBy: filters.sortBy,
+        sortDir: filters.sortDir,
+    });
 
     React.useEffect(() => {
         const unbindStart = router.on('start', () => setIsTableLoading(true));
@@ -115,6 +130,12 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
 
     // useEffect para manejar el debounce de la búsqueda
     React.useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+
+            return;
+        }
+
         const timer = setTimeout(() => {
             router.get(window.location.pathname, cleanParams({
                 search: searchTerm,
@@ -126,9 +147,20 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
         }, 300);
 
         return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchTerm, statusFilter, perPageFilter]);
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setStatusFilter('');
+        setPerPageFilter('10');
+    };
+
+    const toggleCardSelection = (id: number, checked: boolean) => {
+        setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((item) => item !== id)));
+    };
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const { data, setData, post, put, processing, errors, reset, delete: bulkDelete } = useForm({
+    const { data, setData, post, put, processing, errors, reset } = useForm({
         nombre: '',
         codigo_iso2: '',
         codigo_iso3: '',
@@ -240,6 +272,29 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
             accessorKey: 'nombre',
             className: 'font-medium',
             sortable: true,
+            cell: (pais) => (
+                <div className="flex items-center gap-3">
+                    <EntityAvatar
+                        name={pais.nombre}
+                        customInitials={pais.codigo_iso2}
+                        status={pais.activo ? 'active' : 'inactive'}
+                        size="sm"
+                        shape="rounded"
+                    />
+                    <div className="min-w-0">
+                        <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
+                            {pais.nombre}
+                        </p>
+                        {(pais.continente || pais.codigo_telefonico) && (
+                            <p className="text-xs text-muted-foreground">
+                                {pais.continente || ''}
+                                {pais.continente && pais.codigo_telefonico ? ' • ' : ''}
+                                {pais.codigo_telefonico ? `+${pais.codigo_telefonico.replace(/^\+/, '')}` : ''}
+                            </p>
+                        )}
+                    </div>
+                </div>
+            ),
         },
         {
             header: 'ISO2 Code',
@@ -342,26 +397,26 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                     />
                 </div>
 
-                <FilterBar>
-                    <div className="flex flex-wrap items-end gap-4">
+                <FilterBar className="rounded-2xl">
+                    <div className="flex flex-1 flex-wrap items-end gap-4">
                         <FilterField label={__('Search')}>
                             <Input
                                 placeholder={__('Search by name, code...')}
-                                className="w-full md:w-96"
+                                className="w-full md:w-80 rounded-xl"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </FilterField>
                         <FilterField label={__('Status')}>
                             <Select
-                                value={statusFilter}
-                                onValueChange={(value) => setStatusFilter(value)}
+                                value={statusFilter || 'all'}
+                                onValueChange={(value) => setStatusFilter(value === 'all' ? '' : value)}
                             >
-                                <SelectTrigger className="w-full md:w-48">
+                                <SelectTrigger className="w-full md:w-44 rounded-xl">
                                     <SelectValue placeholder={__('All')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{__('All')}</SelectItem>
+                                    <SelectItem value="all">{__('All')}</SelectItem>
                                     <SelectItem value="1">{__('Active')}</SelectItem>
                                     <SelectItem value="0">{__('Inactive')}</SelectItem>
                                 </SelectContent>
@@ -372,7 +427,7 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                                 value={perPageFilter}
                                 onValueChange={(value) => setPerPageFilter(value)}
                             >
-                                <SelectTrigger className="w-full md:w-40">
+                                <SelectTrigger className="w-full md:w-36 rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -384,37 +439,246 @@ export default function PaisesIndexPage({ auth, paises, stats, filters }: Paises
                             </Select>
                         </FilterField>
                     </div>
-                    <div className="flex items-end space-x-2">
-                        <Button variant="secondary">{__('Export')}</Button>
+                    <div className="flex items-center gap-2 shrink-0 self-end">
+                        <Button variant="secondary" className="rounded-xl">{__('Export')}</Button>
+                        <ViewModeToggle
+                            value={viewMode}
+                            onChange={setViewMode}
+                            activeColorClassName="text-blue-600 dark:text-blue-400"
+                        />
                     </div>
-                </FilterBar >
+                </FilterBar>
 
-                <div className="w-full">
-                    <DataTable
-                        data={paises}
-                        columns={columns}
-                        selectedIds={selectedIds}
-                        onSelectionChange={setSelectedIds}
-                        filters={{
-                            search: searchTerm,
-                            status: statusFilter,
-                            perPage: perPageFilter,
-                            sortBy: filters.sortBy,
-                            sortDir: filters.sortDir,
-                        }}
-                        isLoading={isTableLoading}
-                        onRowClick={(pais) => handleEditClick(pais)}
-                        bulkActions={bulkActions}
-                        emptyState={{
-                            title: 'No countries found',
-                            description: searchTerm || statusFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any countries in the database yet.',
-                            ctaLabel: 'New Country',
-                            onCtaClick: handleCreateClick,
-                        }}
-                    />
-                </div>
+                {viewMode === 'grid' ? (
+                    <div className="space-y-4">
+                        {selectedIds.length > 0 && (
+                            <div className="flex items-center justify-between gap-4 p-2.5 px-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-blue-800 dark:text-blue-300">
+                                        {__(':count selected', { count: String(selectedIds.length) })}
+                                    </span>
+                                    <Button
+                                        type="button"
+                                        variant="link"
+                                        size="sm"
+                                        className="text-blue-600 dark:text-blue-400 p-0 h-auto font-normal"
+                                        onClick={() => setSelectedIds([])}
+                                    >
+                                        {__('Clear')}
+                                    </Button>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    className="h-8 gap-1.5 rounded-lg"
+                                    onClick={handleBulkDeleteClick}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    {__('Delete selected')}
+                                </Button>
+                            </div>
+                        )}
+
+                        {isTableLoading ? (
+                            <CardGridSkeleton />
+                        ) : paises.data.length === 0 ? (
+                            <GridEmptyState
+                                icon={<Globe className="h-6 w-6" />}
+                                title={__('No countries found')}
+                                description={
+                                    searchTerm || statusFilter
+                                        ? __('Try clearing your search filters or changing your query.')
+                                        : __('You have not registered any countries in the database yet.')
+                                }
+                                hasActiveFilters={Boolean(searchTerm || statusFilter)}
+                                onResetFilters={handleResetFilters}
+                                ctaLabel={__('New Country')}
+                                onCtaClick={handleCreateClick}
+                            />
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                                {paises.data.map((pais) => {
+                                    const isSelected = selectedIds.includes(pais.id);
+
+                                    return (
+                                        <div
+                                            key={pais.id}
+                                            onClick={() => handleEditClick(pais)}
+                                            className={cn(
+                                                'group relative rounded-2xl border bg-card text-card-foreground shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between cursor-pointer',
+                                                isSelected
+                                                    ? 'border-blue-500 ring-1 ring-blue-500/40'
+                                                    : 'border-slate-200/80 dark:border-slate-800 hover:border-blue-200/80 dark:hover:border-blue-800/60'
+                                            )}
+                                        >
+                                            <div
+                                                className={cn(
+                                                    'h-1.5 w-full bg-gradient-to-r',
+                                                    pais.activo
+                                                        ? 'from-blue-500 via-sky-500 to-emerald-500'
+                                                        : 'from-slate-400 to-slate-500'
+                                                )}
+                                            />
+
+                                            <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                                                <div className="space-y-4">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex items-start gap-3 min-w-0">
+                                                            <div
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="pt-1 shrink-0"
+                                                            >
+                                                                <Checkbox
+                                                                    checked={isSelected}
+                                                                    onCheckedChange={(checked) =>
+                                                                        toggleCardSelection(pais.id, Boolean(checked))
+                                                                    }
+                                                                    aria-label={__('Select row')}
+                                                                />
+                                                            </div>
+                                                            <EntityAvatar
+                                                                name={pais.nombre}
+                                                                customInitials={pais.codigo_iso2}
+                                                                status={pais.activo ? 'active' : 'inactive'}
+                                                                size="lg"
+                                                                shape="rounded"
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <h3 className="font-bold text-base text-slate-900 dark:text-white truncate">
+                                                                    {pais.nombre}
+                                                                </h3>
+                                                                <p className="text-xs text-muted-foreground truncate">
+                                                                    {pais.continente || __('Not specified')}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div onClick={(e) => e.stopPropagation()}>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0">
+                                                                        <MoreVertical className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-44 rounded-xl">
+                                                                    <DropdownMenuItem onClick={() => handleEditClick(pais)}>
+                                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                                        {__('Edit')}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleToggleActive(pais)}>
+                                                                        <ToggleRight className="mr-2 h-4 w-4" />
+                                                                        {pais.activo ? __('Deactivate') : __('Activate')}
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                        <span
+                                                            className={cn(
+                                                                'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border',
+                                                                pais.activo
+                                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900'
+                                                                    : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                                                            )}
+                                                        >
+                                                            {pais.activo ? __('Active') : __('Inactive')}
+                                                        </span>
+                                                        <Badge variant="secondary" className="font-mono text-[11px] rounded-full">
+                                                            {pais.codigo_iso2} / {pais.codigo_iso3}
+                                                        </Badge>
+                                                        {pais.codigo_telefonico && (
+                                                            <Badge variant="outline" className="font-mono text-[11px] rounded-full gap-1">
+                                                                <Phone className="h-3 w-3 text-emerald-600" />
+                                                                +{pais.codigo_telefonico.replace(/^\+/, '')}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="rounded-xl bg-slate-50/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 p-3 space-y-1.5 text-xs text-muted-foreground">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <span>
+                                                                {__('Currency')}:{' '}
+                                                                <strong className="text-slate-700 dark:text-slate-200">
+                                                                    {pais.moneda_principal || '—'}
+                                                                </strong>
+                                                            </span>
+                                                            <span>
+                                                                {__('Tax')}:{' '}
+                                                                <strong className="font-mono text-slate-700 dark:text-slate-200">
+                                                                    {pais.impuesto_predeterminado !== null && pais.impuesto_predeterminado !== undefined
+                                                                        ? `${pais.impuesto_predeterminado}%`
+                                                                        : '0%'}
+                                                                </strong>
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 truncate">
+                                                            <Clock className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                                            <span className="font-mono text-[11px] truncate">
+                                                                {pais.zona_horaria || __('Default')}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="pt-3 mt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <Switch
+                                                            checked={pais.activo}
+                                                            onCheckedChange={() => handleToggleActive(pais)}
+                                                        />
+                                                        <span className="text-[11px] text-muted-foreground">
+                                                            {pais.activo ? __('Active') : __('Inactive')}
+                                                        </span>
+                                                    </div>
+
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleEditClick(pais)}
+                                                        className="h-8 px-3 rounded-xl text-xs gap-1.5 hover:border-blue-300 hover:text-blue-700 dark:hover:text-blue-300"
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                        {__('Edit')}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        <Pagination paginatedData={paises} filters={currentFilters} />
+                    </div>
+                ) : (
+                    <div className="w-full">
+                        <DataTable
+                            data={paises}
+                            columns={columns}
+                            selectedIds={selectedIds}
+                            onSelectionChange={setSelectedIds}
+                            filters={currentFilters}
+                            isLoading={isTableLoading}
+                            onRowClick={(pais) => handleEditClick(pais)}
+                            bulkActions={bulkActions}
+                            emptyState={{
+                                title: 'No countries found',
+                                description: searchTerm || statusFilter
+                                    ? 'Try clearing your search filters or changing your query.'
+                                    : 'You have not registered any countries in the database yet.',
+                                ctaLabel: 'New Country',
+                                onCtaClick: handleCreateClick,
+                            }}
+                        />
+                    </div>
+                )}
             </div >
 
             {/* Modal de Creación/Edición */}

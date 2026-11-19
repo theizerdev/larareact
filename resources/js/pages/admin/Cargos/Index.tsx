@@ -9,16 +9,17 @@ import {
     Trash2,
     ToggleRight,
     Building2,
-    User,
     Tag,
     Layers,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
+import { EntityAvatar } from '@/components/entity-avatar';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
+import Pagination from '@/components/pagination';
 import { StatCard } from '@/components/stat-card';
 import {
     AlertDialog,
@@ -30,6 +31,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -48,13 +50,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { CardGridSkeleton, GridEmptyState, ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
+import { useTranslate } from '@/hooks/use-translate';
 import { cn, cleanParams } from '@/lib/utils';
 import type { Auth } from '@/types';
 import type { Paginated } from '@/types/app';
-import { useTranslate } from '@/hooks/use-translate';
 import { notifySuccess, notifyError } from '@/utils/notifications';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -149,6 +152,7 @@ export default function CargosIndexPage({
     ];
 
     // ── Estados ────────────────────────────────────────────────────────────────
+    const [viewMode, setViewMode]             = useViewMode('smurfit_cargos_view_mode', 'grid');
     const [isModalOpen, setIsModalOpen]       = useState(false);
     const [editingCargo, setEditingCargo]     = useState<Cargo | null>(null);
     const [deletingCargo, setDeletingCargo]   = useState<Cargo | null>(null);
@@ -159,6 +163,14 @@ export default function CargosIndexPage({
     const [statusFilter, setStatusFilter]         = useState(filters.status || '');
     const [departamentoFilter, setDepartamentoFilter] = useState(filters.departamento_id || '');
     const [perPageFilter, setPerPageFilter]       = useState(filters.perPage || '10');
+    const isFirstRender = useRef(true);
+
+    const currentFilters = cleanParams({
+        search:          searchTerm,
+        status:          statusFilter,
+        departamento_id: departamentoFilter,
+        perPage:         perPageFilter,
+    });
 
     // ── Hooks de navegación ────────────────────────────────────────────────────
     React.useEffect(() => {
@@ -166,12 +178,19 @@ export default function CargosIndexPage({
         const unbindFinish = router.on('finish', () => setIsTableLoading(false));
 
         return () => {
- unbindStart(); unbindFinish(); 
-};
+            unbindStart();
+            unbindFinish();
+        };
     }, []);
 
     // Debounce de filtros
     React.useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+
+            return;
+        }
+
         const timer = setTimeout(() => {
             router.get(
                 window.location.pathname,
@@ -187,6 +206,13 @@ export default function CargosIndexPage({
 
         return () => clearTimeout(timer);
     }, [searchTerm, statusFilter, departamentoFilter, perPageFilter]);
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setStatusFilter('');
+        setDepartamentoFilter('');
+        setPerPageFilter('10');
+    };
 
     // ── Formulario Inertia ─────────────────────────────────────────────────────
     const { data, setData, post, put, processing, errors, reset } = useForm(initialForm);
@@ -281,11 +307,16 @@ return;
             className: 'font-medium',
             cell: (cargo) => (
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
-                        <Briefcase className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                    </div>
-                    <div>
-                        <p className="font-medium text-sm">{cargo.nombre}</p>
+                    <EntityAvatar
+                        name={cargo.nombre}
+                        status={cargo.status === 1 ? 'active' : 'inactive'}
+                        size="md"
+                        shape="rounded"
+                    />
+                    <div className="min-w-0">
+                        <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
+                            {cargo.nombre}
+                        </p>
                         {cargo.descripcion && (
                             <p className="text-xs text-muted-foreground truncate max-w-[200px]">{cargo.descripcion}</p>
                         )}
@@ -323,9 +354,16 @@ return;
             header: __('Assigned User'),
             hideOn: 'mobile',
             cell: (cargo) => (
-                <span className="text-xs font-medium text-muted-foreground">
-                    {cargo.user?.name ?? '—'}
-                </span>
+                cargo.user ? (
+                    <div className="flex items-center gap-2">
+                        <EntityAvatar name={cargo.user.name} size="xs" shape="circle" showStatusDot={false} />
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                            {cargo.user.name}
+                        </span>
+                    </div>
+                ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                )
             ),
         },
         {
@@ -425,24 +463,27 @@ return;
                     />
                 </div>
 
-                {/* Filtros */}
-                <FilterBar>
-                    <div className="flex flex-wrap items-end gap-4">
+                {/* Filtros + Conmutador Cuadrícula / Lista */}
+                <FilterBar className="rounded-2xl">
+                    <div className="flex flex-1 flex-wrap items-end gap-4">
                         <FilterField label={__('Search')}>
                             <Input
                                 placeholder={__('Search by name, description...')}
-                                className="w-full md:w-80"
+                                className="w-full md:w-72 rounded-xl"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </FilterField>
                         <FilterField label={__('Department')}>
-                            <Select value={departamentoFilter} onValueChange={setDepartamentoFilter}>
-                                <SelectTrigger className="w-full md:w-56">
+                            <Select
+                                value={departamentoFilter || 'all'}
+                                onValueChange={(v) => setDepartamentoFilter(v === 'all' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full md:w-52 rounded-xl">
                                     <SelectValue placeholder={__('All')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{__('All')}</SelectItem>
+                                    <SelectItem value="all">{__('All')}</SelectItem>
                                     {departamentos.map((dep) => (
                                         <SelectItem key={dep.id} value={String(dep.id)}>
                                             {dep.nombre}
@@ -452,12 +493,15 @@ return;
                             </Select>
                         </FilterField>
                         <FilterField label={__('Status')}>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full md:w-40">
+                            <Select
+                                value={statusFilter || 'all'}
+                                onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full md:w-36 rounded-xl">
                                     <SelectValue placeholder={__('All')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{__('All')}</SelectItem>
+                                    <SelectItem value="all">{__('All')}</SelectItem>
                                     <SelectItem value="1">{__('Active')}</SelectItem>
                                     <SelectItem value="0">{__('Inactive')}</SelectItem>
                                 </SelectContent>
@@ -465,7 +509,7 @@ return;
                         </FilterField>
                         <FilterField label={__('Records per page')}>
                             <Select value={perPageFilter} onValueChange={setPerPageFilter}>
-                                <SelectTrigger className="w-full md:w-40">
+                                <SelectTrigger className="w-full md:w-32 rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -477,25 +521,200 @@ return;
                             </Select>
                         </FilterField>
                     </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end">
+                        <ViewModeToggle
+                            value={viewMode}
+                            onChange={setViewMode}
+                            activeColorClassName="text-teal-600 dark:text-teal-400"
+                        />
+                    </div>
                 </FilterBar>
 
-                {/* Tabla */}
-                <div className="w-full">
-                    <DataTable
-                        data={cargos}
-                        columns={columns}
-                        isLoading={isTableLoading}
-                        onRowClick={(cargo) => handleEditClick(cargo)}
-                        emptyState={{
-                            title: 'No positions found',
-                            description: searchTerm || statusFilter || departamentoFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any positions yet.',
-                            ctaLabel: 'New Position',
-                            onCtaClick: handleCreateClick,
-                        }}
-                    />
-                </div>
+                {/* Contenido Principal: Cuadrícula o Lista */}
+                {viewMode === 'grid' ? (
+                    <div className="space-y-4">
+                        {isTableLoading ? (
+                            <CardGridSkeleton />
+                        ) : cargos.data.length === 0 ? (
+                            <GridEmptyState
+                                icon={<Briefcase className="h-6 w-6" />}
+                                title={__('No positions found')}
+                                description={
+                                    searchTerm || statusFilter || departamentoFilter
+                                        ? __('Try clearing your search filters or changing your query.')
+                                        : __('You have not registered any positions yet.')
+                                }
+                                hasActiveFilters={Boolean(searchTerm || statusFilter || departamentoFilter)}
+                                onResetFilters={handleResetFilters}
+                                ctaLabel={__('New Position')}
+                                onCtaClick={handleCreateClick}
+                            />
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                                {cargos.data.map((cargo) => (
+                                    <div
+                                        key={cargo.id}
+                                        onClick={() => handleEditClick(cargo)}
+                                        className="group relative rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-card text-card-foreground shadow-xs hover:shadow-md hover:border-teal-200/80 dark:hover:border-teal-800/60 transition-all overflow-hidden flex flex-col justify-between cursor-pointer"
+                                    >
+                                        <div
+                                            className={cn(
+                                                'h-1.5 w-full bg-gradient-to-r',
+                                                cargo.status === 1
+                                                    ? 'from-teal-500 via-emerald-500 to-cyan-500'
+                                                    : 'from-slate-400 to-slate-500'
+                                            )}
+                                        />
+
+                                        <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                                            <div className="space-y-4">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex items-start gap-3.5 min-w-0">
+                                                        <EntityAvatar
+                                                            name={cargo.nombre}
+                                                            status={cargo.status === 1 ? 'active' : 'inactive'}
+                                                            size="lg"
+                                                            shape="rounded"
+                                                        />
+                                                        <div className="min-w-0">
+                                                            <h3 className="font-bold text-base text-slate-900 dark:text-white truncate">
+                                                                {cargo.nombre}
+                                                            </h3>
+                                                            {cargo.descripcion && (
+                                                                <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                                                    {cargo.descripcion}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div onClick={(e) => e.stopPropagation()}>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0">
+                                                                    <MoreVertical className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-44 rounded-xl">
+                                                                <DropdownMenuItem onClick={() => handleEditClick(cargo)}>
+                                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                                    {__('Edit')}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleToggleStatus(cargo)}>
+                                                                    <ToggleRight className="mr-2 h-4 w-4" />
+                                                                    {cargo.status === 1 ? __('Deactivate') : __('Activate')}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => setDeletingCargo(cargo)}
+                                                                    className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    {__('Delete')}
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <span
+                                                        className={cn(
+                                                            'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border',
+                                                            cargo.status === 1
+                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900'
+                                                                : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                                                        )}
+                                                    >
+                                                        {cargo.status === 1 ? __('Active') : __('Inactive')}
+                                                    </span>
+                                                    {cargo.departamento?.nombre && (
+                                                        <Badge variant="secondary" className="text-[11px] rounded-full gap-1">
+                                                            <Layers className="h-3 w-3 text-teal-600" />
+                                                            {cargo.departamento.nombre}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+
+                                                <div className="rounded-xl bg-slate-50/80 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 p-3 space-y-1.5 text-xs text-muted-foreground">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="flex items-center gap-1.5 truncate font-medium text-slate-700 dark:text-slate-300">
+                                                            <Building2 className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                                                            <span className="truncate">{cargo.empresa?.razon_social ?? '—'}</span>
+                                                        </span>
+                                                        <span className="flex items-center gap-1 truncate shrink-0">
+                                                            <Tag className="h-3 w-3 text-violet-500 shrink-0" />
+                                                            {cargo.sucursal?.nombre ?? '—'}
+                                                        </span>
+                                                    </div>
+                                                    {cargo.user && (
+                                                        <div className="flex items-center gap-2 pt-0.5">
+                                                            <EntityAvatar
+                                                                name={cargo.user.name}
+                                                                size="xs"
+                                                                shape="circle"
+                                                                showStatusDot={false}
+                                                            />
+                                                            <span className="truncate text-[11px] font-medium">
+                                                                {cargo.user.name}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="pt-3 mt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Switch
+                                                        checked={cargo.status === 1}
+                                                        onCheckedChange={() => handleToggleStatus(cargo)}
+                                                    />
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        {cargo.status === 1 ? __('Active') : __('Inactive')}
+                                                    </span>
+                                                </div>
+
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleEditClick(cargo)}
+                                                    className="h-8 px-3 rounded-xl text-xs gap-1.5 hover:border-teal-300 hover:text-teal-700 dark:hover:text-teal-300"
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                    {__('Edit')}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <Pagination paginatedData={cargos} filters={currentFilters} />
+                    </div>
+                ) : (
+                    <div className="w-full">
+                        <DataTable
+                            data={cargos}
+                            columns={columns}
+                            filters={currentFilters}
+                            isLoading={isTableLoading}
+                            onRowClick={(cargo) => handleEditClick(cargo)}
+                            emptyState={{
+                                title: 'No positions found',
+                                description: searchTerm || statusFilter || departamentoFilter
+                                    ? 'Try clearing your search filters or changing your query.'
+                                    : 'You have not registered any positions yet.',
+                                ctaLabel: 'New Position',
+                                onCtaClick: handleCreateClick,
+                            }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* ── Modal Creación / Edición ────────────────────────────────────────────── */}

@@ -66,11 +66,14 @@ import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import { cn, cleanParams } from '@/lib/utils';
 import { useTranslate } from '@/hooks/use-translate';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { ColumnDef } from '@/components/data-table';
+import { DataTable } from '@/components/data-table';
+import { EntityAvatar } from '@/components/entity-avatar';
+import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
-import { FilterBar, FilterField } from '@/components/filter-bar';
-import { DataTable } from '@/components/data-table';
-import type { ColumnDef } from '@/components/data-table';
+import { ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
+import { VisitasTemporalesGrid } from './Partials/VisitasTemporalesGrid';
 import { notifySuccess, notifyError } from '@/utils/notifications';
 
 interface Pais {
@@ -127,7 +130,7 @@ interface VisitaTemporal {
     foto_documento?: string | null;
     empresa_id: number;
     sucursal_id: number;
-    status: number;
+    status: 'activo' | 'suspendido' | 'en_revision' | string;
     pais_telefono?: Pais | null;
     empleado?: Empleado | null;
     responsable?: Responsable | null;
@@ -149,7 +152,9 @@ interface VisitasPageProps {
     stats: {
         total: number;
         activos: number;
-        inactivos: number;
+        inactivos?: number;
+        suspendidos?: number;
+        revision?: number;
     };
     empleados: Empleado[];
     responsables: Responsable[];
@@ -429,11 +434,40 @@ export default function Index({
     const suggestRef = useRef<HTMLDivElement>(null);
 
     // Filters state
+    const [viewMode, setViewMode] = useViewMode('smurfit_visitas_temporales_view_mode', 'grid');
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'none');
     const [dateFilter, setDateFilter] = useState(filters.fecha_ingreso || '');
     const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '10');
     const [isTableLoading, setIsTableLoading] = useState(false);
+    const isFirstRender = useRef(true);
+
+    const normalizedStatusFilter = statusFilter === 'none' || statusFilter === 'all' ? '' : statusFilter;
+
+    const currentFilters = cleanParams({
+        search: searchTerm,
+        status: normalizedStatusFilter,
+        fecha_ingreso: dateFilter,
+        perPage: perPageFilter,
+    });
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setStatusFilter('none');
+        setDateFilter('');
+        setPerPageFilter('10');
+    };
+
+    const handleSetVisitStatus = (visit: VisitaTemporal, status: 'activo' | 'suspendido' | 'en_revision') => {
+        router.patch(
+            `/admin/visitas-temporales/${visit.id}/toggle-status`,
+            { status },
+            {
+                preserveScroll: true,
+                onSuccess: () => notifySuccess(__('Status updated successfully.')),
+            }
+        );
+    };
 
     // Handle clicks outside of suggestion dropdown to close it
     useEffect(() => {
@@ -462,12 +496,18 @@ export default function Index({
 
     // Filter effect
     useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+
+            return;
+        }
+
         const timer = setTimeout(() => {
             router.get(
                 window.location.pathname,
                 cleanParams({
                     search: searchTerm,
-                    status: statusFilter,
+                    status: statusFilter === 'none' || statusFilter === 'all' ? '' : statusFilter,
                     fecha_ingreso: dateFilter,
                     perPage: perPageFilter,
                 }),
@@ -643,14 +683,23 @@ export default function Index({
             id: 'foto_carnet',
             header: __('Photo'),
             cell: (visit) => (
-                <div className="w-10 h-10 rounded-full border overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
-                    {visit.foto_carnet ? (
-                        <img src={visit.foto_carnet} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                        <User className="w-5 h-5 text-slate-400" />
-                    )}
-                </div>
-            )
+                <EntityAvatar
+                    name={`${visit.nombres} ${visit.apellidos}`}
+                    firstName={visit.nombres}
+                    lastName={visit.apellidos}
+                    seed={visit.documento_identidad || `${visit.nombres} ${visit.apellidos}`}
+                    src={visit.foto_carnet}
+                    status={
+                        visit.status === 'activo'
+                            ? 'active'
+                            : visit.status === 'suspendido'
+                              ? 'danger'
+                              : 'warning'
+                    }
+                    size="md"
+                    shape="circle"
+                />
+            ),
         },
         {
             id: 'visitante',
@@ -878,13 +927,13 @@ export default function Index({
                     />
                 </div>
 
-                {/* Filter Bar */}
-                <FilterBar>
-                    <div className="flex flex-wrap items-end gap-4">
+                {/* Filter Bar + Conmutador Cuadrícula / Lista */}
+                <FilterBar className="rounded-2xl">
+                    <div className="flex flex-1 flex-wrap items-end gap-4">
                         <FilterField label={__('Search Visitor')}>
                             <Input
                                 placeholder={__('Search by name, ID...')}
-                                className="w-full md:w-80 bg-white"
+                                className="w-full md:w-72 bg-white dark:bg-slate-900 rounded-xl"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -892,7 +941,7 @@ export default function Index({
 
                         <FilterField label={__('Status')}>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full md:w-40 bg-white">
+                                <SelectTrigger className="w-full md:w-40 bg-white dark:bg-slate-900 rounded-xl">
                                     <SelectValue placeholder={__('All')} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -907,7 +956,7 @@ export default function Index({
                         <FilterField label={__('Check-In Date')}>
                             <Input
                                 type="date"
-                                className="w-full md:w-48 bg-white"
+                                className="w-full md:w-44 bg-white dark:bg-slate-900 rounded-xl"
                                 value={dateFilter}
                                 onChange={(e) => setDateFilter(e.target.value)}
                             />
@@ -915,7 +964,7 @@ export default function Index({
 
                         <FilterField label={__('Records per page')}>
                             <Select value={perPageFilter} onValueChange={setPerPageFilter}>
-                                <SelectTrigger className="w-full md:w-32 bg-white">
+                                <SelectTrigger className="w-full md:w-28 bg-white dark:bg-slate-900 rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -927,25 +976,45 @@ export default function Index({
                             </Select>
                         </FilterField>
                     </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end">
+                        <ViewModeToggle value={viewMode} onChange={setViewMode} />
+                    </div>
                 </FilterBar>
 
-                {/* DataTable */}
-                <div className="w-full">
-                    <DataTable
-                        data={visitas}
-                        columns={columns}
+                {/* Contenido Principal: Cuadrícula o Lista */}
+                {viewMode === 'grid' ? (
+                    <VisitasTemporalesGrid
+                        visitas={visitas}
                         isLoading={isTableLoading}
-                        onRowClick={(v) => handleEditClick(v)}
-                        emptyState={{
-                            title: __('No temporary visits found'),
-                            description: searchTerm || statusFilter !== 'none' || dateFilter
-                                ? __('Try clearing your search filters or changing your query.')
-                                : __('You have not registered any visits yet.'),
-                            ctaLabel: __('Register First Visit'),
-                            onCtaClick: handleCreateClick,
-                        }}
+                        filters={currentFilters}
+                        hasActiveFilters={Boolean(searchTerm || normalizedStatusFilter || dateFilter)}
+                        onResetFilters={handleResetFilters}
+                        onCreateClick={handleCreateClick}
+                        onEdit={handleEditClick}
+                        onToggleStatus={handleToggleStatus}
+                        onSetStatus={handleSetVisitStatus}
+                        onDelete={setDeletingVisit}
                     />
-                </div>
+                ) : (
+                    <div className="w-full">
+                        <DataTable
+                            data={visitas}
+                            columns={columns}
+                            filters={currentFilters}
+                            isLoading={isTableLoading}
+                            onRowClick={(v) => handleEditClick(v)}
+                            emptyState={{
+                                title: __('No temporary visits found'),
+                                description: searchTerm || normalizedStatusFilter || dateFilter
+                                    ? __('Try clearing your search filters or changing your query.')
+                                    : __('You have not registered any visits yet.'),
+                                ctaLabel: __('Register First Visit'),
+                                onCtaClick: handleCreateClick,
+                            }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* ─── Create / Edit Modal Dialog ────────────────────────────────────────── */}

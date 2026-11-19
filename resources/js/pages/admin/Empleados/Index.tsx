@@ -33,9 +33,12 @@ import { validarCurp } from '@/utils/curpValidator';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import type { ColumnDef } from '@/components/data-table';
 import { DataTable } from '@/components/data-table';
+import { EntityAvatar } from '@/components/entity-avatar';
 import { FilterBar, FilterField } from '@/components/filter-bar';
 import { ModuleHeader } from '@/components/module-header';
 import { StatCard } from '@/components/stat-card';
+import { ViewModeToggle, useViewMode } from '@/components/view-mode-toggle';
+import { EmpleadosGrid } from './Partials/EmpleadosGrid';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -413,10 +416,29 @@ export default function EmpleadosIndexPage({
     };
 
     // Filtros
+    const [viewMode, setViewMode] = useViewMode('smurfit_empleados_view_mode', 'grid');
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [depFilter, setDepFilter] = useState(filters.departamento_id || '');
     const [perPageFilter, setPerPageFilter] = useState(filters.perPage || '10');
+    const isFirstRender = useRef(true);
+
+    const normalizedStatusFilter = statusFilter === 'none' || statusFilter === 'all' ? '' : statusFilter;
+    const normalizedDepFilter = depFilter === 'none' || depFilter === 'all' ? '' : depFilter;
+
+    const currentFilters = cleanParams({
+        search: searchTerm,
+        status: normalizedStatusFilter,
+        departamento_id: normalizedDepFilter,
+        perPage: perPageFilter,
+    });
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setStatusFilter('');
+        setDepFilter('');
+        setPerPageFilter('10');
+    };
 
     const fileInputEmpleadoRef = useRef<HTMLInputElement>(null);
     const fileInputEmpleado2Ref = useRef<HTMLInputElement>(null);
@@ -438,13 +460,19 @@ export default function EmpleadosIndexPage({
 
     // Debounce de filtros
     useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+
+            return;
+        }
+
         const timer = setTimeout(() => {
             router.get(
                 window.location.pathname,
                 cleanParams({
                     search: searchTerm,
-                    status: statusFilter,
-                    departamento_id: depFilter,
+                    status: statusFilter === 'none' || statusFilter === 'all' ? '' : statusFilter,
+                    departamento_id: depFilter === 'none' || depFilter === 'all' ? '' : depFilter,
                     perPage: perPageFilter,
                 }),
                 { preserveState: true, preserveScroll: true }
@@ -714,16 +742,19 @@ export default function EmpleadosIndexPage({
             accessorKey: 'nombres',
             className: 'font-medium',
             cell: (emp) => {
-                const foto = formatImageUrl(emp.foto_empleado) || '/image/avatar-placeholder.png'; // fallback avatar
+                const foto = formatImageUrl(emp.foto_empleado);
+
                 return (
                     <div className="flex items-center gap-3">
-                        <img
+                        <EntityAvatar
+                            name={`${emp.nombres} ${emp.apellidos}`}
+                            firstName={emp.nombres}
+                            lastName={emp.apellidos}
+                            seed={emp.correo || emp.documento_identidad || `${emp.nombres} ${emp.apellidos}`}
                             src={foto}
-                            alt={`${emp.nombres} ${emp.apellidos}`}
-                            className="w-10 h-10 rounded-full object-cover border border-slate-200"
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%23cccccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-                            }}
+                            status={emp.status ? 'active' : 'inactive'}
+                            size="md"
+                            shape="circle"
                         />
                         <div>
                             <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{emp.nombres} {emp.apellidos}</p>
@@ -935,24 +966,27 @@ export default function EmpleadosIndexPage({
                     />
                 </div>
 
-                {/* Filtros */}
-                <FilterBar>
-                    <div className="flex flex-wrap items-end gap-4">
+                {/* Filtros + Conmutador Cuadrícula / Lista */}
+                <FilterBar className="rounded-2xl">
+                    <div className="flex flex-1 flex-wrap items-end gap-4">
                         <FilterField label={__('Search')}>
                             <Input
                                 placeholder={__('Search by name, document, email...')}
-                                className="w-full md:w-80"
+                                className="w-full md:w-72 rounded-xl"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </FilterField>
                         <FilterField label={__('Department')}>
-                            <Select value={depFilter} onValueChange={setDepFilter}>
-                                <SelectTrigger className="w-full md:w-48">
+                            <Select
+                                value={normalizedDepFilter || 'all'}
+                                onValueChange={(v) => setDepFilter(v === 'all' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full md:w-48 rounded-xl">
                                     <SelectValue placeholder={__('All Departments')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="none">{__('All')}</SelectItem>
+                                    <SelectItem value="all">{__('All')}</SelectItem>
                                     {departamentos.map((dep) => (
                                         <SelectItem key={dep.id} value={String(dep.id)}>
                                             {dep.nombre}
@@ -962,12 +996,15 @@ export default function EmpleadosIndexPage({
                             </Select>
                         </FilterField>
                         <FilterField label={__('Status')}>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full md:w-40">
+                            <Select
+                                value={normalizedStatusFilter || 'all'}
+                                onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full md:w-36 rounded-xl">
                                     <SelectValue placeholder={__('All')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="none">{__('All')}</SelectItem>
+                                    <SelectItem value="all">{__('All')}</SelectItem>
                                     <SelectItem value="1">{__('Active')}</SelectItem>
                                     <SelectItem value="0">{__('Inactive')}</SelectItem>
                                 </SelectContent>
@@ -975,7 +1012,7 @@ export default function EmpleadosIndexPage({
                         </FilterField>
                         <FilterField label={__('Records per page')}>
                             <Select value={perPageFilter} onValueChange={setPerPageFilter}>
-                                <SelectTrigger className="w-full md:w-32">
+                                <SelectTrigger className="w-full md:w-28 rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -987,25 +1024,45 @@ export default function EmpleadosIndexPage({
                             </Select>
                         </FilterField>
                     </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end">
+                        <ViewModeToggle value={viewMode} onChange={setViewMode} />
+                    </div>
                 </FilterBar>
 
-                {/* Tabla */}
-                <div className="w-full">
-                    <DataTable
-                        data={empleados}
-                        columns={columns}
+                {/* Contenido Principal: Cuadrícula o Lista */}
+                {viewMode === 'grid' ? (
+                    <EmpleadosGrid
+                        empleados={empleados}
                         isLoading={isTableLoading}
-                        onRowClick={(emp) => handleEditClick(emp)}
-                        emptyState={{
-                            title: 'No employees found',
-                            description: searchTerm || statusFilter || depFilter
-                                ? 'Try clearing your search filters or changing your query.'
-                                : 'You have not registered any employees yet.',
-                            ctaLabel: 'New Employee',
-                            onCtaClick: handleCreateClick,
-                        }}
+                        filters={currentFilters}
+                        hasActiveFilters={Boolean(searchTerm || normalizedStatusFilter || normalizedDepFilter)}
+                        onResetFilters={handleResetFilters}
+                        onCreateClick={handleCreateClick}
+                        onEdit={handleEditClick}
+                        onToggleStatus={handleToggleStatus}
+                        onDelete={setDeletingEmpleado}
+                        formatImageUrl={formatImageUrl}
                     />
-                </div>
+                ) : (
+                    <div className="w-full">
+                        <DataTable
+                            data={empleados}
+                            columns={columns}
+                            filters={currentFilters}
+                            isLoading={isTableLoading}
+                            onRowClick={(emp) => handleEditClick(emp)}
+                            emptyState={{
+                                title: 'No employees found',
+                                description: searchTerm || normalizedStatusFilter || normalizedDepFilter
+                                    ? 'Try clearing your search filters or changing your query.'
+                                    : 'You have not registered any employees yet.',
+                                ctaLabel: 'New Employee',
+                                onCtaClick: handleCreateClick,
+                            }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* ── Modal Creación / Edición ────────────────────────────────────────────── */}
