@@ -381,12 +381,28 @@ class BioTimeController extends Controller
                 $service->syncCatalogs($empresa);
                 $res = $service->syncEmployees($empresa, forceProvision: true, forceUpdate: true);
 
+                // Las fotos viajan con los datos: se copian a los colaboradores sin foto.
+                $fotos = $service->syncPhotos($empresa, 100);
+
                 $msg = sprintf(
                     'Sincronización de empleados completada: %d consultados en BioTime, %d creados y %d actualizados en Hoshō.',
                     $res['fetched'] ?? 0,
                     $res['created'] ?? 0,
                     $res['updated'] ?? 0
                 );
+
+                $msg .= sprintf(' Fotos: %d revisados, %d con foto de perfil, %d con bio-foto, %d asignadas a colaboradores.', $fotos['revisados'], $fotos['fotos'], $fotos['biofotos'], $fotos['colaboradores']);
+
+                // Antes los empleados que no se podían insertar se omitían en silencio.
+                if (! empty($res['diag'])) {
+                    $msg .= ' ('.$res['diag'].')';
+                }
+                if (! empty($res['sin_reloj'])) {
+                    $msg .= sprintf(' %d omitidos por pertenecer solo a áreas cuyos relojes fueron eliminados.', $res['sin_reloj']);
+                }
+                if (! empty($res['omitidos_motivos'])) {
+                    $msg .= ' No se pudo crear: '.implode(' ', array_unique($res['omitidos_motivos']));
+                }
 
                 return back()->with('notification', [
                     'type' => 'success',

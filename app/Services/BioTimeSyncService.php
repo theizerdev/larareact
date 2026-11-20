@@ -247,6 +247,8 @@ class BioTimeSyncService
                 'updated' => $alta['actualizados'],
                 'accounts' => $alta['cuentas'],
                 'skipped' => count($alta['omitidos']),
+                'omitidos_motivos' => $alta['omitidos'],
+                'diag' => $alta['diag'] ?? '',
             ];
 
             foreach ($alta['omitidos'] as $motivo) {

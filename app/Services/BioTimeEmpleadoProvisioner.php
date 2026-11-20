@@ -81,7 +81,7 @@ class BioTimeEmpleadoProvisioner
         ?User $usuario,
         bool $forceUpdate = true,
     ): array {
-        $res = ['creados' => 0, 'actualizados' => 0, 'cuentas' => 0, 'omitidos' => [], 'sin_cuenta' => [], 'nuevos' => []];
+        $res = ['diag' => '', 'creados' => 0, 'actualizados' => 0, 'cuentas' => 0, 'omitidos' => [], 'sin_cuenta' => [], 'nuevos' => []];
 
         $sinReloj = BiotimeDispositivo::areasSinReloj($empresa->id);
 
@@ -121,6 +121,7 @@ class BioTimeEmpleadoProvisioner
             ->get(), $sinReloj);
 
         $pendientes = $bios->whereNull('empleado_id');
+        $res['diag'] = sprintf('en espejo: %d, ya vinculados: %d, pendientes de crear: %d', $bios->count(), $bios->whereNotNull('empleado_id')->count(), $pendientes->count());
         $contexto = null;
 
         if ($pendientes->isNotEmpty()) {
@@ -418,11 +419,20 @@ class BioTimeEmpleadoProvisioner
             ->orderByDesc('n')
             ->value('sucursal_id');
 
-        return Sucursal::withoutTenant()
+        $sucursal = Sucursal::withoutTenant()
             ->where('empresa_id', $empresa->id)
             ->when($id, fn ($q) => $q->whereKey($id))
             ->orderBy('id')
             ->first();
+
+        // Una empresa recién creada puede no tener sucursales: sin una, nadie
+        // de BioTime se podría dar de alta. Se crea una principal.
+        return $sucursal ?? Sucursal::withoutTenant()->create([
+            'empresa_id' => $empresa->id,
+            'nombre' => 'Principal',
+            'codigo_numeral' => '01',
+            'status' => true,
+        ]);
     }
 
     private function departamento(?string $nombre, Empresa $empresa, Sucursal $sucursal, User $usuario): ?Departamento
