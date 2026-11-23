@@ -721,7 +721,16 @@ export default function IndexReparaciones({
                 estado: o.estado_orden,
             },
             {
-                onSuccess: () => notifySuccess(__('Notificación enviada exitosamente al cliente.')),
+                preserveScroll: true,
+                onSuccess: (page: any) => {
+                    const waUrl = page?.props?.flash?.whatsapp_url || page?.props?.whatsapp_url;
+                    if (waUrl) {
+                        window.open(waUrl, '_blank');
+                    }
+                    if (!page?.props?.notification) {
+                        notifySuccess(__('Notificación enviada exitosamente al cliente.'));
+                    }
+                },
                 onError: (err: any) => notifyError(err?.message || __('Error al enviar notificación.')),
             }
         );

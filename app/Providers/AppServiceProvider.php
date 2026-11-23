@@ -50,6 +50,34 @@ class AppServiceProvider extends ServiceProvider
             return null;
         });
 
+        // Garantizar acceso directo de Administradores y roles con permisos de WhatsApp/Integraciones al módulo WhatsApp
+        $isTenantAdmin = static function ($user): bool {
+            if ($user->hasRole('Administrador') || $user->hasRole('Admin') || $user->hasRole('admin')) {
+                return true;
+            }
+
+            return \Illuminate\Support\Facades\DB::table('model_has_roles')
+                ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                ->where('model_has_roles.model_id', $user->id)
+                ->whereIn('roles.name', ['Administrador', 'Admin', 'admin'])
+                ->exists();
+        };
+
+        \Illuminate\Support\Facades\Gate::define('integrations.access', function ($user) use ($isTenantAdmin) {
+            return $isTenantAdmin($user)
+                || $user->hasAnyPermission(['integrations.view', 'integrations.edit']);
+        });
+
+        \Illuminate\Support\Facades\Gate::define('whatsapp.access', function ($user) use ($isTenantAdmin) {
+            return $isTenantAdmin($user)
+                || $user->hasAnyPermission(['whatsapp.view', 'whatsapp.manage', 'integrations.view', 'integrations.edit']);
+        });
+
+        \Illuminate\Support\Facades\Gate::define('whatsapp.operate', function ($user) use ($isTenantAdmin) {
+            return $isTenantAdmin($user)
+                || $user->hasAnyPermission(['whatsapp.manage', 'integrations.edit']);
+        });
+
         Event::listen(Login::class, function (Login $event) {
             $user = $event->user;
             $request = request();

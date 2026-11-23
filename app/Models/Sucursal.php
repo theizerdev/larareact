@@ -36,12 +36,24 @@ class Sucursal extends Model
         'whatsapp_phone',
         'whatsapp_status',
         'whatsapp_last_connected',
+        'whatsapp_connected_at',
         'whatsapp_active',
         'whatsapp_rate_limit',
+        'whatsapp_hourly_limit',
         'whatsapp_warmup_mode',
         'whatsapp_working_hours_enabled',
         'whatsapp_working_hours_start',
         'whatsapp_working_hours_end',
+        'whatsapp_simulate_typing',
+        'whatsapp_typing_min_sec',
+        'whatsapp_typing_max_sec',
+        'whatsapp_delay_min_sec',
+        'whatsapp_delay_max_sec',
+        'whatsapp_batch_size',
+        'whatsapp_batch_pause_sec',
+        'whatsapp_verify_number',
+        'whatsapp_queue_paused',
+        'whatsapp_proxy_url',
     ];
 
     protected function casts(): array
@@ -54,7 +66,18 @@ class Sucursal extends Model
             'whatsapp_warmup_mode' => 'boolean',
             'whatsapp_working_hours_enabled' => 'boolean',
             'whatsapp_rate_limit' => 'integer',
+            'whatsapp_hourly_limit' => 'integer',
+            'whatsapp_simulate_typing' => 'boolean',
+            'whatsapp_typing_min_sec' => 'float',
+            'whatsapp_typing_max_sec' => 'float',
+            'whatsapp_delay_min_sec' => 'integer',
+            'whatsapp_delay_max_sec' => 'integer',
+            'whatsapp_batch_size' => 'integer',
+            'whatsapp_batch_pause_sec' => 'integer',
+            'whatsapp_verify_number' => 'boolean',
+            'whatsapp_queue_paused' => 'boolean',
             'whatsapp_last_connected' => 'datetime',
+            'whatsapp_connected_at' => 'datetime',
         ];
     }
 

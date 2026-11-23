@@ -1,21 +1,65 @@
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import {
-    Settings2, MessageSquare, QrCode, RefreshCw, Power, Send, Key,
-    Database, AlertTriangle, CheckCircle2, Copy, Check, Activity, Phone,
-    Shield, Clock, Sparkles, UserCheck, Flame, ListOrdered, CheckCircle,
-    XCircle, HelpCircle, Server, Radio, ShieldCheck, ArrowRight, ExternalLink,
-    Zap, Globe, Terminal, Layers, FileText, Plus, Trash2, Edit3, Search,
-    Eye, CheckCheck, AlertCircle, HeartHandshake, Wifi, WifiOff, Heart,
-    BarChart3, Inbox, RotateCw, Play, Filter, ArrowUpRight, Users, Megaphone,
-    CheckSquare, Square, Volume2, Store, Building2
+    Activity,
+    AlertTriangle,
+    ArrowDownLeft,
+    ArrowUpRight,
+    Building2,
+    Check,
+    CheckCheck,
+    CheckCircle2,
+    Clock,
+    Copy,
+    Cpu,
+    Edit2,
+    FileText,
+    Flame,
+    Hash,
+    Inbox,
+    Keyboard,
+    Loader2,
+    Megaphone,
+    MessageSquare,
+    Pause,
+    Phone,
+    Play,
+    Plus,
+    Power,
+    QrCode,
+    Radio,
+    RefreshCw,
+    RotateCw,
+    Save,
+    Search,
+    Send,
+    Settings2,
+    Shield,
+    ShieldAlert,
+    ShieldCheck,
+    Smartphone,
+    Sparkles,
+    Store,
+    Terminal,
+    Trash2,
+    Users,
+    WifiOff,
+    Zap,
 } from 'lucide-react';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import Swal from 'sweetalert2';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ModuleHeader } from '@/components/module-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -34,49 +78,93 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslate } from '@/hooks/use-translate';
+import { cn } from '@/lib/utils';
 import type { PaisPhoneOption } from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
-import PhoneInputGroup from '@/pages/admin/Empresas/Partials/PhoneInputGroup';
+
+// ── TIPOS ────────────────────────────────────────────────────────────────
 
 interface LiveStatus {
+    instanceName?: string;
+    status?: string;
     isConnected: boolean;
     connectionState: string;
     qrCode: string | null;
     qrDataUrl?: string | null;
-    token?: string | null;
-    user: {
-        id: string;
-        name?: string;
+    qrExpiresIn?: number | null;
+    phoneNumber?: string | null;
+    pushName?: string | null;
+    currentlyTypingTo?: string | null;
+    queuePaused?: boolean;
+    pauseReason?: string | null;
+    lastError?: string | null;
+    hasSavedSession?: boolean;
+    engine?: string;
+    user?: {
+        id: string | null;
+        name?: string | null;
     } | null;
     userJid?: string | null;
-    lastSeen: string | null;
-    reconnectAttempts: number;
     _error?: string;
 }
 
 interface QueueStats {
-    totalQueued?: number;
-    queued?: number;
-    sentToday?: number;
-    dailyLimit?: number;
-    warmupMode?: boolean;
-    rateLimitPerMin?: number;
-    workingHoursEnabled?: boolean;
-    workingHoursStart?: string;
-    workingHoursEnd?: string;
-    proxyUrl?: string;
-    [key: string]: any;
+    sentToday: number;
+    sentThisHour: number;
+    dailyLimit: number;
+    effectiveDailyLimit: number;
+    hourlyLimit: number;
+    remaining: number;
+    queued: number;
+    failedToday: number;
+    warmupMode: boolean;
+    warmupDay: number;
+    workingHoursEnabled: boolean;
+    workingHoursStart: string;
+    workingHoursEnd: string;
+    withinWorkingHours: boolean;
+    simulateTyping: boolean;
+    typingMinSec: number;
+    typingMaxSec: number;
+    delayMinSec: number;
+    delayMaxSec: number;
+    batchSize: number;
+    batchPauseSec: number;
+    verifyNumber: boolean;
+    queuePaused: boolean;
+    pauseReason?: string | null;
+    consecutiveFailures: number;
+    circuitBreakerActive: boolean;
+    proxyUrl: string;
+    safetyScore: number;
+    safetyTips: string[];
+}
+
+interface SucursalInstanceSummary {
+    id: number;
+    sucursal_id: number;
+    nombre: string;
+    telefono?: string | null;
+    whatsapp_instance: string;
+    whatsapp_phone?: string | null;
+    push_name?: string | null;
+    whatsapp_status: string;
+    connection_state: string;
+    is_connected: boolean;
+    whatsapp_active: boolean;
+    sent_today: number;
+    effective_daily_limit: number;
+    sent_this_hour: number;
+    hourly_limit: number;
+    queued: number;
+    queue_paused: boolean;
+    safety_score: number;
+    currently_typing_to?: string | null;
+    has_saved_session: boolean;
 }
 
 interface WhatsAppTemplateItem {
@@ -87,8 +175,6 @@ interface WhatsAppTemplateItem {
     contenido: string;
     variables: string[] | null;
     activo: boolean;
-    created_at?: string;
-    updated_at?: string;
 }
 
 interface WhatsAppMessageItem {
@@ -97,8 +183,7 @@ interface WhatsAppMessageItem {
     recipient_phone: string;
     recipient_name?: string | null;
     message_content: string;
-    variables?: Record<string, any> | null;
-    status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+    status: string;
     direction: 'inbound' | 'outbound';
     sent_at?: string | null;
     delivered_at?: string | null;
@@ -110,2319 +195,2677 @@ interface WhatsAppMessageItem {
 
 interface BroadcastRecipient {
     id: number;
-    type: 'user' | 'pastor';
+    type: 'cliente' | 'empleado' | 'user';
     name: string;
-    email?: string;
+    email?: string | null;
     phone: string;
     formatted_phone: string;
     is_valid_phone: boolean;
-    zonas: string;
-    distritos: string;
+    sucursal: string;
     role: string;
-    codigo?: string;
 }
 
-interface SucursalItem {
-    id: number;
-    nombre: string;
-    telefono?: string;
-    whatsapp_instance?: string;
-    whatsapp_phone?: string | null;
-    whatsapp_status?: string | null;
-    whatsapp_active?: boolean;
+interface DiagnosticData {
+    success: boolean;
+    online: boolean;
+    api_url: string;
+    engine?: string;
+    instance: string;
+    target_name?: string;
+    socket_state: string;
+    thread_alive: boolean;
+    phone_number?: string | null;
+    push_name?: string | null;
+    latency_ms: number;
+    memory_usage?: string;
+    session_size_kb?: number;
+    active_instances_count?: number;
+    uptime_seconds?: number;
+    webhook_url?: string | null;
+    worker_running?: boolean;
+    error?: string;
 }
 
 interface PageProps {
     empresa_id: number;
     empresa_nombre: string;
-    sucursales?: SucursalItem[];
-    active_sucursal_id?: number | null;
-    target_type?: 'sucursal' | 'empresa';
-    target_name?: string;
-    whatsapp_api_key: string | null;
+    sucursales: SucursalInstanceSummary[];
+    active_sucursal_id: number | null;
+    target_name: string;
     whatsapp_api_url: string;
-    whatsapp_instance?: string;
+    whatsapp_instance: string;
+    whatsapp_active: boolean;
+    whatsapp_phone: string | null;
+    whatsapp_status: string | null;
     whatsapp_rate_limit: number;
+    whatsapp_hourly_limit?: number;
     whatsapp_warmup_mode?: boolean;
     whatsapp_working_hours_enabled?: boolean;
     whatsapp_working_hours_start?: string;
     whatsapp_working_hours_end?: string;
+    whatsapp_simulate_typing?: boolean;
+    whatsapp_typing_min_sec?: number;
+    whatsapp_typing_max_sec?: number;
+    whatsapp_delay_min_sec?: number;
+    whatsapp_delay_max_sec?: number;
+    whatsapp_batch_size?: number;
+    whatsapp_batch_pause_sec?: number;
+    whatsapp_verify_number?: boolean;
     whatsapp_proxy_url?: string;
-    whatsapp_active: boolean;
-    whatsapp_phone: string | null;
-    whatsapp_status: string | null;
     live_status: LiveStatus | null;
-    queue_stats?: QueueStats | null;
-    templates?: WhatsAppTemplateItem[];
+    queue_stats: QueueStats | null;
+    templates: WhatsAppTemplateItem[];
     paises: PaisPhoneOption[];
     is_superadmin?: boolean;
-    subscription_status?: string;
-    trial_ends_at?: string | null;
-    dias_restantes?: number;
-    is_on_trial?: boolean;
 }
 
+// ── CONSTANTES DE FIXSALE ────────────────────────────────────────────────
+
+const TEMPLATE_CATEGORIES: Record<string, { label: string; color: string }> = {
+    reparacion: {
+        label: 'Reparaciones / Taller',
+        color: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25',
+    },
+    ventas: {
+        label: 'Ventas & Facturación',
+        color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
+    },
+    cobranza: {
+        label: 'Créditos & Cobranzas',
+        color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
+    },
+    promocion: {
+        label: 'Promociones & Fidelización',
+        color: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/25',
+    },
+    general: {
+        label: 'General / Avisos',
+        color: 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/25',
+    },
+};
+
+const WARMUP_STAGES = [
+    { label: 'Días 1–2', limit: 20, minDay: 1, maxDay: 2 },
+    { label: 'Días 3–4', limit: 40, minDay: 3, maxDay: 4 },
+    { label: 'Días 5–7', limit: 80, minDay: 5, maxDay: 7 },
+    { label: 'Días 8–14', limit: 150, minDay: 8, maxDay: 14 },
+    { label: 'Día 15+', limit: null, minDay: 15, maxDay: 9999 },
+];
+
+// Helper CSRF para fetch contra Laravel
+function getCsrfHeaders(): Record<string, string> {
+    const metaToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+    const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    const xsrfToken = cookieMatch ? decodeURIComponent(cookieMatch[1]) : '';
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+    };
+    if (metaToken) headers['X-CSRF-TOKEN'] = metaToken;
+    if (xsrfToken) headers['X-XSRF-TOKEN'] = xsrfToken;
+    return headers;
+}
+
+// ── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────
+
 export default function WhatsAppIntegration({
-    empresa_id,
     empresa_nombre,
-    sucursales = [],
-    active_sucursal_id = null,
-    target_type = 'empresa',
-    target_name = '',
-    whatsapp_api_key,
-    whatsapp_api_url,
-    whatsapp_instance = '',
-    whatsapp_rate_limit,
+    sucursales: initialSucursales = [],
+    active_sucursal_id: initialSucursalId = null,
+    whatsapp_api_url: initialApiUrl,
+    whatsapp_instance: initialInstanceName,
+    whatsapp_active: initialWhatsappActive,
+    whatsapp_rate_limit = 200,
+    whatsapp_hourly_limit = 25,
     whatsapp_warmup_mode = true,
     whatsapp_working_hours_enabled = true,
     whatsapp_working_hours_start = '08:00',
     whatsapp_working_hours_end = '20:00',
+    whatsapp_simulate_typing = true,
+    whatsapp_typing_min_sec = 2.0,
+    whatsapp_typing_max_sec = 6.0,
+    whatsapp_delay_min_sec = 8,
+    whatsapp_delay_max_sec = 20,
+    whatsapp_batch_size = 10,
+    whatsapp_batch_pause_sec = 60,
+    whatsapp_verify_number = true,
     whatsapp_proxy_url = '',
-    whatsapp_active,
-    whatsapp_phone,
-    whatsapp_status,
-    live_status,
-    queue_stats,
-    templates = [],
-    paises
+    live_status: initialLiveStatus,
+    queue_stats: initialQueueStats,
+    templates: initialTemplates = [],
+    paises = [],
+    is_superadmin = false,
 }: PageProps) {
     const { __ } = useTranslate();
-    const [copiedToken, setCopiedToken] = useState(false);
-    const [copiedWebhook, setCopiedWebhook] = useState(false);
-    const [liveStatusState, setLiveStatusState] = useState<LiveStatus | null>(live_status);
-    const [queueStatsState, setQueueStatsState] = useState<QueueStats | null>(queue_stats || null);
-    const [isPolling, setIsPolling] = useState(false);
-    const [sendingMsg, setSendingMsg] = useState(false);
-    const [checkingNumber, setCheckingNumber] = useState(false);
-    const [numberCheckResult, setNumberCheckResult] = useState<{ checked: boolean; exists?: boolean; jid?: string; error?: string } | null>(null);
-    const [previewingSpintax, setPreviewingSpintax] = useState(false);
-    const [spintaxPreviews, setSpintaxPreviews] = useState<string[]>([]);
+
     const [activeTab, setActiveTab] = useState('connection');
 
-    // Estado del Módulo de Diagnóstico / Heartbeat
-    const [diagnosticOpen, setDiagnosticOpen] = useState(false);
-    const [diagnosticLoading, setDiagnosticLoading] = useState(false);
-    const [diagnosticData, setDiagnosticData] = useState<any>(null);
+    // Estado multi-instancia por sucursal
+    const [instances, setInstances] = useState<SucursalInstanceSummary[]>(initialSucursales);
+    const [selectedSucursalId, setSelectedSucursalId] = useState<number | null>(
+        initialSucursalId ?? initialSucursales[0]?.id ?? null
+    );
 
-    // Estado del Módulo de Plantillas
-    const [templatesList, setTemplatesList] = useState<WhatsAppTemplateItem[]>(templates);
-    const [templateModalOpen, setTemplateModalOpen] = useState(false);
-    const [editingTemplate, setEditingTemplate] = useState<WhatsAppTemplateItem | null>(null);
-    const [templateCategoryFilter, setTemplateCategoryFilter] = useState('all');
-    const [templateFormData, setTemplateFormData] = useState({
-        nombre: '',
-        categoria: 'pastoral',
-        contenido: '',
-        variables: [] as string[],
-        activo: true,
-    });
-    const [savingTemplate, setSavingTemplate] = useState(false);
+    // Estado en vivo de la sucursal seleccionada
+    const [liveStatus, setLiveStatus] = useState<LiveStatus | null>(initialLiveStatus);
+    const [queueStats, setQueueStats] = useState<QueueStats | null>(initialQueueStats);
+    const [branchActive, setBranchActive] = useState<boolean>(initialWhatsappActive);
+    const [instanceSlugInput, setInstanceSlugInput] = useState<string>(initialInstanceName || '');
+    const [apiUrlInput, setApiUrlInput] = useState<string>(initialApiUrl || 'http://127.0.0.1:3001');
+    const [savingInstanceConfig, setSavingInstanceConfig] = useState(false);
+    const [loadingAction, setLoadingAction] = useState(false);
+    const [switchingBranch, setSwitchingBranch] = useState(false);
+    const prevConnectedRef = useRef<boolean>(Boolean(initialLiveStatus?.isConnected));
 
-    // Estado del Módulo de Historial y Logs
+    // Vinculación: QR vs Código de 8 dígitos
+    const [linkMode, setLinkMode] = useState<'qr' | 'phone'>('qr');
+    const [pairPhoneInput, setPairPhoneInput] = useState('');
+    const [pairingCode, setPairingCode] = useState<string | null>(null);
+    const [pairLoading, setPairLoading] = useState(false);
+    const [copiedCode, setCopiedCode] = useState(false);
+
+    // Probador en vivo & Verificador
+    const defaultCountryDial = useMemo(() => {
+        const ve = paises.find((p) => p.codigo_iso2 === 'VE' || p.codigo_telefonico === '+58');
+        return ve?.codigo_telefonico || paises[0]?.codigo_telefonico || '+58';
+    }, [paises]);
+
+    const [testCountryCode, setTestCountryCode] = useState<string>(defaultCountryDial);
+    const [testPhone, setTestPhone] = useState('');
+    const [testMessage, setTestMessage] = useState(
+        `{Hola|Buen día|Saludos} *{{cliente}}*, mensaje de prueba enviado desde la línea oficial de *{{sucursal}}* en *${empresa_nombre}*. ✅`
+    );
+    const [testSimulateTyping, setTestSimulateTyping] = useState(true);
+    const [testUseQueue, setTestUseQueue] = useState(false);
+    const [sendingTest, setSendingTest] = useState(false);
+    const [testPreviews, setTestPreviews] = useState<string[]>([]);
+    const [checkLoading, setCheckLoading] = useState(false);
+    const [checkResult, setCheckResult] = useState<{
+        exists: boolean;
+        phone: string;
+        verified_live?: boolean;
+        verified_name?: string | null;
+        reason?: string | null;
+    } | null>(null);
+
+    // Formulario Anti-Baneo por sucursal
+    const [abDailyLimit, setAbDailyLimit] = useState(initialQueueStats?.dailyLimit ?? whatsapp_rate_limit);
+    const [abHourlyLimit, setAbHourlyLimit] = useState(initialQueueStats?.hourlyLimit ?? whatsapp_hourly_limit);
+    const [abWarmupMode, setAbWarmupMode] = useState(initialQueueStats?.warmupMode ?? whatsapp_warmup_mode);
+    const [abWorkingHoursEnabled, setAbWorkingHoursEnabled] = useState(
+        initialQueueStats?.workingHoursEnabled ?? whatsapp_working_hours_enabled
+    );
+    const [abWorkingHoursStart, setAbWorkingHoursStart] = useState(
+        initialQueueStats?.workingHoursStart ?? whatsapp_working_hours_start
+    );
+    const [abWorkingHoursEnd, setAbWorkingHoursEnd] = useState(
+        initialQueueStats?.workingHoursEnd ?? whatsapp_working_hours_end
+    );
+    const [abSimulateTyping, setAbSimulateTyping] = useState(
+        initialQueueStats?.simulateTyping ?? whatsapp_simulate_typing
+    );
+    const [abTypingMinSec, setAbTypingMinSec] = useState(initialQueueStats?.typingMinSec ?? whatsapp_typing_min_sec);
+    const [abTypingMaxSec, setAbTypingMaxSec] = useState(initialQueueStats?.typingMaxSec ?? whatsapp_typing_max_sec);
+    const [abDelayMinSec, setAbDelayMinSec] = useState(initialQueueStats?.delayMinSec ?? whatsapp_delay_min_sec);
+    const [abDelayMaxSec, setAbDelayMaxSec] = useState(initialQueueStats?.delayMaxSec ?? whatsapp_delay_max_sec);
+    const [abBatchSize, setAbBatchSize] = useState(initialQueueStats?.batchSize ?? whatsapp_batch_size);
+    const [abBatchPauseSec, setAbBatchPauseSec] = useState(
+        initialQueueStats?.batchPauseSec ?? whatsapp_batch_pause_sec
+    );
+    const [abVerifyNumber, setAbVerifyNumber] = useState(initialQueueStats?.verifyNumber ?? whatsapp_verify_number);
+    const [abProxyUrl, setAbProxyUrl] = useState(initialQueueStats?.proxyUrl ?? whatsapp_proxy_url);
+    const [savingAntiBan, setSavingAntiBan] = useState(false);
+
+    // Difusión Segura (Fixsale: Clientes, Empleados, Usuarios)
+    const [bcTarget, setBcTarget] = useState<'clientes' | 'empleados' | 'usuarios'>('clientes');
+    const [bcOnlyBranch, setBcOnlyBranch] = useState<boolean>(true);
+    const [bcRecipients, setBcRecipients] = useState<BroadcastRecipient[]>([]);
+    const [bcSelectedIds, setBcSelectedIds] = useState<number[]>([]);
+    const [bcSearch, setBcSearch] = useState('');
+    const [bcMessage, setBcMessage] = useState(
+        '{Hola|Buen día|Estimado/a} *{cliente}*, te {saludamos|escribimos} desde *{sucursal}* de *{empresa}* para informarte sobre nuestras novedades y servicio técnico.'
+    );
+    const [bcPreviews, setBcPreviews] = useState<string[]>([]);
+    const [bcLoadingRecipients, setBcLoadingRecipients] = useState(false);
+    const [bcDispatching, setBcDispatching] = useState(false);
+
+    // Plantillas CRUD
+    const [templates, setTemplates] = useState<WhatsAppTemplateItem[]>(initialTemplates);
+    const [tplCategoryFilter, setTplCategoryFilter] = useState<string>('all');
+    const [tplDialogOpen, setTplDialogOpen] = useState(false);
+    const [editingTpl, setEditingTpl] = useState<WhatsAppTemplateItem | null>(null);
+    const [tplNombre, setTplNombre] = useState('');
+    const [tplCategoria, setTplCategoria] = useState('reparacion');
+    const [tplContenido, setTplContenido] = useState('');
+    const [tplActivo, setTplActivo] = useState(true);
+    const [tplPreviews, setTplPreviews] = useState<string[]>([]);
+    const [savingTpl, setSavingTpl] = useState(false);
+
+    // Bitácora & Cola
     const [messagesData, setMessagesData] = useState<{
         data: WhatsAppMessageItem[];
         current_page: number;
         last_page: number;
         total: number;
-        per_page: number;
     } | null>(null);
     const [messagesStats, setMessagesStats] = useState({
         totalSent: 0,
         totalDelivered: 0,
         totalRead: 0,
         totalFailed: 0,
+        totalQueued: 0,
         deliveryRate: 100,
         readRate: 0,
     });
-    const [historySearch, setHistorySearch] = useState('');
-    const [historyStatus, setHistoryStatus] = useState('all');
-    const [historyPage, setHistoryPage] = useState(1);
-    const [historyLoading, setHistoryLoading] = useState(false);
-    const [selectedMessage, setSelectedMessage] = useState<WhatsAppMessageItem | null>(null);
+    const [msgPage, setMsgPage] = useState(1);
+    const [msgSearch, setMsgSearch] = useState('');
+    const [msgStatusFilter, setMsgStatusFilter] = useState('all');
+    const [msgDirectionFilter, setMsgDirectionFilter] = useState('all');
+    const [msgAllBranches, setMsgAllBranches] = useState(false);
+    const [msgLoading, setMsgLoading] = useState(false);
     const [retryingId, setRetryingId] = useState<number | null>(null);
 
-    // Estado del Módulo de Difusión Masiva (Broadcast)
-    const [broadcastTarget, setBroadcastTarget] = useState<'presbiteros' | 'pastores' | 'usuarios'>('presbiteros');
-    const [broadcastZona, setBroadcastZona] = useState<string>('all');
-    const [broadcastRecipients, setBroadcastRecipients] = useState<BroadcastRecipient[]>([]);
-    const [selectedRecipientIds, setSelectedRecipientIds] = useState<number[]>([]);
-    const [broadcastLoading, setBroadcastLoading] = useState(false);
-    const [broadcastMessage, setBroadcastMessage] = useState('');
-    const [broadcastDelaySeconds, setBroadcastDelaySeconds] = useState(15);
-    const [broadcastSending, setBroadcastSending] = useState(false);
-    const [broadcastFilterSearch, setBroadcastFilterSearch] = useState('');
+    // Modal Diagnóstico
+    const [diagOpen, setDiagOpen] = useState(false);
+    const [diagLoading, setDiagLoading] = useState(false);
+    const [diagnostic, setDiagnostic] = useState<DiagnosticData | null>(null);
 
-    const webhookUrl = typeof window !== 'undefined'
-        ? `${window.location.origin}/webhooks/whatsapp`
-        : '/webhooks/whatsapp';
+    const selectedInstance = useMemo(
+        () => instances.find((i) => i.id === selectedSucursalId) || instances[0] || null,
+        [instances, selectedSucursalId]
+    );
 
-    // Formulario de configuración principal
-    const configForm = useForm({
-        sucursal_id: active_sucursal_id || '',
-        whatsapp_api_url: whatsapp_api_url,
-        whatsapp_instance: whatsapp_instance || (active_sucursal_id ? `sucursal_${active_sucursal_id}` : `empresa_${empresa_id}`),
-        whatsapp_api_key: whatsapp_api_key || '',
-        whatsapp_active: whatsapp_active,
-        whatsapp_rate_limit: whatsapp_rate_limit,
-    });
+    const syncAntiBanForm = useCallback((qs: QueueStats | null) => {
+        if (!qs) return;
+        setAbDailyLimit(qs.dailyLimit ?? 200);
+        setAbHourlyLimit(qs.hourlyLimit ?? 25);
+        setAbWarmupMode(Boolean(qs.warmupMode));
+        setAbWorkingHoursEnabled(Boolean(qs.workingHoursEnabled));
+        setAbWorkingHoursStart((qs.workingHoursStart || '08:00').slice(0, 5));
+        setAbWorkingHoursEnd((qs.workingHoursEnd || '20:00').slice(0, 5));
+        setAbSimulateTyping(Boolean(qs.simulateTyping));
+        setAbTypingMinSec(Number(qs.typingMinSec ?? 2.0));
+        setAbTypingMaxSec(Number(qs.typingMaxSec ?? 6.0));
+        setAbDelayMinSec(Number(qs.delayMinSec ?? 8));
+        setAbDelayMaxSec(Number(qs.delayMaxSec ?? 20));
+        setAbBatchSize(Number(qs.batchSize ?? 10));
+        setAbBatchPauseSec(Number(qs.batchPauseSec ?? 60));
+        setAbVerifyNumber(Boolean(qs.verifyNumber));
+        setAbProxyUrl(qs.proxyUrl || '');
+    }, []);
 
-    // Formulario de parámetros Anti-Baneo
-    const antiBanForm = useForm({
-        sucursal_id: active_sucursal_id || '',
-        dailyLimit: queueStatsState?.dailyLimit ?? whatsapp_rate_limit ?? 300,
-        warmupMode: queueStatsState?.warmupMode ?? whatsapp_warmup_mode ?? true,
-        workingHoursEnabled: queueStatsState?.workingHoursEnabled ?? whatsapp_working_hours_enabled ?? true,
-        workingHoursStart: queueStatsState?.workingHoursStart ?? whatsapp_working_hours_start ?? '08:00',
-        workingHoursEnd: queueStatsState?.workingHoursEnd ?? whatsapp_working_hours_end ?? '20:00',
-        proxyUrl: queueStatsState?.proxyUrl ?? whatsapp_proxy_url ?? '',
-    });
-
-    // País por defecto para el sandbox (Venezuela +58 o primer país de la lista)
-    const defaultCountryId = useMemo(() => {
-        const ve = paises?.find(p => p.codigo_telefonico === '+58' || p.codigo_iso2 === 'VE');
-        return ve ? String(ve.id) : (paises?.[0] ? String(paises[0].id) : '');
-    }, [paises]);
-
-    // Formulario de mensaje de prueba con Spintax
-    const [testMessage, setTestMessage] = useState({
-        paisId: '',
-        phoneNumber: '',
-        message: '{Hola|Buen día|Qué tal} {{nombre}}, {te confirmamos que|te notificamos que} tu solicitud en {{empresa}} está lista. Código: {{random}}.',
-        useSync: false,
-    });
-
-    useEffect(() => {
-        if (!testMessage.paisId && defaultCountryId) {
-            setTestMessage(prev => ({ ...prev, paisId: defaultCountryId }));
-        }
-    }, [defaultCountryId]);
-
-    // Determinar si la hora actual está dentro del horario laboral configurado
-    const isWithinWorkingHours = useMemo(() => {
-        if (!antiBanForm.data.workingHoursEnabled) return true;
-        const now = new Date();
-        const currentMins = now.getHours() * 60 + now.getMinutes();
-        const [startH, startM] = (antiBanForm.data.workingHoursStart || '08:00').split(':').map(Number);
-        const [endH, endM] = (antiBanForm.data.workingHoursEnd || '20:00').split(':').map(Number);
-        const startMins = startH * 60 + startM;
-        const endMins = endH * 60 + endM;
-        return currentMins >= startMins && currentMins <= endMins;
-    }, [antiBanForm.data.workingHoursEnabled, antiBanForm.data.workingHoursStart, antiBanForm.data.workingHoursEnd]);
-
-    // Polling del estado de WhatsApp y Estadísticas de cola
-    useEffect(() => {
-        let intervalId: NodeJS.Timeout;
-        const shouldPoll = whatsapp_active;
-
-        if (shouldPoll) {
-            setIsPolling(true);
-            intervalId = setInterval(async () => {
-                try {
-                    const queryParams = active_sucursal_id ? `?sucursal_id=${active_sucursal_id}` : '';
-                    const headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
-                    const response = await fetch(`/admin/integrations/whatsapp/status${queryParams}`, { headers });
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.success) {
-                            setLiveStatusState(data.status);
-                            if (data.queue_stats) {
-                                setQueueStatsState(data.queue_stats);
-                            }
-
-                            if (data.status?.isConnected && !liveStatusState?.isConnected) {
-                                Swal.fire({
-                                    title: __('Connected!'),
-                                    text: __('WhatsApp has been successfully linked.'),
-                                    icon: 'success',
-                                    timer: 3000,
-                                    showConfirmButton: false,
-                                });
-                            }
-                        }
-                    }
-
-                    const queueRes = await fetch(`/admin/integrations/whatsapp/queue-stats${queryParams}`, { headers });
-                    if (queueRes.ok) {
-                        const queueData = await queueRes.json();
-                        if (queueData.success && queueData.stats) {
-                            setQueueStatsState(queueData.stats);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error polling status:', error);
-                }
-            }, 3500);
-        } else {
-            setIsPolling(false);
-        }
-
-        return () => {
-            if (intervalId) clearInterval(intervalId);
-        };
-    }, [whatsapp_active, liveStatusState?.isConnected, active_sucursal_id]);
-
-    // Cargar historial de mensajes al entrar a la pestaña o al filtrar
-    const fetchMessages = async (page = 1, search = historySearch, status = historyStatus) => {
-        setHistoryLoading(true);
+    // Cargar resumen en vivo de todas las sucursales
+    const loadInstances = useCallback(async () => {
         try {
-            const params = new URLSearchParams({
-                page: String(page),
-                search: search || '',
-                status: status || 'all',
+            const res = await fetch('/admin/integrations/whatsapp/instances', {
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             });
-            const res = await fetch(`/admin/integrations/whatsapp/messages?${params.toString()}`);
             if (res.ok) {
                 const data = await res.json();
-                if (data.success) {
-                    setMessagesData(data.messages);
-                    if (data.stats) {
-                        setMessagesStats(data.stats);
+                if (data.success && Array.isArray(data.instances)) {
+                    setInstances(data.instances);
+                }
+            }
+        } catch {
+            // silencioso
+        }
+    }, []);
+
+    // Cargar estado y estadísticas de la sucursal seleccionada
+    const loadSelectedBranchData = useCallback(
+        async (sucursalId: number | null, syncForm = false) => {
+            if (!sucursalId) return;
+            try {
+                const res = await fetch(`/admin/integrations/whatsapp/status?sucursal_id=${sucursalId}`, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        const newStatus: LiveStatus | null = data.status || null;
+                        setLiveStatus(newStatus);
+                        if (typeof data.whatsapp_active === 'boolean') {
+                            setBranchActive(data.whatsapp_active);
+                        }
+                        if (data.instance_name) {
+                            setInstanceSlugInput(data.instance_name);
+                        }
+                        if (data.queue_stats) {
+                            setQueueStats(data.queue_stats);
+                            if (syncForm) {
+                                syncAntiBanForm(data.queue_stats);
+                            }
+                        }
+
+                        const nowConn = Boolean(newStatus?.isConnected);
+                        if (nowConn && !prevConnectedRef.current) {
+                            toast.success(
+                                `¡WhatsApp vinculado exitosamente! (+${newStatus?.phoneNumber || data.whatsapp_phone || ''})`
+                            );
+                            setPairingCode(null);
+                            loadInstances();
+                        }
+                        prevConnectedRef.current = nowConn;
                     }
                 }
+            } catch {
+                // silencioso
             }
-        } catch (e) {
-            console.error('Error fetching WhatsApp messages:', e);
-        } finally {
-            setHistoryLoading(false);
-        }
-    };
+        },
+        [syncAntiBanForm, loadInstances]
+    );
 
-    useEffect(() => {
-        if (activeTab === 'history') {
-            fetchMessages(historyPage, historySearch, historyStatus);
-        }
-    }, [activeTab, historyPage, historyStatus]);
-
-    // Cargar destinatarios para Difusión Masiva
-    const fetchBroadcastRecipients = async (target = broadcastTarget, zona = broadcastZona) => {
-        setBroadcastLoading(true);
-        try {
-            const params = new URLSearchParams({
-                target,
-                zona: zona || 'all',
-            });
-            const res = await fetch(`/admin/integrations/whatsapp/broadcast/recipients?${params.toString()}`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success) {
-                    setBroadcastRecipients(data.recipients || []);
-                    const validIds = (data.recipients || [])
-                        .filter((r: BroadcastRecipient) => r.is_valid_phone)
-                        .map((r: BroadcastRecipient) => r.id);
-                    setSelectedRecipientIds(validIds);
+    // Cargar historial de mensajes
+    const loadMessages = useCallback(
+        async (
+            page = msgPage,
+            search = msgSearch,
+            statusFilter = msgStatusFilter,
+            direction = msgDirectionFilter,
+            allBranches = msgAllBranches
+        ) => {
+            setMsgLoading(true);
+            try {
+                const params = new URLSearchParams({
+                    page: String(page),
+                    per_page: '12',
+                    search: search || '',
+                    status: statusFilter || 'all',
+                    direction: direction || 'all',
+                    all_branches: allBranches ? '1' : '0',
+                });
+                if (selectedSucursalId) {
+                    params.set('sucursal_id', String(selectedSucursalId));
                 }
+                const res = await fetch(`/admin/integrations/whatsapp/messages?${params.toString()}`, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        setMessagesData(data.messages);
+                        if (data.stats) setMessagesStats(data.stats);
+                    }
+                }
+            } catch {
+                // silencioso
+            } finally {
+                setMsgLoading(false);
             }
-        } catch (e) {
-            console.error('Error fetching broadcast recipients:', e);
-        } finally {
-            setBroadcastLoading(false);
+        },
+        [msgPage, msgSearch, msgStatusFilter, msgDirectionFilter, msgAllBranches, selectedSucursalId]
+    );
+
+    // Cargar destinatarios de difusión
+    const loadBroadcastRecipients = useCallback(
+        async (target = bcTarget, onlyBranch = bcOnlyBranch) => {
+            setBcLoadingRecipients(true);
+            try {
+                const params = new URLSearchParams({
+                    target,
+                    only_branch: onlyBranch ? '1' : '0',
+                });
+                if (selectedSucursalId) params.set('sucursal_id', String(selectedSucursalId));
+                const res = await fetch(`/admin/integrations/whatsapp/broadcast/recipients?${params.toString()}`, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        setBcRecipients(data.recipients || []);
+                        setBcSelectedIds([]);
+                    }
+                }
+            } catch {
+                toast.error('Error cargando contactos de difusión');
+            } finally {
+                setBcLoadingRecipients(false);
+            }
+        },
+        [bcTarget, bcOnlyBranch, selectedSucursalId]
+    );
+
+    // Cambiar de sucursal desde las tarjetas superiores
+    const handleSelectBranch = async (sucursalId: number) => {
+        if (sucursalId === selectedSucursalId) return;
+        setSwitchingBranch(true);
+        setSelectedSucursalId(sucursalId);
+        setPairingCode(null);
+        setCheckResult(null);
+        setMsgPage(1);
+
+        // Actualizar query param en URL sin recargar página
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.set('sucursal_id', String(sucursalId));
+            window.history.replaceState({}, '', url.toString());
+        } catch {
+            // ignorar
         }
+
+        const branchObj = instances.find((i) => i.id === sucursalId);
+        if (branchObj) {
+            setBranchActive(branchObj.whatsapp_active);
+            setInstanceSlugInput(branchObj.whatsapp_instance);
+            prevConnectedRef.current = branchObj.is_connected;
+        }
+
+        await loadSelectedBranchData(sucursalId, true);
+        setSwitchingBranch(false);
     };
 
+    // Polling inteligente en vivo (2.5s mientras espera QR/conexión/cola, 10s en reposo)
+    useEffect(() => {
+        const st = liveStatus?.connectionState?.toUpperCase() || '';
+        const fastMode =
+            st === 'QR_READY' ||
+            st === 'CONNECTING' ||
+            st === 'RECONNECTING' ||
+            (queueStats?.queued ?? 0) > 0 ||
+            Boolean(liveStatus?.currentlyTypingTo) ||
+            Boolean(pairingCode);
+
+        const interval = setInterval(() => {
+            loadSelectedBranchData(selectedSucursalId, false);
+            loadInstances();
+            if (activeTab === 'logs' || (queueStats?.queued ?? 0) > 0) {
+                loadMessages(msgPage, msgSearch, msgStatusFilter, msgDirectionFilter, msgAllBranches);
+            }
+        }, fastMode ? 2500 : 10000);
+
+        return () => clearInterval(interval);
+    }, [
+        liveStatus?.connectionState,
+        liveStatus?.currentlyTypingTo,
+        queueStats?.queued,
+        pairingCode,
+        activeTab,
+        selectedSucursalId,
+        msgPage,
+        msgSearch,
+        msgStatusFilter,
+        msgDirectionFilter,
+        msgAllBranches,
+        loadSelectedBranchData,
+        loadInstances,
+        loadMessages,
+    ]);
+
+    // Cargar destinatarios cuando se abre la pestaña Difusión o cambia sucursal/audiencia
     useEffect(() => {
         if (activeTab === 'broadcast') {
-            fetchBroadcastRecipients(broadcastTarget, broadcastZona);
+            loadBroadcastRecipients(bcTarget, bcOnlyBranch);
         }
-    }, [activeTab, broadcastTarget, broadcastZona]);
+    }, [activeTab, bcTarget, bcOnlyBranch, selectedSucursalId, loadBroadcastRecipients]);
+
+    // Cargar bitácora cuando se abre la pestaña Cola & Bitácora o cambian filtros
+    useEffect(() => {
+        if (activeTab === 'logs') {
+            loadMessages(msgPage, msgSearch, msgStatusFilter, msgDirectionFilter, msgAllBranches);
+        }
+    }, [activeTab, msgPage, msgSearch, msgStatusFilter, msgDirectionFilter, msgAllBranches, selectedSucursalId, loadMessages]);
+
+    // ── ACCIONES DE CONEXIÓN POR SUCURSAL ───────────────────────────────
+
+    const handleConnect = async () => {
+        setLoadingAction(true);
+        setPairingCode(null);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/connect', {
+                method: 'POST',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({ sucursal_id: selectedSucursalId }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setBranchActive(true);
+                if (data.status) setLiveStatus(data.status);
+                await loadInstances();
+                if (data.status?.isConnected) {
+                    toast.success(`Sucursal conectada (+${data.status.phoneNumber || ''})`);
+                } else if (data.status?.qrDataUrl) {
+                    toast.success('Código QR generado desde Python. Escanéalo con tu teléfono.');
+                } else {
+                    toast.info('Iniciando sesión de WhatsApp en Python...');
+                }
+            } else {
+                toast.error(data.error || 'No se pudo iniciar la instancia de WhatsApp.');
+            }
+        } catch {
+            toast.error('Error de comunicación con el servidor.');
+        } finally {
+            setLoadingAction(false);
+        }
+    };
+
+    const handleReconnect = async () => {
+        setLoadingAction(true);
+        setPairingCode(null);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/reconnect', {
+                method: 'POST',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({ sucursal_id: selectedSucursalId, clear_session: true }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                if (data.status) setLiveStatus(data.status);
+                await loadInstances();
+                toast.success('Sesión reiniciada. Nuevo código QR listo.');
+            } else {
+                toast.error(data.error || 'No se pudo regenerar la sesión.');
+            }
+        } catch {
+            toast.error('Error intentando reiniciar la sesión.');
+        } finally {
+            setLoadingAction(false);
+        }
+    };
+
+    const handleDisconnect = async () => {
+        const confirm = await Swal.fire({
+            title: '¿Desvincular línea de esta sucursal?',
+            text: `Se cerrará la sesión de WhatsApp de "${selectedInstance?.nombre || 'esta sucursal'}" y deberás escanear el QR nuevamente para volver a vincularla.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, desvincular',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#e11d48',
+        });
+        if (!confirm.isConfirmed) return;
+
+        setLoadingAction(true);
+        setPairingCode(null);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/disconnect', {
+                method: 'POST',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({ sucursal_id: selectedSucursalId }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setLiveStatus(data.status || { isConnected: false, connectionState: 'DISCONNECTED', qrCode: null });
+                prevConnectedRef.current = false;
+                await loadInstances();
+                toast.success(data.message || 'Sesión desvinculada correctamente.');
+            } else {
+                toast.error(data.error || 'No se pudo desvincular la instancia.');
+            }
+        } catch {
+            toast.error('Error comunicando con el servidor.');
+        } finally {
+            setLoadingAction(false);
+        }
+    };
+
+    const handlePairPhone = async () => {
+        if (!pairPhoneInput.trim()) {
+            toast.error('Ingresa el número de WhatsApp con código de país (ej. +584121234567)');
+            return;
+        }
+        setPairLoading(true);
+        setPairingCode(null);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/pair', {
+                method: 'POST',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({
+                    sucursal_id: selectedSucursalId,
+                    phone: pairPhoneInput.trim(),
+                }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                if (data.already_connected) {
+                    toast.success('Esta sucursal ya tiene WhatsApp conectado.');
+                    loadSelectedBranchData(selectedSucursalId, false);
+                } else if (data.pairing_code) {
+                    setPairingCode(data.pairing_code);
+                    toast.success('Código de 8 dígitos generado. Ingrésalo en WhatsApp → Dispositivos vinculados.');
+                }
+            } else {
+                toast.error(data.error || 'No se pudo generar el código de emparejamiento.');
+            }
+        } catch {
+            toast.error('Error conectando con el motor Python.');
+        } finally {
+            setPairLoading(false);
+        }
+    };
+
+    const handleCopyPairingCode = () => {
+        if (!pairingCode) return;
+        navigator.clipboard.writeText(pairingCode);
+        setCopiedCode(true);
+        toast.success('Código copiado al portapapeles');
+        setTimeout(() => setCopiedCode(false), 2000);
+    };
+
+    const handleToggleBranchActive = async (nextActive: boolean) => {
+        setBranchActive(nextActive);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/toggle-active', {
+                method: 'POST',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({ sucursal_id: selectedSucursalId, active: nextActive }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast.success(data.message);
+                loadInstances();
+                loadSelectedBranchData(selectedSucursalId, false);
+            } else {
+                setBranchActive(!nextActive);
+                toast.error(data.error || 'No se pudo actualizar el estado.');
+            }
+        } catch {
+            setBranchActive(!nextActive);
+            toast.error('Error al actualizar el estado de la sucursal.');
+        }
+    };
+
+    const handleSaveInstanceConfig = async () => {
+        setSavingInstanceConfig(true);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/update', {
+                method: 'PUT',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({
+                    sucursal_id: selectedSucursalId,
+                    whatsapp_instance: instanceSlugInput.trim(),
+                    whatsapp_active: branchActive,
+                    ...(is_superadmin ? { whatsapp_api_url: apiUrlInput.trim() } : {}),
+                }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast.success(data.message || 'Configuración de instancia actualizada.');
+                if (data.whatsapp_instance) setInstanceSlugInput(data.whatsapp_instance);
+                loadInstances();
+                loadSelectedBranchData(selectedSucursalId, false);
+            } else {
+                toast.error(data.error || data.message || 'No se pudo guardar la configuración.');
+            }
+        } catch {
+            toast.error('Error guardando configuración de la instancia.');
+        } finally {
+            setSavingInstanceConfig(false);
+        }
+    };
+
+    // ── VERIFICADOR & ENVÍO DE PRUEBA ───────────────────────────────────
+
+    const buildFullTestPhone = () => {
+        const raw = testPhone.replace(/\D/g, '');
+        if (!raw) return '';
+        const cleanDigits = raw.startsWith('0') ? raw.slice(1) : raw;
+        const prefix = testCountryCode.replace(/\D/g, '');
+        if (prefix && cleanDigits.startsWith(prefix) && cleanDigits.length >= 11) {
+            return cleanDigits;
+        }
+        return prefix ? `${prefix}${cleanDigits}` : cleanDigits;
+    };
+
+    const handleCheckNumber = async () => {
+        const fullPhone = buildFullTestPhone();
+        if (!fullPhone) {
+            toast.error('Ingresa un número telefónico para verificar.');
+            return;
+        }
+        setCheckLoading(true);
+        setCheckResult(null);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/check-number', {
+                method: 'POST',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({
+                    sucursal_id: selectedSucursalId,
+                    phone: fullPhone,
+                }),
+            });
+            const data = await res.json();
+            const r = data.result || data.data;
+            if (res.ok && data.success && r) {
+                setCheckResult({
+                    exists: Boolean(r.exists),
+                    phone: r.phone || r.formattedPhone || fullPhone,
+                    verified_live: Boolean(r.verified_live),
+                    verified_name: r.verified_name || null,
+                    reason: r.reason || null,
+                });
+                if (r.exists) {
+                    toast.success(`+${r.phone || fullPhone} tiene WhatsApp activo`);
+                } else {
+                    toast.warning(`+${r.phone || fullPhone} NO está registrado en WhatsApp`);
+                }
+            } else {
+                toast.error(data.error || 'No se pudo verificar el número.');
+            }
+        } catch {
+            toast.error('Error al contactar con el motor de WhatsApp.');
+        } finally {
+            setCheckLoading(false);
+        }
+    };
+
+    const handleSendTest = async () => {
+        const fullPhone = buildFullTestPhone();
+        if (!fullPhone || !testMessage.trim()) {
+            toast.error('Completa el número destino y el mensaje de prueba.');
+            return;
+        }
+        setSendingTest(true);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/send-message', {
+                method: 'POST',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({
+                    sucursal_id: selectedSucursalId,
+                    to: fullPhone,
+                    message: testMessage,
+                    sync: !testUseQueue,
+                    simulate_typing: testSimulateTyping,
+                    verify_number: abVerifyNumber,
+                }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast.success(data.message || 'Mensaje despachado correctamente.');
+                loadSelectedBranchData(selectedSucursalId, false);
+                loadInstances();
+                if (activeTab === 'logs') {
+                    loadMessages(1, msgSearch, msgStatusFilter, msgDirectionFilter, msgAllBranches);
+                }
+            } else {
+                toast.error(data.error || 'No se pudo enviar el mensaje de prueba.');
+            }
+        } catch {
+            toast.error('Error de red al enviar el mensaje.');
+        } finally {
+            setSendingTest(false);
+        }
+    };
+
+    // ── POLÍTICAS ANTI-BANEO Y CONTROL DE COLA ──────────────────────────
+
+    const handleSaveAntiBan = async () => {
+        setSavingAntiBan(true);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/antiban', {
+                method: 'POST',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({
+                    sucursal_id: selectedSucursalId,
+                    dailyLimit: abDailyLimit,
+                    hourlyLimit: abHourlyLimit,
+                    warmupMode: abWarmupMode,
+                    workingHoursEnabled: abWorkingHoursEnabled,
+                    workingHoursStart: abWorkingHoursStart,
+                    workingHoursEnd: abWorkingHoursEnd,
+                    simulateTyping: abSimulateTyping,
+                    typingMinSec: abTypingMinSec,
+                    typingMaxSec: abTypingMaxSec,
+                    delayMinSec: abDelayMinSec,
+                    delayMaxSec: abDelayMaxSec,
+                    batchSize: abBatchSize,
+                    batchPauseSec: abBatchPauseSec,
+                    verifyNumber: abVerifyNumber,
+                    proxyUrl: abProxyUrl.trim(),
+                }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast.success(data.message || 'Políticas Anti-Baneo guardadas.');
+                if (data.stats) setQueueStats(data.stats);
+                loadInstances();
+            } else {
+                toast.error(data.error || 'Error guardando políticas Anti-Baneo.');
+            }
+        } catch {
+            toast.error('Error de red al guardar políticas Anti-Baneo.');
+        } finally {
+            setSavingAntiBan(false);
+        }
+    };
+
+    const handleToggleQueuePause = async () => {
+        const nextPaused = !(queueStats?.queuePaused || liveStatus?.queuePaused);
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/queue/toggle', {
+                method: 'POST',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({
+                    sucursal_id: selectedSucursalId,
+                    paused: nextPaused,
+                }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast.success(data.message);
+                if (data.stats) setQueueStats(data.stats);
+                loadSelectedBranchData(selectedSucursalId, false);
+                loadInstances();
+            } else {
+                toast.error(data.error || 'Error cambiando el estado de la cola.');
+            }
+        } catch {
+            toast.error('Error de red cambiando estado de la cola.');
+        }
+    };
+
+    const handleClearQueue = async () => {
+        const confirm = await Swal.fire({
+            title: '¿Cancelar cola pendiente?',
+            text: `Se cancelarán todos los mensajes en cola de "${selectedInstance?.nombre || 'esta sucursal'}".`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, cancelar cola',
+            cancelButtonText: 'Volver',
+            confirmButtonColor: '#e11d48',
+        });
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/queue/clear', {
+                method: 'POST',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({ sucursal_id: selectedSucursalId }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast.success(data.message || 'Cola vaciada.');
+                loadSelectedBranchData(selectedSucursalId, false);
+                loadInstances();
+                loadMessages(1, msgSearch, msgStatusFilter, msgDirectionFilter, msgAllBranches);
+            }
+        } catch {
+            toast.error('Error vaciando la cola.');
+        }
+    };
+
+    // ── SPINTAX PREVIEW ─────────────────────────────────────────────────
+
+    const handlePreviewSpintax = async (text: string, target: 'test' | 'broadcast' | 'template') => {
+        if (!text.trim()) return;
+        try {
+            const res = await fetch('/admin/integrations/whatsapp/preview-spintax', {
+                method: 'POST',
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({
+                    sucursal_id: selectedSucursalId,
+                    text,
+                    count: 3,
+                }),
+            });
+            const data = await res.json();
+            const vars: string[] = data.variations || data.data?.variations || [];
+            if (target === 'test') setTestPreviews(vars);
+            else if (target === 'broadcast') setBcPreviews(vars);
+            else setTplPreviews(vars);
+        } catch {
+            toast.error('No se pudo previsualizar Spintax.');
+        }
+    };
+
+    // ── DIFUSIÓN SEGURA ─────────────────────────────────────────────────
+
+    const filteredRecipients = useMemo(() => {
+        const q = bcSearch.trim().toLowerCase();
+        if (!q) return bcRecipients;
+        return bcRecipients.filter(
+            (r) =>
+                r.name.toLowerCase().includes(q) ||
+                r.phone.toLowerCase().includes(q) ||
+                r.sucursal.toLowerCase().includes(q)
+        );
+    }, [bcRecipients, bcSearch]);
+
+    const validFilteredIds = useMemo(
+        () => filteredRecipients.filter((r) => r.is_valid_phone).map((r) => r.id),
+        [filteredRecipients]
+    );
+
+    const toggleSelectAllValid = (checked: boolean) => {
+        setBcSelectedIds(checked ? validFilteredIds : []);
+    };
 
     const toggleRecipient = (id: number) => {
-        setSelectedRecipientIds(prev =>
-            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-        );
+        setBcSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     };
 
-    const toggleAllRecipients = () => {
-        const validRecipients = broadcastRecipients.filter(r => r.is_valid_phone);
-        if (selectedRecipientIds.length === validRecipients.length) {
-            setSelectedRecipientIds([]);
-        } else {
-            setSelectedRecipientIds(validRecipients.map(r => r.id));
-        }
-    };
-
-    const handleInsertBroadcastVariable = (varName: string) => {
-        const tag = `{{${varName}}}`;
-        setBroadcastMessage(prev => prev + tag);
-    };
-
-    const handleSelectBroadcastTemplate = (templateContent: string) => {
-        setBroadcastMessage(templateContent);
-        Swal.fire({
-            title: __('Template Loaded'),
-            text: __('Broadcast content updated from template.'),
-            icon: 'info',
-            timer: 1500,
-            showConfirmButton: false,
-        });
-    };
+    const estimatedBroadcastMinutes = useMemo(() => {
+        const count = bcSelectedIds.length;
+        if (count === 0) return 0;
+        const avgDelay = (abDelayMinSec + abDelayMaxSec) / 2;
+        const avgTyping = abSimulateTyping ? (abTypingMinSec + abTypingMaxSec) / 2 : 0;
+        const batches = Math.floor(count / Math.max(2, abBatchSize));
+        const totalSec = count * (avgDelay + avgTyping) + batches * abBatchPauseSec;
+        return Math.max(1, Math.ceil(totalSec / 60));
+    }, [bcSelectedIds.length, abDelayMinSec, abDelayMaxSec, abSimulateTyping, abTypingMinSec, abTypingMaxSec, abBatchSize, abBatchPauseSec]);
 
     const handleDispatchBroadcast = async () => {
-        if (selectedRecipientIds.length === 0) {
-            Swal.fire({
-                title: __('No Recipients Selected'),
-                text: __('Please select at least one recipient with a valid phone number.'),
-                icon: 'warning',
-            });
+        if (bcSelectedIds.length === 0) {
+            toast.error('Selecciona al menos un destinatario con teléfono válido.');
+            return;
+        }
+        if (!bcMessage.trim()) {
+            toast.error('Escribe el mensaje a encolar.');
             return;
         }
 
-        if (!broadcastMessage.trim()) {
-            Swal.fire({
-                title: __('Empty Message'),
-                text: __('Please compose a message or choose a template before sending.'),
-                icon: 'warning',
-            });
-            return;
-        }
-
-        const targetLabel = broadcastTarget === 'presbiteros'
-            ? __('Presbyters')
-            : broadcastTarget === 'pastores'
-            ? __('Pastors')
-            : __('Users');
-
-        const result = await Swal.fire({
-            title: __('Dispatch Broadcast Campaign?'),
-            html: `
-                <div class="text-left text-sm space-y-2">
-                    <p><b>${__('Target Audience:')}</b> ${targetLabel}</p>
-                    <p><b>${__('Recipients Count:')}</b> <span class="text-emerald-600 font-bold">${selectedRecipientIds.length} ${__('recipients')}</span></p>
-                    <p><b>${__('Safety Delay:')}</b> ${broadcastDelaySeconds} ${__('seconds between messages')}</p>
-                    <p class="text-xs text-muted-foreground mt-2">${__('Messages will be queued and sent safely with Spintax variation to protect the WhatsApp line.')}</p>
-                </div>
-            `,
+        const confirm = await Swal.fire({
+            title: '¿Encolar difusión segura?',
+            html: `<div class="text-left text-sm space-y-1.5">
+                <p><b>Sucursal emisora:</b> ${selectedInstance?.nombre || 'Sucursal'}</p>
+                <p><b>Destinatarios:</b> <span class="font-bold text-emerald-600">${bcSelectedIds.length} contacto(s)</span></p>
+                <p><b>Duración estimada:</b> ~${estimatedBroadcastMinutes} min (con retardos humanos y pausas por lote)</p>
+            </div>`,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: __('Yes, Dispatch Broadcast'),
-            cancelButtonText: __('Cancel'),
+            confirmButtonText: 'Sí, encolar difusión',
+            cancelButtonText: 'Cancelar',
             confirmButtonColor: '#059669',
         });
+        if (!confirm.isConfirmed) return;
 
-        if (!result.isConfirmed) return;
-
-        setBroadcastSending(true);
+        setBcDispatching(true);
         try {
             const res = await fetch('/admin/integrations/whatsapp/broadcast/send', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                },
+                headers: getCsrfHeaders(),
                 body: JSON.stringify({
-                    target_type: broadcastTarget,
-                    recipient_ids: selectedRecipientIds,
-                    message_content: broadcastMessage,
-                    delay_seconds: broadcastDelaySeconds,
+                    sucursal_id: selectedSucursalId,
+                    target_type: bcTarget,
+                    recipient_ids: bcSelectedIds,
+                    message_content: bcMessage,
                 }),
             });
-
             const data = await res.json();
-
-            if (data.success) {
-                Swal.fire({
-                    title: __('Broadcast Enqueued!'),
-                    text: data.message || __('The broadcast messages have been successfully added to the dispatch queue.'),
-                    icon: 'success',
-                    showConfirmButton: true,
-                    confirmButtonText: __('View History & Logs'),
-                }).then((r) => {
-                    if (r.isConfirmed) {
-                        setActiveTab('history');
-                        fetchMessages(1, '', 'all');
-                    }
-                });
+            if (res.ok && data.success) {
+                toast.success(data.message || 'Difusión encolada correctamente.');
+                setBcSelectedIds([]);
+                setActiveTab('logs');
+                await loadSelectedBranchData(selectedSucursalId, false);
+                await loadInstances();
+                await loadMessages(1, '', 'all', 'all', false);
             } else {
-                Swal.fire({
-                    title: __('Broadcast Error'),
-                    text: data.error || __('Failed to dispatch broadcast.'),
-                    icon: 'error',
-                });
+                toast.error(data.error || 'Error al encolar la difusión.');
             }
-        } catch (e) {
-            Swal.fire({
-                title: __('Error'),
-                text: __('Network error attempting to send broadcast.'),
-                icon: 'error',
-            });
+        } catch {
+            toast.error('Error de red al encolar la difusión.');
         } finally {
-            setBroadcastSending(false);
+            setBcDispatching(false);
         }
     };
 
-    // Ejecutar diagnóstico en vivo
-    const handleRunDiagnostic = async () => {
-        setDiagnosticOpen(true);
-        setDiagnosticLoading(true);
+    // ── PLANTILLAS CRUD ─────────────────────────────────────────────────
+
+    const filteredTemplates = useMemo(() => {
+        if (tplCategoryFilter === 'all') return templates;
+        return templates.filter((t) => t.categoria === tplCategoryFilter);
+    }, [templates, tplCategoryFilter]);
+
+    const openNewTemplate = () => {
+        setEditingTpl(null);
+        setTplNombre('');
+        setTplCategoria('reparacion');
+        setTplContenido(
+            '{Hola|Buen día} *{cliente}*, te {informamos|confirmamos} desde *{sucursal}* que tu equipo ({equipo}) de la orden *{orden}* ya se encuentra listo para retirar. ✅'
+        );
+        setTplActivo(true);
+        setTplPreviews([]);
+        setTplDialogOpen(true);
+    };
+
+    const openEditTemplate = (tpl: WhatsAppTemplateItem) => {
+        setEditingTpl(tpl);
+        setTplNombre(tpl.nombre);
+        setTplCategoria(tpl.categoria || 'general');
+        setTplContenido(tpl.contenido);
+        setTplActivo(tpl.activo);
+        setTplPreviews([]);
+        setTplDialogOpen(true);
+    };
+
+    const handleSaveTemplate = async () => {
+        if (!tplNombre.trim() || !tplContenido.trim()) {
+            toast.error('Nombre y contenido son obligatorios.');
+            return;
+        }
+        setSavingTpl(true);
         try {
-            const queryParams = active_sucursal_id ? `?sucursal_id=${active_sucursal_id}` : '';
-            const res = await fetch(`/admin/integrations/whatsapp/diagnostic${queryParams}`);
-            if (res.ok) {
-                const data = await res.json();
-                setDiagnosticData(data);
+            const url = editingTpl
+                ? `/admin/integrations/whatsapp/templates/${editingTpl.id}`
+                : '/admin/integrations/whatsapp/templates';
+            const method = editingTpl ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method,
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({
+                    nombre: tplNombre.trim(),
+                    categoria: tplCategoria,
+                    contenido: tplContenido,
+                    activo: tplActivo,
+                }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                if (editingTpl && data.template) {
+                    setTemplates((prev) => prev.map((t) => (t.id === editingTpl.id ? data.template : t)));
+                } else if (data.template) {
+                    setTemplates((prev) => [data.template, ...prev]);
+                }
+                toast.success(data.message || 'Plantilla guardada.');
+                setTplDialogOpen(false);
+            } else {
+                toast.error(data.error || 'No se pudo guardar la plantilla.');
             }
-        } catch (e) {
-            console.error('Error running diagnostic:', e);
+        } catch {
+            toast.error('Error guardando plantilla.');
         } finally {
-            setDiagnosticLoading(false);
+            setSavingTpl(false);
         }
     };
 
-    // Reintentar mensaje fallido
+    const handleDeleteTemplate = async (id: number) => {
+        const confirm = await Swal.fire({
+            title: '¿Eliminar plantilla?',
+            text: 'Esta acción no se puede deshacer.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Eliminar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#e11d48',
+        });
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const res = await fetch(`/admin/integrations/whatsapp/templates/${id}`, {
+                method: 'DELETE',
+                headers: getCsrfHeaders(),
+            });
+            if (res.ok) {
+                setTemplates((prev) => prev.filter((t) => t.id !== id));
+                toast.success('Plantilla eliminada.');
+            }
+        } catch {
+            toast.error('No se pudo eliminar la plantilla.');
+        }
+    };
+
     const handleRetryMessage = async (id: number) => {
         setRetryingId(id);
         try {
             const res = await fetch(`/admin/integrations/whatsapp/messages/${id}/retry`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                },
+                headers: getCsrfHeaders(),
+                body: JSON.stringify({ sucursal_id: selectedSucursalId }),
             });
             const data = await res.json();
-            if (data.success) {
-                Swal.fire({
-                    title: __('Message Re-sent'),
-                    text: __('The message has been re-queued for transmission.'),
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-                fetchMessages(historyPage, historySearch, historyStatus);
+            if (res.ok && data.success) {
+                toast.success(data.message || 'Mensaje reenviado.');
+                loadMessages(msgPage, msgSearch, msgStatusFilter, msgDirectionFilter, msgAllBranches);
+                loadSelectedBranchData(selectedSucursalId, false);
             } else {
-                Swal.fire({
-                    title: __('Retry Failed'),
-                    text: data.error || __('Could not send message.'),
-                    icon: 'error',
-                });
+                toast.error(data.error || 'Fallo al reintentar.');
             }
-        } catch (e) {
-            Swal.fire({
-                title: __('Error'),
-                text: __('Failed to communicate with server.'),
-                icon: 'error',
-            });
+        } catch {
+            toast.error('Error de red al reintentar.');
         } finally {
             setRetryingId(null);
         }
     };
 
-    // Gestor de Plantillas
-    const handleOpenCreateTemplate = () => {
-        setEditingTemplate(null);
-        setTemplateFormData({
-            nombre: '',
-            categoria: 'pastoral',
-            contenido: '',
-            variables: [],
-            activo: true,
-        });
-        setTemplateModalOpen(true);
-    };
+    // ── DIAGNÓSTICO DEL MOTOR PYTHON ────────────────────────────────────
 
-    const handleOpenEditTemplate = (t: WhatsAppTemplateItem) => {
-        setEditingTemplate(t);
-        setTemplateFormData({
-            nombre: t.nombre,
-            categoria: t.categoria,
-            contenido: t.contenido,
-            variables: t.variables || [],
-            activo: t.activo,
-        });
-        setTemplateModalOpen(true);
-    };
-
-    const handleInsertVariableInTemplate = (varName: string) => {
-        const tag = `{{${varName}}}`;
-        setTemplateFormData(prev => ({
-            ...prev,
-            contenido: prev.contenido + tag,
-            variables: prev.variables.includes(varName) ? prev.variables : [...prev.variables, varName],
-        }));
-    };
-
-    const handleSaveTemplate = (e: React.FormEvent) => {
-        e.preventDefault();
-        setSavingTemplate(true);
-
-        const url = editingTemplate
-            ? `/admin/integrations/whatsapp/templates/${editingTemplate.id}`
-            : '/admin/integrations/whatsapp/templates';
-        
-        const method = editingTemplate ? 'put' : 'post';
-
-        router[method](url, templateFormData, {
-            preserveScroll: true,
-            preserveState: true,
-            onSuccess: () => {
-                setTemplateModalOpen(false);
-                Swal.fire({
-                    title: __('Template Saved'),
-                    text: __('WhatsApp template successfully stored.'),
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-            },
-            onFinish: () => setSavingTemplate(false),
-        });
-    };
-
-    const handleDeleteTemplate = (id: number) => {
-        Swal.fire({
-            title: __('Delete Template?'),
-            text: __('This action cannot be undone.'),
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: __('Yes, delete'),
-            cancelButtonText: __('Cancel'),
-            confirmButtonColor: '#e11d48',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                router.delete(`/admin/integrations/whatsapp/templates/${id}`, {
-                    preserveScroll: true,
-                    preserveState: true,
-                    onSuccess: () => {
-                        Swal.fire({
-                            title: __('Deleted'),
-                            text: __('Template removed successfully.'),
-                            icon: 'success',
-                            timer: 2000,
-                            showConfirmButton: false,
-                        });
-                    },
-                });
-            }
-        });
-    };
-
-    const handleUseTemplateInSandbox = (t: WhatsAppTemplateItem) => {
-        setTestMessage(prev => ({
-            ...prev,
-            message: t.contenido,
-        }));
-        setActiveTab('dispatcher');
-        Swal.fire({
-            title: __('Template Loaded'),
-            text: __('Template loaded into the testing sandbox.'),
-            icon: 'info',
-            timer: 1500,
-            showConfirmButton: false,
-        });
-    };
-
-    const filteredTemplates = useMemo(() => {
-        if (templateCategoryFilter === 'all') return templates;
-        return templates.filter(t => t.categoria === templateCategoryFilter);
-    }, [templates, templateCategoryFilter]);
-
-    const handleSaveConfig = (e: React.FormEvent) => {
-        e.preventDefault();
-        configForm.put('/admin/integrations/whatsapp/update', {
-            preserveScroll: true,
-            preserveState: true,
-            onSuccess: () => {
-                Swal.fire({
-                    title: __('Settings Saved'),
-                    text: __('WhatsApp configuration has been successfully updated.'),
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-            },
-        });
-    };
-
-    const handleSaveAntiBan = (e: React.FormEvent) => {
-        e.preventDefault();
-        antiBanForm.post('/admin/integrations/whatsapp/antiban', {
-            preserveScroll: true,
-            preserveState: true,
-            onSuccess: () => {
-                Swal.fire({
-                    title: __('Anti-Ban Updated'),
-                    text: __('Anti-ban limits and schedule settings saved successfully.'),
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-            },
-        });
-    };
-
-    const handleGenerateToken = () => {
-        Swal.fire({
-            title: __('Are you sure?'),
-            text: __('Generating a new token will invalidate the current one.'),
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: __('Yes, generate new token'),
-            cancelButtonText: __('Cancel'),
-            confirmButtonColor: '#e11d48',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                router.post('/admin/integrations/whatsapp/generate-token', {}, {
-                    preserveScroll: true,
-                    preserveState: true,
-                    onSuccess: (page) => {
-                        const newKey = (page.props as any).whatsapp_api_key;
-                        if (newKey) {
-                            configForm.setData('whatsapp_api_key', newKey);
-                        }
-                        Swal.fire({
-                            title: __('Token Generated'),
-                            text: __('A new API key has been created for your company.'),
-                            icon: 'success',
-                            timer: 2000,
-                            showConfirmButton: false,
-                        });
-                    }
-                });
-            }
-        });
-    };
-
-    const handleSyncCompany = () => {
-        Swal.fire({
-            title: __('Synchronize Company?'),
-            text: __('This will sync the company information and token with the WhatsApp server database.'),
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: __('Yes, synchronize'),
-            cancelButtonText: __('Cancel'),
-        }).then((result) => {
-            if (result.isConfirmed) {
-                router.post('/admin/integrations/whatsapp/sync', {}, {
-                    preserveScroll: true,
-                    preserveState: true,
-                    onSuccess: () => {
-                        Swal.fire({
-                            title: __('Synchronized'),
-                            text: __('Company synchronized with WhatsApp server.'),
-                            icon: 'success',
-                            timer: 2000,
-                            showConfirmButton: false,
-                        });
-                    }
-                });
-            }
-        });
-    };
-
-    const handleBranchChange = (value: string) => {
-        router.get(
-            '/admin/integrations/whatsapp',
-            { sucursal_id: value },
-            {
-                preserveScroll: true,
-                preserveState: false,
-            }
-        );
-    };
-
-    const handleConnect = () => {
-        router.post('/admin/integrations/whatsapp/connect', {
-            sucursal_id: active_sucursal_id || '',
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            onSuccess: () => {
-                Swal.fire({
-                    title: __('Iniciando...'),
-                    text: __('Solicitando código QR al servidor de WhatsApp...'),
-                    icon: 'info',
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-            }
-        });
-    };
-
-    const handleDisconnect = () => {
-        Swal.fire({
-            title: __('Disconnect WhatsApp Session?'),
-            text: __('You will need to scan the QR code again to link this instance.'),
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: __('Yes, Disconnect'),
-            cancelButtonText: __('Cancel'),
-            confirmButtonColor: '#e11d48',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                router.post('/admin/integrations/whatsapp/disconnect', {
-                    sucursal_id: active_sucursal_id || '',
-                }, {
-                    preserveScroll: true,
-                    preserveState: true,
-                    onSuccess: () => {
-                        setLiveStatusState(prev => prev ? { ...prev, isConnected: false, connectionState: 'disconnected', user: null, userJid: null } : null);
-                        Swal.fire({
-                            title: __('Disconnected'),
-                            text: __('WhatsApp session has been closed.'),
-                            icon: 'info',
-                            timer: 2000,
-                            showConfirmButton: false,
-                        });
-                    }
-                });
-            }
-        });
-    };
-
-    const handleReconnect = () => {
-        router.post('/admin/integrations/whatsapp/reconnect', {
-            sucursal_id: active_sucursal_id || '',
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            onSuccess: () => {
-                Swal.fire({
-                    title: __('Reconnecting...'),
-                    text: __('Requesting session renewal from WhatsApp server.'),
-                    icon: 'info',
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-            }
-        });
-    };
-
-    const getFullPhoneNumber = () => {
-        const pais = paises?.find(p => String(p.id) === String(testMessage.paisId));
-        const rawDigits = testMessage.phoneNumber.replace(/\D/g, '');
-        if (!rawDigits) return '';
-
-        let nationalDigits = rawDigits;
-        if (nationalDigits.startsWith('0')) {
-            nationalDigits = nationalDigits.substring(1);
-        }
-
-        if (pais?.codigo_telefonico === '+58' || pais?.codigo_iso2 === 'VE') {
-            if (nationalDigits.startsWith('58') && nationalDigits.length === 12) {
-                return nationalDigits;
-            }
-            return `58${nationalDigits}`;
-        }
-
-        const dialCode = pais?.codigo_telefonico?.replace('+', '') || '';
-        if (dialCode && nationalDigits.startsWith(dialCode)) {
-            return nationalDigits;
-        }
-
-        return dialCode ? `${dialCode}${nationalDigits}` : nationalDigits;
-    };
-
-    const handleCheckNumber = async () => {
-        const fullPhone = getFullPhoneNumber();
-        if (!fullPhone) {
-            Swal.fire({
-                title: __('Validation'),
-                text: __('Please enter a valid phone number with area code.'),
-                icon: 'warning',
-            });
-            return;
-        }
-
-        setCheckingNumber(true);
-        setNumberCheckResult(null);
-
+    const handleRunDiagnostic = async () => {
+        setDiagOpen(true);
+        setDiagLoading(true);
+        setDiagnostic(null);
         try {
-            const response = await fetch('/admin/integrations/whatsapp/check-number', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                },
-                body: JSON.stringify({
-                    phone: fullPhone,
-                    sucursal_id: active_sucursal_id || '',
-                }),
-            });
-
-            const data = await response.json();
-
-            if (data.success && data.result) {
-                const isRegistered = Boolean(data.result.exists);
-                setNumberCheckResult({
-                    checked: true,
-                    exists: isRegistered,
-                    jid: data.result.jid,
-                });
-
-                if (isRegistered) {
-                    Swal.fire({
-                        title: __('Valid WhatsApp Number!'),
-                        text: `${__('Number')} +${fullPhone} ${__('is registered and ready to receive messages.')}`,
-                        icon: 'success',
-                        timer: 3000,
-                        showConfirmButton: false,
-                    });
-                } else {
-                    Swal.fire({
-                        title: __('Number Not Found'),
-                        text: `${__('The phone number')} +${fullPhone} ${__('does NOT have an active WhatsApp account. Sending messages may penalize your reputation.')}`,
-                        icon: 'warning',
-                        confirmButtonText: __('Understand'),
-                    });
-                }
-            } else {
-                setNumberCheckResult({
-                    checked: true,
-                    exists: false,
-                    error: data.error || __('Verification failed'),
-                });
+            const res = await fetch(
+                `/admin/integrations/whatsapp/diagnostic?sucursal_id=${selectedSucursalId || ''}`,
+                { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } }
+            );
+            if (res.ok) {
+                const data = await res.json();
+                setDiagnostic(data);
             }
-        } catch (error) {
-            setNumberCheckResult({
-                checked: true,
-                exists: false,
-                error: __('Communication error with WhatsApp API'),
-            });
+        } catch {
+            toast.error('Error ejecutando diagnóstico del motor Python.');
         } finally {
-            setCheckingNumber(false);
+            setDiagLoading(false);
         }
     };
 
-    const handlePreviewSpintax = async () => {
-        if (!testMessage.message.trim()) return;
+    // ── HELPERS VISUALES ────────────────────────────────────────────────
 
-        setPreviewingSpintax(true);
-        try {
-            const response = await fetch('/admin/integrations/whatsapp/preview-spintax', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                },
-                body: JSON.stringify({
-                    text: testMessage.message,
-                    count: 4,
-                    sucursal_id: active_sucursal_id || '',
-                    variables: {
-                        nombre: 'Pastor David Morales',
-                        empresa: empresa_nombre,
-                        random: String(Math.floor(1000 + Math.random() * 9000)),
-                    },
-                }),
-            });
+    const connState = (liveStatus?.connectionState || 'DISCONNECTED').toUpperCase();
+    const isServiceUnavailable = liveStatus?._error === 'service_unavailable';
+    const isConnected = Boolean(liveStatus?.isConnected) || connState === 'CONNECTED';
+    const isQrReady = !isConnected && (connState === 'QR_READY' || Boolean(liveStatus?.qrDataUrl || liveStatus?.qrCode));
+    const isConnecting = !isConnected && (connState === 'CONNECTING' || connState === 'RECONNECTING');
+    const isReconnecting = !isConnected && connState === 'RECONNECTING';
+    const isBannedCooldown = connState === 'BANNED_COOLDOWN';
+    const isPaused = Boolean(queueStats?.queuePaused || liveStatus?.queuePaused);
 
-            const data = await response.json();
-            if (data.success && Array.isArray(data.variations)) {
-                setSpintaxPreviews(data.variations);
-            }
-        } catch (error) {
-            console.error('Error previewing spintax:', error);
-        } finally {
-            setPreviewingSpintax(false);
+    const safetyScore = queueStats?.safetyScore ?? 100;
+    const dailyPct = queueStats
+        ? Math.min(100, Math.round((queueStats.sentToday / Math.max(1, queueStats.effectiveDailyLimit)) * 100))
+        : 0;
+    const hourlyPct = queueStats
+        ? Math.min(100, Math.round((queueStats.sentThisHour / Math.max(1, queueStats.hourlyLimit)) * 100))
+        : 0;
+
+    const renderStateBadge = (state: string, compact = false) => {
+        switch ((state || '').toUpperCase()) {
+            case 'CONNECTED':
+            case 'OPEN':
+                return (
+                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 gap-1.5 font-semibold">
+                        <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                        {compact ? 'En línea' : 'Conectado'}
+                    </Badge>
+                );
+            case 'QR_READY':
+            case 'QR':
+                return (
+                    <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 gap-1.5 font-semibold">
+                        <QrCode className="size-3" />
+                        Esperando QR
+                    </Badge>
+                );
+            case 'RECONNECTING':
+                return (
+                    <Badge className="bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 gap-1.5 font-semibold">
+                        <Loader2 className="size-3 animate-spin" />
+                        Reconectando
+                    </Badge>
+                );
+            case 'CONNECTING':
+                return (
+                    <Badge className="bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 gap-1.5 font-semibold">
+                        <Loader2 className="size-3 animate-spin" />
+                        Conectando
+                    </Badge>
+                );
+            case 'BANNED_COOLDOWN':
+                return (
+                    <Badge variant="destructive" className="gap-1.5 font-semibold">
+                        <ShieldAlert className="size-3" />
+                        Pausa Anti-Ban
+                    </Badge>
+                );
+            default:
+                return (
+                    <Badge variant="outline" className="text-muted-foreground gap-1.5 font-medium">
+                        <WifiOff className="size-3" />
+                        Desconectado
+                    </Badge>
+                );
         }
     };
 
-    const handleSendTestMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const fullPhone = getFullPhoneNumber();
-
-        if (!fullPhone) {
-            Swal.fire({
-                title: __('Validation'),
-                text: __('Please select a country code and enter a recipient phone number.'),
-                icon: 'warning',
-            });
-            return;
+    const renderMsgStatus = (status: string) => {
+        switch (status) {
+            case 'read':
+                return (
+                    <Badge className="bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 gap-1 text-[11px]">
+                        <CheckCheck className="size-3" /> Leído
+                    </Badge>
+                );
+            case 'delivered':
+                return (
+                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 gap-1 text-[11px]">
+                        <CheckCheck className="size-3" /> Entregado
+                    </Badge>
+                );
+            case 'sent':
+                return (
+                    <Badge className="bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30 gap-1 text-[11px]">
+                        <Check className="size-3" /> Enviado
+                    </Badge>
+                );
+            case 'sending':
+                return (
+                    <Badge className="bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 gap-1 text-[11px]">
+                        <Keyboard className="size-3 animate-pulse" /> Escribiendo...
+                    </Badge>
+                );
+            case 'queued':
+            case 'pending':
+                return (
+                    <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 gap-1 text-[11px]">
+                        <Clock className="size-3" /> En cola
+                    </Badge>
+                );
+            case 'cancelled':
+                return (
+                    <Badge variant="outline" className="text-muted-foreground text-[11px]">
+                        Cancelado
+                    </Badge>
+                );
+            default:
+                return (
+                    <Badge variant="destructive" className="gap-1 text-[11px]">
+                        <AlertTriangle className="size-3" /> Fallido
+                    </Badge>
+                );
         }
-
-        setSendingMsg(true);
-        try {
-            const response = await fetch('/admin/integrations/whatsapp/send-message', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                },
-                body: JSON.stringify({
-                    to: fullPhone,
-                    phone: fullPhone,
-                    message: testMessage.message,
-                    sync: testMessage.useSync,
-                    sucursal_id: active_sucursal_id || '',
-                    variables: {
-                        nombre: 'Cliente',
-                        empresa: empresa_nombre,
-                        random: String(Math.floor(1000 + Math.random() * 9000)),
-                    },
-                }),
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                Swal.fire({
-                    title: __('Message Sent!'),
-                    text: __('The WhatsApp message has been successfully dispatched or queued.'),
-                    icon: 'success',
-                    timer: 2500,
-                    showConfirmButton: false,
-                });
-                if (activeTab === 'history') {
-                    fetchMessages(historyPage, historySearch, historyStatus);
-                }
-            } else {
-                Swal.fire({
-                    title: __('Send Error'),
-                    text: data.error || __('Could not deliver the message. Check WhatsApp connection.'),
-                    icon: 'error',
-                });
-            }
-        } catch (error) {
-            Swal.fire({
-                title: __('Error'),
-                text: __('Network error attempting to contact WhatsApp server.'),
-                icon: 'error',
-            });
-        } finally {
-            setSendingMsg(false);
-        }
-    };
-
-    const copyTokenToClipboard = () => {
-        if (configForm.data.whatsapp_api_key) {
-            navigator.clipboard.writeText(configForm.data.whatsapp_api_key);
-            setCopiedToken(true);
-            setTimeout(() => setCopiedToken(false), 2000);
-        }
-    };
-
-    const copyWebhookToClipboard = () => {
-        navigator.clipboard.writeText(webhookUrl);
-        setCopiedWebhook(true);
-        setTimeout(() => setCopiedWebhook(false), 2000);
     };
 
     const breadcrumbs = [
         { title: __('Dashboard'), href: '/admin/dashboard' },
-        { title: __('Settings'), href: '#' },
         { title: __('Integrations'), href: '/admin/integrations' },
-        { title: __('WhatsApp'), href: '/admin/integrations/whatsapp' }
+        { title: 'WhatsApp Multi-Sucursal', href: '/admin/integrations/whatsapp' },
     ];
 
-    const isConnected = Boolean(liveStatusState?.isConnected);
-    const isConnecting = liveStatusState?.connectionState === 'connecting';
-    const isQrReady = liveStatusState?.connectionState === 'qr_ready' || liveStatusState?.status === 'qr' || Boolean(liveStatusState?.qrCode || liveStatusState?.qrDataUrl);
-    const isServiceUnavailable = liveStatusState?._error === 'service_unavailable';
-
-    const sentTodayCount = queueStatsState?.sentToday ?? 0;
-    const dailyLimitCount = queueStatsState?.dailyLimit ?? antiBanForm.data.dailyLimit ?? 300;
-    const quotaPercentage = Math.min(100, Math.round((sentTodayCount / (dailyLimitCount || 1)) * 100));
-
-    const getConnectionStateLabel = (state?: string | null, connectedFallback = false) => {
-        if (state) {
-            switch (state.toLowerCase()) {
-                case 'connected':
-                case 'open':
-                    return __('Connected');
-                case 'connecting':
-                    return __('Connecting...');
-                case 'qr_ready':
-                case 'qr':
-                    return __('Waiting Scan');
-                case 'disconnected':
-                case 'close':
-                    return __('Disconnected');
-                case 'idle':
-                    return __('Inactive');
-                default:
-                    return __(state);
-            }
-        }
-        return connectedFallback ? __('Connected') : __('Disconnected');
-    };
+    const connectedBranchesCount = instances.filter((i) => i.is_connected).length;
 
     return (
         <>
-            <Head title={__('WhatsApp Integration')} />
-            <div className="space-y-6 w-full pb-10">
+            <Head title="WhatsApp Multi-Sucursal (Python)" />
+            <div className="space-y-5 w-full pb-10">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-                {/* Module Header */}
+                {/* ── ENCABEZADO PRINCIPAL ── */}
                 <ModuleHeader
-                    icon={<MessageSquare className="h-6 w-6 text-white" />}
-                    title={__('WhatsApp API Module')}
-                    description={`${__('Multi-Instance Baileys Engine for')} ${empresa_nombre}`}
-                    colorClassName="bg-emerald-600"
+                    icon={<MessageSquare className="size-6 text-white" />}
+                    title="Centro de WhatsApp Multi-Sucursal"
+                    description={`Motor nativo en Python (Neonize / WhatsMeow) para ${empresa_nombre} · 1 línea independiente por sucursal.`}
+                    colorClassName="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 dark:from-emerald-700 dark:via-teal-700 dark:to-cyan-800 shadow-sm"
                 >
                     <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="bg-black/20 text-white border-white/20 font-mono text-xs">
-                            {configForm.data.whatsapp_instance}
-                        </Badge>
-                        
-                        <Badge className={`gap-1.5 text-xs ${
-                            isConnected
-                                ? 'bg-emerald-500 hover:bg-emerald-500 text-white'
-                                : isConnecting || isQrReady
-                                ? 'bg-amber-500 hover:bg-amber-500 text-white'
-                                : 'bg-rose-500 hover:bg-rose-500 text-white'
-                        }`}>
-                            <span className={`h-2 w-2 rounded-full ${
-                                isConnected
-                                    ? 'bg-white animate-pulse'
-                                    : isConnecting || isQrReady
-                                    ? 'bg-white animate-ping'
-                                    : 'bg-white'
-                            }`} />
-                            {isConnected ? __('Connected') : isQrReady ? __('Waiting Scan') : isConnecting ? __('Connecting...') : __('Disconnected')}
-                        </Badge>
-
-                        {/* Botón de Diagnóstico / Heartbeat */}
+                        {isServiceUnavailable ? (
+                            <Badge className="bg-rose-500/90 hover:bg-rose-500 text-white border-white/25 gap-1.5 px-2.5 py-1 text-xs">
+                                <WifiOff className="size-3.5" />
+                                Motor Python Offline
+                            </Badge>
+                        ) : (
+                            <Badge className="bg-white/15 hover:bg-white/20 text-white border-white/25 gap-1.5 px-2.5 py-1 text-xs">
+                                <Cpu className="size-3.5" />
+                                Motor Python · {connectedBranchesCount}/{instances.length || 1} en línea
+                            </Badge>
+                        )}
                         <Button
                             size="sm"
-                            variant="outline"
+                            variant="secondary"
                             onClick={handleRunDiagnostic}
-                            className="h-8 bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs gap-1.5"
+                            className="bg-white/15 hover:bg-white/25 text-white border border-white/20 gap-1.5 h-8 text-xs"
                         >
-                            <Heart className="h-3.5 w-3.5 text-rose-300 fill-rose-300" />
-                            {__('Health Diagnostic')}
+                            <Activity className="size-3.5" />
+                            <span className="hidden sm:inline">Diagnóstico</span>
                         </Button>
-
-                        {isConnected && (
-                            <div className="flex gap-2 ml-1">
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={handleReconnect}
-                                    className="h-8 bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs gap-1.5"
-                                >
-                                    <RefreshCw className="h-3.5 w-3.5" />
-                                    {__('Reset Session')}
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={handleDisconnect}
-                                    className="h-8 bg-rose-600 hover:bg-rose-700 text-white text-xs gap-1.5"
-                                >
-                                    <Power className="h-3.5 w-3.5" />
-                                    {__('Disconnect')}
-                                </Button>
-                            </div>
-                        )}
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                                loadInstances();
+                                loadSelectedBranchData(selectedSucursalId, false);
+                                toast.info('Estado sincronizado con el motor Python');
+                            }}
+                            className="bg-white/15 hover:bg-white/25 text-white border border-white/20 h-8 px-2.5"
+                            title="Sincronizar estado"
+                        >
+                            <RefreshCw className="size-3.5" />
+                        </Button>
                     </div>
                 </ModuleHeader>
 
-                {/* Alerta de Desconexión (Heartbeat Alert) */}
-                {whatsapp_active && !isConnected && (
-                    <Card className="border-amber-400/80 bg-amber-500/10 dark:bg-amber-950/20 backdrop-blur-sm shadow-sm">
-                        <CardContent className="flex items-center justify-between p-4 flex-wrap gap-3">
-                            <div className="flex items-start gap-3">
-                                <WifiOff className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                                <div>
-                                    <h4 className="font-semibold text-amber-900 dark:text-amber-300 text-sm">
-                                        {__('WhatsApp Session Disconnected')}
-                                    </h4>
-                                    <p className="text-xs text-amber-800 dark:text-amber-400/90 mt-0.5">
-                                        {__('Your WhatsApp line is not active. Outbound messages will not dispatch until reconnected.')}
-                                    </p>
-                                </div>
-                            </div>
-                            <Button
-                                size="sm"
-                                onClick={() => setActiveTab('connection')}
-                                className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 h-8"
-                            >
-                                <QrCode className="h-3.5 w-3.5" />
-                                {__('Link / Scan QR Now')}
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Server Offline Alert Banner */}
+                {/* ── ALERTA MOTOR PYTHON OFFLINE ── */}
                 {isServiceUnavailable && (
-                    <Card className="border-rose-400/60 bg-rose-500/10 dark:bg-rose-950/20 backdrop-blur-sm shadow-sm">
-                        <CardContent className="flex items-start gap-3.5 p-4">
-                            <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-                            <div>
-                                <h3 className="font-semibold text-rose-800 dark:text-rose-300">{__('WhatsApp Server Offline')}</h3>
-                                <p className="text-sm text-rose-700 dark:text-rose-400/90 mt-1">
-                                    {__('The WhatsApp API service at')} <code className="font-mono text-xs font-semibold px-1 py-0.5 bg-rose-100 dark:bg-rose-900/50 rounded">{whatsapp_api_url}</code> {__('is currently unreachable. Please make sure the Node.js service is running.')}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4">
+                        <div className="flex items-start gap-3">
+                            <Terminal className="size-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                            <div className="space-y-1">
+                                <p className="text-sm font-bold text-rose-900 dark:text-rose-200">
+                                    El motor nativo de WhatsApp en Python está detenido
+                                </p>
+                                <p className="text-xs text-rose-800/90 dark:text-rose-300/90">
+                                    No se detectó respuesta en{' '}
+                                    <code className="font-mono font-semibold px-1.5 py-0.5 rounded bg-rose-500/15">
+                                        {apiUrlInput}
+                                    </code>
+                                    . Inícialo ejecutando{' '}
+                                    <code className="font-mono font-semibold px-1.5 py-0.5 rounded bg-rose-500/15">
+                                        php artisan whatsapp:start
+                                    </code>{' '}
+                                    o abriendo{' '}
+                                    <code className="font-mono font-semibold px-1.5 py-0.5 rounded bg-rose-500/15">
+                                        whatsapp-service\run.bat
+                                    </code>
+                                    .
                                 </p>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                                loadInstances();
+                                loadSelectedBranchData(selectedSucursalId, true);
+                            }}
+                            className="border-rose-500/40 text-rose-700 dark:text-rose-300 hover:bg-rose-500/10 gap-1.5 shrink-0"
+                        >
+                            <RefreshCw className="size-3.5" />
+                            Reintentar
+                        </Button>
+                    </div>
                 )}
 
-                {/* Branch (Sucursal) Selector Banner */}
-                {sucursales && sucursales.length > 0 && (
-                    <Card className="border-emerald-500/30 bg-gradient-to-r from-emerald-500/5 via-card to-card shadow-sm">
-                        <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-emerald-500/10 text-emerald-600 rounded-xl">
-                                    <Store className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-bold flex items-center gap-2 text-foreground">
-                                        {__('Conexión WhatsApp por Sucursal')}
-                                        <Badge variant="secondary" className="text-[10px] font-normal uppercase">
-                                            {`${__('Sucursal')}: ${target_name}`}
-                                        </Badge>
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground">
-                                        {__('Cada sucursal opera con su propia línea de WhatsApp de forma 100% aislada e independiente.')}
-                                    </p>
-                                </div>
-                            </div>
+                {/* ── SELECTOR MULTI-INSTANCIA POR SUCURSAL ── */}
+                <div className="space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            <Building2 className="size-3.5 text-emerald-600" />
+                            <span>Instancias por Sucursal ({instances.length || 1})</span>
+                            {switchingBranch && <Loader2 className="size-3.5 animate-spin text-primary" />}
+                        </div>
+                        {liveStatus?.currentlyTypingTo && (
+                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 gap-1.5 animate-pulse">
+                                <Keyboard className="size-3.5" />
+                                Escribiendo a +{liveStatus.currentlyTypingTo}...
+                            </Badge>
+                        )}
+                    </div>
 
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
-                                <Label className="text-xs font-semibold shrink-0 text-muted-foreground hidden md:inline">
-                                    {__('Sucursal')}:
-                                </Label>
-                                <Select
-                                    value={String(active_sucursal_id || sucursales[0]?.id || '')}
-                                    onValueChange={handleBranchChange}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {instances.map((inst) => {
+                            const isSelected = inst.id === selectedSucursalId;
+                            const pct = Math.min(
+                                100,
+                                Math.round((inst.sent_today / Math.max(1, inst.effective_daily_limit)) * 100)
+                            );
+                            return (
+                                <button
+                                    key={inst.id}
+                                    type="button"
+                                    onClick={() => handleSelectBranch(inst.id)}
+                                    className={cn(
+                                        'text-left rounded-xl border p-3.5 transition-all cursor-pointer bg-card hover:border-emerald-500/50',
+                                        isSelected
+                                            ? 'border-emerald-600 ring-2 ring-emerald-500/20 shadow-sm'
+                                            : 'border-border/80 hover:bg-muted/30',
+                                        !inst.whatsapp_active && 'opacity-75'
+                                    )}
                                 >
-                                    <SelectTrigger className="w-full sm:w-[270px] h-9 text-xs font-medium">
-                                        <SelectValue placeholder={__('Selecciona sucursal')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {sucursales.map((suc) => (
-                                            <SelectItem key={suc.id} value={String(suc.id)} className="text-xs font-medium">
-                                                🏬 {suc.nombre} {suc.whatsapp_phone ? `(${suc.whatsapp_phone})` : ''} {suc.whatsapp_status === 'connected' ? '🟢' : '⚪'}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-1.5">
+                                                <Store className="size-3.5 text-emerald-600 shrink-0" />
+                                                <p className="text-sm font-bold text-foreground truncate">{inst.nombre}</p>
+                                            </div>
+                                            <p className="text-[11px] font-mono text-muted-foreground truncate mt-0.5">
+                                                {inst.whatsapp_phone ? `+${inst.whatsapp_phone}` : inst.whatsapp_instance}
+                                            </p>
+                                        </div>
+                                        {renderStateBadge(inst.connection_state, true)}
+                                    </div>
+
+                                    <div className="mt-3 space-y-1.5">
+                                        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                                            <span>
+                                                Hoy: <strong>{inst.sent_today}</strong>/{inst.effective_daily_limit}
+                                            </span>
+                                            <span className="flex items-center gap-1.5">
+                                                {!inst.whatsapp_active && (
+                                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground">
+                                                        Inactiva
+                                                    </span>
+                                                )}
+                                                {inst.queued > 0 && (
+                                                    <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                                                        {inst.queued} cola
+                                                    </span>
+                                                )}
+                                                {inst.queue_paused && <Pause className="size-3 text-rose-500" />}
+                                            </span>
+                                        </div>
+                                        <Progress value={pct} className="h-1.5" />
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* ── ALERTA CIRCUIT BREAKER / PAUSA ── */}
+                {(isPaused || isBannedCooldown) && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+                        <div className="flex items-start gap-3">
+                            <ShieldAlert className="size-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-sm font-bold text-foreground">
+                                    {isBannedCooldown
+                                        ? `Circuit Breaker Anti-Ban Activado (${selectedInstance?.nombre})`
+                                        : `Cola de Envíos en Pausa (${selectedInstance?.nombre})`}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {queueStats?.pauseReason ||
+                                        liveStatus?.pauseReason ||
+                                        'Los envíos en cola están retenidos para proteger la línea de esta sucursal.'}
+                                </p>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                        <Button size="sm" onClick={handleToggleQueuePause} className="gap-1.5 shrink-0">
+                            <Play className="size-3.5" />
+                            Reanudar Cola
+                        </Button>
+                    </div>
                 )}
 
-                {/* Enhanced Shadcn Stat Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Card 1: Socket State */}
-                    <Card className="p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                {__('Socket State')}
-                            </span>
-                            <div className={`p-2 rounded-xl ${
-                                isConnected
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                    : isConnecting || isQrReady
-                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                            }`}>
-                                <Activity className="h-4 w-4" />
-                            </div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                                    {getConnectionStateLabel(liveStatusState?.connectionState, isConnected)}
+                {/* ── 4 KPIs EN TIEMPO REAL DE LA SUCURSAL ACTIVA ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    <Card className="border-border/80">
+                        <CardContent className="p-4 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                    Sucursal: {selectedInstance?.nombre || '—'}
                                 </span>
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={branchActive}
+                                        onCheckedChange={handleToggleBranchActive}
+                                        title="Activar/Desactivar WhatsApp en esta sucursal"
+                                    />
+                                </div>
                             </div>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
-                                <Phone className="h-3 w-3 text-emerald-500" />
-                                {liveStatusState?.userJid ? `+${liveStatusState.userJid.split('@')[0]}` : (whatsapp_phone ? `+${whatsapp_phone}` : __('No linked phone'))}
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-base font-bold text-foreground truncate font-mono">
+                                    {liveStatus?.phoneNumber
+                                        ? `+${liveStatus.phoneNumber}`
+                                        : selectedInstance?.whatsapp_phone
+                                        ? `+${selectedInstance.whatsapp_phone}`
+                                        : instanceSlugInput || '—'}
+                                </span>
+                                {renderStateBadge(connState, true)}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground truncate">
+                                {liveStatus?.pushName
+                                    ? `Perfil: ${liveStatus.pushName}`
+                                    : branchActive
+                                    ? 'Sesión aislada cifrada en Python'
+                                    : 'Integración pausada para esta sucursal'}
                             </p>
-                        </div>
+                        </CardContent>
                     </Card>
 
-                    {/* Card 2: 24H Daily Quota */}
-                    <Card className="p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                {__('24H Daily Limit')}
-                            </span>
-                            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                                <Flame className="h-4 w-4" />
+                    <Card className="border-border/80">
+                        <CardContent className="p-4 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-muted-foreground">Cuota Diaria / Horaria</span>
+                                <Flame className="size-4 text-amber-500" />
                             </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="flex items-baseline gap-1.5">
-                                <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">
-                                    {sentTodayCount}
+                            <div className="flex items-baseline justify-between">
+                                <span className="text-xl font-black text-foreground">
+                                    {queueStats?.sentToday ?? 0}
+                                    <span className="text-xs font-normal text-muted-foreground">
+                                        {' '}
+                                        / {queueStats?.effectiveDailyLimit ?? abDailyLimit}
+                                    </span>
                                 </span>
-                                <span className="text-xs text-muted-foreground font-medium">
-                                    / {dailyLimitCount} {__('messages')}
-                                </span>
+                                {(queueStats?.warmupMode ?? abWarmupMode) && (
+                                    <Badge
+                                        variant="outline"
+                                        className="text-[10px] border-amber-500/40 text-amber-600 dark:text-amber-400"
+                                    >
+                                        Warm-up Día {queueStats?.warmupDay ?? 1}
+                                    </Badge>
+                                )}
                             </div>
-                            <Progress value={quotaPercentage} className="h-1.5 bg-slate-100 dark:bg-slate-800" />
-                            <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>{__('Remaining:')} {Math.max(0, dailyLimitCount - sentTodayCount)}</span>
-                                <span>{dailyLimitCount} {__('max')}</span>
-                            </div>
-                        </div>
+                            <Progress value={dailyPct} className="h-1.5" />
+                            <p className="text-[11px] text-muted-foreground">
+                                Última hora:{' '}
+                                <strong>
+                                    {queueStats?.sentThisHour ?? 0}/{queueStats?.hourlyLimit ?? abHourlyLimit}
+                                </strong>{' '}
+                                ({hourlyPct}%)
+                            </p>
+                        </CardContent>
                     </Card>
 
-                    {/* Card 3: Outbound Queue */}
-                    <Card className="p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                {__('Pending in Queue')}
-                            </span>
-                            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                                <ListOrdered className="h-4 w-4" />
+                    <Card className="border-border/80">
+                        <CardContent className="p-4 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-muted-foreground">Control de Cola</span>
+                                <Clock className="size-4 text-sky-500" />
                             </div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <div className="flex items-baseline gap-1.5">
-                                <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">
-                                    {queueStatsState?.queued ?? queueStatsState?.totalQueued ?? 0}
+                            <div className="flex items-center justify-between">
+                                <span className="text-xl font-black text-foreground">
+                                    {queueStats?.queued ?? 0} en cola
                                 </span>
-                                <span className="text-xs text-muted-foreground font-medium">
-                                    {__('in queue')}
-                                </span>
+                                <Button
+                                    size="sm"
+                                    variant={isPaused ? 'default' : 'outline'}
+                                    onClick={handleToggleQueuePause}
+                                    className="h-7 px-2.5 text-xs gap-1"
+                                >
+                                    {isPaused ? <Play className="size-3" /> : <Pause className="size-3" />}
+                                    {isPaused ? 'Reanudar' : 'Pausar'}
+                                </Button>
                             </div>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Shield className="h-3 w-3 text-indigo-500" />
-                                {__('Anti-Ban Jitter: 20-40s')}
+                            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                <span
+                                    className={cn(
+                                        'size-2 rounded-full shrink-0',
+                                        (queueStats?.withinWorkingHours ?? true) ? 'bg-emerald-500' : 'bg-amber-500'
+                                    )}
+                                />
+                                {(queueStats?.workingHoursEnabled ?? abWorkingHoursEnabled)
+                                    ? (queueStats?.withinWorkingHours ?? true)
+                                        ? `En horario laboral (${queueStats?.workingHoursStart || abWorkingHoursStart}–${queueStats?.workingHoursEnd || abWorkingHoursEnd})`
+                                        : `Fuera de horario (retiene hasta ${queueStats?.workingHoursStart || abWorkingHoursStart})`
+                                    : 'Despacho habilitado 24/7'}
                             </p>
-                        </div>
+                        </CardContent>
                     </Card>
 
-                    {/* Card 4: Anti-Ban Schedule */}
-                    <Card className="p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                {__('Anti-Ban Schedule')}
-                            </span>
-                            <div className={`p-2 rounded-xl ${
-                                isWithinWorkingHours
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                            }`}>
-                                <Clock className="h-4 w-4" />
+                    <Card className="border-border/80">
+                        <CardContent className="p-4 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-muted-foreground">Escudo Anti-Baneo</span>
+                                <ShieldCheck
+                                    className={cn(
+                                        'size-4',
+                                        safetyScore >= 80
+                                            ? 'text-emerald-500'
+                                            : safetyScore >= 50
+                                            ? 'text-amber-500'
+                                            : 'text-rose-500'
+                                    )}
+                                />
                             </div>
-                        </div>
-
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                                <span className="text-base font-bold text-slate-900 dark:text-slate-100">
-                                    {antiBanForm.data.workingHoursStart || '08:00'} - {antiBanForm.data.workingHoursEnd || '20:00'}
-                                </span>
+                            <div className="flex items-baseline justify-between">
+                                <span className="text-xl font-black text-foreground">{safetyScore}%</span>
+                                <Badge
+                                    variant="outline"
+                                    className={cn(
+                                        'text-[10px]',
+                                        safetyScore >= 80
+                                            ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
+                                            : safetyScore >= 50
+                                            ? 'border-amber-500/40 text-amber-600 dark:text-amber-400'
+                                            : 'border-rose-500/40 text-rose-600 dark:text-rose-400'
+                                    )}
+                                >
+                                    {safetyScore >= 80 ? 'Blindaje Alto' : safetyScore >= 50 ? 'Moderado' : 'Riesgo Alto'}
+                                </Badge>
                             </div>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                                <span className={`h-2 w-2 rounded-full ${isWithinWorkingHours ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                                {isWithinWorkingHours ? __('Safe Window Open') : __('Paused (Night Silence)')}
+                            <Progress value={safetyScore} className="h-1.5" />
+                            <p className="text-[11px] text-muted-foreground truncate">
+                                {(queueStats?.simulateTyping ?? abSimulateTyping)
+                                    ? `Typing (${queueStats?.typingMinSec ?? abTypingMinSec}–${queueStats?.typingMaxSec ?? abTypingMaxSec}s) · Delay ${queueStats?.delayMinSec ?? abDelayMinSec}–${queueStats?.delayMaxSec ?? abDelayMaxSec}s`
+                                    : 'Activa Typing y Warm-up para mayor blindaje'}
                             </p>
-                        </div>
+                        </CardContent>
                     </Card>
                 </div>
 
-                {/* Main Tabbed Interface */}
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 h-auto p-1.5 bg-slate-100/80 dark:bg-slate-900/80 rounded-xl gap-1">
-                        <TabsTrigger value="connection" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
-                            <QrCode className="h-4 w-4" />
-                            {__('Connection & QR')}
+                {/* ── PESTAÑAS PRINCIPALES ── */}
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                    <TabsList className="w-full justify-start overflow-x-auto bg-muted/60 p-1 h-auto flex-wrap sm:flex-nowrap">
+                        <TabsTrigger value="connection" className="gap-1.5 text-xs py-2 cursor-pointer">
+                            <QrCode className="size-3.5" />
+                            <span>Instancia & Conexión</span>
                         </TabsTrigger>
-                        <TabsTrigger value="broadcast" className="py-2.5 gap-1.5 text-xs md:text-sm font-semibold rounded-lg text-indigo-600 dark:text-indigo-400">
-                            <Megaphone className="h-4 w-4" />
-                            {__('Mass Broadcast')}
+                        <TabsTrigger value="antiban" className="gap-1.5 text-xs py-2 cursor-pointer">
+                            <Shield className="size-3.5" />
+                            <span>Seguridad Anti-Baneo</span>
                         </TabsTrigger>
-                        <TabsTrigger value="templates" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
-                            <FileText className="h-4 w-4" />
-                            {__('Templates')}
+                        <TabsTrigger value="broadcast" className="gap-1.5 text-xs py-2 cursor-pointer">
+                            <Megaphone className="size-3.5" />
+                            <span>Difusión Segura</span>
                         </TabsTrigger>
-                        <TabsTrigger value="history" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
-                            <Inbox className="h-4 w-4" />
-                            {__('History & Logs')}
+                        <TabsTrigger value="templates" className="gap-1.5 text-xs py-2 cursor-pointer">
+                            <FileText className="size-3.5" />
+                            <span>Plantillas & Spintax</span>
                         </TabsTrigger>
-                        <TabsTrigger value="antiban" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
-                            <Shield className="h-4 w-4" />
-                            {__('Anti-Ban Policies')}
-                        </TabsTrigger>
-                        <TabsTrigger value="dispatcher" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
-                            <Send className="h-4 w-4" />
-                            {__('Test & Spintax')}
-                        </TabsTrigger>
-                        <TabsTrigger value="settings" className="py-2.5 gap-1.5 text-xs md:text-sm font-medium rounded-lg">
-                            <Settings2 className="h-4 w-4" />
-                            {__('Server & Webhook')}
+                        <TabsTrigger value="logs" className="gap-1.5 text-xs py-2 cursor-pointer">
+                            <Inbox className="size-3.5" />
+                            <span>Cola & Bitácora</span>
+                            {(queueStats?.queued ?? 0) > 0 && (
+                                <Badge className="ml-1 h-4 px-1.5 text-[10px] bg-amber-500 text-white">
+                                    {queueStats?.queued}
+                                </Badge>
+                            )}
                         </TabsTrigger>
                     </TabsList>
 
-                    {/* TAB 1: CONNECTION & QR CODE */}
-                    <TabsContent value="connection" className="space-y-6">
-                        <div className="grid md:grid-cols-12 gap-6">
-                            {/* Visual QR / Connected Device Card */}
-                            <div className="md:col-span-7">
-                                <Card className="shadow-sm h-full flex flex-col justify-between">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            <Radio className="h-5 w-5 text-emerald-600" />
-                                            {__('WhatsApp Device Linking')}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {__('Scan QR Code with your mobile phone or inspect active session details.')}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="flex flex-col items-center justify-center min-h-[320px] text-center p-6">
-                                        {!whatsapp_active ? (
-                                            <div className="space-y-3 max-w-sm">
-                                                <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center mx-auto">
-                                                    <Power className="h-8 w-8" />
-                                                </div>
-                                                <h3 className="font-semibold text-slate-800 dark:text-slate-200">{__('Integration Disabled')}</h3>
-                                                <p className="text-xs text-muted-foreground">{__('Enable WhatsApp in the Server Settings tab to start the engine.')}</p>
-                                                <Button size="sm" onClick={() => setActiveTab('settings')} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
-                                                    <Settings2 className="h-4 w-4" />
-                                                    {__('Go to Settings')}
-                                                </Button>
-                                            </div>
-                                        ) : isConnected ? (
-                                            <div className="space-y-4 max-w-sm">
-                                                <div className="relative">
-                                                    <div className="h-24 w-24 bg-emerald-500/10 text-emerald-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-emerald-500/5">
-                                                        <CheckCircle2 className="h-12 w-12" />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{__('WhatsApp Connected & Synced')}</h3>
-                                                    <p className="text-xs text-muted-foreground mt-1">{__('Your phone is currently paired and processing messages through the engine.')}</p>
-                                                </div>
-                                                <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border text-xs font-mono text-slate-700 dark:text-slate-300 space-y-1">
-                                                    <div><strong>{__('JID:')}</strong> {liveStatusState?.userJid || `${whatsapp_phone}@s.whatsapp.net`}</div>
-                                                    <div><strong>{__('Instance:')}</strong> {configForm.data.whatsapp_instance}</div>
-                                                </div>
-                                            </div>
-                                        ) : isQrReady && (liveStatusState?.qrDataUrl || liveStatusState?.qrCode) ? (
-                                            <div className="space-y-4 flex flex-col items-center">
-                                                <div className="p-3 bg-white rounded-2xl shadow-md border-2 border-slate-200 inline-block">
-                                                    <img
-                                                        src={liveStatusState.qrDataUrl || `data:image/png;base64,${liveStatusState.qrCode}`}
-                                                        alt="WhatsApp QR Code"
-                                                        className="w-56 h-56 object-contain rounded-lg"
-                                                    />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400 gap-1.5 animate-pulse">
-                                                        <Clock className="h-3 w-3" />
-                                                        {__('QR Code Active - Scan from WhatsApp App')}
-                                                    </Badge>
-                                                    <p className="text-xs text-muted-foreground">{__('Auto-refreshes every 20 seconds. Keep this screen open.')}</p>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-4 max-w-sm">
-                                                <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center mx-auto">
-                                                    <QrCode className="h-8 w-8" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-semibold text-slate-800 dark:text-slate-200">{__('Sesión no vinculada')}</h3>
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                        {__('Haz clic abajo para iniciar la sesión Baileys y solicitar el código QR en vivo.')}
-                                                    </p>
-                                                </div>
-                                                <Button size="sm" onClick={handleConnect} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
-                                                    <QrCode className="h-4 w-4" />
-                                                    {__('Generar / Escanear QR')}
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                    <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-3 flex justify-between items-center text-xs text-muted-foreground">
-                                        <span>{__('Engine:')} Baileys Multi-Instance</span>
-                                        <span>{__('Status:')} <strong className="text-slate-700 dark:text-slate-300">{getConnectionStateLabel(liveStatusState?.connectionState, isConnected)}</strong></span>
-                                    </CardFooter>
-                                </Card>
-                            </div>
-
-                            {/* Quick Instructions Card */}
-                            <div className="md:col-span-5">
-                                <Card className="shadow-sm h-full flex flex-col justify-between">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            <HelpCircle className="h-5 w-5 text-indigo-600" />
-                                            {__('How to Pair WhatsApp')}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {__('Follow these simple steps on your mobile phone.')}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4 text-xs">
-                                        <div className="space-y-3">
-                                            <div className="flex gap-3 items-start p-3 border rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
-                                                <div className="h-6 w-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">1</div>
-                                                <div>
-                                                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">{__('Open WhatsApp on your Phone')}</h4>
-                                                    <p className="text-muted-foreground mt-0.5">{__('Tap Menu (Android) or Settings (iOS).')}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex gap-3 items-start p-3 border rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
-                                                <div className="h-6 w-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">2</div>
-                                                <div>
-                                                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">{__('Select Linked Devices')}</h4>
-                                                    <p className="text-muted-foreground mt-0.5">{__('Go to Linked Devices > Link a Device and scan the QR code before the 30-second expiry timeout.')}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex gap-3 items-start p-3 border rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
-                                                <div className="h-6 w-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0">3</div>
-                                                <div>
-                                                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">{__('Session Persists Automatically')}</h4>
-                                                    <p className="text-muted-foreground mt-0.5">{__('Once linked, auth credentials persist in local storage. Disconnecting from your phone clears the link.')}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-3 flex justify-between items-center text-xs">
-                                        <span className="text-muted-foreground">{__('Need technical assistance?')}</span>
-                                        <a href="/docs" target="_blank" className="text-emerald-600 hover:underline flex items-center gap-1 font-medium">
-                                            {__('API Docs')} <ExternalLink className="h-3 w-3" />
-                                        </a>
-                                    </CardFooter>
-                                </Card>
-                            </div>
-                        </div>
-                    </TabsContent>
-
-                    {/* TAB: DIFUSIÓN MASIVA / BROADCAST */}
-                    <TabsContent value="broadcast" className="space-y-6">
-                        <div className="grid lg:grid-cols-12 gap-6">
-                            {/* COLUMNA IZQUIERDA: 1. AUDIENCIA Y SELECCIÓN (7 COLS) */}
-                            <div className="lg:col-span-7 space-y-6">
-                                <Card className="shadow-sm border-indigo-200/60 dark:border-indigo-900/40">
-                                    <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    {/* TAB 1: INSTANCIA, VINCULACIÓN DIRECTA & PRUEBAS EN VIVO */}
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    <TabsContent value="connection" className="space-y-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                            {/* Tarjeta Izquierda: Vinculación QR / Código de 8 Dígitos */}
+                            <Card className="lg:col-span-6 border-border/80 flex flex-col justify-between">
+                                <CardHeader className="pb-3">
+                                    <div className="flex items-center justify-between gap-2">
                                         <div>
-                                            <CardTitle className="text-lg flex items-center gap-2">
-                                                <Megaphone className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                                                {__('1. Target Audience & Recipients')}
+                                            <CardTitle className="text-base flex items-center gap-2">
+                                                <Smartphone className="size-4 text-emerald-600" />
+                                                Vincular: {selectedInstance?.nombre || 'Sucursal'}
                                             </CardTitle>
-                                            <CardDescription>
-                                                {__('Select the group and filter recipients for this broadcast.')}
+                                            <CardDescription className="text-xs mt-0.5">
+                                                Sesión Multi-Dispositivo aislada en Python (Neonize / WhatsMeow).
                                             </CardDescription>
                                         </div>
-                                        <Badge variant="outline" className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 font-mono text-xs w-fit">
-                                            {selectedRecipientIds.length} / {broadcastRecipients.length} {__('Selected')}
-                                        </Badge>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        {/* Selectores de Audiencia y Zona */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs font-semibold">{__('Target Group')}</Label>
-                                                <Select
-                                                    value={broadcastTarget}
-                                                    onValueChange={(val: any) => setBroadcastTarget(val)}
-                                                >
-                                                    <SelectTrigger className="text-xs h-9">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="presbiteros">
-                                                            <div className="flex items-center gap-2">
-                                                                <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
-                                                                <span>{__('Presbyters (Role: Presbítero)')}</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                        <SelectItem value="pastores">
-                                                            <div className="flex items-center gap-2">
-                                                                <Users className="h-3.5 w-3.5 text-emerald-600" />
-                                                                <span>{__('All Active Pastors')}</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                        <SelectItem value="usuarios">
-                                                            <div className="flex items-center gap-2">
-                                                                <UserCheck className="h-3.5 w-3.5 text-blue-600" />
-                                                                <span>{__('All System Users')}</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                        {renderStateBadge(connState)}
+                                    </div>
+                                </CardHeader>
 
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs font-semibold">{__('Filter by Zone')}</Label>
-                                                <Select
-                                                    value={broadcastZona}
-                                                    onValueChange={setBroadcastZona}
+                                <CardContent className="space-y-4 flex-1">
+                                    {isConnected ? (
+                                        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-6 text-center space-y-3">
+                                            <div className="mx-auto size-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                                                <CheckCircle2 className="size-8 text-emerald-500" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-bold text-foreground">
+                                                    WhatsApp Conectado
+                                                </h3>
+                                                <p className="text-sm font-mono text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                                                    +{liveStatus?.phoneNumber || selectedInstance?.whatsapp_phone || 'Línea vinculada'}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {liveStatus?.pushName && (
+                                                        <>
+                                                            Cuenta: <strong>{liveStatus.pushName}</strong> ·{' '}
+                                                        </>
+                                                    )}
+                                                    Instancia:{' '}
+                                                    <span className="font-mono font-medium">
+                                                        {liveStatus?.instanceName || instanceSlugInput}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleReconnect}
+                                                    disabled={loadingAction}
+                                                    className="gap-1.5"
                                                 >
-                                                    <SelectTrigger className="text-xs h-9">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">{__('All Zones (National)')}</SelectItem>
-                                                        {Array.from({ length: 15 }, (_, i) => String(i + 1)).map(z => (
-                                                            <SelectItem key={z} value={z}>{__('Zone')} {z}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                    <RotateCw className="size-3.5" />
+                                                    Cambiar Línea
+                                                </Button>
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={handleDisconnect}
+                                                    disabled={loadingAction}
+                                                    className="gap-1.5"
+                                                >
+                                                    <Power className="size-3.5" />
+                                                    Desvincular Sesión
+                                                </Button>
                                             </div>
                                         </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {/* Selector de método de emparejamiento */}
+                                            <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-muted/50 border border-border/70">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setLinkMode('qr')}
+                                                    className={cn(
+                                                        'flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-semibold transition cursor-pointer',
+                                                        linkMode === 'qr'
+                                                            ? 'bg-card text-foreground shadow-xs border border-border/80'
+                                                            : 'text-muted-foreground hover:text-foreground'
+                                                    )}
+                                                >
+                                                    <QrCode className="size-3.5" />
+                                                    Código QR
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setLinkMode('phone')}
+                                                    className={cn(
+                                                        'flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-semibold transition cursor-pointer',
+                                                        linkMode === 'phone'
+                                                            ? 'bg-card text-foreground shadow-xs border border-border/80'
+                                                            : 'text-muted-foreground hover:text-foreground'
+                                                    )}
+                                                >
+                                                    <Hash className="size-3.5" />
+                                                    Código de 8 Dígitos
+                                                </button>
+                                            </div>
 
-                                        {/* Barra de Búsqueda y Botón de Selección Masiva */}
-                                        <div className="flex items-center justify-between gap-3 pt-2">
-                                            <div className="relative flex-1">
-                                                <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted-foreground" />
+                                            {linkMode === 'qr' ? (
+                                                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 p-5 min-h-[270px] space-y-4">
+                                                    {isQrReady && (liveStatus?.qrDataUrl || liveStatus?.qrCode) ? (
+                                                        <>
+                                                            <div className="bg-white p-3 rounded-xl shadow-md border border-slate-200">
+                                                                <img
+                                                                    src={liveStatus.qrDataUrl || liveStatus.qrCode || ''}
+                                                                    alt="Código QR WhatsApp"
+                                                                    className="size-52 object-contain"
+                                                                />
+                                                            </div>
+                                                            <div className="text-center space-y-1">
+                                                                <p className="text-xs font-semibold text-foreground">
+                                                                    WhatsApp → Dispositivos vinculados → Vincular dispositivo
+                                                                </p>
+                                                                {typeof liveStatus.qrExpiresIn === 'number' && (
+                                                                    <p className="text-[11px] text-muted-foreground">
+                                                                        Actualización automática · Expira en aprox.{' '}
+                                                                        <strong className="text-amber-600 dark:text-amber-400">
+                                                                            {liveStatus.qrExpiresIn}s
+                                                                        </strong>
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={handleReconnect}
+                                                                    disabled={loadingAction}
+                                                                    className="gap-1.5 text-xs"
+                                                                >
+                                                                    <RotateCw className="size-3.5" />
+                                                                    Regenerar QR
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={handleDisconnect}
+                                                                    disabled={loadingAction}
+                                                                    className="text-xs text-muted-foreground"
+                                                                >
+                                                                    Cancelar
+                                                                </Button>
+                                                            </div>
+                                                        </>
+                                                    ) : isConnecting || loadingAction ? (
+                                                        <div className="text-center space-y-3 py-8">
+                                                            <Loader2 className="size-10 animate-spin text-emerald-600 mx-auto" />
+                                                            <div>
+                                                                <p className="text-sm font-semibold text-foreground">
+                                                                    {isReconnecting
+                                                                        ? 'Restaurando sesión de WhatsApp automáticamente...'
+                                                                        : 'Negociando sesión cifrada con WhatsApp...'}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {isReconnecting
+                                                                        ? 'Reconectando el socket cifrado de esta sucursal.'
+                                                                        : 'Generando código QR desde el motor Python nativo.'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center space-y-4 py-6 max-w-xs">
+                                                            <div className="mx-auto size-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                                                                <QrCode className="size-7 text-emerald-600" />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <p className="text-sm font-bold text-foreground">
+                                                                    Sucursal sin vincular
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    Genera un código QR exclusivo para{' '}
+                                                                    <strong>{selectedInstance?.nombre}</strong> sin APIs externas.
+                                                                </p>
+                                                            </div>
+                                                            <Button
+                                                                onClick={handleConnect}
+                                                                disabled={loadingAction || isServiceUnavailable}
+                                                                className="gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                            >
+                                                                <Zap className="size-4" />
+                                                                Iniciar Instancia y Generar QR
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="rounded-xl border border-border bg-muted/20 p-5 space-y-4">
+                                                    <div className="space-y-1">
+                                                        <p className="text-sm font-bold text-foreground">
+                                                            Vincular sin Cámara (Código de 8 dígitos)
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Ingresa el número de WhatsApp de{' '}
+                                                            <strong>{selectedInstance?.nombre}</strong> con código de país.
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex gap-2">
+                                                        <Input
+                                                            value={pairPhoneInput}
+                                                            onChange={(e) => setPairPhoneInput(e.target.value)}
+                                                            placeholder="Ej: +584121234567"
+                                                            className="h-10 text-xs font-mono"
+                                                        />
+                                                        <Button
+                                                            onClick={handlePairPhone}
+                                                            disabled={pairLoading || isServiceUnavailable}
+                                                            className="gap-1.5 shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                        >
+                                                            {pairLoading ? (
+                                                                <Loader2 className="size-4 animate-spin" />
+                                                            ) : (
+                                                                <Hash className="size-4" />
+                                                            )}
+                                                            Generar Código
+                                                        </Button>
+                                                    </div>
+
+                                                    {pairingCode && (
+                                                        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-center space-y-2">
+                                                            <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">
+                                                                Código de Vinculación WhatsApp
+                                                            </p>
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <span className="text-2xl font-mono font-black tracking-[0.25em] text-emerald-600 dark:text-emerald-400">
+                                                                    {pairingCode}
+                                                                </span>
+                                                                <Button
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    onClick={handleCopyPairingCode}
+                                                                >
+                                                                    {copiedCode ? (
+                                                                        <Check className="size-4 text-emerald-500" />
+                                                                    ) : (
+                                                                        <Copy className="size-4" />
+                                                                    )}
+                                                                </Button>
+                                                            </div>
+                                                            <p className="text-[11px] text-muted-foreground">
+                                                                En tu móvil: WhatsApp → Dispositivos vinculados → Vincular con número de teléfono
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {liveStatus?.lastError && (
+                                                <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 flex items-start gap-2">
+                                                    <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+                                                    <span>{liveStatus.lastError}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Identificador de instancia de la sucursal */}
+                                    <Separator />
+                                    <div className="space-y-2.5 pt-1">
+                                        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                                            <Settings2 className="size-3.5" />
+                                            <span>Identificador de Instancia ({selectedInstance?.nombre})</span>
+                                        </div>
+                                        <div className={cn('grid gap-2', is_superadmin ? 'sm:grid-cols-2' : 'grid-cols-1')}>
+                                            <div className="space-y-1">
+                                                <Label className="text-[11px] text-muted-foreground">
+                                                    ID de Instancia SQLite
+                                                </Label>
                                                 <Input
-                                                    placeholder={__('Search recipient by name, phone...')}
-                                                    value={broadcastFilterSearch}
-                                                    onChange={e => setBroadcastFilterSearch(e.target.value)}
-                                                    className="pl-9 text-xs h-9"
+                                                    value={instanceSlugInput}
+                                                    onChange={(e) => setInstanceSlugInput(e.target.value)}
+                                                    className="h-8 text-xs font-mono"
+                                                    placeholder="sucursal_1"
+                                                />
+                                            </div>
+                                            {is_superadmin && (
+                                                <div className="space-y-1">
+                                                    <Label className="text-[11px] text-muted-foreground">
+                                                        URL Motor Python
+                                                    </Label>
+                                                    <Input
+                                                        value={apiUrlInput}
+                                                        onChange={(e) => setApiUrlInput(e.target.value)}
+                                                        className="h-8 text-xs font-mono"
+                                                        placeholder="http://127.0.0.1:3001"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex justify-end">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={handleSaveInstanceConfig}
+                                                disabled={savingInstanceConfig}
+                                                className="h-7 text-xs gap-1.5"
+                                            >
+                                                {savingInstanceConfig ? (
+                                                    <Loader2 className="size-3 animate-spin" />
+                                                ) : (
+                                                    <Save className="size-3" />
+                                                )}
+                                                Guardar Instancia
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Tarjeta Derecha: Probador en Vivo & Verificador */}
+                            <Card className="lg:col-span-6 border-border/80">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Send className="size-4 text-emerald-600" />
+                                        Probador en Vivo & Verificador WhatsApp
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">
+                                        Verifica si un cliente tiene WhatsApp activo y prueba Spintax + simulación real de escritura desde{' '}
+                                        <strong>{selectedInstance?.nombre}</strong>.
+                                    </CardDescription>
+                                </CardHeader>
+
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-semibold">Número Destino</Label>
+                                        <div className="flex gap-2">
+                                            {paises.length > 0 && (
+                                                <Select value={testCountryCode} onValueChange={setTestCountryCode}>
+                                                    <SelectTrigger className="w-[105px] h-10 text-xs font-mono shrink-0">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {paises
+                                                            .filter(
+                                                                (p, idx, arr) =>
+                                                                    Boolean(p.codigo_telefonico) &&
+                                                                    arr.findIndex(
+                                                                        (x) =>
+                                                                            x.codigo_telefonico ===
+                                                                            p.codigo_telefonico
+                                                                    ) === idx
+                                                            )
+                                                            .map((p) => {
+                                                                const dialCode = p.codigo_telefonico ?? '+58';
+                                                                return (
+                                                                    <SelectItem
+                                                                        key={p.id}
+                                                                        value={dialCode}
+                                                                        className="text-xs font-mono"
+                                                                    >
+                                                                        {p.codigo_iso2} {dialCode}
+                                                                    </SelectItem>
+                                                                );
+                                                            })}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                            <div className="relative flex-1">
+                                                <Phone className="size-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                                                <Input
+                                                    value={testPhone}
+                                                    onChange={(e) => {
+                                                        setTestPhone(e.target.value);
+                                                        setCheckResult(null);
+                                                    }}
+                                                    placeholder="4121234567"
+                                                    className="pl-9 h-10 text-xs font-mono"
                                                 />
                                             </div>
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                size="sm"
-                                                onClick={toggleAllRecipients}
-                                                className="text-xs h-9 gap-1.5 shrink-0"
+                                                onClick={handleCheckNumber}
+                                                disabled={checkLoading || !testPhone.trim() || isServiceUnavailable}
+                                                className="gap-1.5 text-xs shrink-0 h-10"
                                             >
-                                                {selectedRecipientIds.length === broadcastRecipients.filter(r => r.is_valid_phone).length && selectedRecipientIds.length > 0 ? (
-                                                    <>
-                                                        <CheckSquare className="h-4 w-4 text-indigo-600" />
-                                                        {__('Deselect All')}
-                                                    </>
+                                                {checkLoading ? (
+                                                    <Loader2 className="size-3.5 animate-spin" />
                                                 ) : (
-                                                    <>
-                                                        <Square className="h-4 w-4" />
-                                                        {__('Select All')}
-                                                    </>
+                                                    <ShieldCheck className="size-3.5" />
                                                 )}
+                                                Verificar
                                             </Button>
                                         </div>
 
-                                        {/* Tabla de Destinatarios */}
-                                        <div className="border rounded-xl max-h-[380px] overflow-y-auto overflow-x-auto">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow className="bg-slate-50 dark:bg-slate-900/50 text-xs">
-                                                        <TableHead className="w-10 text-center">#</TableHead>
-                                                        <TableHead>{__('Recipient')}</TableHead>
-                                                        <TableHead>{__('Phone')}</TableHead>
-                                                        <TableHead>{__('Zone / District')}</TableHead>
-                                                        <TableHead>{__('Status')}</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {broadcastLoading ? (
-                                                        <TableRow>
-                                                            <TableCell colSpan={5} className="text-center py-8 text-xs text-muted-foreground">
-                                                                <RefreshCw className="h-4 w-4 animate-spin inline mr-2 text-indigo-600" />
-                                                                {__('Loading audience list...')}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ) : broadcastRecipients.length === 0 ? (
-                                                        <TableRow>
-                                                            <TableCell colSpan={5} className="text-center py-8 text-xs text-muted-foreground">
-                                                                {__('No recipients found matching current filters.')}
-                                                            </TableCell>
-                                                        </TableRow>
+                                        {checkResult && (
+                                            <div
+                                                className={cn(
+                                                    'rounded-lg border px-3 py-2 text-xs flex items-center justify-between gap-2',
+                                                    checkResult.exists
+                                                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                                        : 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                                                )}
+                                            >
+                                                <span className="flex items-center gap-1.5 font-medium">
+                                                    {checkResult.exists ? (
+                                                        <CheckCircle2 className="size-3.5" />
                                                     ) : (
-                                                        broadcastRecipients
-                                                            .filter(r => {
-                                                                if (!broadcastFilterSearch) return true;
-                                                                const q = broadcastFilterSearch.toLowerCase();
-                                                                return r.name.toLowerCase().includes(q) ||
-                                                                       r.phone.includes(q) ||
-                                                                       (r.zonas && r.zonas.toLowerCase().includes(q));
-                                                            })
-                                                            .map((recipient) => {
-                                                                const isSelected = selectedRecipientIds.includes(recipient.id);
-                                                                return (
-                                                                    <TableRow
-                                                                        key={`${recipient.type}-${recipient.id}`}
-                                                                        className={`text-xs cursor-pointer transition-colors ${
-                                                                            isSelected
-                                                                                ? 'bg-indigo-50/50 dark:bg-indigo-950/20'
-                                                                                : recipient.is_valid_phone
-                                                                                ? 'hover:bg-slate-50/80 dark:hover:bg-slate-900/40'
-                                                                                : 'opacity-50'
-                                                                        }`}
-                                                                        onClick={() => {
-                                                                            if (recipient.is_valid_phone) {
-                                                                                toggleRecipient(recipient.id);
-                                                                            }
-                                                                        }}
-                                                                    >
-                                                                        <TableCell className="text-center">
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={isSelected}
-                                                                                disabled={!recipient.is_valid_phone}
-                                                                                onChange={() => toggleRecipient(recipient.id)}
-                                                                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
-                                                                            />
-                                                                        </TableCell>
-                                                                        <TableCell>
-                                                                            <div className="font-semibold text-slate-900 dark:text-slate-100">
-                                                                                {recipient.name}
-                                                                            </div>
-                                                                            <div className="text-[11px] text-muted-foreground">
-                                                                                {recipient.role}
-                                                                            </div>
-                                                                        </TableCell>
-                                                                        <TableCell className="font-mono text-xs">
-                                                                            {recipient.phone ? (
-                                                                                <span>+{recipient.formatted_phone || recipient.phone}</span>
-                                                                            ) : (
-                                                                                <span className="text-rose-500 font-sans italic">{__('No phone registered')}</span>
-                                                                            )}
-                                                                        </TableCell>
-                                                                        <TableCell>
-                                                                            <div className="text-xs">
-                                                                                <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-900">
-                                                                                    {recipient.zonas}
-                                                                                </Badge>
-                                                                            </div>
-                                                                            {recipient.distritos && recipient.distritos !== __('Unassigned') && (
-                                                                                <div className="text-[10px] text-muted-foreground mt-0.5">
-                                                                                    {recipient.distritos}
-                                                                                </div>
-                                                                            )}
-                                                                        </TableCell>
-                                                                        <TableCell>
-                                                                            {recipient.is_valid_phone ? (
-                                                                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 text-[10px] gap-1">
-                                                                                    <Check className="h-3 w-3" /> {__('Valid')}
-                                                                                </Badge>
-                                                                            ) : (
-                                                                                <Badge className="bg-rose-500/10 text-rose-600 border-rose-200 text-[10px]">
-                                                                                    {__('Invalid Phone')}
-                                                                                </Badge>
-                                                                            )}
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                );
-                                                            })
+                                                        <AlertTriangle className="size-3.5" />
                                                     )}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
+                                                    +{checkResult.phone}:{' '}
+                                                    {checkResult.exists
+                                                        ? 'Cuenta activa en WhatsApp'
+                                                        : 'No registrado en WhatsApp'}
+                                                    {checkResult.verified_name ? ` (${checkResult.verified_name})` : ''}
+                                                </span>
+                                                <Badge variant="outline" className="text-[10px]">
+                                                    {checkResult.verified_live ? 'Consulta en vivo' : 'Solo formato'}
+                                                </Badge>
+                                            </div>
+                                        )}
+                                    </div>
 
-                            {/* COLUMNA DERECHA: 2. MENSAJE, SPINTAX Y DESPACHO (5 COLS) */}
-                            <div className="lg:col-span-5 space-y-6">
-                                <Card className="shadow-sm border-indigo-200/60 dark:border-indigo-900/40 flex flex-col justify-between">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            <Send className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                                            {__('2. Message & Spintax Content')}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {__('Compose broadcast with Spintax options and dynamic tags.')}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        {/* Cargar Plantilla Oficial */}
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-semibold">{__('Load Official Template')}</Label>
-                                            <Select onValueChange={handleSelectBroadcastTemplate}>
-                                                <SelectTrigger className="text-xs h-9">
-                                                    <SelectValue placeholder={__('Select a template to load...')} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {templatesList.map(t => (
-                                                        <SelectItem key={t.id} value={t.contenido}>
-                                                            <div className="flex items-center gap-2">
-                                                                <Badge variant="outline" className="text-[10px] uppercase font-mono">{t.categoria}</Badge>
-                                                                <span>{t.nombre}</span>
-                                                            </div>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        {/* Insertar Variables Rápidas */}
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-semibold">{__('Insert Dynamic Variables')}</Label>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {['nombre', 'zonas', 'distritos', 'empresa', 'fecha', 'hora', 'random'].map(v => (
-                                                    <Button
-                                                        key={v}
+                                    <div className="space-y-1.5">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <Label className="text-xs font-semibold">
+                                                Mensaje de Prueba (Spintax {'{a|b}'})
+                                            </Label>
+                                            <div className="flex items-center gap-1">
+                                                {['{{cliente}}', '{{sucursal}}', '{Hola|Buen día}'].map((chip) => (
+                                                    <button
+                                                        key={chip}
                                                         type="button"
-                                                        size="sm"
-                                                        variant="secondary"
-                                                        onClick={() => handleInsertBroadcastVariable(v)}
-                                                        className="h-6 px-2 text-[11px] font-mono bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300"
+                                                        onClick={() =>
+                                                            setTestMessage((prev) => `${prev} ${chip}`.trim())
+                                                        }
+                                                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted hover:bg-emerald-500/15 hover:text-emerald-600 transition cursor-pointer"
                                                     >
-                                                        + {`{{${v}}}`}
-                                                    </Button>
+                                                        +{chip}
+                                                    </button>
                                                 ))}
                                             </div>
                                         </div>
-
-                                        {/* Editor de Texto del Comunicado */}
-                                        <div className="space-y-1.5">
-                                            <div className="flex items-center justify-between">
-                                                <Label className="text-xs font-semibold">{__('Message Body (Spintax Supported)')}</Label>
-                                                <span className="text-[10px] text-muted-foreground font-mono">
-                                                    {__('Use {option1|option2}')}
-                                                </span>
+                                        <Textarea
+                                            rows={4}
+                                            value={testMessage}
+                                            onChange={(e) => setTestMessage(e.target.value)}
+                                            className="text-xs resize-none"
+                                        />
+                                        <div className="flex items-center justify-between">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => handlePreviewSpintax(testMessage, 'test')}
+                                                className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+                                            >
+                                                <Sparkles className="size-3.5" />
+                                                Probar Variaciones Spintax
+                                            </Button>
+                                            <span className="text-[11px] text-muted-foreground">
+                                                {testMessage.length} caracteres
+                                            </span>
+                                        </div>
+                                        {testPreviews.length > 0 && (
+                                            <div className="space-y-1 rounded-lg border border-border/70 bg-muted/20 p-2.5">
+                                                {testPreviews.map((v, idx) => (
+                                                    <p
+                                                        key={idx}
+                                                        className="text-[11px] text-muted-foreground border-b last:border-0 border-border/50 pb-1 last:pb-0"
+                                                    >
+                                                        <strong className="text-emerald-600 mr-1">#{idx + 1}</strong>
+                                                        {v}
+                                                    </p>
+                                                ))}
                                             </div>
-                                            <Textarea
-                                                rows={7}
-                                                placeholder={__('Write pastoral circular or load an official template...')}
-                                                value={broadcastMessage}
-                                                onChange={e => setBroadcastMessage(e.target.value)}
-                                                className="text-xs font-sans resize-y leading-relaxed"
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                        <div className="flex items-center justify-between rounded-lg border border-border/70 p-3 bg-muted/20">
+                                            <div className="space-y-0.5 pr-2">
+                                                <Label className="text-xs font-semibold flex items-center gap-1.5">
+                                                    <Keyboard className="size-3.5 text-emerald-600" />
+                                                    Simular "Escribiendo..."
+                                                </Label>
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    Envía presencia real antes del texto
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                checked={testSimulateTyping}
+                                                onCheckedChange={setTestSimulateTyping}
                                             />
                                         </div>
 
-                                        {/* Parámetros de Seguridad Anti-Baneo */}
-                                        <div className="p-3 border rounded-xl bg-slate-50 dark:bg-slate-900/50 space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Shield className="h-4 w-4 text-emerald-600" />
-                                                    <span className="text-xs font-semibold">{__('Anti-Ban Safety Delay')}</span>
-                                                </div>
-                                                <span className="text-xs font-mono font-bold text-emerald-600">
-                                                    {broadcastDelaySeconds}s {__('delay')}
-                                                </span>
+                                        <div className="flex items-center justify-between rounded-lg border border-border/70 p-3 bg-muted/20">
+                                            <div className="space-y-0.5 pr-2">
+                                                <Label className="text-xs font-semibold flex items-center gap-1.5">
+                                                    <Clock className="size-3.5 text-amber-500" />
+                                                    Enviar vía Cola
+                                                </Label>
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    Aplica horario y retardo del worker
+                                                </p>
                                             </div>
-                                            <p className="text-[11px] text-muted-foreground leading-snug">
-                                                {__('Estimated total broadcast time:')}{' '}
-                                                <b className="text-slate-800 dark:text-slate-200">
-                                                    {Math.ceil((selectedRecipientIds.length * broadcastDelaySeconds) / 60)} {__('minutes')}
-                                                </b>
+                                            <Switch checked={testUseQueue} onCheckedChange={setTestUseQueue} />
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        onClick={handleSendTest}
+                                        disabled={sendingTest || !isConnected}
+                                        className="w-full h-10 gap-2 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    >
+                                        {sendingTest ? (
+                                            <>
+                                                <Loader2 className="size-4 animate-spin" />
+                                                {testSimulateTyping && !testUseQueue
+                                                    ? 'Simulando "Escribiendo..." y enviando...'
+                                                    : 'Despachando...'}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Send className="size-4" />
+                                                {testUseQueue
+                                                    ? 'Encolar Mensaje de Prueba'
+                                                    : 'Enviar Prueba con Simulación Real'}
+                                            </>
+                                        )}
+                                    </Button>
+
+                                    {!isConnected && (
+                                        <p className="text-[11px] text-center text-muted-foreground">
+                                            Vincula la línea de <strong>{selectedInstance?.nombre}</strong> con QR o código de 8 dígitos para habilitar los envíos.
+                                        </p>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
+
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    {/* TAB 2: SEGURIDAD ANTI-BANEO POR SUCURSAL                */}
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    <TabsContent value="antiban" className="space-y-4">
+                        <Card className="border-border/80">
+                            <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div
+                                        className={cn(
+                                            'size-14 rounded-2xl flex flex-col items-center justify-center font-black text-lg border shrink-0',
+                                            safetyScore >= 80
+                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                                : safetyScore >= 50
+                                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                                        )}
+                                    >
+                                        {safetyScore}%
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h3 className="text-sm font-bold text-foreground">
+                                            Índice de Protección Anti-Baneo · {selectedInstance?.nombre}
+                                        </h3>
+                                        {queueStats?.safetyTips && queueStats.safetyTips.length > 0 ? (
+                                            <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+                                                {queueStats.safetyTips.slice(0, 3).map((tip, idx) => (
+                                                    <li key={idx}>{tip}</li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                                Todas las capas de protección humana están configuradas de forma óptima para esta sucursal.
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                <Button
+                                    onClick={handleSaveAntiBan}
+                                    disabled={savingAntiBan}
+                                    className="gap-2 shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                >
+                                    {savingAntiBan ? (
+                                        <Loader2 className="size-4 animate-spin" />
+                                    ) : (
+                                        <ShieldCheck className="size-4" />
+                                    )}
+                                    Guardar Políticas ({selectedInstance?.nombre})
+                                </Button>
+                            </CardContent>
+                        </Card>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                            {/* 1. Simulación Humana */}
+                            <Card className="border-border/80">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-sm flex items-center gap-2">
+                                        <Keyboard className="size-4 text-emerald-600" />
+                                        Simulación de Comportamiento Humano ("Escribiendo...")
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">
+                                        Emite presencia real <code>composing</code> proporcional a la longitud del texto antes de enviarlo.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="flex items-center justify-between rounded-lg border border-border/70 p-3 bg-muted/20">
+                                        <div>
+                                            <Label className="text-xs font-semibold">
+                                                Simular "Escribiendo..." en cada envío
+                                            </Label>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Abre presencia online, muestra indicador de escritura y pausa antes de despachar.
                                             </p>
                                         </div>
+                                        <Switch checked={abSimulateTyping} onCheckedChange={setAbSimulateTyping} />
+                                    </div>
 
-                                        {/* Vista Previa de Muestra */}
-                                        {broadcastRecipients.length > 0 && broadcastMessage && (
-                                            <div className="p-3 border rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 space-y-1.5">
-                                                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                                                    <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-                                                    {__('Sample Preview for')} {broadcastRecipients[0]?.name}:
-                                                </div>
-                                                <div className="text-xs text-slate-700 dark:text-slate-300 bg-white/80 dark:bg-black/30 p-2.5 rounded-lg whitespace-pre-line border border-emerald-200/50 font-sans">
-                                                    {broadcastMessage
-                                                        .replace(/\{\{nombre\}\}/g, broadcastRecipients[0]?.name || '')
-                                                        .replace(/\{\{zonas\}\}/g, broadcastRecipients[0]?.zonas || '')
-                                                        .replace(/\{\{distritos\}\}/g, broadcastRecipients[0]?.distritos || '')
-                                                        .replace(/\{\{empresa\}\}/g, empresa_nombre || 'MMM Venezuela')
-                                                        .replace(/\{\{fecha\}\}/g, new Date().toLocaleDateString())
-                                                        .replace(/\{\{random\}\}/g, 'A7B8C9')}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                    <CardFooter className="pt-2 border-t">
-                                        <Button
-                                            type="button"
-                                            size="lg"
-                                            onClick={handleDispatchBroadcast}
-                                            disabled={broadcastSending || selectedRecipientIds.length === 0 || !broadcastMessage.trim()}
-                                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-2 text-sm shadow-md"
-                                        >
-                                            {broadcastSending ? (
-                                                <>
-                                                    <RefreshCw className="h-4 w-4 animate-spin" />
-                                                    {__('Enqueuing Campaign...')}
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Radio className="h-4 w-4" />
-                                                    {__('Launch Safe Broadcast')} ({selectedRecipientIds.length})
-                                                </>
-                                            )}
-                                        </Button>
-                                    </CardFooter>
-                                </Card>
-                            </div>
-                        </div>
-                    </TabsContent>
-
-                    {/* TAB 2: PLANTILLAS RÁPIDAS CON SPINTAX */}
-                    <TabsContent value="templates" className="space-y-6">
-                        <Card className="shadow-sm">
-                            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div>
-                                    <CardTitle className="text-lg flex items-center gap-2">
-                                        <FileText className="h-5 w-5 text-emerald-600" />
-                                        {__('Message Templates with Spintax')}
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {__('Create and manage reusable templates for pastoral notifications, calls, and announcements.')}
-                                    </CardDescription>
-                                </div>
-                                <Button
-                                    size="sm"
-                                    onClick={handleOpenCreateTemplate}
-                                    className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    {__('New Template')}
-                                </Button>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {/* Filtros por Categoría */}
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {[
-                                        { id: 'all', label: __('All') },
-                                        { id: 'pastoral', label: __('Pastoral') },
-                                        { id: 'convocatorias', label: __('Calls') },
-                                        { id: 'avisos', label: __('Announcements') },
-                                        { id: 'general', label: __('General') },
-                                    ].map(cat => (
-                                        <Button
-                                            key={cat.id}
-                                            size="sm"
-                                            variant={templateCategoryFilter === cat.id ? 'default' : 'outline'}
-                                            onClick={() => setTemplateCategoryFilter(cat.id)}
-                                            className="h-8 text-xs rounded-lg"
-                                        >
-                                            {cat.label}
-                                        </Button>
-                                    ))}
-                                </div>
-
-                                {/* Lista de Plantillas */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                                    {filteredTemplates.length === 0 ? (
-                                        <div className="col-span-2 text-center py-10 border rounded-xl bg-slate-50/50 dark:bg-slate-900/20 text-muted-foreground text-sm space-y-2">
-                                            <FileText className="h-8 w-8 mx-auto text-slate-400" />
-                                            <p>{__('No templates registered in this category.')}</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Duración mínima (seg)</Label>
+                                            <Input
+                                                type="number"
+                                                step="0.5"
+                                                min={1}
+                                                max={15}
+                                                disabled={!abSimulateTyping}
+                                                value={abTypingMinSec}
+                                                onChange={(e) => setAbTypingMinSec(Number(e.target.value))}
+                                                className="h-9 text-xs"
+                                            />
                                         </div>
-                                    ) : (
-                                        filteredTemplates.map(t => (
-                                            <Card key={t.id} className="p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3 border">
-                                                <div className="space-y-2">
-                                                    <div className="flex items-start justify-between gap-2">
-                                                        <div>
-                                                            <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">{t.nombre}</h4>
-                                                            <Badge variant="outline" className="text-[10px] uppercase font-mono mt-1">
-                                                                {__(t.categoria)}
-                                                            </Badge>
-                                                        </div>
-                                                        <div className="flex items-center gap-1">
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => handleOpenEditTemplate(t)}
-                                                                className="h-7 w-7 p-0 text-slate-500 hover:text-slate-800"
-                                                            >
-                                                                <Edit3 className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => handleDeleteTemplate(t.id)}
-                                                                className="h-7 w-7 p-0 text-rose-500 hover:text-rose-700"
-                                                            >
-                                                                <Trash2 className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Duración máxima (seg)</Label>
+                                            <Input
+                                                type="number"
+                                                step="0.5"
+                                                min={1.5}
+                                                max={25}
+                                                disabled={!abSimulateTyping}
+                                                value={abTypingMaxSec}
+                                                onChange={(e) => setAbTypingMaxSec(Number(e.target.value))}
+                                                className="h-9 text-xs"
+                                            />
+                                        </div>
+                                    </div>
 
-                                                    <p className="text-xs text-slate-700 dark:text-slate-300 font-mono bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg line-clamp-3">
-                                                        {t.contenido}
-                                                    </p>
+                                    <Separator />
 
-                                                    {Array.isArray(t.variables) && t.variables.length > 0 && (
-                                                        <div className="flex flex-wrap gap-1 items-center text-[10px] text-muted-foreground pt-1">
-                                                            <span>{__('Variables:')}</span>
-                                                            {t.variables.map((v, i) => (
-                                                                <Badge key={i} variant="secondary" className="font-mono text-[9px] py-0 px-1">
-                                                                    {`{{${v}}}`}
-                                                                </Badge>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="pt-2 border-t flex justify-end">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => handleUseTemplateInSandbox(t)}
-                                                        className="text-xs h-8 gap-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                                                    >
-                                                        <Send className="h-3.5 w-3.5" />
-                                                        {__('Use in Sandbox')}
-                                                    </Button>
-                                                </div>
-                                            </Card>
-                                        ))
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    {/* TAB 3: HISTORIAL Y LOGS DE MENSAJES */}
-                    <TabsContent value="history" className="space-y-6">
-                        {/* Mini-Cards de Métricas de Entrega */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <Card className="p-3.5 shadow-sm space-y-1">
-                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Total Outbound')}</span>
-                                <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{messagesStats.totalSent}</div>
+                                    <div className="flex items-center justify-between rounded-lg border border-border/70 p-3 bg-muted/20">
+                                        <div>
+                                            <Label className="text-xs font-semibold">
+                                                Verificar número en WhatsApp antes de enviar
+                                            </Label>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Consulta <code>is_on_whatsapp</code> con caché de 10 min para evitar rebotes a líneas inexistentes.
+                                            </p>
+                                        </div>
+                                        <Switch checked={abVerifyNumber} onCheckedChange={setAbVerifyNumber} />
+                                    </div>
+                                </CardContent>
                             </Card>
-                            <Card className="p-3.5 shadow-sm space-y-1">
-                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Delivery Rate')}</span>
-                                <div className="text-2xl font-bold text-emerald-600">{messagesStats.deliveryRate}%</div>
-                            </Card>
-                            <Card className="p-3.5 shadow-sm space-y-1">
-                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Read Rate')}</span>
-                                <div className="text-2xl font-bold text-blue-600">{messagesStats.readRate}%</div>
-                            </Card>
-                            <Card className="p-3.5 shadow-sm space-y-1">
-                                <span className="text-[11px] font-semibold text-muted-foreground uppercase">{__('Failed')}</span>
-                                <div className="text-2xl font-bold text-rose-600">{messagesStats.totalFailed}</div>
-                            </Card>
-                        </div>
 
-                        {/* Tabla de Mensajes */}
-                        <Card className="shadow-sm">
-                            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div>
-                                    <CardTitle className="text-lg flex items-center gap-2">
-                                        <Inbox className="h-5 w-5 text-indigo-600" />
-                                        {__('Message & Delivery Registry')}
+                            {/* 2. Control de Cuotas, Retardos y Lotes */}
+                            <Card className="border-border/80">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-sm flex items-center gap-2">
+                                        <Zap className="size-4 text-amber-500" />
+                                        Control de Cuotas, Retardos & Pausas de Enfriamiento
                                     </CardTitle>
-                                    <CardDescription>
-                                        {__('Live log of sent and received messages with read confirmation.')}
+                                    <CardDescription className="text-xs">
+                                        El worker asíncrono de Python aplica retardos gaussianos aleatorios y descansos por lote para esta sucursal.
                                     </CardDescription>
-                                </div>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => fetchMessages(historyPage, historySearch, historyStatus)}
-                                    disabled={historyLoading}
-                                    className="gap-1.5 text-xs h-8"
-                                >
-                                    <RefreshCw className={`h-3.5 w-3.5 ${historyLoading ? 'animate-spin' : ''}`} />
-                                    {__('Refresh')}
-                                </Button>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {/* Barra de Búsqueda y Filtros */}
-                                <div className="flex flex-col sm:flex-row items-center gap-3">
-                                    <div className="relative flex-1 w-full">
-                                        <Search className="h-4 w-4 absolute left-3 top-2.5 text-muted-foreground" />
-                                        <Input
-                                            placeholder={__('Search by phone or message...')}
-                                            value={historySearch}
-                                            onChange={(e) => setHistorySearch(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && fetchMessages(1, historySearch, historyStatus)}
-                                            className="pl-9 text-xs"
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Límite diario máximo</Label>
+                                            <Input
+                                                type="number"
+                                                min={10}
+                                                max={5000}
+                                                value={abDailyLimit}
+                                                onChange={(e) => setAbDailyLimit(Number(e.target.value))}
+                                                className="h-9 text-xs"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Límite por hora</Label>
+                                            <Input
+                                                type="number"
+                                                min={5}
+                                                max={500}
+                                                value={abHourlyLimit}
+                                                onChange={(e) => setAbHourlyLimit(Number(e.target.value))}
+                                                className="h-9 text-xs"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Retardo mín. entre envíos (seg)</Label>
+                                            <Input
+                                                type="number"
+                                                min={2}
+                                                max={120}
+                                                value={abDelayMinSec}
+                                                onChange={(e) => setAbDelayMinSec(Number(e.target.value))}
+                                                className="h-9 text-xs"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Retardo máx. entre envíos (seg)</Label>
+                                            <Input
+                                                type="number"
+                                                min={3}
+                                                max={240}
+                                                value={abDelayMaxSec}
+                                                onChange={(e) => setAbDelayMaxSec(Number(e.target.value))}
+                                                className="h-9 text-xs"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Tamaño de lote (mensajes)</Label>
+                                            <Input
+                                                type="number"
+                                                min={2}
+                                                max={100}
+                                                value={abBatchSize}
+                                                onChange={(e) => setAbBatchSize(Number(e.target.value))}
+                                                className="h-9 text-xs"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Pausa de enfriamiento (seg)</Label>
+                                            <Input
+                                                type="number"
+                                                min={10}
+                                                max={600}
+                                                value={abBatchPauseSec}
+                                                onChange={(e) => setAbBatchPauseSec(Number(e.target.value))}
+                                                className="h-9 text-xs"
+                                            />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* 3. Modo Calentamiento (Warm-up) */}
+                            <Card className="border-border/80">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-sm flex items-center gap-2">
+                                        <Flame className="size-4 text-orange-500" />
+                                        Modo Calentamiento (Warm-up Progresivo)
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">
+                                        Escala progresivamente el límite diario según la antigüedad de la línea de esta sucursal.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="flex items-center justify-between rounded-lg border border-border/70 p-3 bg-muted/20">
+                                        <div>
+                                            <Label className="text-xs font-semibold">Activar Warm-up Progresivo</Label>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Día actual de esta línea: <strong>Día {queueStats?.warmupDay ?? 1}</strong> ·
+                                                Límite hoy: <strong>{queueStats?.effectiveDailyLimit ?? 20} msgs</strong>
+                                            </p>
+                                        </div>
+                                        <Switch checked={abWarmupMode} onCheckedChange={setAbWarmupMode} />
+                                    </div>
+
+                                    <div className="grid grid-cols-5 gap-1.5">
+                                        {WARMUP_STAGES.map((st) => {
+                                            const day = queueStats?.warmupDay ?? 1;
+                                            const active = abWarmupMode && day >= st.minDay && day <= st.maxDay;
+                                            return (
+                                                <div
+                                                    key={st.label}
+                                                    className={cn(
+                                                        'rounded-lg border p-2 text-center transition',
+                                                        active
+                                                            ? 'border-emerald-600 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                                            : 'border-border/70 bg-muted/20 text-muted-foreground'
+                                                    )}
+                                                >
+                                                    <p className="text-[10px] font-semibold">{st.label}</p>
+                                                    <p className="text-xs font-black mt-0.5">
+                                                        {st.limit ? Math.min(st.limit, abDailyLimit) : abDailyLimit}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* 4. Ventana Horaria & Proxy por Sucursal */}
+                            <Card className="border-border/80">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-sm flex items-center gap-2">
+                                        <Clock className="size-4 text-sky-500" />
+                                        Ventana Horaria Laboral & Proxy Dedicado
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">
+                                        Retiene automáticamente mensajes fuera de horario y permite aislar la IP de cada sucursal.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="flex items-center justify-between rounded-lg border border-border/70 p-3 bg-muted/20">
+                                        <div>
+                                            <Label className="text-xs font-semibold">
+                                                Restringir despachos en cola a horario laboral
+                                            </Label>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Evita enviar mensajes de madrugada y reduce reportes de spam.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={abWorkingHoursEnabled}
+                                            onCheckedChange={setAbWorkingHoursEnabled}
                                         />
                                     </div>
-                                    <Select value={historyStatus} onValueChange={(v) => { setHistoryStatus(v); setHistoryPage(1); }}>
-                                        <SelectTrigger className="w-full sm:w-40 text-xs h-9">
-                                            <SelectValue placeholder={__('Status')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">{__('All Statuses')}</SelectItem>
-                                            <SelectItem value="delivered">{__('Delivered')}</SelectItem>
-                                            <SelectItem value="read">{__('Read')}</SelectItem>
-                                            <SelectItem value="sent">{__('Sent')}</SelectItem>
-                                            <SelectItem value="failed">{__('Failed')}</SelectItem>
-                                            <SelectItem value="pending">{__('Pending')}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
 
-                                {/* Tabla */}
-                                <div className="border rounded-xl overflow-x-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow className="bg-slate-50 dark:bg-slate-900/50 text-xs">
-                                                <TableHead>{__('Recipient')}</TableHead>
-                                                <TableHead>{__('Message')}</TableHead>
-                                                <TableHead>{__('Direction')}</TableHead>
-                                                <TableHead>{__('Status')}</TableHead>
-                                                <TableHead>{__('Date')}</TableHead>
-                                                <TableHead className="text-right">{__('Actions')}</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {!messagesData || messagesData.data.length === 0 ? (
-                                                <TableRow>
-                                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-xs">
-                                                        {historyLoading ? __('Loading messages...') : __('No messages found with selected filters.')}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ) : (
-                                                messagesData.data.map(m => (
-                                                    <TableRow key={m.id} className="text-xs">
-                                                        <TableCell className="font-mono font-semibold">
-                                                            +{m.recipient_phone}
-                                                        </TableCell>
-                                                        <TableCell className="max-w-[240px] truncate text-slate-600 dark:text-slate-300">
-                                                            {m.message_content}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Badge variant="outline" className={`text-[10px] ${m.direction === 'inbound' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-700'}`}>
-                                                                {m.direction === 'inbound' ? __('Inbound') : __('Outbound')}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {m.status === 'read' && (
-                                                                <Badge className="bg-blue-500/10 text-blue-600 border-blue-200 gap-1 text-[10px]">
-                                                                    <CheckCheck className="h-3 w-3" /> {__('Read')}
-                                                                </Badge>
-                                                            )}
-                                                            {m.status === 'delivered' && (
-                                                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 gap-1 text-[10px]">
-                                                                    <CheckCheck className="h-3 w-3" /> {__('Delivered')}
-                                                                </Badge>
-                                                            )}
-                                                            {m.status === 'sent' && (
-                                                                <Badge className="bg-slate-500/10 text-slate-600 border-slate-200 gap-1 text-[10px]">
-                                                                    <Check className="h-3 w-3" /> {__('Sent')}
-                                                                </Badge>
-                                                            )}
-                                                            {m.status === 'failed' && (
-                                                                <Badge className="bg-rose-500/10 text-rose-600 border-rose-200 gap-1 text-[10px]">
-                                                                    <AlertCircle className="h-3 w-3" /> {__('Failed')}
-                                                                </Badge>
-                                                            )}
-                                                            {m.status === 'pending' && (
-                                                                <Badge className="bg-amber-500/10 text-amber-600 border-amber-200 gap-1 text-[10px]">
-                                                                    <Clock className="h-3 w-3" /> {__('Pending')}
-                                                                </Badge>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-muted-foreground whitespace-nowrap">
-                                                            {new Date(m.created_at).toLocaleString()}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex items-center justify-end gap-1">
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="ghost"
-                                                                    onClick={() => setSelectedMessage(m)}
-                                                                    className="h-7 w-7 p-0"
-                                                                >
-                                                                    <Eye className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                                {m.status === 'failed' && (
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="outline"
-                                                                        onClick={() => handleRetryMessage(m.id)}
-                                                                        disabled={retryingId === m.id}
-                                                                        className="h-7 text-[11px] gap-1 text-rose-600 hover:text-rose-700 px-2"
-                                                                    >
-                                                                        <RotateCw className={`h-3 w-3 ${retryingId === m.id ? 'animate-spin' : ''}`} />
-                                                                        {__('Retry')}
-                                                                    </Button>
-                                                                )}
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-
-                                {/* Paginación */}
-                                {messagesData && messagesData.last_page > 1 && (
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
-                                        <span>
-                                            {__('Page')} {messagesData.current_page} {__('of')} {messagesData.last_page} ({messagesData.total} {__('messages')})
-                                        </span>
-                                        <div className="flex gap-1">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                disabled={messagesData.current_page <= 1}
-                                                onClick={() => setHistoryPage(prev => Math.max(1, prev - 1))}
-                                                className="h-7 text-xs"
-                                            >
-                                                {__('Previous')}
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                disabled={messagesData.current_page >= messagesData.last_page}
-                                                onClick={() => setHistoryPage(prev => prev + 1)}
-                                                className="h-7 text-xs"
-                                            >
-                                                {__('Next')}
-                                            </Button>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Hora de inicio</Label>
+                                            <Input
+                                                type="time"
+                                                disabled={!abWorkingHoursEnabled}
+                                                value={abWorkingHoursStart}
+                                                onChange={(e) => setAbWorkingHoursStart(e.target.value)}
+                                                className="h-9 text-xs"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Hora de cierre</Label>
+                                            <Input
+                                                type="time"
+                                                disabled={!abWorkingHoursEnabled}
+                                                value={abWorkingHoursEnd}
+                                                onChange={(e) => setAbWorkingHoursEnd(e.target.value)}
+                                                className="h-9 text-xs"
+                                            />
                                         </div>
                                     </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
 
-                    {/* TAB 4: ANTI-BAN POLICIES & WORKING HOURS */}
-                    <TabsContent value="antiban" className="space-y-6">
-                        <div className="grid md:grid-cols-12 gap-6">
-                            <div className="md:col-span-8">
-                                <Card className="shadow-sm">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            <Shield className="h-5 w-5 text-amber-600" />
-                                            {__('Anti-Ban Protection & Messaging Policies')}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {__('Adjust safety throttle limits, warm-up pacing, and nocturnal silence to prevent Meta phone bans.')}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <form onSubmit={handleSaveAntiBan}>
-                                        <CardContent className="space-y-5">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {/* Warmup Mode Toggle */}
-                                                <div className="p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <Label className="font-semibold text-sm flex items-center gap-1.5">
-                                                            <Flame className="h-4 w-4 text-amber-500" />
-                                                            {__('Warm-Up Mode')}
-                                                        </Label>
-                                                        <Switch
-                                                            checked={antiBanForm.data.warmupMode}
-                                                            onCheckedChange={(c) => antiBanForm.setData('warmupMode', c)}
-                                                        />
-                                                    </div>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {__('Automatically throttles messages with dynamic intervals (20-40s) for newly connected phone lines.')}
-                                                    </p>
-                                                </div>
-
-                                                {/* Daily Message Limit Input */}
-                                                <div className="p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
-                                                    <Label htmlFor="dailyLimit" className="font-semibold text-sm block">
-                                                        {__('Daily Message Limit')}
-                                                    </Label>
-                                                    <Input
-                                                        id="dailyLimit"
-                                                        type="number"
-                                                        min="10"
-                                                        max="20000"
-                                                        value={antiBanForm.data.dailyLimit}
-                                                        onChange={(e) => antiBanForm.setData('dailyLimit', parseInt(e.target.value) || 100)}
-                                                        className="bg-white dark:bg-slate-950 font-mono"
-                                                    />
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {__('Recommended: 30 for week 1, 80 for week 2, 200+ for mature lines.')}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Working Hours Timeframe */}
-                                            <div className="p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                    <Label className="font-semibold text-sm flex items-center gap-1.5">
-                                                        <Clock className="h-4 w-4 text-indigo-500" />
-                                                        {__('Working Hours & Night Silence (Auto-Pause)')}
-                                                    </Label>
-                                                    <Switch
-                                                        checked={antiBanForm.data.workingHoursEnabled}
-                                                        onCheckedChange={(c) => antiBanForm.setData('workingHoursEnabled', c)}
-                                                    />
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {__('Queued messages during off-hours will safely pause and automatically resume the following morning.')}
-                                                </p>
-                                                <div className="grid grid-cols-2 gap-4 pt-1">
-                                                    <div>
-                                                        <Label className="text-xs text-muted-foreground block mb-1">{__('Start Time')}</Label>
-                                                        <Input
-                                                            type="time"
-                                                            value={antiBanForm.data.workingHoursStart}
-                                                            onChange={(e) => antiBanForm.setData('workingHoursStart', e.target.value)}
-                                                            className="bg-white dark:bg-slate-950"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-xs text-muted-foreground block mb-1">{__('End Time')}</Label>
-                                                        <Input
-                                                            type="time"
-                                                            value={antiBanForm.data.workingHoursEnd}
-                                                            onChange={(e) => antiBanForm.setData('workingHoursEnd', e.target.value)}
-                                                            className="bg-white dark:bg-slate-950"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Dedicated Proxy (Optional) */}
-                                            <div className="p-4 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
-                                                <Label htmlFor="proxyUrl" className="font-semibold text-sm flex items-center gap-1.5">
-                                                    <Globe className="h-4 w-4 text-emerald-500" />
-                                                    {__('Dedicated Proxy HTTP / SOCKS5 (Optional)')}
-                                                </Label>
-                                                <Input
-                                                    id="proxyUrl"
-                                                    placeholder="http://user:password@proxy-ip:port"
-                                                    value={antiBanForm.data.proxyUrl}
-                                                    onChange={(e) => antiBanForm.setData('proxyUrl', e.target.value)}
-                                                    className="font-mono text-xs bg-white dark:bg-slate-950"
-                                                />
-                                                <p className="text-xs text-muted-foreground">
-                                                    {__('Route this specific WhatsApp instance through a fixed residential proxy IP.')}
-                                                </p>
-                                            </div>
-                                        </CardContent>
-                                        <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
-                                            <Button type="submit" disabled={antiBanForm.processing} className="gap-2 bg-amber-600 hover:bg-amber-700 text-white">
-                                                <Shield className="h-4 w-4" />
-                                                {__('Save Anti-Ban Policies')}
-                                            </Button>
-                                        </CardFooter>
-                                    </form>
-                                </Card>
-                            </div>
-
-                            {/* Anti-Ban Rules Sidebar */}
-                            <div className="md:col-span-4 space-y-6">
-                                <Card className="shadow-sm">
-                                    <CardHeader>
-                                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                            <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                                            {__('Anti-Ban Safety Checklist')}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 text-xs">
-                                        <div className="flex gap-2 items-start">
-                                            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                                            <span><strong>{__('Use Spintax Always:')}</strong> {__('Rotate greetings and words so each message has a unique fingerprint.')}</span>
-                                        </div>
-                                        <div className="flex gap-2 items-start">
-                                            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                                            <span><strong>{__('Verify Numbers First:')}</strong> {__('Check if the recipient exists on WhatsApp before sending cold broadcasts.')}</span>
-                                        </div>
-                                        <div className="flex gap-2 items-start">
-                                            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                                            <span><strong>{__('Honor Opt-Outs:')}</strong> {__('Our webhook automatically registers unsubscriptions when users reply "STOP".')}</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-semibold">
+                                            Proxy SOCKS5 / HTTP Residencial para esta Sucursal (Opcional)
+                                        </Label>
+                                        <Input
+                                            value={abProxyUrl}
+                                            onChange={(e) => setAbProxyUrl(e.target.value)}
+                                            placeholder="socks5://usuario:clave@host:1080"
+                                            className="h-9 text-xs font-mono"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Recomendado si gestionas muchas sucursales desde el mismo servidor para aislar su reputación IP.
+                                        </p>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     </TabsContent>
 
-                    {/* TAB 5: TESTING SANDBOX & SPINTAX */}
-                    <TabsContent value="dispatcher" className="space-y-6">
-                        <Card className="shadow-sm">
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <Send className="h-5 w-5 text-emerald-600" />
-                                    {__('Testing Sandbox & Spintax Simulator')}
-                                </CardTitle>
-                                <CardDescription>
-                                    {__('Test message delivery with automatic number verification (+58) and live Spintax variations.')}
-                                </CardDescription>
-                            </CardHeader>
-                            <form onSubmit={handleSendTestMessage}>
-                                <CardContent className="space-y-6">
-                                    {/* Selector rápido de plantillas */}
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    {/* TAB 3: DIFUSIÓN SEGURA EN COLA ANTI-BANEO (FIXSALE)     */}
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    <TabsContent value="broadcast" className="space-y-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                            {/* Selector de Destinatarios */}
+                            <Card className="lg:col-span-5 border-border/80 flex flex-col">
+                                <CardHeader className="pb-3 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="text-sm flex items-center gap-2">
+                                            <Users className="size-4 text-emerald-600" />
+                                            Destinatarios ({bcSelectedIds.length} seleccionados)
+                                        </CardTitle>
+                                        <Badge variant="outline" className="text-[10px]">
+                                            {validFilteredIds.length} válidos
+                                        </Badge>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Select
+                                            value={bcTarget}
+                                            onValueChange={(v) =>
+                                                setBcTarget(v as 'clientes' | 'empleados' | 'usuarios')
+                                            }
+                                        >
+                                            <SelectTrigger className="h-9 text-xs bg-background">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="clientes" className="text-xs">
+                                                    Clientes
+                                                </SelectItem>
+                                                <SelectItem value="empleados" className="text-xs">
+                                                    Empleados / Técnicos
+                                                </SelectItem>
+                                                <SelectItem value="usuarios" className="text-xs">
+                                                    Usuarios del Sistema
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+
+                                        <div className="relative">
+                                            <Search className="size-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+                                            <Input
+                                                value={bcSearch}
+                                                onChange={(e) => setBcSearch(e.target.value)}
+                                                placeholder="Buscar..."
+                                                className="pl-8 h-9 text-xs"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-2 pt-1">
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="only-branch-recipients"
+                                                checked={bcOnlyBranch}
+                                                onCheckedChange={(c) => setBcOnlyBranch(c === true)}
+                                            />
+                                            <Label
+                                                htmlFor="only-branch-recipients"
+                                                className="text-xs font-medium cursor-pointer"
+                                            >
+                                                Solo contactos de <strong>{selectedInstance?.nombre}</strong>
+                                            </Label>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="select-all-valid"
+                                                checked={
+                                                    validFilteredIds.length > 0 &&
+                                                    bcSelectedIds.length === validFilteredIds.length
+                                                }
+                                                onCheckedChange={(c) => toggleSelectAllValid(c === true)}
+                                            />
+                                            <Label
+                                                htmlFor="select-all-valid"
+                                                className="text-xs font-medium cursor-pointer"
+                                            >
+                                                Seleccionar todos con teléfono válido ({validFilteredIds.length})
+                                            </Label>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+
+                                <CardContent className="flex-1 overflow-y-auto max-h-[380px] space-y-1.5 pr-3">
+                                    {bcLoadingRecipients ? (
+                                        <div className="py-10 text-center text-xs text-muted-foreground">
+                                            <Loader2 className="size-5 animate-spin mx-auto mb-2" />
+                                            Cargando contactos...
+                                        </div>
+                                    ) : filteredRecipients.length === 0 ? (
+                                        <div className="py-10 text-center text-xs text-muted-foreground">
+                                            No se encontraron contactos con los filtros seleccionados.
+                                        </div>
+                                    ) : (
+                                        filteredRecipients.map((r) => {
+                                            const checked = bcSelectedIds.includes(r.id);
+                                            return (
+                                                <div
+                                                    key={`${r.type}-${r.id}`}
+                                                    onClick={() => r.is_valid_phone && toggleRecipient(r.id)}
+                                                    className={cn(
+                                                        'flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs transition',
+                                                        r.is_valid_phone
+                                                            ? checked
+                                                                ? 'border-emerald-600 bg-emerald-500/5 cursor-pointer'
+                                                                : 'border-border/60 hover:bg-muted/40 cursor-pointer'
+                                                            : 'border-border/40 opacity-50 cursor-not-allowed'
+                                                    )}
+                                                >
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <Checkbox
+                                                            checked={checked}
+                                                            disabled={!r.is_valid_phone}
+                                                            onCheckedChange={() =>
+                                                                r.is_valid_phone && toggleRecipient(r.id)
+                                                            }
+                                                        />
+                                                        <div className="min-w-0">
+                                                            <p className="font-semibold text-foreground truncate">
+                                                                {r.name}
+                                                            </p>
+                                                            <p className="text-[11px] font-mono text-muted-foreground truncate">
+                                                                {r.is_valid_phone
+                                                                    ? r.formatted_phone
+                                                                    : 'Sin teléfono válido'}{' '}
+                                                                · {r.sucursal}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <Badge variant="outline" className="text-[10px] shrink-0">
+                                                        {r.role}
+                                                    </Badge>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Redactor Spintax + Encolado Seguro */}
+                            <Card className="lg:col-span-7 border-border/80">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-sm flex items-center gap-2">
+                                        <Sparkles className="size-4 text-emerald-600" />
+                                        Redactor con Spintax & Despacho Seguro ({selectedInstance?.nombre})
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">
+                                        Los mensajes se encolan en el worker de Python y salen uno a uno desde la línea de{' '}
+                                        <strong>{selectedInstance?.nombre}</strong> con simulación de escritura y pausas aleatorias.
+                                    </CardDescription>
+                                </CardHeader>
+
+                                <CardContent className="space-y-4">
                                     {templates.length > 0 && (
-                                        <div className="p-3 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                                            <div className="flex items-center gap-2">
-                                                <FileText className="h-4 w-4 text-emerald-600" />
-                                                <span className="text-xs font-semibold">{__('Load from Template:')}</span>
-                                            </div>
-                                            <Select onValueChange={(val) => {
-                                                const t = templates.find(item => String(item.id) === val);
-                                                if (t) setTestMessage(prev => ({ ...prev, message: t.contenido }));
-                                            }}>
-                                                <SelectTrigger className="w-full sm:w-72 text-xs h-8 bg-white dark:bg-slate-950">
-                                                    <SelectValue placeholder={__('Select a template...')} />
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-semibold">Cargar desde Plantilla</Label>
+                                            <Select
+                                                onValueChange={(tplId) => {
+                                                    const found = templates.find((t) => String(t.id) === tplId);
+                                                    if (found) setBcMessage(found.contenido);
+                                                }}
+                                            >
+                                                <SelectTrigger className="h-9 text-xs bg-background">
+                                                    <SelectValue placeholder="Seleccionar una plantilla guardada..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {templates.map(t => (
-                                                        <SelectItem key={t.id} value={String(t.id)}>
+                                                    {templates.map((t) => (
+                                                        <SelectItem key={t.id} value={String(t.id)} className="text-xs">
                                                             {t.nombre}
                                                         </SelectItem>
                                                     ))}
@@ -2431,484 +2874,673 @@ export default function WhatsAppIntegration({
                                         </div>
                                     )}
 
-                                    {/* Phone selector with Country Code */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <Label className="text-sm font-semibold">{__('Recipient WhatsApp Number')}</Label>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={handleCheckNumber}
-                                                disabled={checkingNumber || !testMessage.phoneNumber}
-                                                className="h-7 text-xs gap-1.5"
-                                            >
-                                                <UserCheck className="h-3.5 w-3.5 text-blue-600" />
-                                                {checkingNumber ? __('Verifying...') : __('Verify WhatsApp Number')}
-                                            </Button>
-                                        </div>
-
-                                        <PhoneInputGroup
-                                            paises={paises}
-                                            selectedPaisId={testMessage.paisId}
-                                            phoneNumber={testMessage.phoneNumber}
-                                            onPaisChange={(val) => setTestMessage(prev => ({ ...prev, paisId: val }))}
-                                            onPhoneNumberChange={(val) => setTestMessage(prev => ({ ...prev, phoneNumber: val }))}
-                                        />
-
-                                        {numberCheckResult && (
-                                            <div className="pt-1">
-                                                {numberCheckResult.exists ? (
-                                                    <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-300 dark:text-emerald-400 gap-1 text-xs">
-                                                        <CheckCircle className="h-3.5 w-3.5" />
-                                                        {__('Number verified on WhatsApp!')} ({numberCheckResult.jid})
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge className="bg-amber-500/10 text-amber-700 border-amber-300 dark:text-amber-400 gap-1 text-xs">
-                                                        <AlertTriangle className="h-3.5 w-3.5" />
-                                                        {numberCheckResult.error || __('Warning: Number NOT found on WhatsApp. Meta will penalize sending to invalid numbers.')}
-                                                    </Badge>
-                                                )}
+                                    <div className="space-y-1.5">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <Label className="text-xs font-semibold">Contenido del Mensaje</Label>
+                                            <div className="flex flex-wrap items-center gap-1">
+                                                {[
+                                                    '{cliente}',
+                                                    '{empresa}',
+                                                    '{sucursal}',
+                                                    '{Hola|Buen día|Saludos}',
+                                                ].map((chip) => (
+                                                    <button
+                                                        key={chip}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setBcMessage((prev) => `${prev} ${chip}`.trim())
+                                                        }
+                                                        className="text-[10px] font-mono px-2 py-0.5 rounded bg-muted hover:bg-emerald-500/15 hover:text-emerald-600 transition cursor-pointer"
+                                                    >
+                                                        +{chip}
+                                                    </button>
+                                                ))}
                                             </div>
-                                        )}
-                                    </div>
-
-                                    {/* Message Textarea with Spintax Simulator */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <Label htmlFor="test_msg" className="text-sm font-semibold">
-                                                {__('Message Template (Spintax Supported)')}
-                                            </Label>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={handlePreviewSpintax}
-                                                disabled={previewingSpintax || !testMessage.message}
-                                                className="h-7 text-xs gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
-                                            >
-                                                <Sparkles className="h-3.5 w-3.5" />
-                                                {previewingSpintax ? __('Generating...') : __('Preview Spintax Variations')}
-                                            </Button>
                                         </div>
-
                                         <Textarea
-                                            id="test_msg"
-                                            rows={3}
-                                            value={testMessage.message}
-                                            onChange={(e) => setTestMessage(prev => ({ ...prev, message: e.target.value }))}
-                                            className="font-mono text-xs"
+                                            rows={5}
+                                            value={bcMessage}
+                                            onChange={(e) => setBcMessage(e.target.value)}
+                                            className="text-xs"
                                         />
-                                        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                                            <span>{__('Spintax Syntax:')} <code className="text-emerald-600 font-bold">{'{Hola|Buen día|Saludos}'}</code></span>
-                                            <span>• {__('Variables:')} <code className="text-blue-600 font-bold">{'{{nombre}}'}</code>, <code className="text-blue-600 font-bold">{'{{empresa}}'}</code>, <code className="text-blue-600 font-bold">{'{{random}}'}</code></span>
-                                        </div>
+                                    </div>
 
-                                        {/* Spintax Interactive Variations Output */}
-                                        {spintaxPreviews.length > 0 && (
-                                            <div className="p-4 border rounded-xl bg-amber-50/40 dark:bg-amber-950/20 space-y-2.5 mt-3">
-                                                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 block flex items-center gap-1.5">
-                                                    <Sparkles className="h-3.5 w-3.5" />
-                                                    {__('Spintax Permutation Samples:')}
-                                                </span>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                    {spintaxPreviews.map((variation, idx) => (
-                                                        <div key={idx} className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border text-xs text-slate-800 dark:text-slate-200 shadow-sm">
-                                                            <span className="text-amber-600 font-bold mr-1.5">#{idx + 1}:</span>
-                                                            {variation}
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                    <div className="space-y-2">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handlePreviewSpintax(bcMessage, 'broadcast')}
+                                            className="gap-1.5 text-xs"
+                                        >
+                                            <Sparkles className="size-3.5" />
+                                            Probar Variaciones Spintax
+                                        </Button>
+                                        {bcPreviews.length > 0 && (
+                                            <div className="space-y-1.5 rounded-lg border border-border/70 bg-muted/20 p-3">
+                                                {bcPreviews.map((v, idx) => (
+                                                    <p
+                                                        key={idx}
+                                                        className="text-xs text-muted-foreground border-b last:border-0 border-border/50 pb-1.5 last:pb-0"
+                                                    >
+                                                        <span className="font-bold text-emerald-600 mr-1.5">
+                                                            #{idx + 1}
+                                                        </span>
+                                                        {v}
+                                                    </p>
+                                                ))}
                                             </div>
                                         )}
                                     </div>
-                                </CardContent>
-                                <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                                    <div className="flex items-center gap-2.5">
-                                        <Switch
-                                            id="use_sync"
-                                            checked={testMessage.useSync}
-                                            onCheckedChange={(checked) => setTestMessage(prev => ({ ...prev, useSync: checked }))}
-                                        />
-                                        <Label htmlFor="use_sync" className="text-xs text-muted-foreground cursor-pointer">
-                                            {__('Immediate Sync Dispatch (Bypass Queue)')}
-                                        </Label>
+
+                                    <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3.5 text-xs space-y-1">
+                                        <p className="font-bold text-foreground flex items-center gap-1.5">
+                                            <ShieldCheck className="size-4 text-emerald-600" />
+                                            Protección Activa para esta Difusión ({selectedInstance?.nombre})
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                            • Retardo aleatorio: <strong>{abDelayMinSec}–{abDelayMaxSec}s</strong> ·
+                                            Pausa cada <strong>{abBatchSize}</strong> mensajes:{' '}
+                                            <strong>{abBatchPauseSec}s</strong>
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                            • Simulación "Escribiendo...":{' '}
+                                            <strong>{abSimulateTyping ? 'Activa' : 'Desactivada'}</strong> · Duración
+                                            estimada para {bcSelectedIds.length} contacto(s):{' '}
+                                            <strong>~{estimatedBroadcastMinutes} min</strong>
+                                        </p>
                                     </div>
+
                                     <Button
-                                        type="submit"
-                                        disabled={sendingMsg || !isConnected}
-                                        className="w-full sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow"
+                                        onClick={handleDispatchBroadcast}
+                                        disabled={bcDispatching || bcSelectedIds.length === 0 || !isConnected}
+                                        className="w-full h-10 gap-2 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
                                     >
-                                        <Send className={`h-4 w-4 ${sendingMsg ? 'animate-pulse' : ''}`} />
-                                        {__('Send Protected Message')}
+                                        {bcDispatching ? (
+                                            <Loader2 className="size-4 animate-spin" />
+                                        ) : (
+                                            <Megaphone className="size-4" />
+                                        )}
+                                        Encolar Difusión Segura ({bcSelectedIds.length} destinatarios)
                                     </Button>
-                                </CardFooter>
-                            </form>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
+
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    {/* TAB 4: PLANTILLAS & SPINTAX                             */}
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    <TabsContent value="templates" className="space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <h3 className="text-sm font-bold text-foreground">
+                                    Biblioteca de Plantillas de FixSale
+                                </h3>
+                                <p className="text-xs text-muted-foreground">
+                                    Combina Spintax {'{Opción A|Opción B}'} y variables para órdenes de reparación, ventas, cobranzas y promociones.
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Select value={tplCategoryFilter} onValueChange={setTplCategoryFilter}>
+                                    <SelectTrigger className="w-44 h-8 text-xs">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all" className="text-xs">
+                                            Todas las categorías
+                                        </SelectItem>
+                                        {Object.entries(TEMPLATE_CATEGORIES).map(([key, meta]) => (
+                                            <SelectItem key={key} value={key} className="text-xs">
+                                                {meta.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    size="sm"
+                                    onClick={openNewTemplate}
+                                    className="gap-1.5 h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                >
+                                    <Plus className="size-3.5" />
+                                    Nueva Plantilla
+                                </Button>
+                            </div>
+                        </div>
+
+                        {filteredTemplates.length === 0 ? (
+                            <Card className="border-dashed">
+                                <CardContent className="py-12 text-center space-y-3">
+                                    <FileText className="size-8 text-muted-foreground mx-auto" />
+                                    <p className="text-sm font-semibold text-foreground">
+                                        No hay plantillas registradas en esta categoría
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Crea plantillas con Spintax para notificar estados de reparación, recibos de venta o promociones.
+                                    </p>
+                                    <Button size="sm" onClick={openNewTemplate} className="gap-1.5">
+                                        <Plus className="size-4" />
+                                        Crear Primera Plantilla
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {filteredTemplates.map((tpl) => {
+                                    const cat = TEMPLATE_CATEGORIES[tpl.categoria] || TEMPLATE_CATEGORIES.general;
+                                    return (
+                                        <Card
+                                            key={tpl.id}
+                                            className="border-border/80 flex flex-col justify-between"
+                                        >
+                                            <CardHeader className="pb-2">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="space-y-1 min-w-0">
+                                                        <CardTitle className="text-sm truncate">{tpl.nombre}</CardTitle>
+                                                        <Badge variant="outline" className={cn('text-[10px]', cat.color)}>
+                                                            {cat.label}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className="size-7"
+                                                            title="Probar en Sandbox"
+                                                            onClick={() => {
+                                                                setTestMessage(tpl.contenido);
+                                                                setActiveTab('connection');
+                                                                toast.info('Plantilla cargada en el probador en vivo.');
+                                                            }}
+                                                        >
+                                                            <Send className="size-3.5 text-emerald-600" />
+                                                        </Button>
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className="size-7"
+                                                            onClick={() => openEditTemplate(tpl)}
+                                                        >
+                                                            <Edit2 className="size-3.5" />
+                                                        </Button>
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className="size-7 text-rose-500 hover:text-rose-600"
+                                                            onClick={() => handleDeleteTemplate(tpl.id)}
+                                                        >
+                                                            <Trash2 className="size-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardHeader>
+                                            <CardContent className="pt-1">
+                                                <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-4 bg-muted/30 rounded-lg p-2.5 border border-border/50">
+                                                    {tpl.contenido}
+                                                </p>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </TabsContent>
+
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    {/* TAB 5: COLA DE SALIDA & BITÁCORA DE MENSAJES            */}
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    <TabsContent value="logs" className="space-y-4">
+                        <Card className="border-border/80">
+                            <CardHeader className="pb-3">
+                                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <div className="relative w-52">
+                                            <Search className="size-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                                            <Input
+                                                value={msgSearch}
+                                                onChange={(e) => {
+                                                    setMsgSearch(e.target.value);
+                                                    setMsgPage(1);
+                                                }}
+                                                placeholder="Buscar teléfono o texto..."
+                                                className="pl-8 h-9 text-xs"
+                                            />
+                                        </div>
+
+                                        <Select
+                                            value={msgStatusFilter}
+                                            onValueChange={(v) => {
+                                                setMsgStatusFilter(v);
+                                                setMsgPage(1);
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-40 h-9 text-xs bg-background">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all" className="text-xs">
+                                                    Todos los estados
+                                                </SelectItem>
+                                                <SelectItem value="queued" className="text-xs">
+                                                    En Cola / Enviando
+                                                </SelectItem>
+                                                <SelectItem value="sent" className="text-xs">
+                                                    Enviados
+                                                </SelectItem>
+                                                <SelectItem value="delivered" className="text-xs">
+                                                    Entregados (✓✓)
+                                                </SelectItem>
+                                                <SelectItem value="read" className="text-xs">
+                                                    Leídos (✓✓ azul)
+                                                </SelectItem>
+                                                <SelectItem value="failed" className="text-xs">
+                                                    Fallidos
+                                                </SelectItem>
+                                                <SelectItem value="cancelled" className="text-xs">
+                                                    Cancelados
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+
+                                        <Select
+                                            value={msgDirectionFilter}
+                                            onValueChange={(v) => {
+                                                setMsgDirectionFilter(v);
+                                                setMsgPage(1);
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-32 h-9 text-xs bg-background">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all" className="text-xs">
+                                                    Dirección: Todas
+                                                </SelectItem>
+                                                <SelectItem value="outbound" className="text-xs">
+                                                    Salientes
+                                                </SelectItem>
+                                                <SelectItem value="inbound" className="text-xs">
+                                                    Entrantes
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+
+                                        <div className="flex items-center gap-1.5 pl-1">
+                                            <Checkbox
+                                                id="all-branches-logs"
+                                                checked={msgAllBranches}
+                                                onCheckedChange={(c) => {
+                                                    setMsgAllBranches(c === true);
+                                                    setMsgPage(1);
+                                                }}
+                                            />
+                                            <Label
+                                                htmlFor="all-branches-logs"
+                                                className="text-xs text-muted-foreground cursor-pointer"
+                                            >
+                                                Todas las sucursales
+                                            </Label>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground mr-1">
+                                            <span>
+                                                Entrega: <strong>{messagesStats.deliveryRate}%</strong>
+                                            </span>
+                                            <span>·</span>
+                                            <span>
+                                                Lectura: <strong>{messagesStats.readRate}%</strong>
+                                            </span>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant={isPaused ? 'default' : 'outline'}
+                                            onClick={handleToggleQueuePause}
+                                            className="h-8 text-xs gap-1.5"
+                                        >
+                                            {isPaused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
+                                            {isPaused ? 'Reanudar' : 'Pausar'}
+                                        </Button>
+                                        {(queueStats?.queued ?? 0) > 0 && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={handleClearQueue}
+                                                className="h-8 text-xs text-rose-600 border-rose-500/30 hover:bg-rose-500/10 gap-1.5"
+                                            >
+                                                <Trash2 className="size-3.5" />
+                                                Cancelar Cola ({queueStats?.queued})
+                                            </Button>
+                                        )}
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() =>
+                                                loadMessages(
+                                                    msgPage,
+                                                    msgSearch,
+                                                    msgStatusFilter,
+                                                    msgDirectionFilter,
+                                                    msgAllBranches
+                                                )
+                                            }
+                                            className="h-8 px-2"
+                                        >
+                                            <RefreshCw className={cn('size-3.5', msgLoading && 'animate-spin')} />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardHeader>
+
+                            <CardContent className="p-0">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-xs">
+                                        <thead>
+                                            <tr className="border-y border-border/80 bg-muted/30 text-muted-foreground">
+                                                <th className="text-left font-semibold py-2.5 px-4">Contacto</th>
+                                                <th className="text-left font-semibold py-2.5 px-4">Flujo</th>
+                                                <th className="text-left font-semibold py-2.5 px-4">Mensaje</th>
+                                                <th className="text-left font-semibold py-2.5 px-4">Estado</th>
+                                                <th className="text-left font-semibold py-2.5 px-4">Fecha</th>
+                                                <th className="text-right font-semibold py-2.5 px-4">Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border/60">
+                                            {!messagesData || messagesData.data.length === 0 ? (
+                                                <tr>
+                                                    <td
+                                                        colSpan={6}
+                                                        className="py-10 text-center text-muted-foreground"
+                                                    >
+                                                        {msgLoading
+                                                            ? 'Cargando bitácora...'
+                                                            : 'No hay registros de mensajes con los filtros seleccionados.'}
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                messagesData.data.map((m) => (
+                                                    <tr key={m.id} className="hover:bg-muted/20 transition">
+                                                        <td className="py-3 px-4 align-top whitespace-nowrap">
+                                                            <p className="font-semibold text-foreground">
+                                                                {m.recipient_name || 'Contacto'}
+                                                            </p>
+                                                            <p className="text-[11px] font-mono text-muted-foreground">
+                                                                +{m.recipient_phone.replace(/^\+/, '')}
+                                                            </p>
+                                                        </td>
+                                                        <td className="py-3 px-4 align-top whitespace-nowrap">
+                                                            {m.direction === 'inbound' ? (
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="text-[10px] gap-1 text-sky-600 border-sky-500/30"
+                                                                >
+                                                                    <ArrowDownLeft className="size-3" /> Entrante
+                                                                </Badge>
+                                                            ) : (
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="text-[10px] gap-1 text-emerald-600 border-emerald-500/30"
+                                                                >
+                                                                    <ArrowUpRight className="size-3" /> Saliente
+                                                                </Badge>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-3 px-4 align-top max-w-md">
+                                                            <p className="text-foreground/90 line-clamp-2 whitespace-pre-wrap">
+                                                                {m.message_content}
+                                                            </p>
+                                                            {m.error_message && (
+                                                                <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1">
+                                                                    <AlertTriangle className="size-3 shrink-0" />
+                                                                    {m.error_message}
+                                                                </p>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-3 px-4 align-top whitespace-nowrap">
+                                                            {renderMsgStatus(m.status)}
+                                                        </td>
+                                                        <td className="py-3 px-4 align-top whitespace-nowrap text-muted-foreground">
+                                                            {new Date(m.sent_at || m.created_at).toLocaleString()}
+                                                        </td>
+                                                        <td className="py-3 px-4 align-top text-right whitespace-nowrap">
+                                                            {m.direction === 'outbound' &&
+                                                                (m.status === 'failed' || m.status === 'cancelled') && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        disabled={retryingId === m.id}
+                                                                        onClick={() => handleRetryMessage(m.id)}
+                                                                        className="h-7 px-2.5 text-[11px] gap-1"
+                                                                    >
+                                                                        {retryingId === m.id ? (
+                                                                            <Loader2 className="size-3 animate-spin" />
+                                                                        ) : (
+                                                                            <RotateCw className="size-3" />
+                                                                        )}
+                                                                        Reintentar
+                                                                    </Button>
+                                                                )}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {messagesData && messagesData.last_page > 1 && (
+                                    <div className="flex items-center justify-between px-4 py-3 border-t border-border/70 text-xs">
+                                        <span className="text-muted-foreground">
+                                            Página {messagesData.current_page} de {messagesData.last_page} (
+                                            {messagesData.total} registros)
+                                        </span>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                disabled={msgPage <= 1}
+                                                onClick={() => setMsgPage((p) => Math.max(1, p - 1))}
+                                                className="h-7 text-xs"
+                                            >
+                                                Anterior
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                disabled={msgPage >= messagesData.last_page}
+                                                onClick={() => setMsgPage((p) => p + 1)}
+                                                className="h-7 text-xs"
+                                            >
+                                                Siguiente
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
                         </Card>
                     </TabsContent>
-
-                    {/* TAB 6: SERVER SETTINGS & WEBHOOKS */}
-                    <TabsContent value="settings" className="space-y-6">
-                        <div className="grid md:grid-cols-12 gap-6">
-                            {/* Server credentials & tokens */}
-                            <div className="md:col-span-7">
-                                <Card className="shadow-sm">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            <Server className="h-5 w-5 text-emerald-600" />
-                                            {__('Server & Multi-Instance Configuration')}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {__('Endpoint routing and company authentication credentials.')}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <form onSubmit={handleSaveConfig}>
-                                        <CardContent className="space-y-4">
-                                            {/* Enable Switch */}
-                                            <div className="flex items-center justify-between p-3.5 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40">
-                                                <div className="space-y-0.5">
-                                                    <Label className="text-sm font-semibold">{__('Enable WhatsApp Integration')}</Label>
-                                                    <p className="text-xs text-muted-foreground">{__('Enable automated template sending.')}</p>
-                                                </div>
-                                                <Switch
-                                                    checked={configForm.data.whatsapp_active}
-                                                    onCheckedChange={(checked) => configForm.setData('whatsapp_active', checked)}
-                                                />
-                                            </div>
-
-                                            {/* Connection IP / API URL */}
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="whatsapp_api_url">{__('Connection IP / API URL')}</Label>
-                                                <Input
-                                                    id="whatsapp_api_url"
-                                                    placeholder="http://localhost:3000"
-                                                    value={configForm.data.whatsapp_api_url}
-                                                    onChange={(e) => configForm.setData('whatsapp_api_url', e.target.value)}
-                                                    className="font-mono text-sm"
-                                                />
-                                            </div>
-
-                                            {/* Instance Name */}
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="whatsapp_instance">{__('WhatsApp Instance Name')}</Label>
-                                                <Input
-                                                    id="whatsapp_instance"
-                                                    placeholder="empresa_1"
-                                                    value={configForm.data.whatsapp_instance}
-                                                    onChange={(e) => configForm.setData('whatsapp_instance', e.target.value)}
-                                                    className="font-mono text-sm"
-                                                />
-                                            </div>
-
-                                            {/* Company Token */}
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="whatsapp_api_key">{__('Company API Token (x-api-key)')}</Label>
-                                                <div className="flex gap-2">
-                                                    <Input
-                                                        id="whatsapp_api_key"
-                                                        type="text"
-                                                        value={configForm.data.whatsapp_api_key}
-                                                        onChange={(e) => configForm.setData('whatsapp_api_key', e.target.value)}
-                                                        className="font-mono text-sm"
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        onClick={copyTokenToClipboard}
-                                                        disabled={!configForm.data.whatsapp_api_key}
-                                                        className="shrink-0"
-                                                    >
-                                                        {copiedToken ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4 text-slate-500" />}
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                        <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex flex-col sm:flex-row justify-between gap-3">
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={handleGenerateToken}
-                                                    className="gap-1.5 text-xs text-slate-700 dark:text-slate-200"
-                                                >
-                                                    <Key className="h-3.5 w-3.5" />
-                                                    {__('Generate Token')}
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={handleSyncCompany}
-                                                    disabled={!whatsapp_api_key}
-                                                    className="gap-1.5 text-xs text-slate-700 hover:text-emerald-700 dark:text-slate-200"
-                                                >
-                                                    <Database className="h-3.5 w-3.5" />
-                                                    {__('Sync Company')}
-                                                </Button>
-                                            </div>
-
-                                            <Button type="submit" disabled={configForm.processing} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
-                                                <RefreshCw className={`h-4 w-4 ${configForm.processing ? 'animate-spin' : ''}`} />
-                                                {__('Save Settings')}
-                                            </Button>
-                                        </CardFooter>
-                                    </form>
-                                </Card>
-                            </div>
-
-                            {/* Webhook Endpoint Info Card */}
-                            <div className="md:col-span-5 space-y-6">
-                                <Card className="shadow-sm">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            <Terminal className="h-5 w-5 text-indigo-600" />
-                                            {__('Inbound Webhook Endpoint')}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {__('Receives opt-out unsubscriptions and incoming user replies.')}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4 text-xs">
-                                        <div className="space-y-2">
-                                            <Label className="text-xs text-muted-foreground">{__('Webhook URL (Auto-Registered)')}</Label>
-                                            <div className="flex gap-2">
-                                                <Input
-                                                    readOnly
-                                                    value={webhookUrl}
-                                                    className="font-mono text-xs bg-slate-50 dark:bg-slate-900 select-all"
-                                                />
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={copyWebhookToClipboard}
-                                                    className="shrink-0"
-                                                >
-                                                    {copiedWebhook ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-3.5 border rounded-xl bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
-                                            <span className="font-semibold text-slate-800 dark:text-slate-200 block">{__('Listening Events:')}</span>
-                                            <div className="space-y-1.5 text-muted-foreground">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Badge variant="outline" className="font-mono text-[10px] bg-white dark:bg-slate-950">contact.opt_out</Badge>
-                                                    <span>{__('Handles STOP / BAJA unsubscriptions.')}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Badge variant="outline" className="font-mono text-[10px] bg-white dark:bg-slate-950">message.received</Badge>
-                                                    <span>{__('Handles incoming user messages & interactive bot replies.')}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Badge variant="outline" className="font-mono text-[10px] bg-white dark:bg-slate-950">message.ack / status</Badge>
-                                                    <span>{__('Updates delivery and blue ticks read receipts.')}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </div>
-                    </TabsContent>
                 </Tabs>
-            </div>
 
-            {/* MODAL 1: Diagnóstico en Vivo (Heartbeat) */}
-            <Dialog open={diagnosticOpen} onOpenChange={setDiagnosticOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-base">
-                            <Heart className="h-5 w-5 text-rose-500 fill-rose-500" />
-                            {__('WhatsApp Health Diagnostic')}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {__('Real-time latency check and Baileys engine status test.')}
-                        </DialogDescription>
-                    </DialogHeader>
+                {/* ── MODAL CREAR / EDITAR PLANTILLA ── */}
+                <Dialog open={tplDialogOpen} onOpenChange={setTplDialogOpen}>
+                    <DialogContent className="sm:max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle>
+                                {editingTpl ? 'Editar Plantilla' : 'Nueva Plantilla con Spintax'}
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Usa variables como {'{cliente}'}, {'{sucursal}'}, {'{orden}'}, {'{equipo}'} combinadas con Spintax {'{Hola|Buen día}'}.
+                            </DialogDescription>
+                        </DialogHeader>
 
-                    {diagnosticLoading ? (
-                        <div className="py-8 text-center space-y-3">
-                            <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin mx-auto" />
-                            <p className="text-xs text-muted-foreground">{__('Executing server ping...')}</p>
-                        </div>
-                    ) : diagnosticData ? (
-                        <div className="space-y-3 text-xs">
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
-                                    <span className="text-[10px] text-muted-foreground block uppercase">{__('Network Latency')}</span>
-                                    <span className="text-lg font-bold text-emerald-600 font-mono">{diagnosticData.latencyMs} ms</span>
+                        <div className="space-y-4 py-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-semibold">Nombre *</Label>
+                                    <Input
+                                        value={tplNombre}
+                                        onChange={(e) => setTplNombre(e.target.value)}
+                                        placeholder="Ej: Equipo Listo para Entrega"
+                                        className="h-9 text-xs"
+                                    />
                                 </div>
-                                <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
-                                    <span className="text-[10px] text-muted-foreground block uppercase">{__('Socket State')}</span>
-                                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                                        {getConnectionStateLabel(diagnosticData.status?.connectionState, Boolean(diagnosticData.status?.isConnected))}
-                                    </span>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-semibold">Categoría</Label>
+                                    <Select value={tplCategoria} onValueChange={setTplCategoria}>
+                                        <SelectTrigger className="h-9 text-xs bg-background">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(TEMPLATE_CATEGORIES).map(([key, meta]) => (
+                                                <SelectItem key={key} value={key} className="text-xs">
+                                                    {meta.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
 
-                            {diagnosticData.health && (
-                                <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border space-y-1.5 font-mono text-[11px]">
-                                    <div><strong>{__('Node.js:')}</strong> {diagnosticData.health.system?.nodeVersion} ({diagnosticData.health.system?.platform})</div>
-                                    <div><strong>{__('RSS Memory:')}</strong> {diagnosticData.health.system?.memoryUsageMb?.rss} MB</div>
-                                    <div><strong>{__('Database:')}</strong> {diagnosticData.health.database?.status} ({diagnosticData.health.database?.latencyMs} ms)</div>
+                            <div className="space-y-1.5">
+                                <div className="flex flex-wrap items-center justify-between gap-1">
+                                    <Label className="text-xs font-semibold">Contenido del Mensaje *</Label>
+                                    <div className="flex flex-wrap gap-1">
+                                        {['{cliente}', '{orden}', '{equipo}', '{sucursal}'].map((chip) => (
+                                            <button
+                                                key={chip}
+                                                type="button"
+                                                onClick={() => setTplContenido((prev) => `${prev} ${chip}`.trim())}
+                                                className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted hover:bg-emerald-500/15 hover:text-emerald-600 cursor-pointer"
+                                            >
+                                                +{chip}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <Textarea
+                                    rows={5}
+                                    value={tplContenido}
+                                    onChange={(e) => setTplContenido(e.target.value)}
+                                    className="text-xs"
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handlePreviewSpintax(tplContenido, 'template')}
+                                    className="text-xs gap-1.5"
+                                >
+                                    <Sparkles className="size-3.5" />
+                                    Probar Spintax
+                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-xs">Activa</Label>
+                                    <Switch checked={tplActivo} onCheckedChange={setTplActivo} />
+                                </div>
+                            </div>
+
+                            {tplPreviews.length > 0 && (
+                                <div className="rounded-lg border border-border/70 bg-muted/20 p-3 space-y-1.5">
+                                    {tplPreviews.map((v, i) => (
+                                        <p key={i} className="text-xs text-muted-foreground">
+                                            <strong className="text-emerald-600">#{i + 1}</strong> {v}
+                                        </p>
+                                    ))}
                                 </div>
                             )}
-
-                            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                                <span>{__('The WhatsApp engine is healthy and responding optimally.')}</span>
-                            </div>
-                        </div>
-                    ) : null}
-
-                    <DialogFooter>
-                        <Button size="sm" variant="outline" onClick={() => setDiagnosticOpen(false)}>
-                            {__('Close')}
-                        </Button>
-                        <Button size="sm" onClick={handleRunDiagnostic} disabled={diagnosticLoading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                            {__('Re-test')}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* MODAL 2: Crear / Editar Plantilla */}
-            <Dialog open={templateModalOpen} onOpenChange={setTemplateModalOpen}>
-                <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle className="text-base flex items-center gap-2">
-                            <FileText className="h-5 w-5 text-emerald-600" />
-                            {editingTemplate ? __('Edit Template') : __('New WhatsApp Template')}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {__('Define a reusable template with Spintax options and dynamic variables.')}
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <form onSubmit={handleSaveTemplate} className="space-y-4 text-xs">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="tpl_name">{__('Template Name')}</Label>
-                            <Input
-                                id="tpl_name"
-                                required
-                                placeholder={__('e.g. Pastoral Assembly Call')}
-                                value={templateFormData.nombre}
-                                onChange={(e) => setTemplateFormData(prev => ({ ...prev, nombre: e.target.value }))}
-                            />
                         </div>
 
-                        <div className="space-y-1.5">
-                            <Label htmlFor="tpl_cat">{__('Category')}</Label>
-                            <Select
-                                value={templateFormData.categoria}
-                                onValueChange={(val) => setTemplateFormData(prev => ({ ...prev, categoria: val }))}
-                            >
-                                <SelectTrigger id="tpl_cat">
-                                    <SelectValue placeholder={__('Select category')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="pastoral">{__('Pastoral')}</SelectItem>
-                                    <SelectItem value="convocatorias">{__('Calls')}</SelectItem>
-                                    <SelectItem value="avisos">{__('Announcements')}</SelectItem>
-                                    <SelectItem value="general">{__('General')}</SelectItem>
-                                    <SelectItem value="seguridad">{__('Security')}</SelectItem>
-                                    <SelectItem value="asistencia">{__('Attendance')}</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="tpl_content">{__('Template Content (Spintax Supported)')}</Label>
-                                <span className="text-[10px] text-muted-foreground">{__('Use {option1|option2}')}</span>
-                            </div>
-                            <Textarea
-                                id="tpl_content"
-                                required
-                                rows={4}
-                                placeholder="{Estimado|Apreciado} {{nombre}}, le notificamos..."
-                                value={templateFormData.contenido}
-                                onChange={(e) => setTemplateFormData(prev => ({ ...prev, contenido: e.target.value }))}
-                                className="font-mono text-xs"
-                            />
-                        </div>
-
-                        {/* Insertador de Variables */}
-                        <div className="space-y-1.5">
-                            <Label className="text-[11px] text-muted-foreground">{__('Insert Quick Variables:')}</Label>
-                            <div className="flex flex-wrap gap-1.5">
-                                {['nombre', 'iglesia', 'zona', 'fecha', 'hora', 'lugar', 'empresa', 'random'].map(varName => (
-                                    <Button
-                                        key={varName}
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleInsertVariableInTemplate(varName)}
-                                        className="h-6 text-[10px] font-mono px-2 bg-slate-50 dark:bg-slate-900 hover:bg-emerald-50 text-slate-700 dark:text-slate-300"
-                                    >
-                                        + {`{{${varName}}}`}
-                                    </Button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <DialogFooter className="pt-3">
-                            <Button type="button" size="sm" variant="outline" onClick={() => setTemplateModalOpen(false)}>
-                                {__('Cancel')}
+                        <DialogFooter>
+                            <Button variant="outline" size="sm" onClick={() => setTplDialogOpen(false)}>
+                                Cancelar
                             </Button>
-                            <Button type="submit" size="sm" disabled={savingTemplate} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                                {savingTemplate ? __('Saving...') : __('Save Template')}
+                            <Button
+                                size="sm"
+                                onClick={handleSaveTemplate}
+                                disabled={savingTpl}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                                {savingTpl && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
+                                Guardar Plantilla
                             </Button>
                         </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+                    </DialogContent>
+                </Dialog>
 
-            {/* MODAL 3: Detalle de Mensaje del Historial */}
-            <Dialog open={Boolean(selectedMessage)} onOpenChange={(open) => !open && setSelectedMessage(null)}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="text-base flex items-center gap-2">
-                            <Inbox className="h-5 w-5 text-indigo-600" />
-                            {__('Message Details')}
-                        </DialogTitle>
-                    </DialogHeader>
+                {/* ── MODAL DIAGNÓSTICO DEL MOTOR PYTHON ── */}
+                <Dialog open={diagOpen} onOpenChange={setDiagOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Cpu className="size-5 text-emerald-600" />
+                                Diagnóstico del Motor Python Nativo
+                            </DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Telemetría en tiempo real de Neonize / WhatsMeow para{' '}
+                                <strong>{selectedInstance?.nombre}</strong>.
+                            </DialogDescription>
+                        </DialogHeader>
 
-                    {selectedMessage && (
-                        <div className="space-y-3 text-xs">
-                            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border space-y-1.5 font-mono">
-                                <div><strong>{__('Recipient:')}</strong> +{selectedMessage.recipient_phone}</div>
-                                <div><strong>{__('Message ID:')}</strong> {selectedMessage.message_id || 'N/A'}</div>
-                                <div><strong>{__('Status:')}</strong> <span className="capitalize">{__(selectedMessage.status)}</span></div>
-                                <div><strong>{__('Sent Date:')}</strong> {new Date(selectedMessage.created_at).toLocaleString()}</div>
-                                {selectedMessage.read_at && <div><strong>{__('Read Date:')}</strong> {new Date(selectedMessage.read_at).toLocaleString()}</div>}
-                                <div><strong>{__('Retry Count:')}</strong> {selectedMessage.retry_count}</div>
+                        {diagLoading ? (
+                            <div className="py-8 text-center text-xs text-muted-foreground">
+                                <Loader2 className="size-6 animate-spin mx-auto mb-2 text-emerald-600" />
+                                Consultando estado interno del motor Python...
                             </div>
-
-                            <div className="space-y-1">
-                                <Label className="font-semibold">{__('Dispatched Content:')}</Label>
-                                <div className="p-3 bg-slate-100 dark:bg-slate-950 rounded-xl border text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
-                                    {selectedMessage.message_content}
-                                </div>
+                        ) : diagnostic ? (
+                            <div className="space-y-2 text-xs">
+                                {[
+                                    ['Motor', diagnostic.engine || 'Python Nativo (Neonize)'],
+                                    ['Endpoint Local', diagnostic.api_url],
+                                    ['Sucursal', diagnostic.target_name || selectedInstance?.nombre || '—'],
+                                    ['Instancia SQLite', diagnostic.instance],
+                                    ['Estado del Socket', diagnostic.socket_state],
+                                    [
+                                        'Hilo Nativo Activo',
+                                        diagnostic.thread_alive ? 'Sí (Daemon Activo)' : 'Detenido',
+                                    ],
+                                    [
+                                        'Línea Vinculada',
+                                        diagnostic.phone_number ? `+${diagnostic.phone_number}` : 'Sin vincular',
+                                    ],
+                                    ['Latencia HTTP', `${diagnostic.latency_ms} ms`],
+                                    ['Memoria RAM', diagnostic.memory_usage || 'N/D'],
+                                    ['Sesión SQLite', `${diagnostic.session_size_kb ?? 0} KB`],
+                                    ['Instancias Cargadas', String(diagnostic.active_instances_count ?? 1)],
+                                    [
+                                        'Worker Cola Anti-Ban',
+                                        diagnostic.worker_running ? 'Activo' : 'Detenido',
+                                    ],
+                                ].map(([k, v]) => (
+                                    <div
+                                        key={k}
+                                        className="flex items-center justify-between py-1.5 border-b border-border/60 last:border-0 gap-3"
+                                    >
+                                        <span className="text-muted-foreground">{k}</span>
+                                        <span className="font-mono font-semibold text-foreground text-right truncate">
+                                            {v}
+                                        </span>
+                                    </div>
+                                ))}
+                                {diagnostic.error && (
+                                    <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-rose-600 dark:text-rose-400">
+                                        {diagnostic.error}
+                                    </div>
+                                )}
                             </div>
+                        ) : null}
 
-                            {selectedMessage.error_message && (
-                                <div className="p-2.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 rounded-xl text-rose-700 dark:text-rose-400">
-                                    <strong>{__('Error:')}</strong> {selectedMessage.error_message}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <DialogFooter>
-                        <Button size="sm" variant="outline" onClick={() => setSelectedMessage(null)}>
-                            {__('Close')}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                        <DialogFooter>
+                            <Button size="sm" onClick={() => setDiagOpen(false)}>
+                                Cerrar
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
         </>
     );
 }

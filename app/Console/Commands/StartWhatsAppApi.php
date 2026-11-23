@@ -9,75 +9,79 @@ class StartWhatsAppApi extends Command
 {
     protected $signature = 'whatsapp:start';
 
-    protected $description = 'Iniciar la API de WhatsApp';
+    protected $description = 'Iniciar el motor nativo de WhatsApp en Python para Fixsale';
 
     public function handle()
     {
-        $this->info('Iniciando API de WhatsApp...');
+        $this->info('================================================================');
+        $this->info('    INICIANDO MOTOR NATIVO DE WHATSAPP (PYTHON NEONIZE)');
+        $this->info('================================================================');
 
-        $apiPath = base_path('../larawhatsapp/whatsapp-api-v2');
+        $apiPath = base_path('whatsapp-service');
 
         if (! is_dir($apiPath)) {
-            $this->error('No se encontró el directorio de la API de WhatsApp en: '.$apiPath);
+            $this->error('No se encontró el directorio del microservicio en: '.$apiPath);
 
             return 1;
         }
 
-        $this->info('Cambiando al directorio: '.$apiPath);
+        // Buscar intérprete de Python disponible
+        $possiblePythons = [
+            $apiPath.DIRECTORY_SEPARATOR.'venv'.DIRECTORY_SEPARATOR.'Scripts'.DIRECTORY_SEPARATOR.'python.exe',
+            'C:\\laragon\\www\\sismed\\backend\\venv\\Scripts\\python.exe',
+            'C:\\laragon\\bin\\python\\python-3.13\\python.exe',
+            'python',
+        ];
 
-        // Verificar si Node.js está instalado
-        $nodeCheck = new Process(['node', '--version']);
-        $nodeCheck->run();
-
-        if (! $nodeCheck->isSuccessful()) {
-            $this->error('Node.js no está instalado o no está en el PATH');
-
-            return 1;
-        }
-
-        $this->info('Node.js versión: '.trim($nodeCheck->getOutput()));
-
-        // Verificar si npm está instalado
-        $npmCheck = new Process(['npm', '--version']);
-        $npmCheck->run();
-
-        if (! $npmCheck->isSuccessful()) {
-            $this->error('npm no está instalado o no está en el PATH');
-
-            return 1;
-        }
-
-        // Instalar dependencias si no existen
-        if (! is_dir($apiPath.'/node_modules')) {
-            $this->info('Instalando dependencias...');
-            $npmInstall = new Process(['npm', 'install'], $apiPath);
-            $npmInstall->setTimeout(300); // 5 minutos
-            $npmInstall->run();
-
-            if (! $npmInstall->isSuccessful()) {
-                $this->error('Error al instalar dependencias: '.$npmInstall->getErrorOutput());
-
-                return 1;
+        $pythonExe = null;
+        foreach ($possiblePythons as $candidate) {
+            if ($candidate === 'python') {
+                $check = new Process(['python', '--version']);
+                $check->run();
+                if ($check->isSuccessful()) {
+                    $pythonExe = 'python';
+                    break;
+                }
+            } elseif (file_exists($candidate)) {
+                $pythonExe = $candidate;
+                break;
             }
         }
 
-        // Iniciar la API
-        $this->info('Iniciando servidor de WhatsApp API en puerto 3001...');
+        if (! $pythonExe) {
+            $this->error('No se encontró un ejecutable de Python compatible en el sistema.');
 
-        $process = new Process(['npm', 'start'], $apiPath);
+            return 1;
+        }
+
+        $this->info('Python detectado: '.$pythonExe);
+        $this->info('Servidor levantando en http://127.0.0.1:3001...');
+        $this->info('Swagger / Documentación: http://127.0.0.1:3001/docs');
+        $this->info('Presiona Ctrl+C para detener el servicio.');
+        $this->newLine();
+
+        $process = new Process([
+            $pythonExe,
+            '-m',
+            'uvicorn',
+            'main:app',
+            '--host',
+            '127.0.0.1',
+            '--port',
+            '3001',
+            '--reload',
+        ], $apiPath);
+
         $process->setTimeout(null);
 
         $process->start(function ($type, $buffer) {
             if ($type === Process::ERR) {
-                $this->error($buffer);
+                $this->output->write('<comment>'.$buffer.'</comment>');
             } else {
-                $this->line($buffer);
+                $this->output->write($buffer);
             }
         });
 
-        $this->info('API de WhatsApp iniciada. Presiona Ctrl+C para detener.');
-
-        // Mantener el proceso corriendo
         while ($process->isRunning()) {
             sleep(1);
         }

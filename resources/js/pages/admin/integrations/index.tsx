@@ -20,6 +20,8 @@ interface PageProps {
     google_maps_active: boolean;
     whatsapp_active: boolean;
     whatsapp_connected: boolean;
+    whatsapp_branches_total?: number;
+    whatsapp_branches_connected?: number;
     paypal_active?: boolean;
     paypal_mode?: string;
     paypal_client_id?: string;
@@ -44,6 +46,8 @@ export default function Integrations({
     google_maps_active,
     whatsapp_active, 
     whatsapp_connected,
+    whatsapp_branches_total = 0,
+    whatsapp_branches_connected = 0,
     paypal_active = false,
     paypal_mode = 'sandbox',
     paypal_client_id = '',
@@ -431,7 +435,7 @@ export default function Integrations({
                         </form>
                     </Card>
 
-                    {/* WhatsApp API Integration */}
+                    {/* WhatsApp Native Python Integration */}
                     <Card className="shadow-sm border-t-4 border-t-emerald-600 flex flex-col justify-between">
                         <CardHeader>
                             <div className="flex items-center justify-between">
@@ -440,23 +444,28 @@ export default function Integrations({
                                         <MessageSquare className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <CardTitle>{__('WhatsApp Business API')}</CardTitle>
-                                        <CardDescription>{__('Automate customer messaging and trigger notification alerts.')}</CardDescription>
+                                        <CardTitle>WhatsApp Multi-Sucursal (Python)</CardTitle>
+                                        <CardDescription>Motor nativo Neonize sin APIs externas, con 1 instancia independiente por sucursal.</CardDescription>
                                     </div>
                                 </div>
                                 <BadgeWhatsAppStatus active={whatsapp_active} connected={whatsapp_connected} />
                             </div>
                         </CardHeader>
-                        <CardContent className="flex-1 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        <CardContent className="flex-1 py-4 text-sm text-slate-600 dark:text-slate-400 space-y-2">
                             <p>
-                                {__('Connect your corporate WhatsApp account using QR code. Send transactional alerts, customer reminders, and manage templates.')}
+                                Vincula el WhatsApp de cada sucursal mediante código QR o código de 8 dígitos. Incluye simulación de escritura humana, escudo Anti-Baneo, plantillas con Spintax y difusión segura en cola.
                             </p>
+                            {whatsapp_branches_total > 0 && (
+                                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                                    Sucursales en línea: {whatsapp_branches_connected} de {whatsapp_branches_total}
+                                </p>
+                            )}
                         </CardContent>
                         <CardFooter className="border-t bg-slate-50/50 dark:bg-slate-900/10 px-6 py-4 flex justify-end">
                             <Link href="/admin/integrations/whatsapp">
                                 <Button variant="outline" size="sm" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-900/50 dark:text-emerald-400 dark:hover:bg-emerald-950/20">
                                     <Settings2 className="h-4 w-4" />
-                                    {__('Configure')}
+                                    Configurar Sucursales
                                 </Button>
                             </Link>
                         </CardFooter>

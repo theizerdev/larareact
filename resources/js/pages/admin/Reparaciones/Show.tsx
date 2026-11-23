@@ -801,12 +801,12 @@ export default function ShowReparacion({
         }
     };
 
-    const hasOpenedWaRef = React.useRef(false);
+    const lastOpenedWaUrlRef = React.useRef<string | null>(null);
     useEffect(() => {
         document.body.style.pointerEvents = "";
         const waUrl = pageProps.flash?.whatsapp_url || pageProps.whatsapp_url;
-        if (waUrl && !hasOpenedWaRef.current) {
-            hasOpenedWaRef.current = true;
+        if (waUrl && lastOpenedWaUrlRef.current !== waUrl) {
+            lastOpenedWaUrlRef.current = waUrl;
             window.open(waUrl, '_blank');
         }
     }, [pageProps.flash?.whatsapp_url, pageProps.whatsapp_url]);
@@ -1358,8 +1358,10 @@ export default function ShowReparacion({
             {
                 preserveScroll: true,
                 preserveState: true,
-                onSuccess: () => {
-                    notifySuccess(__('Validación post-atención guardada correctamente.'));
+                onSuccess: (page: any) => {
+                    if (!page?.props?.notification) {
+                        notifySuccess(__('Validación post-atención guardada correctamente.'));
+                    }
                 },
                 onError: () => {
                     notifyError(__('Ocurrió un error al guardar la validación final.'));
@@ -1936,10 +1938,15 @@ export default function ShowReparacion({
                 estado: selectedWhatsAppEstado,
             },
             {
-                onSuccess: () => {
+                onSuccess: (page: any) => {
                     setIsSendingWhatsApp(false);
-                    setOpenWhatsAppModal(false);
-                    notifySuccess(__('Notificación enviada exitosamente al cliente.'));
+                    const notif = page?.props?.notification;
+                    if (!notif || notif.type !== 'error') {
+                        setOpenWhatsAppModal(false);
+                    }
+                    if (!notif) {
+                        notifySuccess(__('Notificación enviada exitosamente al cliente.'));
+                    }
                 },
                 onError: (errors: any) => {
                     setIsSendingWhatsApp(false);
@@ -1986,10 +1993,12 @@ export default function ShowReparacion({
             },
             {
                 preserveScroll: true,
-                onSuccess: () => {
+                onSuccess: (page: any) => {
                     setIsUpdatingEstado(false);
                     setOpenStatusModal(false);
-                    notifySuccess(__('Estado actualizado y notificación procesada exitosamente.'));
+                    if (!page?.props?.notification) {
+                        notifySuccess(__('Estado actualizado y notificación procesada exitosamente.'));
+                    }
                 },
                 onError: () => {
                     setIsUpdatingEstado(false);

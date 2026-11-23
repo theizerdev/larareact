@@ -29,7 +29,9 @@ class SaleService
 
     public function processSale(array $data, int $userId): Sale
     {
-        return DB::transaction(function () use ($data, $userId) {
+        $reparacionesEntregadas = [];
+
+        $sale = DB::transaction(function () use ($data, $userId, &$reparacionesEntregadas) {
             $user = User::find($userId);
 
             $cashRegister = CashRegister::getActiveRegister($user);
@@ -294,6 +296,9 @@ class SaleService
                                     $reparacion->comision_estado = 'pendiente';
                                 }
                                 $isFinalizado = true;
+                                if ($estadoAnterior !== 'entregado_reparado') {
+                                    $reparacionesEntregadas[$reparacion->id] = $reparacion;
+                                }
                             }
                             $reparacion->save();
 
@@ -336,6 +341,9 @@ class SaleService
                                 $reparacion->comision_estado = 'pendiente';
                             }
                             $reparacion->save();
+                            if ($estadoAnterior !== 'entregado_reparado') {
+                                $reparacionesEntregadas[$reparacion->id] = $reparacion;
+                            }
 
                             \App\Models\OrdenReparacionHistorial::create([
                                 'orden_id' => $reparacion->id,
@@ -399,6 +407,20 @@ class SaleService
 
             return $sale;
         });
+
+        // Notificar por WhatsApp al cliente las órdenes de reparación liquidadas/entregadas desde POS
+        if (! empty($reparacionesEntregadas)) {
+            $repController = app(\App\Http\Controllers\Admin\ReparacionController::class);
+            foreach ($reparacionesEntregadas as $repOrden) {
+                try {
+                    $repController->sendWhatsAppNotificationOnStatusChanged($repOrden, 'entregado_reparado');
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Error notificando por WhatsApp entrega POS de orden #{$repOrden->numero_orden}: " . $e->getMessage());
+                }
+            }
+        }
+
+        return $sale;
     }
 
     /**

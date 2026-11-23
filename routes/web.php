@@ -32,6 +32,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::post('/contact-request', [ContactController::class, 'send'])->name('contact.send');
+Route::post('/api/whatsapp/webhook', [\App\Http\Controllers\Admin\IntegrationController::class, 'whatsappWebhook'])->name('integrations.whatsapp.webhook');
 
 Route::middleware(['guest'])->group(function () {
     Route::get('/forgot-password', [ForgotPasswordOtpController::class, 'show'])->name('password.request');

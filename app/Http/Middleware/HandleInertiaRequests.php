@@ -99,6 +99,7 @@ class HandleInertiaRequests extends Middleware
                 ? json_decode(file_get_contents($path) ?: '{}', true)
                 : [],
             'notification' => fn () => $request->session()->pull('notification'),
+            'whatsapp_url' => fn () => $request->session()->pull('whatsapp_url'),
             'low_stock_count' => fn () => $request->user()
                 ? Producto::where('empresa_id', $request->user()->empresa_id)
                     ->where('sucursal_id', $request->user()->sucursal_id)

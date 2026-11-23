@@ -44,6 +44,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->validateCsrfTokens(except: [
+            'api/whatsapp/webhook',
+            'whatsapp/webhook',
             'preregistro/*',
             'admin/integrations/stripe/test',
             'admin/integrations/*/test',

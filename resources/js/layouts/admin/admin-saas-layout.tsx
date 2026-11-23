@@ -136,7 +136,7 @@ function CollapsibleNavItem({
 }: {
     title: string;
     icon: React.ComponentType<any>;
-    items: { title: string; href: string }[];
+    items: { title: string; href: string; badgeDot?: boolean; badgeLabel?: string }[];
     collapsed: boolean;
 }) {
     const { url } = usePage();
@@ -155,6 +155,7 @@ function CollapsibleNavItem({
 
     // Determine if any of the sub-items are active
     const isAnyActive = items.some((item) => checkActive(item.href));
+    const hasAlertDot = items.some((item) => item.badgeDot);
 
     // State to toggle open/closed
     const [isOpen, setIsOpen] = React.useState(isAnyActive);
@@ -178,11 +179,17 @@ function CollapsibleNavItem({
                     <button
                         onClick={handleToggle}
                         className={cn(
-                            'group flex w-full items-center justify-center rounded-lg p-2.5 text-sm font-medium transition-all text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                            'group relative flex w-full items-center justify-center rounded-lg p-2.5 text-sm font-medium transition-all text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                             isAnyActive && 'bg-primary/10 text-primary'
                         )}
                     >
                         <Icon className="size-5 shrink-0" />
+                        {hasAlertDot && (
+                            <span className="absolute top-2 right-2 flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                            </span>
+                        )}
                     </button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
@@ -193,11 +200,14 @@ function CollapsibleNavItem({
                                 key={idx}
                                 href={item.href}
                                 className={cn(
-                                    'text-xs py-1 px-2 rounded hover:bg-sidebar-accent block',
+                                    'text-xs py-1 px-2 rounded hover:bg-sidebar-accent flex items-center justify-between gap-2',
                                     checkActive(item.href) ? 'text-primary font-semibold' : 'text-sidebar-foreground/80'
                                 )}
                             >
-                                {__(item.title)}
+                                <span>{__(item.title)}</span>
+                                {item.badgeDot && (
+                                    <span className="inline-flex h-2 w-2 rounded-full bg-amber-500 shrink-0" />
+                                )}
                             </Link>
                         ))}
                     </div>
@@ -218,6 +228,12 @@ function CollapsibleNavItem({
                 <div className="flex items-center gap-3">
                     <Icon className="size-5 shrink-0" />
                     <span className="whitespace-nowrap">{__(title)}</span>
+                    {hasAlertDot && !isOpen && (
+                        <span className="relative flex h-2 w-2 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                        </span>
+                    )}
                 </div>
                 {isOpen ? (
                     <ChevronDown className="size-4 text-slate-500 group-hover:text-slate-300" />
@@ -236,13 +252,22 @@ function CollapsibleNavItem({
                                 key={idx}
                                 href={item.href}
                                 className={cn(
-                                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all block',
+                                    'flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all',
                                     active
                                         ? 'text-primary font-semibold'
                                         : 'text-sidebar-foreground/60 hover:text-sidebar-accent-foreground'
                                 )}
                             >
-                                {__(item.title)}
+                                <span>{__(item.title)}</span>
+                                {item.badgeDot && (
+                                    <span
+                                        className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500 shrink-0"
+                                        title={item.badgeLabel || __('Vincular QR')}
+                                    >
+                                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                        {item.badgeLabel || 'QR'}
+                                    </span>
+                                )}
                             </Link>
                         );
                     })}
@@ -805,13 +830,22 @@ export default function AdminSaasLayout({
                                 {(() => {
                                     if (isVendedor) return null;
 
+                                    const whatsappNeedsScan = Boolean((page.props as any)?.whatsapp_needs_scan);
+
                                     const integrationsItems = [
+                                        {
+                                            title: 'WhatsApp',
+                                            href: '/admin/integrations/whatsapp',
+                                            allowed: isAdmin || hasPermission('whatsapp.view') || hasPermission('whatsapp.manage') || hasPermission('integrations.view'),
+                                            badgeDot: whatsappNeedsScan,
+                                            badgeLabel: 'QR',
+                                        },
                                         {
                                             title: 'Catalog',
                                             href: integrationsIndex.url(),
-                                            permission: 'integrations.view',
+                                            allowed: isAdmin || hasPermission('integrations.view'),
                                         },
-                                    ].filter(item => hasPermission(item.permission));
+                                    ].filter((item) => item.allowed);
 
                                     if (integrationsItems.length === 0) return null;
 

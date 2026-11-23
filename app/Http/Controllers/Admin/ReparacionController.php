@@ -978,16 +978,27 @@ class ReparacionController extends Controller
             'comentario' => 'Orden de recepción registrada.',
         ]);
 
-        // Enviar notificaciones por WhatsApp al cliente y al técnico asociado
-        $waUrl = $this->sendWhatsAppNotificationsOnOrderCreation($orden);
+        // Enviar notificaciones por WhatsApp al cliente y al técnico asociado vía microservicio Python
+        $waResult = $this->sendWhatsAppNotificationsOnOrderCreation($orden);
+        $notifType = 'success';
+        $notifMessage = "Orden de Reparación {$numeroOrden} creada exitosamente.";
+
+        if (! empty($waResult['sent'])) {
+            $notifMessage .= ' Notificación de WhatsApp enviada al cliente.';
+        } elseif (! empty($waResult['wa_url'])) {
+            $notifType = 'warning';
+            $notifMessage .= ' No se pudo enviar WhatsApp directo'
+                . (! empty($waResult['error']) ? " ({$waResult['error']})" : '')
+                . '. Se generó enlace de respaldo para WhatsApp Web.';
+        }
 
         $redirect = redirect()->to(route('admin.reparaciones.show', $orden->id) . '?nueva=1')->with('notification', [
-            'type' => 'success',
-            'message' => "Orden de Reparación {$numeroOrden} creada exitosamente.",
+            'type' => $notifType,
+            'message' => $notifMessage,
         ]);
 
-        if ($waUrl) {
-            $redirect->with('whatsapp_url', $waUrl);
+        if (! empty($waResult['wa_url'])) {
+            $redirect->with('whatsapp_url', $waResult['wa_url']);
         }
 
         return $redirect;
@@ -1373,40 +1384,44 @@ class ReparacionController extends Controller
             ]);
         }
 
-        $waUrl = null;
-        $whatsappNotified = false;
+        $waResult = null;
         $shouldNotifyWhatsApp = $request->has('notificar_whatsapp')
             ? $request->boolean('notificar_whatsapp')
             : true;
 
         if ($shouldNotifyWhatsApp && ($nuevoEstado !== $estadoAnterior || $request->filled('mensaje_whatsapp'))) {
             $customMessage = $request->input('mensaje_whatsapp');
-            $waUrl = $this->sendWhatsAppNotificationOnStatusChanged(
+            $waResult = $this->dispatchStatusWhatsAppNotification(
                 $reparacion,
                 $nuevoEstado,
                 $validated['comentario'] ?? null,
                 $customMessage
             );
-            $whatsappNotified = true;
         }
 
         $message = ($nuevoEstado === 'reparado' || $nuevoEstado === 'listo_reparado')
-            ? "Estado actualizado a Listo para Entregar Reparado."
-            : "Estado actualizado exitosamente.";
+            ? 'Estado actualizado a Listo para Entregar Reparado.'
+            : 'Estado actualizado exitosamente.';
+        $notifType = 'success';
 
-        if ($whatsappNotified) {
-            $message .= $waUrl
-                ? " (Se generó enlace para WhatsApp Web por fallo de conexión directa)"
-                : " (Notificación de WhatsApp enviada al cliente)";
+        if (is_array($waResult)) {
+            if (! empty($waResult['sent'])) {
+                $message .= ' (Notificación de WhatsApp enviada al cliente)';
+            } elseif (! empty($waResult['wa_url'])) {
+                $notifType = 'warning';
+                $message .= ' (WhatsApp directo falló'
+                    . (! empty($waResult['error']) ? ": {$waResult['error']}" : '')
+                    . '. Se abrió enlace de WhatsApp Web)';
+            }
         }
 
         $redirect = redirect()->route('admin.reparaciones.show', $reparacion->id)->with('notification', [
-            'type' => 'success',
+            'type' => $notifType,
             'message' => $message,
         ]);
 
-        if ($waUrl) {
-            $redirect->with('whatsapp_url', $waUrl);
+        if (! empty($waResult['wa_url'])) {
+            $redirect->with('whatsapp_url', $waResult['wa_url']);
         }
 
         return $redirect;
@@ -1507,6 +1522,7 @@ class ReparacionController extends Controller
     public function notificarWhatsApp(Request $request, $reparacion)
     {
         $reparacion = $this->findAuthorizedOrder($reparacion);
+        $reparacion->loadMissing(['cliente', 'marca', 'modelo', 'empresa', 'sucursal']);
 
         $validated = $request->validate([
             'mensaje' => 'required|string|max:4000',
@@ -1514,65 +1530,86 @@ class ReparacionController extends Controller
             'estado' => 'nullable|string',
         ]);
 
-        $user = auth()->user();
-        $empresa = $user ? $user->empresa : \App\Models\Empresa::find($reparacion->empresa_id ?? 1);
-        $empresaId = $empresa ? $empresa->id : ($reparacion->empresa_id ?? 1);
+        [$whatsappService, $sucursal] = $this->resolveWhatsAppServiceForOrder($reparacion);
 
-        $phone = !empty($validated['telefono']) ? $validated['telefono'] : ($reparacion->cliente_telefono ?? $reparacion->cliente?->telefono);
-        $targetPhone = $this->formatPhoneNumber($phone, $empresaId);
+        $phone = ! empty($validated['telefono']) ? $validated['telefono'] : ($reparacion->cliente_telefono ?? $reparacion->cliente?->telefono);
+        $targetPhone = $this->formatPhoneNumber($phone, $reparacion->empresa_id, $whatsappService);
 
-        if (!$targetPhone) {
+        if (! $targetPhone) {
             return back()->with('notification', [
                 'type' => 'error',
                 'message' => __('El cliente no posee un número de teléfono válido para el envío.'),
             ]);
         }
 
-        try {
-            $whatsappService = \App\Services\WhatsAppService::forSucursal($reparacion->sucursal_id ?? $reparacion->sucursal ?? $empresaId);
+        $fallbackUrl = "https://wa.me/{$targetPhone}?text=" . urlencode($validated['mensaje']);
 
+        if ($sucursal && ! $sucursal->whatsapp_active) {
+            return back()
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('WhatsApp está desactivado para la sucursal :sucursal. Actívalo en Integraciones > WhatsApp.', ['sucursal' => $sucursal->nombre]),
+                ])
+                ->with('whatsapp_url', $fallbackUrl);
+        }
+
+        try {
+            $clienteNombre = $reparacion->cliente?->nombre ?? $reparacion->cliente_nombre ?? 'Cliente';
             $result = $whatsappService->sendText(
                 $targetPhone,
                 $validated['mensaje'],
                 [
-                    'cliente' => $reparacion->cliente?->nombre ?? $reparacion->cliente_nombre ?? 'Cliente',
+                    'cliente' => $clienteNombre,
                     'orden' => $reparacion->numero_orden,
                     'equipo' => trim(($reparacion->marca?->nombre ?? $reparacion->marca_nombre ?? '') . ' ' . ($reparacion->modelo?->nombre_comercial ?? $reparacion->modelo_nombre ?? '')),
                 ],
-                false
+                true,
+                null,
+                [
+                    'recipient_name' => $clienteNombre,
+                    'typingMinSec' => 1.5,
+                    'typingMaxSec' => 3.5,
+                ]
             );
 
-            if (!empty($validated['estado'])) {
-                OrdenReparacionHistorial::create([
-                    'orden_id' => $reparacion->id,
-                    'user_id' => auth()->id(),
-                    'estado_anterior' => $reparacion->estado_orden,
-                    'estado_nuevo' => $reparacion->estado_orden,
-                    'comentario' => "Notificación de WhatsApp enviada al cliente ({$targetPhone})",
-                    'mensaje_whatsapp' => $validated['mensaje'] ?? null,
-                ]);
-            }
+            $isSuccess = $this->isWhatsAppResultSuccessful($result);
+            $errorMsg = is_array($result) && ! empty($result['error'])
+                ? (string) $result['error']
+                : __('No se pudo conectar con el servicio de WhatsApp de la sucursal.');
 
-            if ($result && (isset($result['success']) && $result['success'] || isset($result['messageId']) || isset($result['jobId']) || isset($result['status']))) {
+            OrdenReparacionHistorial::create([
+                'orden_id' => $reparacion->id,
+                'user_id' => auth()->id(),
+                'estado_anterior' => $reparacion->estado_orden,
+                'estado_nuevo' => $reparacion->estado_orden,
+                'comentario' => $isSuccess
+                    ? "📲 Notificación de WhatsApp enviada al cliente ({$targetPhone})"
+                    : "⚠️ Falló el envío manual de WhatsApp al cliente ({$targetPhone}): {$errorMsg}",
+                'mensaje_whatsapp' => $validated['mensaje'] ?? null,
+            ]);
+
+            if ($isSuccess) {
                 return back()->with('notification', [
                     'type' => 'success',
                     'message' => __('Notificación de WhatsApp enviada exitosamente al cliente.'),
                 ]);
             }
 
-            $errorMsg = is_array($result) && !empty($result['error']) ? $result['error'] : __('Notificación enviada al servidor de WhatsApp.');
-
-            return back()->with('notification', [
-                'type' => 'success',
-                'message' => $errorMsg,
-            ]);
+            return back()
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('No se pudo enviar por WhatsApp: ') . $errorMsg,
+                ])
+                ->with('whatsapp_url', $fallbackUrl);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Error enviando notificación WhatsApp desde orden: ' . $e->getMessage());
 
-            return back()->with('notification', [
-                'type' => 'error',
-                'message' => __('Error al enviar notificación por WhatsApp: ') . $e->getMessage(),
-            ]);
+            return back()
+                ->with('notification', [
+                    'type' => 'error',
+                    'message' => __('Error al enviar notificación por WhatsApp: ') . $e->getMessage(),
+                ])
+                ->with('whatsapp_url', $fallbackUrl);
         }
     }
 
@@ -1771,28 +1808,31 @@ class ReparacionController extends Controller
         $postVal = $validated['post_servicio_json'];
         $postArray = is_array($postVal) ? $postVal : json_decode($postVal, true);
 
+        $estadoAnterior = $reparacion->estado_orden;
         $updateData = [
             'post_servicio_json' => $postArray,
         ];
 
         if ($request->filled('estado_orden')) {
             $updateData['estado_orden'] = $request->input('estado_orden');
-        } else if (!in_array($reparacion->estado_orden, ['entregado', 'entregado_finalizado', 'entregado_reparado', 'entregado_no_reparado'])) {
+        } elseif (! in_array($reparacion->estado_orden, ['entregado', 'entregado_finalizado', 'entregado_reparado', 'entregado_no_reparado'])) {
             $updateData['estado_orden'] = 'listo_reparado';
         }
 
+        $nuevoEstado = $updateData['estado_orden'] ?? $estadoAnterior;
+
         $reparacion->update($updateData);
 
-        if (!empty($postArray['fotos_post']) && is_array($postArray['fotos_post']) && \Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
+        if (! empty($postArray['fotos_post']) && is_array($postArray['fotos_post']) && \Illuminate\Support\Facades\Schema::hasTable('orden_reparacion_fotos')) {
             foreach ($postArray['fotos_post'] as $key => $fotoItem) {
                 $url = is_array($fotoItem) ? ($fotoItem['url'] ?? null) : $fotoItem;
-                if (!empty($url)) {
+                if (! empty($url)) {
                     $anguloKey = is_array($fotoItem) ? ($fotoItem['angulo'] ?? "post_{$key}") : "post_{$key}";
                     OrdenReparacionFoto::create([
                         'orden_id' => $reparacion->id,
                         'angulo' => $anguloKey,
                         'url' => $url,
-                        'descripcion' => "Fotografía Post-Reparación (" . ucfirst(str_replace('_', ' ', $anguloKey)) . ")",
+                        'descripcion' => 'Fotografía Post-Reparación (' . ucfirst(str_replace('_', ' ', $anguloKey)) . ')',
                     ]);
                 }
             }
@@ -1801,31 +1841,88 @@ class ReparacionController extends Controller
         OrdenReparacionHistorial::create([
             'orden_id' => $reparacion->id,
             'user_id' => auth()->id(),
-            'estado_anterior' => $reparacion->estado_orden,
-            'estado_nuevo' => $updateData['estado_orden'] ?? $reparacion->estado_orden,
+            'estado_anterior' => $estadoAnterior,
+            'estado_nuevo' => $nuevoEstado,
             'comentario' => 'Validación Final, Limpieza & Control de Calidad Post-Atención registrado.',
         ]);
 
-        // Enviar notificación de WhatsApp informando que el equipo está listo para retirar
-        $waUrl = $this->sendWhatsAppNotificationOnPostServicioCompleted($reparacion);
+        // Enviar notificación de WhatsApp informando el estado final (listo para retirar / reparado)
+        $waResult = $this->dispatchStatusWhatsAppNotification(
+            $reparacion,
+            in_array($nuevoEstado, ['reparado', 'listo_reparado'], true) ? 'listo_reparado' : $nuevoEstado
+        );
+
+        $notifType = 'success';
+        $notifMessage = 'Proceso de Post-Atención guardado exitosamente.';
+        if (! empty($waResult['sent'])) {
+            $notifMessage .= ' Notificación de WhatsApp enviada al cliente.';
+        } elseif (! empty($waResult['wa_url'])) {
+            $notifType = 'warning';
+            $notifMessage .= ' WhatsApp directo falló'
+                . (! empty($waResult['error']) ? " ({$waResult['error']})" : '')
+                . '. Se generó enlace para WhatsApp Web.';
+        }
 
         $redirect = redirect()->route('admin.reparaciones.show', $reparacion->id)
-            ->with('success', 'Proceso de Post-Atención guardado exitosamente. Notificación de retiro enviada al cliente.');
+            ->with('notification', [
+                'type' => $notifType,
+                'message' => $notifMessage,
+            ]);
 
-        if ($waUrl) {
-            $redirect->with('whatsapp_url', $waUrl);
+        if (! empty($waResult['wa_url'])) {
+            $redirect->with('whatsapp_url', $waResult['wa_url']);
         }
 
         return $redirect;
     }
 
-    private function sendWhatsAppNotificationOnPostServicioCompleted(OrdenReparacion $orden): ?string
+    /**
+     * Resuelve de forma segura la instancia de WhatsAppService para la sucursal de una orden.
+     *
+     * @return array{0: \App\Services\WhatsAppService, 1: ?\App\Models\Sucursal}
+     */
+    private function resolveWhatsAppServiceForOrder(OrdenReparacion $orden): array
     {
-        return $this->sendWhatsAppNotificationOnStatusChanged($orden, 'listo_reparado');
+        $sucursal = null;
+        if (! empty($orden->sucursal_id)) {
+            $sucursal = \App\Models\Sucursal::withoutGlobalScopes()
+                ->with(['empresa.pais', 'paisTelefono'])
+                ->find($orden->sucursal_id);
+        } elseif ($orden->relationLoaded('sucursal') && $orden->sucursal) {
+            $sucursal = $orden->sucursal;
+        }
+
+        if ($sucursal) {
+            $service = \App\Services\WhatsAppService::forSucursal($sucursal);
+
+            return [$service, $sucursal];
+        }
+
+        $empresaId = $orden->empresa_id ?? (auth()->user()?->empresa_id ?: 1);
+        $service = \App\Services\WhatsAppService::forCompany($empresaId);
+
+        return [$service, $service->getSucursal()];
+    }
+
+    /**
+     * Evalúa estrictamente si la respuesta del motor Python de WhatsApp fue exitosa.
+     */
+    private function isWhatsAppResultSuccessful(?array $result): bool
+    {
+        if (! is_array($result)) {
+            return false;
+        }
+
+        if (array_key_exists('success', $result)) {
+            return (bool) $result['success'];
+        }
+
+        return ! empty($result['messageId']) || ! empty($result['jobId']);
     }
 
     /**
      * Envía automáticamente notificación de WhatsApp al cliente cuando cambia el estado de una reparación.
+     * Retorna el enlace fallback wa.me únicamente si el envío directo falló.
      */
     public function sendWhatsAppNotificationOnStatusChanged(
         OrdenReparacion $orden,
@@ -1833,53 +1930,83 @@ class ReparacionController extends Controller
         ?string $comentario = null,
         ?string $customMessage = null
     ): ?string {
+        $result = $this->dispatchStatusWhatsAppNotification($orden, $nuevoEstado, $comentario, $customMessage);
+
+        return $result['wa_url'] ?? null;
+    }
+
+    /**
+     * Despacha notificación de cambio de estado vía motor Python (modo directo humanizado sync=true)
+     * y devuelve un resultado estructurado con estado real de entrega.
+     *
+     * @return array{sent: bool, skipped: bool, wa_url: ?string, error: ?string}
+     */
+    private function dispatchStatusWhatsAppNotification(
+        OrdenReparacion $orden,
+        string $nuevoEstado,
+        ?string $comentario = null,
+        ?string $customMessage = null
+    ): array {
         $targetPhone = null;
         $mensaje = null;
 
         try {
-            $user = auth()->user();
-            $empresaId = $orden->empresa_id ?? ($user ? $user->empresa_id : 1);
-            $sucursalTarget = $orden->sucursal_id ?: ($orden->sucursal ?: $empresaId);
-            $whatsappService = (\App\Services\WhatsAppService::forSucursal($sucursalTarget))->setTimeout(4);
+            [$whatsappService, $sucursal] = $this->resolveWhatsAppServiceForOrder($orden);
+
+            if ($sucursal && ! $sucursal->whatsapp_active) {
+                \Illuminate\Support\Facades\Log::info("WhatsApp desactivado para sucursal #{$sucursal->id}; omitiendo notificación de orden #{$orden->numero_orden}.");
+
+                return ['sent' => false, 'skipped' => true, 'wa_url' => null, 'error' => null];
+            }
 
             $orden->loadMissing(['cliente', 'marca', 'modelo', 'tecnico', 'empresa']);
 
-            $phone = !empty($orden->cliente_telefono) ? $orden->cliente_telefono : ($orden->cliente?->telefono);
-            if (!$phone && $orden->cliente_id) {
+            $phone = ! empty($orden->cliente_telefono) ? $orden->cliente_telefono : ($orden->cliente?->telefono);
+            if (! $phone && $orden->cliente_id) {
                 $clienteModel = \App\Models\Cliente::find($orden->cliente_id);
-                if ($clienteModel && !empty($clienteModel->telefono)) {
+                if ($clienteModel && ! empty($clienteModel->telefono)) {
                     $phone = $clienteModel->telefono;
                 }
             }
 
-            $targetPhone = $this->formatPhoneNumber($phone, $empresaId);
-            if (!$targetPhone) {
+            $targetPhone = $this->formatPhoneNumber($phone, $orden->empresa_id, $whatsappService);
+            if (! $targetPhone) {
                 \Illuminate\Support\Facades\Log::info("No se envió WhatsApp por cambio de estado en orden #{$orden->numero_orden}: el cliente no posee teléfono.");
-                return null;
+
+                return ['sent' => false, 'skipped' => true, 'wa_url' => null, 'error' => null];
             }
 
-            $mensaje = !empty($customMessage)
+            $mensaje = ! empty($customMessage)
                 ? $customMessage
                 : $this->generateStatusWhatsAppMessage($orden, $nuevoEstado, $comentario);
 
+            $clienteNombre = $orden->cliente?->nombre ?: ($orden->cliente_nombre ?: 'Cliente');
             $variables = [
-                'cliente' => $orden->cliente?->nombre ?: ($orden->cliente_nombre ?: 'Cliente'),
+                'cliente' => $clienteNombre,
                 'orden' => $orden->numero_orden,
                 'equipo' => trim(($orden->marca?->nombre ?: ($orden->marca_nombre ?: '')) . ' ' . ($orden->modelo?->nombre_comercial ?: ($orden->modelo_nombre ?: ''))),
             ];
 
-            $result = $whatsappService->sendText($targetPhone, $mensaje, $variables, false);
-
-            $isSuccess = $result && (
-                (isset($result['success']) && $result['success']) ||
-                isset($result['messageId']) ||
-                isset($result['jobId']) ||
-                isset($result['status']) ||
-                isset($result['key']) ||
-                isset($result['data'])
+            // Modo directo (sync=true): entrega inmediata con simulación humana y confirmación real del motor Python
+            $result = $whatsappService->sendText(
+                $targetPhone,
+                $mensaje,
+                $variables,
+                true,
+                null,
+                [
+                    'recipient_name' => $clienteNombre,
+                    'typingMinSec' => 1.5,
+                    'typingMaxSec' => 3.5,
+                ]
             );
 
-            // Registrar en historial el intento/éxito de notificación WhatsApp
+            $isSuccess = $this->isWhatsAppResultSuccessful($result);
+            $errorMsg = is_array($result) && ! empty($result['error'])
+                ? (string) $result['error']
+                : 'No se pudo conectar con la instancia de WhatsApp.';
+
+            // Registrar en historial el resultado real de la notificación
             \App\Models\OrdenReparacionHistorial::create([
                 'orden_id' => $orden->id,
                 'user_id' => auth()->id(),
@@ -1887,25 +2014,33 @@ class ReparacionController extends Controller
                 'estado_nuevo' => $nuevoEstado,
                 'comentario' => $isSuccess
                     ? "📲 Notificación de WhatsApp enviada automáticamente al cliente ({$targetPhone}) para estado: " . ucfirst(str_replace('_', ' ', $nuevoEstado))
-                    : "⚠️ Intento de envío WhatsApp al cliente ({$targetPhone}). " . (is_array($result) && !empty($result['error']) ? $result['error'] : ''),
+                    : "⚠️ Falló el envío automático de WhatsApp al cliente ({$targetPhone}): {$errorMsg}",
                 'mensaje_whatsapp' => $mensaje,
             ]);
 
             if ($isSuccess) {
-                return null;
+                return ['sent' => true, 'skipped' => false, 'wa_url' => null, 'error' => null];
             }
 
-            // Fallback: enlace directo a WhatsApp Web si la API no pudo entregarlo
-            return "https://wa.me/{$targetPhone}?text=" . urlencode($mensaje);
+            // Fallback: enlace directo a WhatsApp Web si el motor Python no pudo entregarlo
+            return [
+                'sent' => false,
+                'skipped' => false,
+                'wa_url' => "https://wa.me/{$targetPhone}?text=" . urlencode($mensaje),
+                'error' => $errorMsg,
+            ];
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error("Error enviando WhatsApp por cambio de estado en orden #{$orden->numero_orden}: " . $e->getMessage());
 
-            if (!empty($targetPhone) && !empty($mensaje)) {
-                return "https://wa.me/{$targetPhone}?text=" . urlencode($mensaje);
-            }
+            return [
+                'sent' => false,
+                'skipped' => false,
+                'wa_url' => (! empty($targetPhone) && ! empty($mensaje))
+                    ? "https://wa.me/{$targetPhone}?text=" . urlencode($mensaje)
+                    : null,
+                'error' => $e->getMessage(),
+            ];
         }
-
-        return null;
     }
 
     /**
@@ -2011,24 +2146,41 @@ class ReparacionController extends Controller
         }
     }
 
-    private function sendWhatsAppNotificationsOnOrderCreation(OrdenReparacion $orden): ?string
+    /**
+     * Envía las notificaciones de creación de orden al cliente y técnico vía microservicio Python.
+     *
+     * @return array{sent: bool, skipped: bool, wa_url: ?string, error: ?string}
+     */
+    private function sendWhatsAppNotificationsOnOrderCreation(OrdenReparacion $orden): array
     {
+        $clientePhone = null;
+        $mensajeCliente = null;
+
         try {
             $user = auth()->user();
             $empresaId = $orden->empresa_id ?? ($user ? $user->empresa_id : 1);
-            $whatsappService = (\App\Services\WhatsAppService::forSucursal($orden->sucursal_id ?? $orden->sucursal ?? $empresaId))->setTimeout(3);
+            [$whatsappService, $sucursal] = $this->resolveWhatsAppServiceForOrder($orden);
+
+            if ($sucursal && ! $sucursal->whatsapp_active) {
+                return ['sent' => false, 'skipped' => true, 'wa_url' => null, 'error' => null];
+            }
+
             $currencySymbol = $this->getCurrencySymbol();
 
             $waUrlCliente = null;
+            $clienteSent = false;
+            $clienteError = null;
+            $engineReachable = true;
 
             // 1. Notificación al Cliente
-            $clientePhone = $this->formatPhoneNumber($orden->cliente_telefono, $empresaId);
-            if (!$clientePhone && $orden->cliente_id) {
+            $rawClientePhone = $orden->cliente_telefono;
+            if (! $rawClientePhone && $orden->cliente_id) {
                 $clienteModel = \App\Models\Cliente::find($orden->cliente_id);
-                if ($clienteModel && !empty($clienteModel->telefono)) {
-                    $clientePhone = $this->formatPhoneNumber($clienteModel->telefono, $empresaId);
+                if ($clienteModel && ! empty($clienteModel->telefono)) {
+                    $rawClientePhone = $clienteModel->telefono;
                 }
             }
+            $clientePhone = $this->formatPhoneNumber($rawClientePhone, $empresaId, $whatsappService);
 
             if ($clientePhone) {
                 $costoFmt = number_format((float) $orden->costo_estimado, 2);
@@ -2040,7 +2192,7 @@ class ReparacionController extends Controller
                     . "*Orden:* #{$orden->numero_orden}\n"
                     . "*Cliente:* {$orden->cliente_nombre}\n"
                     . "*Equipo:* {$orden->marca_nombre} {$orden->modelo_nombre} ({$orden->tipo_dispositivo})\n"
-                    . (!empty($orden->imei_serie) ? "*IMEI/Serie:* {$orden->imei_serie}\n" : "")
+                    . (! empty($orden->imei_serie) ? "*IMEI/Serie:* {$orden->imei_serie}\n" : '')
                     . "*Falla Reportada:* {$orden->descripcion_falla}\n"
                     . "*Costo Estimado:* {$currencySymbol}{$costoFmt}\n"
                     . "*Anticipo:* {$currencySymbol}{$anticipoFmt}\n"
@@ -2049,85 +2201,126 @@ class ReparacionController extends Controller
                     . "{$trackingUrl}\n\n"
                     . "Estimado(a) *{$orden->cliente_nombre}*, su equipo ha sido recibido exitosamente en nuestro taller. Le mantendremos informado sobre el estatus de su reparacion. Gracias por su confianza.";
 
-                $whatsappService->sendMessage($clientePhone, $mensajeCliente);
-                $waUrlCliente = "https://wa.me/{$clientePhone}?text=" . urlencode($mensajeCliente);
+                $resCliente = $whatsappService->sendText(
+                    $clientePhone,
+                    $mensajeCliente,
+                    [
+                        'cliente' => $orden->cliente_nombre ?: 'Cliente',
+                        'orden' => $orden->numero_orden,
+                        'equipo' => trim("{$orden->marca_nombre} {$orden->modelo_nombre}"),
+                    ],
+                    true,
+                    null,
+                    [
+                        'recipient_name' => $orden->cliente_nombre ?: 'Cliente',
+                        'typingMinSec' => 1.5,
+                        'typingMaxSec' => 3.0,
+                    ]
+                );
+
+                $clienteSent = $this->isWhatsAppResultSuccessful($resCliente);
+                if (! $clienteSent) {
+                    $clienteError = is_array($resCliente) && ! empty($resCliente['error'])
+                        ? (string) $resCliente['error']
+                        : 'No se pudo conectar con la instancia de WhatsApp.';
+                    $waUrlCliente = "https://wa.me/{$clientePhone}?text=" . urlencode($mensajeCliente);
+
+                    if (str_contains(strtolower($clienteError), 'fuera de línea') || str_contains(strtolower($clienteError), 'no está conectada')) {
+                        $engineReachable = false;
+                    }
+                }
+
+                OrdenReparacionHistorial::create([
+                    'orden_id' => $orden->id,
+                    'user_id' => auth()->id(),
+                    'estado_anterior' => 'recibido',
+                    'estado_nuevo' => 'recibido',
+                    'comentario' => $clienteSent
+                        ? "📲 Confirmación de recepción enviada por WhatsApp al cliente ({$clientePhone})"
+                        : "⚠️ Falló el envío automático de confirmación por WhatsApp al cliente ({$clientePhone}): {$clienteError}",
+                    'mensaje_whatsapp' => $mensajeCliente,
+                ]);
             }
 
-            // 2. Notificación al Técnico Asignado (si aplica)
-            if ($orden->tecnico_id) {
+            // 2. Notificación al Técnico Asignado (si aplica y la instancia está operativa)
+            if ($orden->tecnico_id && $engineReachable) {
                 $tecnico = \App\Models\User::find($orden->tecnico_id);
-                if ($tecnico && !empty($tecnico->telefono)) {
-                    $tecnicoPhone = $this->formatPhoneNumber($tecnico->telefono, $empresaId);
+                if ($tecnico && ! empty($tecnico->telefono)) {
+                    $tecnicoPhone = $this->formatPhoneNumber($tecnico->telefono, $empresaId, $whatsappService);
                     if ($tecnicoPhone) {
                         $mensajeTecnico = "*NUEVA ORDEN DE REPARACION ASIGNADA*\n\n"
                             . "*Orden:* #{$orden->numero_orden}\n"
                             . "*Tecnico:* {$tecnico->name}\n"
                             . "*Equipo:* {$orden->marca_nombre} {$orden->modelo_nombre} ({$orden->tipo_dispositivo})\n"
-                            . (!empty($orden->imei_serie) ? "*IMEI/Serie:* {$orden->imei_serie}\n" : "")
+                            . (! empty($orden->imei_serie) ? "*IMEI/Serie:* {$orden->imei_serie}\n" : '')
                             . "*Cliente:* {$orden->cliente_nombre}\n"
                             . "*Falla Reportada:* {$orden->descripcion_falla}\n"
-                            . (!empty($orden->observaciones_fisicas) ? "*Observaciones:* {$orden->observaciones_fisicas}\n" : "")
+                            . (! empty($orden->observaciones_fisicas) ? "*Observaciones:* {$orden->observaciones_fisicas}\n" : '')
                             . "\nHola *{$tecnico->name}*, se te ha asignado una nueva orden de servicio tecnico. Por favor ingresa al sistema para iniciar el diagnostico.";
 
-                        $whatsappService->sendMessage($tecnicoPhone, $mensajeTecnico);
+                        $whatsappService->sendText(
+                            $tecnicoPhone,
+                            $mensajeTecnico,
+                            [
+                                'cliente' => $tecnico->name,
+                                'orden' => $orden->numero_orden,
+                            ],
+                            true,
+                            null,
+                            [
+                                'recipient_name' => $tecnico->name,
+                                'typingMinSec' => 1.0,
+                                'typingMaxSec' => 2.0,
+                            ]
+                        );
                     }
                 }
             }
 
-            return $waUrlCliente;
+            return [
+                'sent' => $clienteSent,
+                'skipped' => empty($clientePhone),
+                'wa_url' => $waUrlCliente,
+                'error' => $clienteError,
+            ];
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Error enviando notificaciones de WhatsApp en creación de orden: ' . $e->getMessage());
+
+            return [
+                'sent' => false,
+                'skipped' => false,
+                'wa_url' => (! empty($clientePhone) && ! empty($mensajeCliente))
+                    ? "https://wa.me/{$clientePhone}?text=" . urlencode($mensajeCliente)
+                    : null,
+                'error' => $e->getMessage(),
+            ];
         }
-        return null;
     }
 
-    private function formatPhoneNumber(?string $phone, ?int $empresaId = null): ?string
+    private function formatPhoneNumber(?string $phone, ?int $empresaId = null, ?\App\Services\WhatsAppService $whatsappService = null): ?string
     {
         if (empty($phone)) {
             return null;
         }
 
-        // 1. Eliminar cualquier carácter que no sea un número (elimina el signo +, espacios, guiones, etc.)
-        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
-        if (empty($cleanPhone)) {
-            return null;
-        }
+        $countryCode = $whatsappService?->getCountryCode();
 
-        // 2. Obtener el prefijo telefónico del país de la empresa
-        $codigoPais = null;
-        if ($empresaId) {
-            $empresa = \App\Models\Empresa::with('paisTelefono')->find($empresaId);
+        if (! $countryCode && $empresaId) {
+            $empresa = \App\Models\Empresa::with(['paisTelefono', 'pais'])->find($empresaId);
             if ($empresa) {
-                if ($empresa->paisTelefono && !empty($empresa->paisTelefono->codigo_telefonico)) {
-                    $codigoPais = preg_replace('/[^0-9]/', '', $empresa->paisTelefono->codigo_telefonico);
-                } elseif ($empresa->pais_telefono_id) {
-                    $pais = \App\Models\Pais::find($empresa->pais_telefono_id);
-                    if ($pais && !empty($pais->codigo_telefonico)) {
-                        $codigoPais = preg_replace('/[^0-9]/', '', $pais->codigo_telefonico);
-                    }
-                }
+                $countryCode = $empresa->paisTelefono?->codigo_telefonico
+                    ?: $empresa->pais?->codigo_telefonico;
             }
         }
 
-        // Fallback si no se especificó o no se encontró empresa: buscar país predeterminado activo
-        if (!$codigoPais) {
+        if (! $countryCode) {
             $paisDefault = \App\Models\Pais::where('activo', true)->first();
-            if ($paisDefault && !empty($paisDefault->codigo_telefonico)) {
-                $codigoPais = preg_replace('/[^0-9]/', '', $paisDefault->codigo_telefonico);
-            }
+            $countryCode = $paisDefault?->codigo_telefonico ?: '+58';
         }
 
-        // 3. Formatear el número agregando el código de país si aún no lo tiene
-        if ($codigoPais) {
-            $phoneWithoutZero = ltrim($cleanPhone, '0');
+        $formatted = \App\Services\WhatsAppService::formatPhoneNumber($phone, $countryCode);
 
-            if (!str_starts_with($cleanPhone, $codigoPais) && !str_starts_with($phoneWithoutZero, $codigoPais)) {
-                $cleanPhone = $codigoPais . $phoneWithoutZero;
-            }
-        }
-
-        // Retornar número limpio de sólo dígitos sin el signo +
-        return $cleanPhone;
+        return $formatted !== '' ? $formatted : null;
     }
 
     public function apiFind(\Illuminate\Http\Request $request)

@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { TemplateSettingsProvider } from '@/hooks/use-template-settings';
 import AdminSaasLayout from '@/layouts/admin/admin-saas-layout';
 import type { BreadcrumbItem } from '@/types';
-import { notifyError, notifySuccess } from '@/utils/notifications';
+import { notifyError, notifyInfo, notifySuccess, notifyWarning } from '@/utils/notifications';
 
 export default function AdminLayout({
     breadcrumbs = [],
@@ -13,7 +13,7 @@ export default function AdminLayout({
     children: React.ReactNode;
 }) {
     const { props } = usePage();
-    const { notification } = props as unknown as { notification: { type: 'success' | 'error'; message: string } };
+    const { notification } = props as unknown as { notification: { type: 'success' | 'error' | 'warning' | 'info'; message: string } };
 
     useEffect(() => {
         if (notification) {
@@ -23,6 +23,12 @@ export default function AdminLayout({
                     break;
                 case 'error':
                     notifyError(notification.message);
+                    break;
+                case 'warning':
+                    notifyWarning(notification.message);
+                    break;
+                case 'info':
+                    notifyInfo(notification.message);
                     break;
             }
         }

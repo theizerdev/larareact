@@ -164,7 +164,7 @@ class PublicReparacionTrackingController extends Controller
                         'logo' => $empresa?->logo ?: $empresa?->logo_mini,
                         'direccion' => $sucursal?->direccion ?: ($empresa?->direccion ?: ''),
                         'telefono' => $sucursal?->telefono ?: ($empresa?->telefono ?: ''),
-                        'whatsapp_phone' => $empresa?->whatsapp_phone ?: ($empresa?->telefono ?: ''),
+                        'whatsapp_phone' => $sucursal?->whatsapp_phone ?: ($sucursal?->telefono ?: ($empresa?->telefono ?: '')),
                         'email' => $empresa?->email ?: '',
                     ],
                 ];
@@ -185,6 +185,11 @@ class PublicReparacionTrackingController extends Controller
             }
         }
 
+        $defaultBranch = $targetEmpresa
+            ? ($targetEmpresa->sucursales()->where('whatsapp_active', true)->whereNotNull('whatsapp_phone')->first()
+                ?? $targetEmpresa->sucursales()->first())
+            : null;
+
         return Inertia::render('public/ReparacionTracking', [
             'orden' => $ordenData,
             'empresaId' => $targetEmpresa?->id,
@@ -195,9 +200,9 @@ class PublicReparacionTrackingController extends Controller
                 'id' => $targetEmpresa->id,
                 'nombre' => $targetEmpresa->nombre_comercial ?: $targetEmpresa->razon_social,
                 'logo' => $targetEmpresa->logo ?: $targetEmpresa->logo_mini,
-                'telefono' => $targetEmpresa->telefono,
-                'whatsapp_phone' => $targetEmpresa->whatsapp_phone ?: $targetEmpresa->telefono,
-                'direccion' => $targetEmpresa->direccion,
+                'telefono' => $defaultBranch?->telefono ?: $targetEmpresa->telefono,
+                'whatsapp_phone' => $defaultBranch?->whatsapp_phone ?: ($defaultBranch?->telefono ?: $targetEmpresa->telefono),
+                'direccion' => $defaultBranch?->direccion ?: $targetEmpresa->direccion,
             ] : null,
         ]);
     }
