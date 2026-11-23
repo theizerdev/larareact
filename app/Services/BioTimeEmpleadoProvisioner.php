@@ -43,6 +43,8 @@ class BioTimeEmpleadoProvisioner
     private const CAMPOS = [
         'nombres' => 'first_name',
         'apellidos' => 'last_name',
+        'documento_identidad' => 'emp_code',
+        'codigo_acceso' => 'emp_code',
         'tarjeta_acceso_1' => 'card_no',
         'curp' => 'national',
         'telefono' => 'mobile',
@@ -90,13 +92,32 @@ class BioTimeEmpleadoProvisioner
             ->orderByRaw('CAST(emp_code AS UNSIGNED)')
             ->get(), $sinReloj);
 
-        // 1. Auto-vincular pendientes cuyo documento, tarjeta o CURP ya coincida con Hoshō
+        $deptos = DB::table('biotime_departamentos')->where('empresa_id', $empresa->id)->pluck('dept_name', 'dept_code');
+        $cargos = DB::table('biotime_cargos')->where('empresa_id', $empresa->id)->pluck('position_name', 'position_code');
+
+        // 1. ACTUALIZAR ya vinculados primero para alinear codigo_acceso/documento_identidad y liberar códigos viejos
+        if (! $dryRun) {
+            foreach ($bios->whereNotNull('empleado_id') as $bio) {
+                if ($this->actualizar($bio, $empresa, $cambios[$bio->id] ?? [], $deptos, $cargos, $forceUpdate)) {
+                    $res['actualizados']++;
+                }
+            }
+        }
+
+        // 2. Auto-vincular pendientes cuyo documento, código de acceso, tarjeta o CURP ya coincida con Hoshō
+        $vinculadosIds = BiotimeEmpleado::query()
+            ->where('empresa_id', $empresa->id)
+            ->whereNotNull('empleado_id')
+            ->pluck('empleado_id');
+
         foreach ($bios->whereNull('empleado_id') as $bio) {
             $codigo = trim((string) $bio->emp_code);
             $existente = Empleado::withoutTenant()
                 ->where('empresa_id', $empresa->id)
+                ->when($vinculadosIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $vinculadosIds))
                 ->where(function ($q) use ($codigo, $bio) {
-                    $q->where('documento_identidad', $codigo);
+                    $q->where('documento_identidad', $codigo)
+                        ->orWhere('codigo_acceso', $codigo);
                     if (! empty($bio->card_no)) {
                         $q->orWhere('tarjeta_acceso_1', trim((string) $bio->card_no));
                     }
@@ -108,9 +129,14 @@ class BioTimeEmpleadoProvisioner
 
             if ($existente) {
                 $bio->update(['empleado_id' => $existente->id, 'link_status' => 'auto']);
+                $vinculadosIds->push($existente->id);
                 BiotimeMarcaje::query()
                     ->where('biotime_empleado_id', $bio->id)
                     ->update(['empleado_id' => $existente->id]);
+
+                if (! $dryRun && $this->actualizar($bio, $empresa, $cambios[$bio->id] ?? [], $deptos, $cargos, $forceUpdate)) {
+                    $res['actualizados']++;
+                }
             }
         }
 
@@ -138,22 +164,34 @@ class BioTimeEmpleadoProvisioner
             }
         }
 
-        $deptos = DB::table('biotime_departamentos')->where('empresa_id', $empresa->id)->pluck('dept_name', 'dept_code');
-        $cargos = DB::table('biotime_cargos')->where('empresa_id', $empresa->id)->pluck('position_name', 'position_code');
-
-        // 2. CREAR: Los que no están en Hosho se crean con todos los datos que están en BioTime
+        // 3. CREAR: Los que no están en Hosho se crean con todos los datos que están en BioTime
         foreach ($pendientes as $bio) {
             $codigo = trim((string) $bio->emp_code);
 
-            // Verificación defensiva contra duplicados
+            if ($codigo === '') {
+                $res['omitidos'][] = "{$bio->nombre_completo}: sin emp_code en BioTime.";
+                continue;
+            }
+
+            // Verificación defensiva contra duplicados en la misma empresa
             $existente = Empleado::withoutTenant()
                 ->where('empresa_id', $empresa->id)
-                ->where('documento_identidad', $codigo)
+                ->when($vinculadosIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $vinculadosIds))
+                ->where(fn ($q) => $q->where('documento_identidad', $codigo)->orWhere('codigo_acceso', $codigo))
                 ->first();
 
             if ($existente) {
                 $bio->update(['empleado_id' => $existente->id, 'link_status' => 'auto']);
+                $vinculadosIds->push($existente->id);
                 BiotimeMarcaje::query()->where('biotime_empleado_id', $bio->id)->update(['empleado_id' => $existente->id]);
+                if (! $dryRun && $this->actualizar($bio, $empresa, $cambios[$bio->id] ?? [], $deptos, $cargos, $forceUpdate)) {
+                    $res['actualizados']++;
+                }
+                continue;
+            }
+
+            if (Empleado::withoutTenant()->where('documento_identidad', $codigo)->exists()) {
+                $res['omitidos'][] = "{$codigo} {$bio->nombre_completo}: el número de empleado ya está ocupado en otra empresa.";
                 continue;
             }
 
@@ -163,20 +201,6 @@ class BioTimeEmpleadoProvisioner
             if (! $dryRun) {
                 [$suc, $usr] = $contexto;
                 DB::transaction(fn () => $this->crear($bio, $codigo, $empresa, $suc, $usr, $deptos, $cargos));
-            }
-        }
-
-        // 3. ACTUALIZAR: Los que están en Hosho se actualizan con todos los datos de BioTime
-        if (! $dryRun) {
-            $vinculados = $this->conReloj(BiotimeEmpleado::query()
-                ->where('empresa_id', $empresa->id)
-                ->whereNotNull('empleado_id')
-                ->get(), $sinReloj);
-
-            foreach ($vinculados as $bio) {
-                if ($this->actualizar($bio, $empresa, $cambios[$bio->id] ?? [], $deptos, $cargos, $forceUpdate)) {
-                    $res['actualizados']++;
-                }
             }
         }
 
@@ -291,10 +315,16 @@ class BioTimeEmpleadoProvisioner
             $curp = null;
         }
 
+        $codigoAcceso = null;
+        if ($codigo !== '' && mb_strlen($codigo) <= 20 && ! Empleado::withoutTenant()->where('codigo_acceso', $codigo)->exists()) {
+            $codigoAcceso = $codigo;
+        }
+
         $empleado = Empleado::create([
             'nombres' => $bio->first_name ?: 'N/A',
             'apellidos' => $bio->last_name ?: 'N/A',
             'documento_identidad' => $codigo,
+            'codigo_acceso' => $codigoAcceso,
             'tarjeta_acceso_1' => $cardNo,
             'curp' => $curp,
             'telefono' => $bio->mobile ? trim((string) $bio->mobile) : null,
@@ -370,9 +400,16 @@ class BioTimeEmpleadoProvisioner
             $actual = $actual instanceof \DateTimeInterface ? $actual->format('Y-m-d') : $actual;
 
             $cambioEnReloj = in_array($origen, $cambiados, true);
+            $esCodigoBioTime = in_array($columna, ['codigo_acceso', 'documento_identidad'], true);
 
-            if (blank($actual) || $forceUpdate || ($cambioEnReloj && (string) $actual !== (string) $valor)) {
+            if (blank($actual) || $forceUpdate || $esCodigoBioTime || ($cambioEnReloj && (string) $actual !== (string) $valor)) {
                 if ((string) $actual !== (string) $valor) {
+                    if ($columna === 'codigo_acceso' && (mb_strlen((string) $valor) > 20 || Empleado::withoutTenant()->where('codigo_acceso', $valor)->whereKeyNot($empleado->id)->exists())) {
+                        continue;
+                    }
+                    if ($columna === 'documento_identidad' && Empleado::withoutTenant()->where('documento_identidad', $valor)->whereKeyNot($empleado->id)->exists()) {
+                        continue;
+                    }
                     // Una tarjeta ya usada por otro empleado no se copia: dos
                     // personas con el mismo gafete abrirían la puerta una por otra.
                     if ($columna === 'tarjeta_acceso_1' && Empleado::withoutTenant()->where('tarjeta_acceso_1', $valor)->whereKeyNot($empleado->id)->exists()) {

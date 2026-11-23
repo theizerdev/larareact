@@ -422,8 +422,14 @@ class BioTimeSyncService
             return 0;
         }
 
+        $vinculadosIds = BiotimeEmpleado::query()
+            ->where('empresa_id', $empresa->id)
+            ->whereNotNull('empleado_id')
+            ->pluck('empleado_id');
+
         $empleados = Empleado::query()
             ->when($empresa->id, fn ($q) => $q->where('empresa_id', $empresa->id))
+            ->when($vinculadosIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $vinculadosIds))
             ->get(['id', 'documento_identidad', 'curp', 'codigo_acceso', 'tarjeta_acceso_1', 'tarjeta_acceso_2', 'tarjeta_acceso_3']);
 
         // Índice normalizado valor -> [empleado_id, ...]

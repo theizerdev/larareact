@@ -354,8 +354,9 @@ class EmpleadoImportService
                     'status' => true,
                 ];
 
-                if (!empty($codigoAccesoExcel)) {
-                    $occupied = Empleado::where('codigo_acceso', $codigoAccesoExcel)
+                if (!empty($codigoAccesoExcel) && mb_strlen((string) $codigoAccesoExcel) <= 20) {
+                    $occupied = Empleado::withoutTenant()
+                        ->where('codigo_acceso', $codigoAccesoExcel)
                         ->when($existing, fn($q) => $q->where('id', '!=', $existing->id))
                         ->exists();
 
@@ -364,7 +365,7 @@ class EmpleadoImportService
                     }
                 }
 
-                // Si viene codigo_acceso válido en el Excel, usarlo. Si no, conservar el existente o generar uno de 8 dígitos.
+                // Si viene codigo_acceso válido en el Excel, usarlo. Si no, conservar el existente o alinear con el número de empleado.
                 // Generation happens inside createWithRetry's closure (not before it) so a
                 // collision retry actually recomputes a fresh code instead of reusing the
                 // one that just failed - see AccessCodeService::createWithRetry.
@@ -373,18 +374,20 @@ class EmpleadoImportService
                     if (empty($dataToSave['codigo_acceso']) && !empty($existing->codigo_acceso)) {
                         $dataToSave['codigo_acceso'] = $existing->codigo_acceso;
                     }
-                    \App\Services\AccessCodeService::createWithRetry(function () use ($existing, &$dataToSave, $needsCode, $sucursalId) {
+                    $docParaCodigo = (string) ($dataToSave['documento_identidad'] ?? $existing->documento_identidad ?? '');
+                    \App\Services\AccessCodeService::createWithRetry(function () use ($existing, &$dataToSave, $needsCode, $docParaCodigo, $sucursalId) {
                         if ($needsCode) {
-                            $dataToSave['codigo_acceso'] = \App\Services\AccessCodeService::generate('empleado', $sucursalId);
+                            $dataToSave['codigo_acceso'] = $this->resolveDefaultAccessCode($docParaCodigo, $sucursalId, $existing->id);
                         }
                         $existing->update($dataToSave);
                     });
                     $empleado = $existing;
                     $updatedCount++;
                 } else {
-                    $empleado = \App\Services\AccessCodeService::createWithRetry(function () use ($dataToSave, $sucursalId) {
+                    $docParaCodigo = (string) ($dataToSave['documento_identidad'] ?? '');
+                    $empleado = \App\Services\AccessCodeService::createWithRetry(function () use ($dataToSave, $docParaCodigo, $sucursalId) {
                         if (empty($dataToSave['codigo_acceso'])) {
-                            $dataToSave['codigo_acceso'] = \App\Services\AccessCodeService::generate('empleado', $sucursalId);
+                            $dataToSave['codigo_acceso'] = $this->resolveDefaultAccessCode($docParaCodigo, $sucursalId);
                         }
                         return Empleado::create($dataToSave);
                     });
@@ -442,6 +445,27 @@ class EmpleadoImportService
                 'message' => 'Ocurrió un error al procesar la importación: ' . $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Prefers using the employee ID/document code directly so there is a single unified
+     * code; falls back to generating an internal code only if empty, too long, or taken.
+     */
+    private function resolveDefaultAccessCode(string $doc, ?int $sucursalId, ?int $excludeEmpleadoId = null): string
+    {
+        $doc = trim($doc);
+        if ($doc !== '' && mb_strlen($doc) <= 20) {
+            $occupied = Empleado::withoutTenant()
+                ->where('codigo_acceso', $doc)
+                ->when($excludeEmpleadoId, fn ($q) => $q->where('id', '!=', $excludeEmpleadoId))
+                ->exists();
+
+            if (! $occupied) {
+                return $doc;
+            }
+        }
+
+        return \App\Services\AccessCodeService::generate('empleado', $sucursalId);
     }
 
     /**

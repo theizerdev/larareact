@@ -214,7 +214,7 @@ class RelojChecadorKioskoController extends Controller
                 'apellidos' => $empleado->apellidos,
                 'correo' => $empleado->correo,
                 'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'numero' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'numero' => $empleado->documento_identidad ?: $empleado->codigo_acceso,
                 'codigo_acceso' => $empleado->codigo_acceso,
                 'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
                 'departamento' => $empleado->departamento?->nombre,

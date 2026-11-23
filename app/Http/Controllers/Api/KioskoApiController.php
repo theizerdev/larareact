@@ -488,6 +488,9 @@ class KioskoApiController extends Controller
             'message' => 'Enrolamiento completado.',
             'empleado' => [
                 'id' => $empleado->id,
+                'documento_identidad' => $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'numero_empleado' => $empleado->documento_identidad ?: $empleado->codigo_acceso,
                 'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
                 ...$this->datosEnrolamiento($empleado),
             ],
@@ -572,6 +575,9 @@ class KioskoApiController extends Controller
             'message' => 'Enrolamiento completado.',
             'empleado' => [
                 'id' => $empleado->id,
+                'documento_identidad' => $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'numero_empleado' => $empleado->documento_identidad ?: $empleado->codigo_acceso,
                 'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
                 ...$this->datosEnrolamiento($empleado),
             ],
@@ -627,10 +633,16 @@ class KioskoApiController extends Controller
             throw ValidationException::withMessages(['departamento_id' => 'El área no es válida.']);
         }
 
+        $codigoAccesoInicial = mb_strlen($numero) <= 20
+            && ! Empleado::withoutTenant()->where('codigo_acceso', $numero)->exists()
+            ? $numero
+            : null;
+
         $empleado = AccessCodeService::createWithRetry(fn () => Empleado::create([
             'nombres' => trim($data['nombres']),
             'apellidos' => trim($data['apellidos']),
             'documento_identidad' => $numero,
+            'codigo_acceso' => $codigoAccesoInicial,
             'departamento_id' => $data['departamento_id'] ?? null,
             'empresa_id' => $user->empresa_id,
             'sucursal_id' => $user->sucursal_id,

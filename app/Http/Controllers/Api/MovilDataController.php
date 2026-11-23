@@ -149,7 +149,7 @@ class MovilDataController extends Controller
             'id' => $e->id,
             'nombre_completo' => $e->nombre_completo,
             'documento_identidad' => $e->documento_identidad,
-            'codigo_acceso' => $e->codigo_acceso,
+            'codigo_acceso' => $e->codigo_acceso ?: $e->documento_identidad,
             'curp' => $e->curp,
             'telefono' => $e->telefono,
             'correo' => $e->correo,

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BiotimeEmpleado;
 use App\Models\Empleado;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -100,6 +101,16 @@ class EmpleadoEnrolamientoService
                 throw ValidationException::withMessages([
                     'biotime' => $mensajeFormateado,
                 ]);
+            }
+
+            if (($res['accion'] ?? '') === 'omitido') {
+                $bio = BiotimeEmpleado::query()
+                    ->where('empresa_id', $empleado->empresa_id)
+                    ->where('empleado_id', $empleado->id)
+                    ->first();
+                if ($bio !== null) {
+                    $pusher->sincronizarCodigoDesdeBioTime($empleado->fresh(), $bio);
+                }
             }
         } catch (ValidationException $ve) {
             throw $ve;

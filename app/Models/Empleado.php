@@ -19,7 +19,13 @@ class Empleado extends Model
     {
         static::creating(function ($empleado) {
             if (empty($empleado->codigo_acceso)) {
-                $empleado->codigo_acceso = \App\Services\AccessCodeService::generate('empleado', $empleado->sucursal_id);
+                $doc = trim((string) ($empleado->documento_identidad ?? ''));
+
+                if ($doc !== '' && mb_strlen($doc) <= 20 && ! static::withoutTenant()->where('codigo_acceso', $doc)->exists()) {
+                    $empleado->codigo_acceso = $doc;
+                } else {
+                    $empleado->codigo_acceso = \App\Services\AccessCodeService::generate('empleado', $empleado->sucursal_id);
+                }
             }
         });
 

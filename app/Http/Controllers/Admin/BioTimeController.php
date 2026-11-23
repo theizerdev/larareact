@@ -12,6 +12,7 @@ use App\Models\BiotimePermiso;
 use App\Models\BiotimeTurno;
 use App\Models\Empleado;
 use App\Models\Empresa;
+use App\Services\BioTimeEmpleadoPusher;
 use App\Services\BioTimeFotoService;
 use App\Services\BioTimeService;
 use App\Services\BioTimeSyncService;
@@ -159,14 +160,25 @@ class BioTimeController extends Controller
             'empleado_id' => 'nullable|integer|exists:empleados,id',
         ]);
 
+        $empleado = null;
+        if (! empty($validated['empleado_id'])) {
+            $empleado = Empleado::withoutTenant()
+                ->where('empresa_id', $biotimeEmpleado->empresa_id)
+                ->findOrFail($validated['empleado_id']);
+        }
+
         $biotimeEmpleado->update([
-            'empleado_id' => $validated['empleado_id'] ?? null,
-            'link_status' => empty($validated['empleado_id']) ? 'unmatched' : 'manual',
+            'empleado_id' => $empleado?->id,
+            'link_status' => $empleado ? 'manual' : 'unmatched',
         ]);
 
         // Propaga el vínculo a los marcajes ya espejados de este empleado.
         BiotimeMarcaje::where('biotime_empleado_id', $biotimeEmpleado->id)
-            ->update(['empleado_id' => $validated['empleado_id'] ?? null]);
+            ->update(['empleado_id' => $empleado?->id]);
+
+        if ($empleado) {
+            app(BioTimeEmpleadoPusher::class)->sincronizarCodigoDesdeBioTime($empleado, $biotimeEmpleado);
+        }
 
         return back()->with('notification', [
             'type' => 'success',

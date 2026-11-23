@@ -175,6 +175,7 @@ class SmurfitDemo extends Command
             $empleados[] = Empleado::withoutGlobalScopes()->updateOrCreate(
                 ['documento_identidad' => $numero],
                 [
+                    'codigo_acceso' => $numero,
                     'nombres' => $nombres,
                     'apellidos' => $apellidos,
                     'genero' => $genero,

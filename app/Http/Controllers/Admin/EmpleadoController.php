@@ -107,11 +107,40 @@ class EmpleadoController extends Controller
     {
         $data = $request->validated();
 
+        $data['documento_identidad'] = isset($data['documento_identidad'])
+            ? trim((string) $data['documento_identidad'])
+            : null;
+        $data['codigo_acceso'] = isset($data['codigo_acceso'])
+            ? trim((string) $data['codigo_acceso'])
+            : null;
+
+        if (empty($data['documento_identidad']) && ! empty($data['codigo_acceso'])) {
+            $docOcupado = Empleado::withoutTenant()
+                ->where('documento_identidad', $data['codigo_acceso'])
+                ->exists();
+            if (! $docOcupado) {
+                $data['documento_identidad'] = $data['codigo_acceso'];
+            }
+        }
+
         if (empty($data['documento_identidad'])) {
             do {
                 $code = (string) mt_rand(100000, 999999);
-            } while (Empleado::where('documento_identidad', $code)->exists());
+            } while (
+                Empleado::withoutTenant()
+                    ->where(fn ($q) => $q->where('documento_identidad', $code)->orWhere('codigo_acceso', $code))
+                    ->exists()
+            );
             $data['documento_identidad'] = $code;
+        }
+
+        if (empty($data['codigo_acceso']) && mb_strlen($data['documento_identidad']) <= 20) {
+            $codigoOcupado = Empleado::withoutTenant()
+                ->where('codigo_acceso', $data['documento_identidad'])
+                ->exists();
+            if (! $codigoOcupado) {
+                $data['codigo_acceso'] = $data['documento_identidad'];
+            }
         }
 
         $data['foto_empleado'] = $this->handleImageUpload($request->input('foto_empleado'), 'foto_empleado');
@@ -349,6 +378,32 @@ class EmpleadoController extends Controller
         }
         if ($request->filled('intervalo_geolocalizacion_minutos')) {
             $data['intervalo_geolocalizacion_minutos'] = (int) $request->input('intervalo_geolocalizacion_minutos');
+        }
+
+        if (array_key_exists('documento_identidad', $data)) {
+            $doc = trim((string) ($data['documento_identidad'] ?? ''));
+            $data['documento_identidad'] = $doc !== '' ? $doc : $empleado->documento_identidad;
+        }
+
+        if (array_key_exists('codigo_acceso', $data)) {
+            $cod = trim((string) ($data['codigo_acceso'] ?? ''));
+            if ($cod !== '') {
+                $data['codigo_acceso'] = $cod;
+            } else {
+                $docActual = $data['documento_identidad'] ?? $empleado->documento_identidad;
+                if (
+                    filled($docActual)
+                    && mb_strlen((string) $docActual) <= 20
+                    && ! Empleado::withoutTenant()
+                        ->whereKeyNot($empleado->id)
+                        ->where('codigo_acceso', $docActual)
+                        ->exists()
+                ) {
+                    $data['codigo_acceso'] = (string) $docActual;
+                } else {
+                    unset($data['codigo_acceso']);
+                }
+            }
         }
 
         $empleado->update($data);

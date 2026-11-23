@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\EnrolamientoInvitacionMail;
+use App\Models\BiotimeEmpleado;
 use App\Models\Empleado;
 use App\Models\Empresa;
 use App\Models\Pais;
@@ -37,7 +38,7 @@ class EmpleadoEnrolamientoController extends Controller
         return Inertia::render('admin/Empleados/Enrolamiento', [
             'empleado' => [
                 'id' => $empleado->id,
-                'numero' => $empleado->documento_identidad,
+                'numero' => $empleado->documento_identidad ?: $empleado->codigo_acceso,
                 'nombres' => $empleado->nombres,
                 'apellidos' => $empleado->apellidos,
                 'area' => $empleado->departamento?->nombre,
@@ -87,7 +88,8 @@ class EmpleadoEnrolamientoController extends Controller
         $user = auth()->user();
 
         if (!empty($data['empleado_id'])) {
-            $empleado = Empleado::findOrFail($data['empleado_id']);
+            $empleado = Empleado::when($user->empresa_id, fn ($q) => $q->where('empresa_id', $user->empresa_id))
+                ->findOrFail($data['empleado_id']);
             if (!empty($data['telefono'])) {
                 $empleado->telefono = $data['telefono'];
             }
@@ -99,10 +101,21 @@ class EmpleadoEnrolamientoController extends Controller
             }
         } else {
             $empleado = null;
-            if (!empty($data['documento_identidad'])) {
-                $empleado = Empleado::where('documento_identidad', $data['documento_identidad'])
-                    ->where('empresa_id', $user->empresa_id)
+            $doc = trim((string) ($data['documento_identidad'] ?? ''));
+
+            if ($doc !== '') {
+                $empleado = Empleado::where('empresa_id', $user->empresa_id)
+                    ->where(function ($q) use ($doc) {
+                        $q->where('documento_identidad', $doc)
+                            ->orWhere('codigo_acceso', $doc);
+                    })
                     ->first();
+
+                if (! $empleado && Empleado::withoutTenant()->where('documento_identidad', $doc)->exists()) {
+                    throw ValidationException::withMessages([
+                        'documento_identidad' => ['Este número de empleado ya está registrado en otra empresa.'],
+                    ]);
+                }
             }
 
             if (!$empleado) {
@@ -110,13 +123,24 @@ class EmpleadoEnrolamientoController extends Controller
                 $empleado->nombres = $data['nombres'];
                 $empleado->apellidos = $data['apellidos'];
 
-                if (!empty($data['documento_identidad'])) {
-                    $empleado->documento_identidad = $data['documento_identidad'];
+                if ($doc !== '') {
+                    $empleado->documento_identidad = $doc;
                 } else {
                     do {
                         $code = (string) mt_rand(100000, 999999);
-                    } while (Empleado::where('documento_identidad', $code)->exists());
+                    } while (
+                        Empleado::withoutTenant()
+                            ->where(fn ($q) => $q->where('documento_identidad', $code)->orWhere('codigo_acceso', $code))
+                            ->exists()
+                    );
                     $empleado->documento_identidad = $code;
+                }
+
+                if (
+                    mb_strlen($empleado->documento_identidad) <= 20
+                    && ! Empleado::withoutTenant()->where('codigo_acceso', $empleado->documento_identidad)->exists()
+                ) {
+                    $empleado->codigo_acceso = $empleado->documento_identidad;
                 }
 
                 $empleado->departamento_id = $data['departamento_id'] ?? null;
@@ -144,6 +168,11 @@ class EmpleadoEnrolamientoController extends Controller
         $empleado->enrolamiento_token = $token;
         $empleado->enrolamiento_token_expires_at = now()->addHours(72);
         $empleado->save();
+
+        if ($bio = BiotimeEmpleado::where('empleado_id', $empleado->id)->where('empresa_id', $empleado->empresa_id)->first()) {
+            app(BioTimeEmpleadoPusher::class)->sincronizarCodigoDesdeBioTime($empleado, $bio);
+            $empleado->refresh();
+        }
 
         $enrolamientoUrl = url("/enrolamiento/{$token}");
         $empresa = $user->empresa ?? Empresa::first();
@@ -209,6 +238,7 @@ class EmpleadoEnrolamientoController extends Controller
                 'nombres' => $empleado->nombres,
                 'apellidos' => $empleado->apellidos,
                 'documento_identidad' => $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
             ],
         ]);
     }
@@ -232,7 +262,7 @@ class EmpleadoEnrolamientoController extends Controller
         return Inertia::render('admin/Empleados/Enrolamiento', [
             'empleado' => [
                 'id' => $empleado->id,
-                'numero' => $empleado->documento_identidad,
+                'numero' => $empleado->documento_identidad ?: $empleado->codigo_acceso,
                 'nombres' => $empleado->nombres,
                 'apellidos' => $empleado->apellidos,
                 'area' => $empleado->departamento?->nombre,

@@ -118,6 +118,16 @@ class BioTimeEmpleadoPusher
             ->first();
 
         if ($bio === null) {
+            $bio = $this->buscarEnEspejoPorIdentificadores($empresa, $empleado);
+            if ($bio !== null) {
+                if ($dryRun) {
+                    return $this->resultado(true, 'vincular', "Ya existe en BioTime con el número {$bio->emp_code}; se vincularía y se actualizaría.");
+                }
+                $bio->update(['empleado_id' => $empleado->id, 'link_status' => 'auto']);
+            }
+        }
+
+        if ($bio === null) {
             $codigo = trim((string) $empleado->documento_identidad);
 
             if (! preg_match((string) config('biotime.emp_code_pattern'), $codigo)) {
@@ -147,6 +157,64 @@ class BioTimeEmpleadoPusher
         }
 
         return $this->actualizar($empleado, $empresa, $cliente, $sync, $bio, $dryRun);
+    }
+
+    /**
+     * Busca una única fila sin vínculo en el espejo local de BioTime por CURP o tarjeta.
+     */
+    private function buscarEnEspejoPorIdentificadores(Empresa $empresa, Empleado $empleado): ?BiotimeEmpleado
+    {
+        $curp = trim((string) ($empleado->curp ?? ''));
+        $tarjeta = trim((string) ($empleado->tarjeta_acceso_1 ?? ''));
+
+        if ($curp === '' && ($tarjeta === '' || trim($tarjeta, '0') === '')) {
+            return null;
+        }
+
+        $candidatos = BiotimeEmpleado::query()
+            ->where('empresa_id', $empresa->id)
+            ->whereNull('empleado_id')
+            ->where(function ($q) use ($curp, $tarjeta) {
+                if ($curp !== '') {
+                    $q->orWhere('national', $curp);
+                }
+                if ($tarjeta !== '' && trim($tarjeta, '0') !== '') {
+                    $q->orWhere('card_no', $tarjeta);
+                }
+            })
+            ->limit(2)
+            ->get();
+
+        return $candidatos->count() === 1 ? $candidatos->first() : null;
+    }
+
+    /**
+     * Alinea codigo_acceso y documento_identidad en empleados con el emp_code de BioTime
+     * sin disparar otro envío a BioTime.
+     */
+    public function sincronizarCodigoDesdeBioTime(Empleado $empleado, BiotimeEmpleado $bio): void
+    {
+        $empCode = trim((string) $bio->emp_code);
+        if ($empCode === '') {
+            return;
+        }
+
+        $cambios = [];
+
+        if ((string) $empleado->documento_identidad !== $empCode
+            && ! Empleado::withoutTenant()->where('documento_identidad', $empCode)->whereKeyNot($empleado->id)->exists()) {
+            $cambios['documento_identidad'] = $empCode;
+        }
+
+        if (mb_strlen($empCode) <= 20
+            && (string) $empleado->codigo_acceso !== $empCode
+            && ! Empleado::withoutTenant()->where('codigo_acceso', $empCode)->whereKeyNot($empleado->id)->exists()) {
+            $cambios['codigo_acceso'] = $empCode;
+        }
+
+        if ($cambios !== []) {
+            $empleado->forceFill($cambios)->saveQuietly();
+        }
     }
 
     private function crear(Empleado $empleado, Empresa $empresa, BioTimeService $cliente, BioTimeSyncService $sync, string $codigo, bool $dryRun): array
@@ -197,6 +265,10 @@ class BioTimeEmpleadoPusher
 
         $bio = $this->refrescarEspejo($empresa, $cliente, $sync, $codigo, $r['data'], ['empleado_id' => $empleado->id, 'link_status' => 'auto']);
 
+        if ($bio !== null) {
+            $this->sincronizarCodigoDesdeBioTime($empleado, $bio);
+        }
+
         return $this->exito($empleado, 'creado', "Dado de alta en BioTime con el número {$codigo}.".($bio ? $this->subirFoto($empleado, $cliente, $bio) : ''));
     }
 
@@ -239,6 +311,10 @@ class BioTimeEmpleadoPusher
         $fotoPendiente = $this->fotoPendiente($empleado, $bio);
 
         if ($cambios === [] && ! $fotoPendiente) {
+            if (! $dryRun) {
+                $this->sincronizarCodigoDesdeBioTime($empleado, $bio);
+            }
+
             return $dryRun
                 ? $this->resultado(true, 'sin_cambios', 'BioTime ya tiene estos datos.')
                 : $this->exito($empleado, 'sin_cambios', 'BioTime ya tiene estos datos.');
@@ -274,6 +350,8 @@ class BioTimeEmpleadoPusher
             $bio = $this->refrescarEspejo($empresa, $cliente, $sync, (string) $bio->emp_code, $r['data']) ?? $bio;
             $mensaje = 'Actualizado en BioTime: '.implode(', ', array_keys($cambios)).'.';
         }
+
+        $this->sincronizarCodigoDesdeBioTime($empleado, $bio);
 
         return $this->exito($empleado, $cambios === [] ? 'sin_cambios' : 'actualizado', $mensaje.$this->subirFoto($empleado, $cliente, $bio));
     }

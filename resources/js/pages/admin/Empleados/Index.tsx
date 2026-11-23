@@ -459,6 +459,7 @@ export default function EmpleadosIndexPage({
         setData({
             ...initialForm,
             documento_identidad: randomCode,
+            codigo_acceso: randomCode,
             curp: '',
             empresa_id: companyId,
             sucursal_id: branchId,
@@ -627,12 +628,20 @@ export default function EmpleadosIndexPage({
                         <div>
                             <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{emp.nombres} {emp.apellidos}</p>
                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20" title="Código de Acceso 8 Dígitos">
-                                    ACCESO: {emp.codigo_acceso || 'N/A'}
-                                </span>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs tracking-wider border border-indigo-500/20" title="Código de Empleado 6 Dígitos">
-                                    N° EMP: {emp.documento_identidad || 'N/A'}
-                                </span>
+                                {(!emp.codigo_acceso || !emp.documento_identidad || emp.codigo_acceso === emp.documento_identidad) ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20" title="ID BioTime / Código de Acceso">
+                                        N° EMP / ACCESO: {emp.codigo_acceso || emp.documento_identidad || 'N/A'}
+                                    </span>
+                                ) : (
+                                    <>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20" title="Código de Acceso">
+                                            ACCESO: {emp.codigo_acceso}
+                                        </span>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs tracking-wider border border-indigo-500/20" title="Código de Empleado">
+                                            N° EMP: {emp.documento_identidad}
+                                        </span>
+                                    </>
+                                )}
                                 <span className={cn(
                                     'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border',
                                     emp.enrolado_en
@@ -1143,21 +1152,21 @@ export default function EmpleadosIndexPage({
                                         )}
                                     </div>
 
-                                    {/* Código de Acceso de Empleado (8 dígitos) */}
+                                    {/* Código de Acceso / ID BioTime */}
                                     <div className="md:col-span-1 p-4 rounded-xl border border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/40 space-y-2 transition-all shadow-sm">
                                         <div className="flex items-center justify-between mb-1">
                                             <Label htmlFor="codigo_acceso" className="font-semibold text-xs text-emerald-900 dark:text-emerald-200">
-                                                Código de Acceso (8 dígitos)
+                                                Código de Acceso / ID BioTime
                                             </Label>
                                             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                                                Auto de 8 dígitos
+                                                Igual al ID de empleado
                                             </span>
                                         </div>
                                         <Input
                                             id="codigo_acceso"
                                             value={data.codigo_acceso}
                                             onChange={(e) => setData('codigo_acceso', e.target.value)}
-                                            placeholder="ej. 10100001"
+                                            placeholder="ej. 727652"
                                             maxLength={20}
                                             className="font-mono font-bold text-sm text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 focus:border-emerald-500"
                                         />
@@ -1166,17 +1175,24 @@ export default function EmpleadosIndexPage({
                                         )}
                                     </div>
 
-                                    {/* Código de Empleado (6 dígitos) */}
+                                    {/* Código de Empleado / ID BioTime */}
                                     <div className="md:col-span-1 p-4 rounded-xl border border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/30 space-y-2 transition-all shadow-sm">
                                         <div className="flex items-center justify-between mb-1">
                                             <Label htmlFor="documento_identidad" className="font-semibold text-xs text-indigo-950 dark:text-indigo-200">
-                                                Código de Empleado (6 dígitos) *
+                                                Código de Empleado / ID BioTime *
                                             </Label>
                                             <button
                                                 type="button"
                                                 onClick={() => {
                                                     const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
-                                                    setData('documento_identidad', randomCode);
+                                                    const shouldSyncAccess =
+                                                        !editingEmpleado &&
+                                                        (!data.codigo_acceso || data.codigo_acceso === data.documento_identidad);
+                                                    setData({
+                                                        ...data,
+                                                        documento_identidad: randomCode,
+                                                        ...(shouldSyncAccess ? { codigo_acceso: randomCode } : {}),
+                                                    });
                                                 }}
                                                 className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium flex items-center gap-1"
                                             >
@@ -1187,7 +1203,17 @@ export default function EmpleadosIndexPage({
                                         <Input
                                             id="documento_identidad"
                                             value={data.documento_identidad}
-                                            onChange={(e) => setData('documento_identidad', e.target.value)}
+                                            onChange={(e) => {
+                                                const nextDoc = e.target.value;
+                                                const shouldSyncAccess =
+                                                    !editingEmpleado &&
+                                                    (!data.codigo_acceso || data.codigo_acceso === data.documento_identidad);
+                                                setData({
+                                                    ...data,
+                                                    documento_identidad: nextDoc,
+                                                    ...(shouldSyncAccess ? { codigo_acceso: nextDoc } : {}),
+                                                });
+                                            }}
                                             placeholder="ej. 727652"
                                             maxLength={20}
                                             className="font-mono font-semibold text-sm"

@@ -42,6 +42,7 @@ export interface EmpleadoSimple {
     nombres: string;
     apellidos: string;
     documento_identidad?: string | null;
+    codigo_acceso?: string | null;
     telefono?: string | null;
     correo?: string | null;
     pais_telefono_id?: string | number | null;
@@ -106,7 +107,7 @@ export function EnrolarModal({
             setSelectedEmpleadoId(String(preselectedEmpleado.id));
             setNombres(preselectedEmpleado.nombres || '');
             setApellidos(preselectedEmpleado.apellidos || '');
-            setDocumentoIdentidad(preselectedEmpleado.documento_identidad || '');
+            setDocumentoIdentidad(preselectedEmpleado.documento_identidad || preselectedEmpleado.codigo_acceso || '');
             setDepartamentoId(preselectedEmpleado.departamento_id ? String(preselectedEmpleado.departamento_id) : '');
             setTelefono(preselectedEmpleado.telefono || '');
             setCorreo(preselectedEmpleado.correo || '');
@@ -132,7 +133,7 @@ export function EnrolarModal({
         if (emp) {
             setNombres(emp.nombres || '');
             setApellidos(emp.apellidos || '');
-            setDocumentoIdentidad(emp.documento_identidad || '');
+            setDocumentoIdentidad(emp.documento_identidad || emp.codigo_acceso || '');
             setDepartamentoId(emp.departamento_id ? String(emp.departamento_id) : '');
             setTelefono(emp.telefono || '');
             setCorreo(emp.correo || '');
