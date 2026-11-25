@@ -947,19 +947,19 @@ export default function EmpleadosIndexPage({
                             {__('Enrolar')}
                         </Button>
 
+                        {(canImport || canCreate) && (
+                            <Button
+                                type="button"
+                                onClick={() => setIsImportModalOpen(true)}
+                                className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm font-semibold flex items-center gap-1.5"
+                            >
+                                <FileSpreadsheet className="w-4 h-4" />
+                                {__('Importar Excel')}
+                            </Button>
+                        )}
+
                         {MOSTRAR_ALTA_MANUAL && (
                             <>
-                                <Can permission="empleados.import">
-                                    <Button
-                                        type="button"
-                                        onClick={() => setIsImportModalOpen(true)}
-                                        variant="outline"
-                                        className="border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 flex items-center gap-1.5"
-                                    >
-                                        <FileSpreadsheet className="w-4 h-4" />
-                                        {__('Importar Excel')}
-                                    </Button>
-                                </Can>
                                 <Can permission="empleados.create">
                                     <Button
                                         type="button"
@@ -2470,6 +2470,9 @@ export default function EmpleadosIndexPage({
             <ImportWizardModal
                 open={isImportModalOpen}
                 onOpenChange={setIsImportModalOpen}
+                onSuccess={() => {
+                    router.reload({ only: ['empleados', 'stats'] });
+                }}
             />
 
             {/* Modal de Enrolamiento de Colaboradores */}

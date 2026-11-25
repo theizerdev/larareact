@@ -34,12 +34,20 @@ import Swal from 'sweetalert2';
 
 interface ImportRecord {
     documento_identidad: string;
+    codigo_nuevo?: string;
+    codigo_anterior?: string | null;
+    legacy?: string | null;
+    codigo_acceso?: string | null;
     nombres: string;
     apellidos: string;
-    correo?: string;
-    telefono?: string;
-    departamento?: string;
-    empresa?: string;
+    correo?: string | null;
+    telefono?: string | null;
+    departamento?: string | null;
+    cargo?: string | null;
+    empresa?: string | null;
+    genero?: string | null;
+    fecha_ingreso?: string | null;
+    fecha_nacimiento?: string | null;
     tarjeta_acceso_1?: string;
     tarjeta_acceso_2?: string;
     tarjeta_acceso_3?: string;
@@ -433,18 +441,18 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                             </p>
                             <div className="flex flex-wrap gap-1.5 pt-1">
                                 {[
-                                    'CURP / No. Empleado',
-                                    'Nombre',
-                                    'Apellido Paterno',
-                                    'Apellido Materno',
-                                    'Empresa',
-                                    'Área / Departamento',
-                                    'Correo',
+                                    'ID del empleado Nuevo',
+                                    'ID Empleado Anterior',
+                                    'Legacy',
+                                    'Nombre (s)',
+                                    'Apellido (s)',
+                                    'Departamento / Área',
+                                    'Nombre del Cargo',
+                                    'Fecha de contratación',
+                                    'Gafete número',
+                                    'Género',
+                                    'Correo electrónico',
                                     'Teléfono',
-                                    'Tipo Vehículo',
-                                    'Marca Vehículo',
-                                    'Color Vehículo',
-                                    'Placa Vehículo',
                                 ].map((col) => (
                                     <Badge key={col} variant="outline" className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-[11px]">
                                         {col}
@@ -595,12 +603,11 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                 <thead className="text-[11px] uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 sticky top-0">
                                     <tr>
                                         <th className="py-2 px-3">Estatus</th>
-                                        <th className="py-2 px-3">CURP / No. Empleado</th>
+                                        <th className="py-2 px-3">Códigos (Nuevo / Anterior / Legacy)</th>
                                         <th className="py-2 px-3">Nombre Completo</th>
-                                        <th className="py-2 px-3">Departamento</th>
-                                        <th className="py-2 px-3">Tarjetas Acceso</th>
-                                        <th className="py-2 px-3">Teléfono (+52)</th>
-                                        <th className="py-2 px-3">Vehículo(s)</th>
+                                        <th className="py-2 px-3">Departamento / Cargo</th>
+                                        <th className="py-2 px-3">Correo / Género</th>
+                                        <th className="py-2 px-3">Gafete / Ingreso</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -617,40 +624,37 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                                     </Badge>
                                                 )}
                                             </td>
-                                            <td className="py-2 px-3 font-semibold font-mono text-slate-900 dark:text-slate-100">
-                                                {r.documento_identidad}
+                                            <td className="py-2 px-3 font-mono">
+                                                <div className="flex flex-wrap gap-1">
+                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 font-bold">
+                                                        NUEVO: {r.codigo_nuevo || r.documento_identidad}
+                                                    </Badge>
+                                                    {r.codigo_anterior && (
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300">
+                                                            ANT: {r.codigo_anterior}
+                                                        </Badge>
+                                                    )}
+                                                    {r.legacy && (
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300">
+                                                            LEG: {r.legacy}
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="py-2 px-3 font-medium">
                                                 {r.nombres} {r.apellidos}
                                             </td>
                                             <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
-                                                {r.departamento || 'General'}
+                                                <div>{r.departamento || 'General'}</div>
+                                                {r.cargo && <div className="text-[10px] text-slate-400">{r.cargo}</div>}
                                             </td>
-                                            <td className="py-2 px-3">
-                                                <div className="flex items-center gap-1 font-mono text-[11px]">
-                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                                        T1: {r.tarjeta_acceso_1 || '0'}
-                                                    </Badge>
-                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                                        T2: {r.tarjeta_acceso_2 || '0'}
-                                                    </Badge>
-                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                                        T3: {r.tarjeta_acceso_3 || '0'}
-                                                    </Badge>
-                                                </div>
+                                            <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
+                                                <div className="truncate max-w-[180px]">{r.correo || '—'}</div>
+                                                {r.genero && <div className="text-[10px] text-slate-400">Sexo: {r.genero}</div>}
                                             </td>
                                             <td className="py-2 px-3 font-mono text-slate-600 dark:text-slate-400">
-                                                {r.telefono ? `+52 ${r.telefono}` : '-'}
-                                            </td>
-                                            <td className="py-2 px-3">
-                                                {r.vehiculos && r.vehiculos.length > 0 ? (
-                                                    <span className="flex items-center gap-1 text-[11px] text-slate-700 dark:text-slate-300">
-                                                        <Car className="w-3.5 h-3.5 text-blue-500" />
-                                                        {r.vehiculos.map((v) => `${v.tipo_vehiculo} (${v.placa || 'S/N'})`).join(', ')}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-slate-400">-</span>
-                                                )}
+                                                <div>{r.codigo_acceso || r.documento_identidad}</div>
+                                                {r.fecha_ingreso && <div className="text-[10px] text-slate-400">{r.fecha_ingreso}</div>}
                                             </td>
                                         </tr>
                                     ))}

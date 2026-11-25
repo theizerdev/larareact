@@ -86,18 +86,24 @@ class EmpleadoImportService
             $rowNum = $rowsData[$i]['row_number'];
 
             $doc = $this->getCellValueByMap($rowCells, $colIndexMap['documento_identidad']);
+            $codigoAnterior = $this->getCellValueByMap($rowCells, $colIndexMap['codigo_anterior']);
+            $legacy = $this->getCellValueByMap($rowCells, $colIndexMap['legacy']);
             $curp = $this->getCellValueByMap($rowCells, $colIndexMap['curp']);
             $nombre = $this->getCellValueByMap($rowCells, $colIndexMap['nombres']);
+            $apellidosCol = $this->getCellValueByMap($rowCells, $colIndexMap['apellidos']);
             $paterno = $this->getCellValueByMap($rowCells, $colIndexMap['apellido_paterno']);
             $materno = $this->getCellValueByMap($rowCells, $colIndexMap['apellido_materno']);
 
             // Skip completely empty rows
-            if (empty($doc) && empty($nombre) && empty($paterno)) {
+            if (empty($doc) && empty($nombre) && empty($paterno) && empty($apellidosCol)) {
                 continue;
             }
 
-            // Build full name and surnames
+            // Build full surnames (prefer explicit Apellido(s) column if paterno/materno are empty)
             $apellidos = trim("{$paterno} {$materno}");
+            if ($apellidos === '' && trim((string) $apellidosCol) !== '') {
+                $apellidos = trim((string) $apellidosCol);
+            }
 
             // Clean Document / Employee Number
             $docClean = trim((string)$doc);
@@ -109,11 +115,19 @@ class EmpleadoImportService
                 continue;
             }
 
-            $correo = $this->getCellValueByMap($rowCells, $colIndexMap['correo']);
+            $correo = $this->cleanEmail($this->getCellValueByMap($rowCells, $colIndexMap['correo']));
             $telefono = $this->getCellValueByMap($rowCells, $colIndexMap['telefono']);
             $departamento = $this->getCellValueByMap($rowCells, $colIndexMap['departamento']);
+            $area = $this->getCellValueByMap($rowCells, $colIndexMap['area']);
+            if (trim((string) $departamento) === '' && trim((string) $area) !== '') {
+                $departamento = $area;
+            }
+            $cargo = $this->getCellValueByMap($rowCells, $colIndexMap['cargo']);
             $empresa = $this->getCellValueByMap($rowCells, $colIndexMap['empresa']);
             $codigoAcceso = $this->getCellValueByMap($rowCells, $colIndexMap['codigo_acceso']);
+            $genero = $this->normalizeGenero($this->getCellValueByMap($rowCells, $colIndexMap['genero']));
+            $fechaIngreso = $this->parseDateValue($this->getCellValueByMap($rowCells, $colIndexMap['fecha_ingreso']));
+            $fechaNacimiento = $this->parseDateValue($this->getCellValueByMap($rowCells, $colIndexMap['fecha_nacimiento']));
 
             // Tarjetas de acceso
             $tarjeta1 = $this->cleanTarjetaValue($this->getCellValueByMap($rowCells, $colIndexMap['tarjeta_acceso_1']));
@@ -141,14 +155,21 @@ class EmpleadoImportService
             if (!isset($groupedEmployees[$docClean])) {
                 $groupedEmployees[$docClean] = [
                     'documento_identidad' => $docClean,
+                    'codigo_nuevo' => $docClean,
+                    'codigo_anterior' => trim((string)$codigoAnterior) ?: null,
+                    'legacy' => trim((string)$legacy) ?: null,
                     'codigo_acceso' => trim((string)$codigoAcceso),
                     'curp' => trim((string)$curp),
                     'nombres' => trim((string)$nombre),
                     'apellidos' => $apellidos,
-                    'correo' => trim((string)$correo),
+                    'correo' => $correo,
                     'telefono' => $this->cleanPhoneNumber($telefono),
                     'departamento' => trim((string)$departamento),
+                    'cargo' => trim((string)$cargo) ?: null,
                     'empresa' => trim((string)$empresa),
+                    'genero' => $genero,
+                    'fecha_ingreso' => $fechaIngreso,
+                    'fecha_nacimiento' => $fechaNacimiento,
                     'tarjeta_acceso_1' => $tarjeta1,
                     'tarjeta_acceso_2' => $tarjeta2,
                     'tarjeta_acceso_3' => $tarjeta3,
@@ -163,13 +184,19 @@ class EmpleadoImportService
                 $groupedEmployees[$docClean]['rows'][] = $rowNum;
                 // Fill in missing fields if second row has more data
                 if (empty($groupedEmployees[$docClean]['correo']) && !empty($correo)) {
-                    $groupedEmployees[$docClean]['correo'] = trim((string)$correo);
+                    $groupedEmployees[$docClean]['correo'] = $correo;
                 }
                 if (empty($groupedEmployees[$docClean]['telefono']) && !empty($telefono)) {
                     $groupedEmployees[$docClean]['telefono'] = $this->cleanPhoneNumber($telefono);
                 }
                 if (empty($groupedEmployees[$docClean]['departamento']) && !empty($departamento)) {
                     $groupedEmployees[$docClean]['departamento'] = trim((string)$departamento);
+                }
+                if (empty($groupedEmployees[$docClean]['codigo_anterior']) && trim((string)$codigoAnterior) !== '') {
+                    $groupedEmployees[$docClean]['codigo_anterior'] = trim((string)$codigoAnterior);
+                }
+                if (empty($groupedEmployees[$docClean]['legacy']) && trim((string)$legacy) !== '') {
+                    $groupedEmployees[$docClean]['legacy'] = trim((string)$legacy);
                 }
                 if (($groupedEmployees[$docClean]['tarjeta_acceso_1'] === '0') && $tarjeta1 !== '0') {
                     $groupedEmployees[$docClean]['tarjeta_acceso_1'] = $tarjeta1;
@@ -183,11 +210,22 @@ class EmpleadoImportService
             }
         }
 
-        // Query existing employees to mark duplicates
+        // Query existing employees to mark duplicates (match by documento_identidad or codigo_nuevo)
         $docsList = array_keys($groupedEmployees);
-        $existingDocs = Empleado::whereIn('documento_identidad', $docsList)
-            ->pluck('id', 'documento_identidad')
-            ->toArray();
+        $existingEmployees = Empleado::where(function ($q) use ($docsList) {
+            $q->whereIn('documento_identidad', $docsList)
+                ->orWhereIn('codigo_nuevo', $docsList);
+        })->get(['id', 'documento_identidad', 'codigo_nuevo']);
+
+        $existingDocs = [];
+        foreach ($existingEmployees as $ex) {
+            if ($ex->documento_identidad) {
+                $existingDocs[$ex->documento_identidad] = $ex->id;
+            }
+            if ($ex->codigo_nuevo) {
+                $existingDocs[$ex->codigo_nuevo] = $ex->id;
+            }
+        }
 
         $records = [];
         $nuevosCount = 0;
@@ -290,7 +328,10 @@ class EmpleadoImportService
                     continue;
                 }
 
-                $existing = Empleado::where('documento_identidad', $doc)->first();
+                $existing = Empleado::where(function ($q) use ($doc) {
+                    $q->where('documento_identidad', $doc)
+                        ->orWhere('codigo_nuevo', $doc);
+                })->first();
 
                 if ($existing && $duplicateStrategy === 'skip') {
                     $skippedCount++;
@@ -336,18 +377,52 @@ class EmpleadoImportService
 
                 $codigoAccesoExcel = !empty($rec['codigo_acceso']) ? trim($rec['codigo_acceso']) : null;
 
+                $cargoId = null;
+                if (!empty($rec['cargo'])) {
+                    $cleanCargoName = trim(preg_replace('/\s+/', ' ', (string) $rec['cargo']));
+                    if ($cleanCargoName !== '') {
+                        $formattedCargo = mb_convert_case($cleanCargoName, MB_CASE_TITLE, 'UTF-8');
+                        $cargoModel = Cargo::where('empresa_id', $empresaId)
+                            ->whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower($cleanCargoName)])
+                            ->first();
+                        if (! $cargoModel) {
+                            $cargoModel = Cargo::create([
+                                'nombre' => $formattedCargo,
+                                'empresa_id' => $empresaId,
+                                'sucursal_id' => $sucursalId,
+                                'departamento_id' => $departamentoId,
+                                'user_id' => auth()->id() ?: 1,
+                                'status' => 1,
+                            ]);
+                        }
+                        $cargoId = $cargoModel->id;
+                    }
+                }
+
+                $codigoNuevo = trim((string) ($rec['codigo_nuevo'] ?? $doc));
+                $codigoAnterior = !empty($rec['codigo_anterior']) ? trim((string) $rec['codigo_anterior']) : null;
+                $legacy = !empty($rec['legacy']) ? trim((string) $rec['legacy']) : null;
+                $correoClean = $this->cleanEmail($rec['correo'] ?? null);
+
                 $dataToSave = [
                     'nombres' => !empty($rec['nombres']) ? $rec['nombres'] : 'N/A',
                     'apellidos' => !empty($rec['apellidos']) ? $rec['apellidos'] : 'N/A',
-                    'documento_identidad' => $doc,
+                    'documento_identidad' => $codigoNuevo ?: $doc,
+                    'codigo_nuevo' => $codigoNuevo ?: $doc,
+                    'codigo_anterior' => $codigoAnterior,
+                    'legacy' => $legacy,
                     'curp' => !empty($rec['curp']) ? trim($rec['curp']) : null,
                     'tarjeta_acceso_1' => $tarjeta1,
                     'tarjeta_acceso_2' => $tarjeta2,
                     'tarjeta_acceso_3' => $tarjeta3,
                     'pais_telefono_id' => $paisId,
                     'telefono' => $rec['telefono'] ?? null,
-                    'correo' => !empty($rec['correo']) ? $rec['correo'] : null,
+                    'correo' => $correoClean,
+                    'genero' => !empty($rec['genero']) ? $this->normalizeGenero((string) $rec['genero']) : null,
+                    'fecha_ingreso' => !empty($rec['fecha_ingreso']) ? $this->parseDateValue((string) $rec['fecha_ingreso']) : null,
+                    'fecha_nacimiento' => !empty($rec['fecha_nacimiento']) ? $this->parseDateValue((string) $rec['fecha_nacimiento']) : null,
                     'departamento_id' => $departamentoId,
+                    'cargo_id' => $cargoId,
                     'turno_laboral_id' => $defaultTurno->id,
                     'empresa_id' => $empresaId,
                     'sucursal_id' => $sucursalId,
@@ -487,12 +562,40 @@ class EmpleadoImportService
     }
 
     /**
-     * Helper to read .xlsx file structure via ZipArchive & SimpleXML.
+     * Helper to read .xlsx/.xls/.csv rows via PhpSpreadsheet (handles formatted dates & strings accurately).
      */
     private function readXlsxRows(string $filePath): array
     {
         if (!file_exists($filePath)) {
             return [];
+        }
+
+        try {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            $rawRows = $sheet->toArray(null, true, true, true);
+
+            $rowsData = [];
+            foreach ($rawRows as $rowNumber => $cols) {
+                $cells = [];
+                foreach ($cols as $colLetter => $val) {
+                    if ($val !== null && trim((string) $val) !== '') {
+                        $cells[$colLetter . $rowNumber] = trim((string) $val);
+                    }
+                }
+                if (!empty($cells)) {
+                    $rowsData[] = [
+                        'row_number' => (int) $rowNumber,
+                        'cells' => $cells,
+                    ];
+                }
+            }
+
+            if (!empty($rowsData)) {
+                return $rowsData;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('PhpSpreadsheet fallback a ZipArchive en EmpleadoImportService: ' . $e->getMessage());
         }
 
         $zip = new ZipArchive();
@@ -587,15 +690,23 @@ class EmpleadoImportService
     {
         $map = [
             'documento_identidad' => null,
+            'codigo_anterior' => null,
+            'legacy' => null,
             'codigo_acceso' => null,
             'curp' => null,
             'nombres' => null,
+            'apellidos' => null,
             'apellido_paterno' => null,
             'apellido_materno' => null,
             'correo' => null,
             'telefono' => null,
             'departamento' => null,
+            'area' => null,
+            'cargo' => null,
             'empresa' => null,
+            'genero' => null,
+            'fecha_ingreso' => null,
+            'fecha_nacimiento' => null,
             'tarjeta_acceso_1' => null,
             'tarjeta_acceso_2' => null,
             'tarjeta_acceso_3' => null,
@@ -623,40 +734,63 @@ class EmpleadoImportService
                 continue;
             }
 
-            // 2. Código de Acceso / QR Nuevo / IVMS
-            if ($map['codigo_acceso'] === null && (str_contains($h, 'qr nuevo') || str_contains($h, 'codigo acceso') || str_contains($h, 'codigo de acceso') || str_contains($h, 'ivms'))) {
+            // 2. Código Legacy
+            if ($map['legacy'] === null && str_contains($h, 'legacy')) {
+                $map['legacy'] = $colLetter;
+                continue;
+            }
+
+            // 3. Código Anterior / ID Empleado Anterior
+            if ($map['codigo_anterior'] === null && (str_contains($h, 'anterior') || str_contains($h, 'antiguo'))) {
+                $map['codigo_anterior'] = $colLetter;
+                continue;
+            }
+
+            // 4. Código de Acceso / Gafete / QR Nuevo / IVMS
+            if ($map['codigo_acceso'] === null && (str_contains($h, 'gafete') || str_contains($h, 'gafette') || str_contains($h, 'qr nuevo') || str_contains($h, 'codigo acceso') || str_contains($h, 'codigo de acceso') || str_contains($h, 'ivms'))) {
                 $map['codigo_acceso'] = $colLetter;
                 continue;
             }
 
-            // 3. CURP
+            // 5. CURP
             if ($map['curp'] === null && str_contains($h, 'curp')) {
                 $map['curp'] = $colLetter;
                 continue;
             }
 
-            // 4. Departamento / Área (Excluir 'responsable', 'jefe', 'gerente')
-            if (
-                $map['departamento'] === null &&
-                !str_contains($h, 'responsable') && !str_contains($h, 'jefe') && !str_contains($h, 'gerente') &&
-                (str_contains($h, 'area') || str_contains($h, 'departamento') || str_contains($h, 'depto') || str_contains($h, 'seccion') || str_contains($h, 'modulo') || $h === 'dep')
-            ) {
-                $map['departamento'] = $colLetter;
+            // 6. Cargo / Puesto (excluir 'id del cargo')
+            if ($map['cargo'] === null && !str_starts_with($h, 'id ') && (str_contains($h, 'cargo') || str_contains($h, 'puesto'))) {
+                $map['cargo'] = $colLetter;
                 continue;
             }
 
-            // 5. Documento de Identidad / No. Empleado (Priorizar 'No. Empleado' sobre QR / Gafette / ID)
+            // 7. Departamento / Área (Excluir 'id de departamento', 'id de area', 'responsable', 'jefe', 'gerente')
             if (
-                !str_contains($h, 'vehiculo') && !str_contains($h, 'auto') && !str_contains($h, 'placa') && !str_contains($h, 'qr') && !str_contains($h, 'gafette') && !str_contains($h, 'ivms') &&
+                !str_starts_with($h, 'id ') &&
+                !str_contains($h, 'responsable') && !str_contains($h, 'jefe') && !str_contains($h, 'gerente')
+            ) {
+                if ($map['departamento'] === null && (str_contains($h, 'departamento') || str_contains($h, 'depto') || str_contains($h, 'seccion') || str_contains($h, 'modulo') || $h === 'dep')) {
+                    $map['departamento'] = $colLetter;
+                    continue;
+                }
+                if ($map['area'] === null && str_contains($h, 'area')) {
+                    $map['area'] = $colLetter;
+                    continue;
+                }
+            }
+
+            // 8. Documento de Identidad / ID del empleado Nuevo / No. Empleado
+            if (
+                !str_contains($h, 'vehiculo') && !str_contains($h, 'auto') && !str_contains($h, 'placa') && !str_contains($h, 'qr') && !str_contains($h, 'gafete') && !str_contains($h, 'gafette') && !str_contains($h, 'ivms') && !str_contains($h, 'anterior') && !str_contains($h, 'antiguo') &&
                 (str_contains($h, 'empleado') || str_contains($h, 'documento') || str_contains($h, 'cedula') || str_contains($h, 'dni') || $h === 'id' || $h === 'no' || $h === 'num')
             ) {
-                if ($map['documento_identidad'] === null || str_contains($h, 'empleado')) {
+                if ($map['documento_identidad'] === null || str_contains($h, 'nuevo') || str_contains($h, 'empleado')) {
                     $map['documento_identidad'] = $colLetter;
                 }
                 continue;
             }
 
-            // 5. Apellidos y Nombres
+            // 9. Apellidos y Nombres
             if ($map['apellido_paterno'] === null && str_contains($h, 'paterno')) {
                 $map['apellido_paterno'] = $colLetter;
                 continue;
@@ -665,28 +799,46 @@ class EmpleadoImportService
                 $map['apellido_materno'] = $colLetter;
                 continue;
             }
-            if ($map['nombres'] === null && str_contains($h, 'nombre') && !str_contains($h, 'apellido') && !str_contains($h, 'comercial')) {
+            if ($map['apellidos'] === null && str_contains($h, 'apellido')) {
+                $map['apellidos'] = $colLetter;
+                continue;
+            }
+            if ($map['nombres'] === null && str_contains($h, 'nombre') && !str_contains($h, 'apellido') && !str_contains($h, 'comercial') && !str_contains($h, 'cargo') && !str_contains($h, 'empresa') && !str_contains($h, 'planta')) {
                 $map['nombres'] = $colLetter;
                 continue;
             }
 
-            // 6. Contacto
+            // 10. Género y Fechas
+            if ($map['genero'] === null && (str_contains($h, 'genero') || str_contains($h, 'sexo'))) {
+                $map['genero'] = $colLetter;
+                continue;
+            }
+            if ($map['fecha_ingreso'] === null && (str_contains($h, 'contratacion') || str_contains($h, 'fecha ingreso') || str_contains($h, 'fecha de ingreso'))) {
+                $map['fecha_ingreso'] = $colLetter;
+                continue;
+            }
+            if ($map['fecha_nacimiento'] === null && (str_contains($h, 'cumplean') || str_contains($h, 'nacimiento'))) {
+                $map['fecha_nacimiento'] = $colLetter;
+                continue;
+            }
+
+            // 11. Contacto
             if ($map['correo'] === null && (str_contains($h, 'correo') || str_contains($h, 'email'))) {
                 $map['correo'] = $colLetter;
                 continue;
             }
-            if ($map['telefono'] === null && (str_contains($h, 'telefono') || str_contains($h, 'celular'))) {
+            if ($map['telefono'] === null && (str_contains($h, 'telefono') || str_contains($h, 'celular') || str_contains($h, 'movil'))) {
                 $map['telefono'] = $colLetter;
                 continue;
             }
 
-            // 7. Empresa
-            if ($map['empresa'] === null && str_contains($h, 'empresa') && !str_contains($h, 'vehiculo')) {
+            // 12. Empresa
+            if ($map['empresa'] === null && str_contains($h, 'empresa') && !str_contains($h, 'vehiculo') && !str_contains($h, 'correo') && !str_contains($h, 'telefono') && !str_contains($h, 'movil')) {
                 $map['empresa'] = $colLetter;
                 continue;
             }
 
-            // 8. Vehículos
+            // 13. Vehículos
             if ($map['tipo_vehiculo'] === null && str_contains($h, 'tipo vehiculo')) {
                 $map['tipo_vehiculo'] = $colLetter;
                 continue;
@@ -710,6 +862,64 @@ class EmpleadoImportService
         }
 
         return $map;
+    }
+
+    private function cleanEmail(?string $value): ?string
+    {
+        $val = trim((string) $value);
+        if ($val === '' || $val === '0' || $val === '-' || strtoupper($val) === 'N/A') {
+            return null;
+        }
+
+        return filter_var($val, FILTER_VALIDATE_EMAIL) ? mb_strtolower($val, 'UTF-8') : null;
+    }
+
+    private function normalizeGenero(?string $value): ?string
+    {
+        $v = mb_strtoupper(trim((string) $value), 'UTF-8');
+        if ($v === '') {
+            return null;
+        }
+        if (in_array($v, ['M', 'MASCULINO', 'HOMBRE', 'MALE'], true)) {
+            return 'M';
+        }
+        if (in_array($v, ['F', 'FEMENINO', 'MUJER', 'FEMALE'], true)) {
+            return 'F';
+        }
+
+        return null;
+    }
+
+    private function parseDateValue(?string $value): ?string
+    {
+        $val = trim((string) $value);
+        if ($val === '' || $val === '0' || $val === '-') {
+            return null;
+        }
+
+        if (is_numeric($val) && (float) $val > 1000) {
+            try {
+                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $val)->format('Y-m-d');
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        foreach (['Y-m-d', 'm/d/Y', 'n/j/Y', 'd/m/Y', 'j/n/Y', 'd-m-Y', 'm-d-Y'] as $fmt) {
+            try {
+                $dt = \Carbon\Carbon::createFromFormat($fmt, $val);
+                if ($dt && $dt->year >= 1900 && $dt->year <= 2100) {
+                    return $dt->format('Y-m-d');
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        try {
+            return \Carbon\Carbon::parse($val)->format('Y-m-d');
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
