@@ -10,7 +10,6 @@ import {
     ToggleRight,
     Building2,
     Tag,
-    Layers,
     Briefcase,
     Mail,
     Phone,
