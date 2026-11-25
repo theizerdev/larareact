@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BiotimeCalendario;
+use App\Models\BiotimeCargo;
+use App\Models\BiotimeDepartamento;
 use App\Models\BiotimeDispositivo;
 use App\Models\BiotimeEmpleado;
 use App\Models\BiotimeHorario;
@@ -112,26 +114,44 @@ class BioTimeController extends Controller
     {
         $empresaId = $this->empresaId($request);
 
+        $deptNames = BiotimeDepartamento::query()
+            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+            ->pluck('dept_name', 'dept_code');
+
+        $cargoNames = BiotimeCargo::query()
+            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+            ->pluck('position_name', 'position_code');
+
+        $sortable = ['emp_code', 'card_no', 'first_name', 'dept_code', 'position_code', 'hire_date', 'enable_att', 'link_status', 'updated_at'];
+        $sortBy = in_array($request->sortBy, $sortable, true) ? $request->sortBy : 'first_name';
+        $sortDir = strtolower((string) $request->sortDir) === 'desc' ? 'desc' : 'asc';
+
         $empleados = BiotimeEmpleado::query()
-            ->with('empleado:id,nombres,apellidos,documento_identidad,foto_empleado')
+            ->with('empleado:id,nombres,apellidos,documento_identidad,codigo_nuevo,codigo_anterior,tarjeta_acceso_1,correo,telefono,genero,fecha_nacimiento,fecha_ingreso,foto_empleado,biotime_pushed_at,biotime_push_error')
             ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
             ->when($request->search, function ($q, $search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('emp_code', 'like', "%{$search}%")
+                        ->orWhere('card_no', 'like', "%{$search}%")
                         ->orWhere('first_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('national', 'like', "%{$search}%");
+                        ->orWhere('national', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('mobile', 'like', "%{$search}%");
                 });
             })
             ->when($request->link_status, fn ($q, $s) => $q->where('link_status', $s))
-            ->orderBy('first_name')
+            ->orderBy($sortBy, $sortDir)
             ->paginate($request->perPage ?? 25)
-            ->withQueryString();
+            ->withQueryString()
+            ->through(fn (BiotimeEmpleado $b) => $this->formatearBiotimeEmpleado($b, $deptNames, $cargoNames));
 
+        $base = fn () => BiotimeEmpleado::when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId));
         $stats = [
-            'total' => BiotimeEmpleado::when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))->count(),
-            'vinculados' => BiotimeEmpleado::when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))->whereNotNull('empleado_id')->count(),
-            'sin_vincular' => BiotimeEmpleado::when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))->whereNull('empleado_id')->count(),
+            'total' => $base()->count(),
+            'con_tarjeta' => $base()->whereNotNull('card_no')->where('card_no', '!=', '')->where('card_no', '!=', '0')->count(),
+            'vinculados' => $base()->whereNotNull('empleado_id')->count(),
+            'sin_vincular' => $base()->whereNull('empleado_id')->count(),
             // El ZIP se arma con la empresa del usuario; sin empresa no hay qué contar.
             'fotos_pendientes' => $request->user()?->empresa ? $fotos->pendientes($request->user()->empresa) : 0,
         ];
@@ -139,17 +159,90 @@ class BioTimeController extends Controller
         return Inertia::render('admin/biotime/Empleados', [
             'empleados' => $empleados,
             'stats' => $stats,
-            'filters' => $request->only('search', 'link_status', 'perPage'),
+            'filters' => $request->only('search', 'link_status', 'perPage', 'sortBy', 'sortDir'),
             // Catálogo para el selector de vínculo manual.
             'empleados_hosho' => Empleado::query()
                 ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
                 ->orderBy('nombres')
-                ->get(['id', 'nombres', 'apellidos', 'documento_identidad'])
+                ->get(['id', 'nombres', 'apellidos', 'documento_identidad', 'codigo_nuevo'])
                 ->map(fn ($e) => [
                     'id' => $e->id,
-                    'label' => trim($e->nombres.' '.$e->apellidos).' — '.$e->documento_identidad,
+                    'label' => trim($e->nombres.' '.$e->apellidos).' — '.($e->codigo_nuevo ?: $e->documento_identidad),
                 ]),
         ]);
+    }
+
+    /**
+     * Proyección de solo lectura del espejo de BioTime (sin credenciales ni hashes internos de raw).
+     *
+     * @param  \Illuminate\Support\Collection<string, string|null>  $deptNames
+     * @param  \Illuminate\Support\Collection<string, string|null>  $cargoNames
+     * @return array<string, mixed>
+     */
+    private function formatearBiotimeEmpleado(BiotimeEmpleado $b, $deptNames, $cargoNames): array
+    {
+        $raw = is_array($b->raw) ? $b->raw : [];
+        $deptName = ($b->dept_code !== null ? ($deptNames[$b->dept_code] ?? null) : null)
+            ?? data_get($raw, 'department.dept_name');
+        $positionName = ($b->position_code !== null ? ($cargoNames[$b->position_code] ?? null) : null)
+            ?? data_get($raw, 'position.position_name');
+
+        return [
+            'id' => $b->id,
+            'biotime_id' => $b->biotime_id,
+            'emp_code' => $b->emp_code,
+            'card_no' => $b->card_no,
+            'first_name' => $b->first_name,
+            'last_name' => $b->last_name,
+            'nickname' => $b->nickname,
+            'nombre_completo' => $b->nombre_completo,
+            'national' => $b->national,
+            'gender' => $b->gender,
+            'birthday' => $b->birthday?->format('Y-m-d'),
+            'hire_date' => $b->hire_date?->format('Y-m-d'),
+            'email' => $b->email,
+            'mobile' => $b->mobile,
+            'dept_code' => $b->dept_code,
+            'dept_name' => $deptName,
+            'position_code' => $b->position_code,
+            'position_name' => $positionName,
+            'area_names' => $b->area_names ?? [],
+            'internal_emp_num' => $b->internal_emp_num,
+            'payroll_num' => $b->payroll_num,
+            'enable_att' => $b->enable_att,
+            'biophoto_path' => $b->biophoto_path,
+            'foto_exportada' => $b->foto_exportada,
+            'foto_exportada_at' => $b->foto_exportada_at?->toIso8601String(),
+            'photo_synced_at' => $b->photo_synced_at?->toIso8601String(),
+            'foto_biotime_url' => $b->foto_biotime_url,
+            'updated_at' => $b->updated_at?->toIso8601String(),
+            'link_status' => $b->link_status,
+            'empleado_id' => $b->empleado_id,
+            'biometrics' => [
+                'face' => data_get($raw, 'face'),
+                'vl_face' => data_get($raw, 'vl_face'),
+                'fingerprint' => data_get($raw, 'fingerprint'),
+                'palm' => data_get($raw, 'palm'),
+                'update_time' => data_get($raw, 'update_time'),
+            ],
+            'empleado' => $b->empleado ? [
+                'id' => $b->empleado->id,
+                'nombres' => $b->empleado->nombres,
+                'apellidos' => $b->empleado->apellidos,
+                'documento_identidad' => $b->empleado->documento_identidad,
+                'codigo_nuevo' => $b->empleado->codigo_nuevo,
+                'codigo_anterior' => $b->empleado->codigo_anterior,
+                'numero_tarjeta' => $b->empleado->numeroTarjeta(),
+                'correo' => $b->empleado->correo,
+                'telefono' => $b->empleado->telefono,
+                'genero' => $b->empleado->genero,
+                'fecha_nacimiento' => $b->empleado->fecha_nacimiento?->format('Y-m-d'),
+                'fecha_ingreso' => $b->empleado->fecha_ingreso?->format('Y-m-d'),
+                'foto_empleado' => $b->empleado->foto_empleado,
+                'biotime_pushed_at' => $b->empleado->biotime_pushed_at?->toIso8601String(),
+                'biotime_push_error' => $b->empleado->biotime_push_error,
+            ] : null,
+        ];
     }
 
     public function vincular(Request $request, BiotimeEmpleado $biotimeEmpleado): RedirectResponse

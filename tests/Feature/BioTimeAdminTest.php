@@ -52,6 +52,82 @@ class BioTimeAdminTest extends TestCase
         $this->actingAs($user)->get('/admin/biotime/marcajes')->assertOk();
     }
 
+    public function test_biotime_empleados_muestra_datos_y_tarjeta_y_oculta_credenciales(): void
+    {
+        $empresa = $this->empresa();
+        $user = $this->userWith(['biotime.view'], $empresa);
+
+        \App\Models\BiotimeDepartamento::create([
+            'empresa_id' => $empresa->id,
+            'biotime_id' => 64255,
+            'dept_code' => '8',
+            'dept_name' => 'Tecnologías de la Información',
+        ]);
+        \App\Models\BiotimeCargo::create([
+            'empresa_id' => $empresa->id,
+            'biotime_id' => 83193,
+            'position_code' => '5',
+            'position_name' => 'Analista',
+        ]);
+
+        $empleado = Empleado::create([
+            'nombres' => 'Mauricio',
+            'apellidos' => 'Navarro Ibarra',
+            'documento_identidad' => '419900',
+            'codigo_nuevo' => '419900',
+            'codigo_anterior' => '856093',
+            'empresa_id' => $empresa->id,
+            'status' => true,
+        ]);
+
+        BiotimeEmpleado::create([
+            'empresa_id' => $empresa->id,
+            'biotime_id' => 9001,
+            'emp_code' => '419900',
+            'first_name' => 'MAURICIO',
+            'last_name' => 'NAVARRO IBARRA',
+            'card_no' => '856093',
+            'dept_code' => '8',
+            'position_code' => '5',
+            'area_names' => ['Sistemas'],
+            'email' => 'mauricio.navarro@smurfitwestrock.mx',
+            'mobile' => '+52-8164194583',
+            'gender' => 'M',
+            'birthday' => '2002-11-11',
+            'hire_date' => '2023-10-17',
+            'enable_att' => true,
+            'empleado_id' => $empleado->id,
+            'link_status' => 'auto',
+            'raw' => [
+                'face' => '-',
+                'vl_face' => '-',
+                'fingerprint' => '-',
+                'palm' => '-',
+                'update_time' => '2026-11-25 20:47:03',
+                'self_password' => 'pbkdf2_sha256$secret_hash',
+                'device_password' => '1234',
+            ],
+        ]);
+
+        $res = $this->actingAs($user)
+            ->get('/admin/biotime/empleados?search=856093')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('admin/biotime/Empleados')
+                ->where('stats.con_tarjeta', 1)
+                ->where('empleados.data.0.emp_code', '419900')
+                ->where('empleados.data.0.card_no', '856093')
+                ->where('empleados.data.0.dept_name', 'Tecnologías de la Información')
+                ->where('empleados.data.0.position_name', 'Analista')
+                ->where('empleados.data.0.email', 'mauricio.navarro@smurfitwestrock.mx')
+                ->where('empleados.data.0.mobile', '+52-8164194583')
+                ->where('empleados.data.0.empleado.numero_tarjeta', '856093')
+                ->missing('empleados.data.0.raw')
+            );
+
+        $this->assertStringNotContainsString('secret_hash', $res->getContent());
+    }
+
     public function test_viewer_cannot_trigger_sync_or_link(): void
     {
         $empresa = $this->empresa();
