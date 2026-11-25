@@ -1994,16 +1994,16 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <Label htmlFor="filtro-numero">Número de empleado</Label>
+                                                <Label htmlFor="filtro-numero">Número de empleado Actual:</Label>
                                                 <Input
                                                     id="filtro-numero"
                                                     value={filtrosEnrolamiento.numero}
                                                     onChange={(e) => actualizarFiltroEnrolamiento('numero', e.target.value)}
-                                                    placeholder="Código nuevo o anterior"
+                                                    placeholder="Número de empleado actual o anterior"
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <Label htmlFor="filtro-correo">Correo</Label>
+                                                <Label htmlFor="filtro-correo">Correo Actual:</Label>
                                                 <Input
                                                     id="filtro-correo"
                                                     type="email"
@@ -2047,16 +2047,32 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                         }`}
                                                     >
                                                         <span className="flex items-center justify-between gap-2">
-                                                            <strong className="truncate text-sm">{resultado.nombre_completo}</strong>
+                                                            <strong className="truncate text-sm font-bold text-foreground">{resultado.nombre_completo}</strong>
                                                             <Badge variant="outline" className="shrink-0 text-[10px]">
                                                                 {resultado.enrolado ? 'Enrolado' : 'Pendiente'}
                                                             </Badge>
                                                         </span>
-                                                        <span className="mt-1 block text-xs text-muted-foreground">
-                                                            No. {resultado.codigo_nuevo || resultado.numero || resultado.codigo_acceso || resultado.documento_identidad}
-                                                            {resultado.codigo_anterior ? ` · Ant: ${resultado.codigo_anterior}` : ''}
-                                                            {resultado.correo ? ` · ${resultado.correo}` : ''}
-                                                        </span>
+                                                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                                                            <span>
+                                                                <strong className="text-foreground">ID número:</strong>{' '}
+                                                                <span className="font-mono font-semibold text-amber-700 dark:text-amber-400">
+                                                                    {resultado.codigo_anterior || `#${resultado.id}`}
+                                                                </span>
+                                                            </span>
+                                                            <span>•</span>
+                                                            <span>
+                                                                <strong className="text-foreground">Número de empleado actual:</strong>{' '}
+                                                                <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                                                                    {resultado.codigo_nuevo || resultado.numero || resultado.documento_identidad}
+                                                                </span>
+                                                            </span>
+                                                            {resultado.correo && (
+                                                                <>
+                                                                    <span>•</span>
+                                                                    <span className="truncate">{resultado.correo}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </button>
                                                 ))}
                                             </div>
@@ -2110,11 +2126,28 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                 )}
                                             </div>
                                             <h2 className="text-xl font-bold text-foreground truncate">{empleado.nombre_completo}</h2>
-                                            <p className="text-xs text-muted-foreground truncate">
-                                                No. Nuevo: <strong className="font-mono text-foreground">{empleado.codigo_nuevo || empleado.numero || empleado.documento_identidad}</strong>
-                                                {empleado.codigo_anterior ? <> · Ant: <strong className="font-mono text-foreground">{empleado.codigo_anterior}</strong></> : null}
-                                                {' • '}{empleado.cargo || 'Sin cargo'} • {empleado.departamento || empleado.area || 'Sin departamento'}
-                                            </p>
+                                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground mt-1">
+                                                <span>
+                                                    <strong className="text-foreground">ID número:</strong>{' '}
+                                                    <span className="font-mono font-semibold text-amber-700 dark:text-amber-400">
+                                                        {empleado.codigo_anterior || `#${empleado.id}`}
+                                                    </span>
+                                                </span>
+                                                <span>•</span>
+                                                <span>
+                                                    <strong className="text-foreground">Número de empleado actual:</strong>{' '}
+                                                    <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                                                        {empleado.codigo_nuevo || empleado.numero || empleado.documento_identidad}
+                                                    </span>
+                                                </span>
+                                                {empleado.correo && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <span><strong className="text-foreground">Correo Actual:</strong> {empleado.correo}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-muted-foreground truncate mt-1">{empleado.cargo || 'Sin cargo'} • {empleado.departamento || empleado.area || 'Sin departamento'}</p>
                                             <p className="text-xs text-primary font-medium">Turno: {empleado.turno}</p>
                                         </div>
                                         <Button

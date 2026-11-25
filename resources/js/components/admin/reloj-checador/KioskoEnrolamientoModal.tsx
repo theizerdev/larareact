@@ -594,11 +594,9 @@ export function KioskoEnrolamientoModal({
                             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                                 Información Oficial del Colaborador:
                             </Label>
-                            <div className={`grid gap-3.5 ${empleado.codigo_anterior ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'}`}>
-                                <DatoTarjeta etiqueta="Código Nuevo" valor={empleado.codigo_nuevo || empleado.numero || empleado.documento_identidad} mono />
-                                {empleado.codigo_anterior && (
-                                    <DatoTarjeta etiqueta="Código Anterior" valor={empleado.codigo_anterior} mono />
-                                )}
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
+                                <DatoTarjeta etiqueta="ID número" valor={empleado.codigo_anterior || `#${empleado.id}`} mono />
+                                <DatoTarjeta etiqueta="Número de empleado actual" valor={empleado.codigo_nuevo || empleado.numero || empleado.documento_identidad} mono />
                                 <DatoTarjeta etiqueta="Nombre Completo" valor={empleado.nombre_completo} />
                                 <DatoTarjeta etiqueta="Área / Departamento" valor={empleado.area || empleado.departamento || 'General'} />
                                 <DatoTarjeta etiqueta="Puesto / Cargo" valor={empleado.cargo || 'Operativo'} />
