@@ -35,6 +35,7 @@ import { Breadcrumbs } from '@/components/breadcrumbs';
 import { CameraWidget } from '@/components/admin/empleados/CameraWidget';
 import { ImportWizardModal } from '@/components/admin/empleados/ImportWizardModal';
 import { EnrolarModal, EmpleadoSimple } from '@/components/admin/empleados/EnrolarModal';
+import { CedulaEnrolamientoExpedienteModal } from '@/components/admin/empleados/CedulaEnrolamientoExpedienteModal';
 import { validarCurp } from '@/utils/curpValidator';
 import PhoneInputGroup from '../Empresas/Partials/PhoneInputGroup';
 import type { ColumnDef } from '@/components/data-table';
@@ -139,6 +140,7 @@ interface Empleado {
     documento_identidad: string;
     codigo_nuevo?: string | null;
     codigo_anterior?: string | null;
+    legacy?: string | null;
     codigo_acceso?: string | null;
     tarjeta_acceso_1?: string | null;
     tarjeta_acceso_2?: string | null;
@@ -228,6 +230,7 @@ const initialForm = {
     documento_identidad: '',
     codigo_nuevo: '',
     codigo_anterior: '',
+    legacy: '',
     codigo_acceso: '',
     curp: '',
     pais_telefono_id: '' as string | number,
@@ -297,6 +300,7 @@ export default function EmpleadosIndexPage({
     const [deletingEmpleado, setDeletingEmpleado] = useState<Empleado | null>(null);
     const [isEnrolarModalOpen, setIsEnrolarModalOpen] = useState(false);
     const [enrolarPreselectedEmpleado, setEnrolarPreselectedEmpleado] = useState<EmpleadoSimple | null>(null);
+    const [expedienteEmpleado, setExpedienteEmpleado] = useState<Empleado | null>(null);
     const [activeTab, setActiveTab] = useState('general');
     const [isTableLoading, setIsTableLoading] = useState(false);
     const [activeCameraField, setActiveCameraField] = useState<'foto_empleado' | 'foto_empleado_2' | 'foto_documento' | 'foto_documento_reverso' | 'foto_frontal' | 'foto_trasera' | null>(null);
@@ -465,6 +469,7 @@ export default function EmpleadosIndexPage({
             documento_identidad: randomCode,
             codigo_nuevo: randomCode,
             codigo_anterior: '',
+            legacy: '',
             codigo_acceso: randomCode,
             curp: '',
             empresa_id: companyId,
@@ -493,6 +498,7 @@ export default function EmpleadosIndexPage({
             documento_identidad: emp.documento_identidad || '',
             codigo_nuevo: emp.codigo_nuevo || emp.documento_identidad || '',
             codigo_anterior: emp.codigo_anterior || '',
+            legacy: emp.legacy || '',
             codigo_acceso: emp.codigo_acceso || emp.documento_identidad || '',
             curp: emp.curp || '',
             pais_telefono_id: emp.pais_telefono_id || '',
@@ -642,6 +648,11 @@ export default function EmpleadosIndexPage({
                                 {emp.codigo_anterior && (
                                     <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-300 font-mono font-bold text-xs tracking-wider border border-amber-500/30" title="Código Anterior (Enrolamiento)">
                                         ANTIGUO: {emp.codigo_anterior}
+                                    </span>
+                                )}
+                                {emp.legacy && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-800 dark:text-purple-300 font-mono font-bold text-xs tracking-wider border border-purple-500/30" title="Código Legacy">
+                                        LEGACY: {emp.legacy}
                                     </span>
                                 )}
                                 {emp.codigo_acceso && emp.codigo_acceso !== (emp.codigo_nuevo || emp.documento_identidad) && (
@@ -862,6 +873,10 @@ export default function EmpleadosIndexPage({
                             <DropdownMenuItem onClick={() => router.get(`/admin/empleados/${emp.id}/carnet`)}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 {__('Ver Carnet')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setExpedienteEmpleado(emp)}>
+                                <FileText className="mr-2 h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                {__('Expediente / Cédula de Enrolamiento')}
                             </DropdownMenuItem>
                             {canEdit && (
                                 <>
@@ -1231,6 +1246,30 @@ export default function EmpleadosIndexPage({
                                         <p className="text-[10px] text-muted-foreground">Utilizado para buscar y enrolar al empleado con su código previo.</p>
                                         {errors.codigo_anterior && (
                                             <p className="text-red-500 text-xs mt-1">{errors.codigo_anterior}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Código Legacy */}
+                                    <div className="md:col-span-2 p-4 rounded-xl border border-purple-500/30 bg-purple-50/30 dark:bg-purple-950/30 space-y-2 transition-all shadow-sm">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <Label htmlFor="legacy" className="font-semibold text-xs text-purple-950 dark:text-purple-200">
+                                                Código Legacy
+                                            </Label>
+                                            <span className="text-[10px] text-purple-700 dark:text-purple-300 font-medium">
+                                                Referencia Legacy / Enrolamiento
+                                            </span>
+                                        </div>
+                                        <Input
+                                            id="legacy"
+                                            value={data.legacy || ''}
+                                            onChange={(e) => setData('legacy', e.target.value)}
+                                            placeholder="ej. WRK-10045 o SK-2041"
+                                            maxLength={100}
+                                            className="font-mono font-bold text-sm text-purple-900 dark:text-purple-300 border-purple-300 dark:border-purple-700 focus:border-purple-500"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground">Código Legacy guardado en el colaborador y mostrado en su enrolamiento y cédula.</p>
+                                        {errors.legacy && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.legacy}</p>
                                         )}
                                     </div>
 
@@ -2447,6 +2486,15 @@ export default function EmpleadosIndexPage({
                 onSuccess={() => {
                     router.reload({ only: ['empleados', 'stats'] });
                 }}
+            />
+
+            {/* Modal de Expediente / Cédulas de Enrolamiento */}
+            <CedulaEnrolamientoExpedienteModal
+                open={expedienteEmpleado !== null}
+                onOpenChange={(open) => {
+                    if (!open) setExpedienteEmpleado(null);
+                }}
+                empleado={expedienteEmpleado}
             />
         </>
     );

@@ -27,7 +27,8 @@ class EmpleadoController extends Controller
 
     public function index(Request $request)
     {
-        $query = Empleado::with(['paisTelefono', 'departamento', 'responsable', 'cargo', 'empresa', 'sucursal', 'user', 'vehiculos'])
+        $query = Empleado::with(['paisTelefono', 'departamento', 'responsable', 'cargo', 'empresa', 'sucursal', 'user', 'vehiculos', 'ultimaCedulaEnrolamiento'])
+            ->withCount('cedulasEnrolamiento')
             ->when($request->search, function ($q, $search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('nombres', 'like', "%{$search}%")
@@ -35,6 +36,7 @@ class EmpleadoController extends Controller
                         ->orWhere('documento_identidad', 'like', "%{$search}%")
                         ->orWhere('codigo_nuevo', 'like', "%{$search}%")
                         ->orWhere('codigo_anterior', 'like', "%{$search}%")
+                        ->orWhere('legacy', 'like', "%{$search}%")
                         ->orWhere('codigo_acceso', 'like', "%{$search}%")
                         ->orWhere('correo', 'like', "%{$search}%")
                         ->orWhere('telefono', 'like', "%{$search}%");
@@ -114,6 +116,8 @@ class EmpleadoController extends Controller
         $data['codigo_nuevo'] = $nuevo !== '' ? $nuevo : null;
         $ant = trim((string) ($data['codigo_anterior'] ?? ''));
         $data['codigo_anterior'] = $ant !== '' ? $ant : null;
+        $leg = trim((string) ($data['legacy'] ?? ''));
+        $data['legacy'] = $leg !== '' ? $leg : null;
 
         $data['codigo_acceso'] = isset($data['codigo_acceso'])
             ? trim((string) $data['codigo_acceso'])
@@ -395,6 +399,11 @@ class EmpleadoController extends Controller
         if (array_key_exists('codigo_anterior', $data)) {
             $ant = trim((string) ($data['codigo_anterior'] ?? ''));
             $data['codigo_anterior'] = $ant !== '' ? $ant : null;
+        }
+
+        if (array_key_exists('legacy', $data)) {
+            $leg = trim((string) ($data['legacy'] ?? ''));
+            $data['legacy'] = $leg !== '' ? $leg : null;
         }
 
         if (array_key_exists('codigo_acceso', $data)) {

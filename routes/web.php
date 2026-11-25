@@ -156,6 +156,10 @@ Route::post('admin/api/reloj-checador/registrar', [RelojChecadorKioskoController
     ->middleware('throttle:120,1')
     ->name('api.reloj-checador.registrar');
 
+Route::post('admin/api/reloj-checador/enrolamiento/accion', [RelojChecadorKioskoController::class, 'registrarAccionEnrolamiento'])
+    ->middleware('throttle:120,1')
+    ->name('api.reloj-checador.enrolamiento.accion');
+
 Route::post('admin/api/reloj-checador/enrolar', [RelojChecadorKioskoController::class, 'enrolarEmpleado'])
     ->middleware('throttle:60,1')
     ->name('api.reloj-checador.enrolar');

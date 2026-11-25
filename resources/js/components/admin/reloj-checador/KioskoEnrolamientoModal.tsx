@@ -16,7 +16,9 @@ import {
     SwitchCamera,
     Check,
     Zap,
-    Maximize2
+    Maximize2,
+    FileText,
+    ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -33,6 +35,7 @@ export interface EmpleadoKioskoEnrolar {
     documento_identidad: string;
     codigo_nuevo?: string | null;
     codigo_anterior?: string | null;
+    legacy?: string | null;
     numero?: string | null;
     area?: string | null;
     departamento?: string | null;
@@ -95,11 +98,33 @@ function crearFotoBioTime(
     return canvas.toDataURL('image/jpeg', 0.88);
 }
 
-function DatoTarjeta({ etiqueta, valor, mono = false }: { etiqueta: string; valor: string | null | undefined; mono?: boolean }) {
+function DatoTarjeta({
+    etiqueta,
+    valor,
+    mono = false,
+    className,
+}: {
+    etiqueta: string;
+    valor: string | null | undefined;
+    mono?: boolean;
+    className?: string;
+}) {
     return (
-        <div className="rounded-2xl border border-border/80 bg-card/80 p-3 sm:p-4 shadow-2xs backdrop-blur-xs">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{etiqueta}</p>
-            <p className={cn('mt-1 text-sm sm:text-base font-bold text-foreground truncate', mono && 'font-mono tracking-wider')}>
+        <div
+            className={cn(
+                'rounded-2xl border-2 border-border/80 bg-card/90 p-4 sm:p-5 md:p-6 shadow-sm backdrop-blur-xs flex flex-col justify-between min-h-[105px] sm:min-h-[120px] transition-all hover:border-indigo-500/50 hover:shadow-md',
+                className,
+            )}
+        >
+            <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                {etiqueta}
+            </p>
+            <p
+                className={cn(
+                    'mt-2 text-base sm:text-lg md:text-xl font-black text-foreground break-words leading-tight',
+                    mono && 'font-mono tracking-wider',
+                )}
+            >
                 {valor || '—'}
             </p>
         </div>
@@ -141,6 +166,18 @@ export function KioskoEnrolamientoModal({
     const [loading, setLoading] = useState<boolean>(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+    // Trazabilidad y Cédula de Enrolamiento
+    const [cedulaUuid, setCedulaUuid] = useState<string | null>(null);
+    const [avisoRegistradoEn, setAvisoRegistradoEn] = useState<string | null>(null);
+    const [registrandoAviso, setRegistrandoAviso] = useState<boolean>(false);
+    const [geoCoords, setGeoCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [cedulaGenerada, setCedulaGenerada] = useState<{
+        id: number;
+        uuid: string;
+        sello_digital: string | null;
+        pdf_url: string | null;
+    } | null>(null);
 
     // Sonido de obturador para feedback auditivo de captura
     const playShutterSound = () => {
@@ -265,6 +302,10 @@ export function KioskoEnrolamientoModal({
         if (!isOpen || !empleado) {
             setPaso(1);
             setAvisoAceptado(false);
+            setCedulaUuid(null);
+            setAvisoRegistradoEn(null);
+            setRegistrandoAviso(false);
+            setCedulaGenerada(null);
             setFoto1('');
             setFoto2('');
             setGenero('');
@@ -279,6 +320,10 @@ export function KioskoEnrolamientoModal({
 
         setPaso(1);
         setAvisoAceptado(false);
+        setCedulaUuid(null);
+        setAvisoRegistradoEn(null);
+        setRegistrandoAviso(false);
+        setCedulaGenerada(null);
         setFoto1('');
         setFoto2('');
         setGenero(empleado.genero === 'M' || empleado.genero === 'F' ? empleado.genero : '');
@@ -288,6 +333,14 @@ export function KioskoEnrolamientoModal({
         setFotoActivaTarget(1);
         setCountdown(null);
         setSecuenciaEnProgreso(false);
+
+        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => setGeoCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                () => { },
+                { timeout: 5000, maximumAge: 60000 },
+            );
+        }
     }, [isOpen, empleado?.id, stopCamera]);
 
     // Salir con tecla Escape
@@ -444,6 +497,48 @@ export function KioskoEnrolamientoModal({
         lector.readAsDataURL(archivo);
     };
 
+    const handleToggleAvisoPrivacidad = async (checked: boolean) => {
+        setAvisoAceptado(checked);
+
+        if (!checked || !empleado) {
+            return;
+        }
+
+        setRegistrandoAviso(true);
+        try {
+            const response = await fetch('/admin/api/reloj-checador/enrolamiento/accion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-XSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    empleado_id: empleado.id,
+                    accion: 'aviso_privacidad',
+                    cedula_uuid: cedulaUuid,
+                    latitud: geoCoords?.lat ?? null,
+                    longitud: geoCoords?.lng ?? null,
+                }),
+            });
+
+            const data = await response.json();
+            if (response.ok && data.success) {
+                if (data.cedula_uuid) {
+                    setCedulaUuid(data.cedula_uuid);
+                }
+                if (data.log?.ocurrido_en) {
+                    setAvisoRegistradoEn(data.log.ocurrido_en);
+                }
+            }
+        } catch {
+            // Si falla la red en este clic, el backend garantiza el registro al finalizar
+        } finally {
+            setRegistrandoAviso(false);
+        }
+    };
+
     const handleFinalizar = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -458,6 +553,9 @@ export function KioskoEnrolamientoModal({
                 foto_empleado_2: foto2,
                 genero,
                 fecha_nacimiento: fechaNacimiento,
+                cedula_uuid: cedulaUuid,
+                latitud: geoCoords?.lat ?? null,
+                longitud: geoCoords?.lng ?? null,
             };
 
             const response = await fetch('/admin/api/reloj-checador/enrolar', {
@@ -475,6 +573,7 @@ export function KioskoEnrolamientoModal({
 
             if (response.ok && data.success) {
                 stopCamera();
+                setCedulaGenerada(data.cedula || null);
                 setPaso(3);
                 onSuccess(data.empleado);
             } else {
@@ -570,33 +669,37 @@ export function KioskoEnrolamientoModal({
             />
 
             {/* CUERPO PRINCIPAL FULLSCREEN */}
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col justify-center">
+            <main className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 md:px-14 lg:px-16 flex flex-col justify-center">
                 {/* PASO 1: DATOS PRECARGADOS Y AVISO DE PRIVACIDAD */}
                 {paso === 1 && (
-                    <div className="max-w-4xl w-full mx-auto space-y-6 my-auto animate-in fade-in-50 duration-300">
+                    <div className="w-full max-w-[1680px] mx-auto space-y-7 md:space-y-8 my-auto animate-in fade-in-50 duration-300 py-2">
                         {/* HERO BIENVENIDA */}
-                        <div className="flex items-start gap-5 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/5 border-2 border-indigo-500/20 p-6 rounded-3xl shadow-sm">
-                            <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-indigo-600/30">
-                                <Sparkles className="w-7 h-7" />
+                        <div className="flex items-center sm:items-start gap-5 sm:gap-6 bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-indigo-500/5 border-2 border-indigo-500/30 p-6 sm:p-8 rounded-3xl shadow-md">
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xl shadow-indigo-600/30">
+                                <Sparkles className="w-8 h-8 sm:w-10 sm:h-10" />
                             </div>
-                            <div className="space-y-1.5">
-                                <h2 className="text-2xl font-black text-foreground">
+                            <div className="space-y-2">
+                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground tracking-tight">
                                     ¡Bienvenido(a), {nombreMostrar}!
                                 </h2>
-                                <p className="text-sm text-muted-foreground leading-relaxed">
-                                    Tus datos ya forman parte de la plantilla de <strong>{empresaFinal}</strong>. Para habilitar tu marcaje en este quiosco y sincronizar tu rostro con las terminales BioTime de planta, realizaremos una rápida toma fotográfica de frente.
+                                <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed">
+                                    Tus datos ya forman parte de la plantilla de <strong className="text-foreground font-bold">{empresaFinal}</strong>. Para habilitar tu marcaje en este quiosco y sincronizar tu rostro con las terminales BioTime de planta, realizaremos una rápida toma fotográfica de frente.
                                 </p>
                             </div>
                         </div>
 
                         {/* TARJETAS DE DATOS */}
-                        <div className="space-y-2.5">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                Información Oficial del Colaborador:
-                            </Label>
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
-                                <DatoTarjeta etiqueta="ID número" valor={empleado.codigo_anterior || `#${empleado.id}`} mono />
-                                <DatoTarjeta etiqueta="Número de empleado actual" valor={empleado.codigo_nuevo || empleado.numero || empleado.documento_identidad} mono />
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2.5">
+                                <UserCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                <Label className="text-sm sm:text-base font-extrabold uppercase tracking-wider text-muted-foreground">
+                                    Información Oficial del Colaborador:
+                                </Label>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                                <DatoTarjeta etiqueta="No. de Empleado" valor={empleado.codigo_nuevo || empleado.numero || empleado.documento_identidad} mono />
+                                <DatoTarjeta etiqueta="ID" valor={`#${empleado.id}`} mono />
+                                <DatoTarjeta etiqueta="Legacy" valor={empleado.legacy || empleado.codigo_anterior || '—'} mono />
                                 <DatoTarjeta etiqueta="Nombre Completo" valor={empleado.nombre_completo} />
                                 <DatoTarjeta etiqueta="Área / Departamento" valor={empleado.area || empleado.departamento || 'General'} />
                                 <DatoTarjeta etiqueta="Puesto / Cargo" valor={empleado.cargo || 'Operativo'} />
@@ -604,14 +707,14 @@ export function KioskoEnrolamientoModal({
                         </div>
 
                         {/* AVISO DE PRIVACIDAD */}
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        <div className="space-y-3 sm:space-y-4">
+                            <div className="flex items-center gap-2.5 text-sm sm:text-base font-extrabold uppercase tracking-wider text-muted-foreground">
+                                <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                                 <span>Consentimiento y Aviso de Privacidad Biométrico:</span>
                             </div>
-                            <div className="max-h-48 overflow-y-auto rounded-2xl border bg-muted/20 p-5 text-xs sm:text-sm leading-relaxed text-muted-foreground space-y-2 select-none shadow-inner">
+                            <div className="max-h-56 overflow-y-auto rounded-3xl border-2 bg-muted/30 p-6 sm:p-7 text-sm sm:text-base md:text-lg leading-relaxed text-muted-foreground space-y-3 select-none shadow-inner">
                                 <p>
-                                    <strong>{empresaFinal}</strong> es el responsable del tratamiento y resguardo confidencial de sus datos personales sensibles y biométricos faciales.
+                                    <strong className="text-foreground font-bold">{empresaFinal}</strong> es el responsable del tratamiento y resguardo confidencial de sus datos personales sensibles y biométricos faciales.
                                 </p>
                                 <p>
                                     Dichos datos se emplean estrictamente para el registro de asistencia laboral, puntualidad y control de accesos a las instalaciones de la empresa en cumplimiento con las políticas internas.
@@ -621,15 +724,34 @@ export function KioskoEnrolamientoModal({
                                 </p>
                             </div>
 
-                            <label className="flex cursor-pointer items-start gap-4 rounded-2xl border-2 border-border/80 bg-card p-5 hover:bg-muted/30 transition-all shadow-sm">
-                                <Checkbox
-                                    checked={avisoAceptado}
-                                    onCheckedChange={(val) => setAvisoAceptado(val === true)}
-                                    className="mt-0.5 h-6 w-6 rounded-lg data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
-                                />
-                                <span className="text-sm font-bold text-foreground leading-snug">
-                                    He leído, comprendo y acepto el aviso de privacidad para el tratamiento de mis datos biométricos faciales.
-                                </span>
+                            <label
+                                className={cn(
+                                    'flex cursor-pointer items-center justify-between gap-5 rounded-3xl border-2 p-5 sm:p-7 transition-all shadow-sm select-none',
+                                    avisoAceptado
+                                        ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/20'
+                                        : 'border-border/80 bg-card hover:bg-muted/30 hover:border-indigo-400/60',
+                                )}
+                            >
+                                <div className="flex items-center gap-5">
+                                    <Checkbox
+                                        checked={avisoAceptado}
+                                        onCheckedChange={(val) => handleToggleAvisoPrivacidad(val === true)}
+                                        className="h-8 w-8 rounded-xl data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 shrink-0"
+                                    />
+                                    <span className="text-base sm:text-lg md:text-xl font-bold text-foreground leading-snug">
+                                        He leído, comprendo y acepto el aviso de privacidad para el tratamiento de mis datos biométricos faciales.
+                                    </span>
+                                </div>
+                                {registrandoAviso ? (
+                                    <Badge variant="outline" className="shrink-0 gap-1.5 text-xs">
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        Registrando...
+                                    </Badge>
+                                ) : avisoAceptado && avisoRegistradoEn ? (
+                                    <Badge variant="outline" className="shrink-0 bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-bold">
+                                        ✓ Acción Aviso de Privacidad registrada
+                                    </Badge>
+                                ) : null}
                             </label>
                         </div>
 
@@ -640,9 +762,14 @@ export function KioskoEnrolamientoModal({
                                 size="lg"
                                 disabled={!avisoAceptado}
                                 onClick={() => setPaso(2)}
-                                className="w-full h-18 text-lg font-black bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-3 transition-all active:scale-98"
+                                className={cn(
+                                    'w-full h-20 sm:h-22 md:h-24 text-xl sm:text-2xl font-black rounded-3xl shadow-xl flex items-center justify-center gap-4 transition-all tracking-wide',
+                                    avisoAceptado
+                                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/30 active:scale-98 cursor-pointer'
+                                        : 'bg-muted text-muted-foreground opacity-60 cursor-not-allowed',
+                                )}
                             >
-                                <Camera className="w-6 h-6" />
+                                <Camera className="w-8 h-8" />
                                 <span>COMENZAR TOMA DE FOTOGRAFÍAS</span>
                             </Button>
                         </div>
@@ -1082,6 +1209,36 @@ export function KioskoEnrolamientoModal({
                         <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 px-5 py-2 font-mono text-sm">
                             ✓ Estado: Enrolado y Listo para Checar Asistencia
                         </Badge>
+                        {cedulaGenerada && (
+                            <div className="rounded-2xl border-2 border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/20 p-4 text-left space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                                        <FileText className="w-4 h-4" />
+                                        Cédula de Enrolamiento guardada en expediente
+                                    </span>
+                                    {cedulaGenerada.pdf_url && (
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 text-xs font-bold gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-100"
+                                            onClick={() => window.open(cedulaGenerada.pdf_url!, '_blank', 'noopener,noreferrer')}
+                                        >
+                                            <ExternalLink className="w-3.5 h-3.5" />
+                                            Ver Cédula PDF
+                                        </Button>
+                                    )}
+                                </div>
+                                <p className="text-[11px] font-mono text-muted-foreground break-all">
+                                    <strong>Folio:</strong> {cedulaGenerada.uuid}
+                                </p>
+                                {cedulaGenerada.sello_digital && (
+                                    <p className="text-[11px] font-mono text-muted-foreground break-all">
+                                        <strong>Sello Digital:</strong> {cedulaGenerada.sello_digital}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         <div className="pt-4">
                             <Button
                                 type="button"

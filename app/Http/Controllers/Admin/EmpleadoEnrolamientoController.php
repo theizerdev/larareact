@@ -41,6 +41,7 @@ class EmpleadoEnrolamientoController extends Controller
                 'numero' => $empleado->codigo_nuevo ?: ($empleado->documento_identidad ?: $empleado->codigo_acceso),
                 'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_anterior' => $empleado->codigo_anterior,
+                'legacy' => $empleado->legacy,
                 'nombres' => $empleado->nombres,
                 'apellidos' => $empleado->apellidos,
                 'area' => $empleado->departamento?->nombre,
@@ -58,7 +59,7 @@ class EmpleadoEnrolamientoController extends Controller
      */
     public function store(Request $request, Empleado $empleado)
     {
-        $this->guardarEnrolamiento($request, $empleado);
+        $this->guardarEnrolamiento($request, $empleado, 'admin');
 
         return back();
     }
@@ -286,6 +287,7 @@ class EmpleadoEnrolamientoController extends Controller
                 'numero' => $empleado->codigo_nuevo ?: ($empleado->documento_identidad ?: $empleado->codigo_acceso),
                 'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_anterior' => $empleado->codigo_anterior,
+                'legacy' => $empleado->legacy,
                 'nombres' => $empleado->nombres,
                 'apellidos' => $empleado->apellidos,
                 'area' => $empleado->departamento?->nombre,
@@ -319,16 +321,95 @@ class EmpleadoEnrolamientoController extends Controller
             ]);
         }
 
-        $this->guardarEnrolamiento($request, $empleado);
+        $this->guardarEnrolamiento($request, $empleado, 'publico');
 
         return back();
     }
 
     /**
+     * Lista las cédulas de enrolamiento y logs guardados en el expediente del colaborador.
+     */
+    public function cedulas(Empleado $empleado)
+    {
+        $cedulas = $empleado->cedulasEnrolamiento()
+            ->with('logs')
+            ->get()
+            ->map(fn (\App\Models\EmpleadoEnrolamientoCedula $c) => [
+                'id' => $c->id,
+                'uuid' => $c->uuid,
+                'origen' => $c->origen,
+                'estado' => $c->estado,
+                'no_empleado' => $c->no_empleado,
+                'codigo_legacy' => $c->codigo_legacy,
+                'nombre_completo' => $c->nombre_completo,
+                'aviso_privacidad_aceptado_en' => $c->aviso_privacidad_aceptado_en?->toIso8601String(),
+                'enrolado_en' => $c->enrolado_en?->toIso8601String(),
+                'ip_address' => $c->ip_address,
+                'sello_digital' => $c->sello_digital,
+                'integridad_valida' => $c->verificarIntegridad(),
+                'pdf_url' => route('admin.empleados.cedulas-enrolamiento.pdf', [$empleado->id, $c->id]),
+                'logs' => $c->logs->map(fn ($l) => [
+                    'id' => $l->id,
+                    'uuid' => $l->uuid,
+                    'accion' => $l->accion,
+                    'etiqueta' => $l->etiqueta,
+                    'descripcion' => $l->descripcion,
+                    'ip_address' => $l->ip_address,
+                    'latitud' => $l->latitud,
+                    'longitud' => $l->longitud,
+                    'hash_evento' => $l->hash_evento,
+                    'ocurrido_en' => $l->ocurrido_en?->toIso8601String(),
+                ])->values(),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'empleado' => [
+                'id' => $empleado->id,
+                'nombre_completo' => $empleado->nombre_completo,
+                'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_anterior' => $empleado->codigo_anterior,
+                'legacy' => $empleado->legacy,
+            ],
+            'cedulas' => $cedulas,
+        ]);
+    }
+
+    /**
+     * Descarga o muestra en el navegador el PDF de la Cédula de Enrolamiento del expediente.
+     */
+    public function descargarCedulaPdf(Empleado $empleado, \App\Models\EmpleadoEnrolamientoCedula $cedula)
+    {
+        if ((int) $cedula->empleado_id !== (int) $empleado->id) {
+            abort(404);
+        }
+
+        $rel = $cedula->pdf_path ? preg_replace('#^/?(storage/)+#', '', ltrim($cedula->pdf_path, '/')) : null;
+        if (! $rel || ! Storage::disk('public')->exists($rel)) {
+            abort(404, 'El archivo PDF de la cédula no se encuentra en el expediente.');
+        }
+
+        return response(Storage::disk('public')->get($rel), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="cedula-enrolamiento-' . $cedula->uuid . '.pdf"',
+        ]);
+    }
+
+    /**
      * Lógica central de guardado de datos biométricos, fotos y sincronización con BioTime.
      */
-    private function guardarEnrolamiento(Request $request, Empleado $empleado): void
+    private function guardarEnrolamiento(Request $request, Empleado $empleado, string $origen = 'admin'): void
     {
-        app(\App\Services\EmpleadoEnrolamientoService::class)->guardar($empleado, $request->all());
+        $empleado = app(\App\Services\EmpleadoEnrolamientoService::class)->guardar($empleado, $request->all());
+
+        app(\App\Services\CedulaEnrolamientoService::class)->completarYGenerarCedula($empleado, [
+            'origen' => $origen,
+            'cedula_uuid' => $request->input('cedula_uuid'),
+            'user_id' => $request->user()?->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'latitud' => $request->input('latitud'),
+            'longitud' => $request->input('longitud'),
+        ]);
     }
 }

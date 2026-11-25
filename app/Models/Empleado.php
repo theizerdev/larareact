@@ -58,6 +58,7 @@ class Empleado extends Model
                 'documento_identidad',
                 'codigo_nuevo',
                 'codigo_anterior',
+                'legacy',
                 'codigo_acceso',
                 'tarjeta_acceso_1',
                 'tarjeta_acceso_2',
@@ -89,6 +90,7 @@ class Empleado extends Model
         'documento_identidad',
         'codigo_nuevo',
         'codigo_anterior',
+        'legacy',
         'codigo_acceso',
         'tarjeta_acceso_1',
         'tarjeta_acceso_2',
@@ -221,6 +223,21 @@ class Empleado extends Model
     public function asistenciaMarcajes(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(AsistenciaMarcaje::class, 'empleado_id');
+    }
+
+    public function cedulasEnrolamiento(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(EmpleadoEnrolamientoCedula::class, 'empleado_id')->latest();
+    }
+
+    public function ultimaCedulaEnrolamiento(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(EmpleadoEnrolamientoCedula::class, 'empleado_id')->latestOfMany();
+    }
+
+    public function enrolamientoLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(EmpleadoEnrolamientoLog::class, 'empleado_id')->latest('ocurrido_en');
     }
 
     /**

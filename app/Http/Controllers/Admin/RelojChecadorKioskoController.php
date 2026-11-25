@@ -7,6 +7,7 @@ use App\Models\AsistenciaMarcaje;
 use App\Models\ConfiguracionAsistencia;
 use App\Models\Empleado;
 use App\Services\CalculoAsistenciaLftService;
+use App\Services\CedulaEnrolamientoService;
 use App\Services\EmpleadoEnrolamientoService;
 use App\Services\RegistroMarcajeService;
 use Carbon\Carbon;
@@ -142,6 +143,7 @@ class RelojChecadorKioskoController extends Controller
                 'documento_identidad' => $empleado->codigo_nuevo ?: ($empleado->codigo_acceso ?: $empleado->documento_identidad),
                 'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_anterior' => $empleado->codigo_anterior,
+                'legacy' => $empleado->legacy,
                 'numero' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_acceso' => $empleado->codigo_acceso ?: ($empleado->codigo_nuevo ?: $empleado->documento_identidad),
                 'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
@@ -205,7 +207,8 @@ class RelojChecadorKioskoController extends Controller
                     $query->where('codigo_acceso', 'like', "%{$numero}%")
                         ->orWhere('documento_identidad', 'like', "%{$numero}%")
                         ->orWhere('codigo_nuevo', 'like', "%{$numero}%")
-                        ->orWhere('codigo_anterior', 'like', "%{$numero}%");
+                        ->orWhere('codigo_anterior', 'like', "%{$numero}%")
+                        ->orWhere('legacy', 'like', "%{$numero}%");
                 });
             })
             ->when(filled($filtros['codigo_nuevo'] ?? null), function ($query) use ($filtros) {
@@ -230,6 +233,7 @@ class RelojChecadorKioskoController extends Controller
                 'documento_identidad' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_anterior' => $empleado->codigo_anterior,
+                'legacy' => $empleado->legacy,
                 'numero' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_acceso' => $empleado->codigo_acceso,
                 'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
@@ -399,9 +403,66 @@ class RelojChecadorKioskoController extends Controller
     }
 
     /**
+     * Registra una acción auditable del flujo de enrolamiento (ej. Aviso de Privacidad al marcar la casilla).
+     */
+    public function registrarAccionEnrolamiento(Request $request, CedulaEnrolamientoService $cedulaService)
+    {
+        $user = $request->user();
+        if ($user && ! $user->can('asistencia.kiosko') && ! $user->can('asistencia.view') && ! $user->can('empleados.edit')) {
+            abort(403, 'No tiene permiso para registrar acciones de enrolamiento.');
+        }
+
+        $validated = $request->validate([
+            'empleado_id' => 'required|integer|exists:empleados,id',
+            'accion' => 'required|in:aviso_privacidad,enrolamiento',
+            'cedula_uuid' => 'nullable|uuid',
+            'latitud' => 'nullable|numeric',
+            'longitud' => 'nullable|numeric',
+        ]);
+
+        $empresaId = $user?->empresa_id ?? \App\Models\Empresa::value('id');
+        $empleado = Empleado::where('id', $validated['empleado_id'])
+            ->when($empresaId, fn ($q) => $q->where('empresa_id', $empresaId))
+            ->first();
+
+        if (! $empleado) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Colaborador no encontrado o no pertenece a su empresa.',
+            ], 404);
+        }
+
+        $resultado = $cedulaService->registrarAccion($empleado, $validated['accion'], [
+            'origen' => 'kiosko',
+            'cedula_uuid' => $validated['cedula_uuid'] ?? null,
+            'user_id' => $user?->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'latitud' => $validated['latitud'] ?? null,
+            'longitud' => $validated['longitud'] ?? null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'cedula_uuid' => $resultado['cedula']->uuid,
+            'log' => [
+                'uuid' => $resultado['log']->uuid,
+                'accion' => $resultado['log']->accion,
+                'etiqueta' => $resultado['log']->etiqueta,
+                'hash_evento' => $resultado['log']->hash_evento,
+                'ocurrido_en' => $resultado['log']->ocurrido_en?->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
      * Enrola al colaborador directamente desde el Kiosko y lo sincroniza con BioTime.
      */
-    public function enrolarEmpleado(Request $request, EmpleadoEnrolamientoService $enrolamientoService)
+    public function enrolarEmpleado(
+        Request $request,
+        EmpleadoEnrolamientoService $enrolamientoService,
+        CedulaEnrolamientoService $cedulaService,
+    )
     {
         $user = $request->user();
         if ($user && ! $user->can('asistencia.kiosko') && ! $user->can('asistencia.view') && ! $user->can('empleados.edit')) {
@@ -415,6 +476,9 @@ class RelojChecadorKioskoController extends Controller
             'foto_empleado_2' => 'required|string',
             'genero' => 'required|in:M,F',
             'fecha_nacimiento' => 'required|date|before:-14 years|after:1900-01-01',
+            'cedula_uuid' => 'nullable|uuid',
+            'latitud' => 'nullable|numeric',
+            'longitud' => 'nullable|numeric',
         ], [
             'aviso_privacidad.accepted' => 'Debe aceptar el aviso de privacidad.',
             'foto_empleado.required' => 'Falta la primera foto frontal.',
@@ -454,14 +518,43 @@ class RelojChecadorKioskoController extends Controller
             ], 500);
         }
 
+        $cedula = $cedulaService->completarYGenerarCedula($empleado, [
+            'origen' => 'kiosko',
+            'cedula_uuid' => $request->input('cedula_uuid'),
+            'user_id' => $user?->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'latitud' => $request->input('latitud'),
+            'longitud' => $request->input('longitud'),
+        ]);
+
         activity('empleados')
             ->causedBy($user)
             ->performedOn($empleado)
-            ->log("Se completó el enrolamiento biométrico de {$empleado->nombre_completo} desde el Kiosko.");
+            ->withProperties([
+                'cedula_uuid' => $cedula->uuid,
+                'sello_digital' => $cedula->sello_digital,
+                'pdf_path' => $cedula->pdf_path,
+            ])
+            ->log("Se completó el enrolamiento biométrico de {$empleado->nombre_completo} desde el Kiosko y se generó su Cédula de Enrolamiento.");
 
         return response()->json([
             'success' => true,
             'message' => 'Enrolamiento biométrico completado y sincronizado con BioTime exitosamente.',
+            'cedula' => [
+                'id' => $cedula->id,
+                'uuid' => $cedula->uuid,
+                'estado' => $cedula->estado,
+                'sello_digital' => $cedula->sello_digital,
+                'pdf_url' => $cedula->pdf_url,
+                'enrolado_en' => $cedula->enrolado_en?->toIso8601String(),
+                'acciones_registradas' => $cedula->logs->map(fn ($l) => [
+                    'uuid' => $l->uuid,
+                    'accion' => $l->accion,
+                    'etiqueta' => $l->etiqueta,
+                    'ocurrido_en' => $l->ocurrido_en?->toIso8601String(),
+                ])->values(),
+            ],
             'empleado' => [
                 'id' => $empleado->id,
                 'nombre_completo' => $empleado->nombre_completo,
@@ -470,6 +563,7 @@ class RelojChecadorKioskoController extends Controller
                 'documento_identidad' => $empleado->codigo_nuevo ?: ($empleado->codigo_acceso ?: $empleado->documento_identidad),
                 'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_anterior' => $empleado->codigo_anterior,
+                'legacy' => $empleado->legacy,
                 'numero' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_acceso' => $empleado->codigo_acceso ?: ($empleado->codigo_nuevo ?: $empleado->documento_identidad),
                 'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),

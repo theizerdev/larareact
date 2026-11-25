@@ -34,6 +34,7 @@ class EmpleadoRequest extends FormRequest
             'documento_identidad' => 'nullable|string|max:50|unique:empleados,documento_identidad,' . $empleadoId,
             'codigo_nuevo' => 'nullable|string|max:50',
             'codigo_anterior' => 'nullable|string|max:50',
+            'legacy' => 'nullable|string|max:100',
             'codigo_acceso' => 'nullable|string|max:20|unique:empleados,codigo_acceso,' . $empleadoId,
             'tarjeta_acceso_1' => 'nullable|string|max:50',
             'tarjeta_acceso_2' => 'nullable|string|max:50',

@@ -8,6 +8,8 @@ Route::middleware(['permission:empleados.view'])->group(function () {
     Route::get('/empleados', [EmpleadoController::class, 'index'])->name('empleados.index');
     Route::get('/empleados/{empleado}/carnet', [EmpleadoController::class, 'carnet'])->name('empleados.carnet');
     Route::post('/empleados/{empleado}/enviar-carnet', [EmpleadoController::class, 'enviarCarnetWhatsApp'])->name('empleados.enviar-carnet');
+    Route::get('/empleados/{empleado}/cedulas-enrolamiento', [EmpleadoEnrolamientoController::class, 'cedulas'])->name('empleados.cedulas-enrolamiento');
+    Route::get('/empleados/{empleado}/cedulas-enrolamiento/{cedula}/pdf', [EmpleadoEnrolamientoController::class, 'descargarCedulaPdf'])->name('empleados.cedulas-enrolamiento.pdf');
     Route::post('/empleados/validar-curp', [EmpleadoController::class, 'validarCurpRenapo'])->name('empleados.validar-curp');
 });
 
