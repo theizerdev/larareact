@@ -120,7 +120,7 @@ export function CedulaEnrolamientoExpedienteModal({ open, onOpenChange, empleado
                         <span>Expediente — Cédulas de Enrolamiento</span>
                     </DialogTitle>
                     <DialogDescription>
-                        {nombre} • No. Empleado: <strong className="font-mono">{empleado?.codigo_nuevo || empleado?.documento_identidad || '—'}</strong> • ID: <strong className="font-mono">#{empleado?.id}</strong> • Legacy: <strong className="font-mono">{empleado?.legacy || empleado?.codigo_anterior || '—'}</strong>
+                        {nombre} • No. Empleado: <strong className="font-mono">{empleado?.codigo_nuevo || empleado?.documento_identidad || '—'}</strong> • N° de Tarjeta: <strong className="font-mono">{empleado?.codigo_anterior || '—'}</strong> • Legacy: <strong className="font-mono">{empleado?.legacy || empleado?.codigo_anterior || '—'}</strong>
                     </DialogDescription>
                 </DialogHeader>
 

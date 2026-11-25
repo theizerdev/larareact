@@ -266,12 +266,6 @@ class CedulaEnrolamientoService
             ?? $empleado->empresa?->nombre_comercial
             ?? 'Smurfit Westrock';
 
-        $generoLabel = match ($empleado->genero) {
-            'M' => 'Hombre',
-            'F' => 'Mujer',
-            default => '—',
-        };
-
         $fechaEmision = now()->timezone($zonaHoraria)->format('d/m/Y H:i:s');
         $fechaValidacion = ($cedula->enrolado_en ?? now())->timezone($zonaHoraria)->format('d/m/Y H:i:s');
 
@@ -284,8 +278,6 @@ class CedulaEnrolamientoService
             'logs' => $logs,
             'empresaNombre' => $empresaNombre,
             'zonaHoraria' => $zonaHoraria,
-            'generoLabel' => $generoLabel,
-            'fechaNacimiento' => $empleado->fecha_nacimiento?->format('d/m/Y') ?? '—',
             'fechaEmision' => $fechaEmision,
             'fechaValidacion' => $fechaValidacion,
             'foto1DataUri' => $foto1DataUri,
