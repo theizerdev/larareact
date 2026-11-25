@@ -442,7 +442,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                             <div className="flex flex-wrap gap-1.5 pt-1">
                                 {[
                                     'ID del empleado Nuevo',
-                                    'ID Empleado Anterior',
+                                    'N° de Tarjeta',
                                     'Legacy',
                                     'Nombre (s)',
                                     'Apellido (s)',
@@ -603,7 +603,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                 <thead className="text-[11px] uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 sticky top-0">
                                     <tr>
                                         <th className="py-2 px-3">Estatus</th>
-                                        <th className="py-2 px-3">Códigos (Nuevo / Anterior / Legacy)</th>
+                                        <th className="py-2 px-3">Códigos (Nuevo / N° de Tarjeta / Legacy)</th>
                                         <th className="py-2 px-3">Nombre Completo</th>
                                         <th className="py-2 px-3">Departamento / Cargo</th>
                                         <th className="py-2 px-3">Correo / Género</th>
@@ -631,7 +631,7 @@ export const ImportWizardModal: React.FC<ImportWizardModalProps> = ({
                                                     </Badge>
                                                     {r.codigo_anterior && (
                                                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300">
-                                                            ANT: {r.codigo_anterior}
+                                                            N° de Tarjeta: {r.codigo_anterior}
                                                         </Badge>
                                                     )}
                                                     {r.legacy && (

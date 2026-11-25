@@ -46,6 +46,7 @@ class BioTimeEmpleadoProvisioner
         'documento_identidad' => 'emp_code',
         'codigo_nuevo' => 'emp_code',
         'codigo_acceso' => 'emp_code',
+        'codigo_anterior' => 'card_no',
         'tarjeta_acceso_1' => 'card_no',
         'curp' => 'national',
         'telefono' => 'mobile',
@@ -121,7 +122,9 @@ class BioTimeEmpleadoProvisioner
                         ->orWhere('codigo_nuevo', $codigo)
                         ->orWhere('codigo_acceso', $codigo);
                     if (! empty($bio->card_no)) {
-                        $q->orWhere('tarjeta_acceso_1', trim((string) $bio->card_no));
+                        $cardNo = trim((string) $bio->card_no);
+                        $q->orWhere('codigo_anterior', $cardNo)
+                            ->orWhere('tarjeta_acceso_1', $cardNo);
                     }
                     if (! empty($bio->national)) {
                         $q->orWhere('curp', trim((string) $bio->national));
@@ -308,9 +311,11 @@ class BioTimeEmpleadoProvisioner
         $departamento = $this->departamento($deptos[$bio->dept_code] ?? null, $empresa, $sucursal, $usuario);
 
         $cardNo = $bio->card_no ? trim((string) $bio->card_no) : null;
-        if ($cardNo && Empleado::withoutTenant()->where('tarjeta_acceso_1', $cardNo)->exists()) {
+        if ($cardNo !== null && trim($cardNo, '0') === '') {
             $cardNo = null;
         }
+        $cardNoCodigoAnterior = $cardNo && ! Empleado::withoutTenant()->where('codigo_anterior', $cardNo)->exists() ? $cardNo : null;
+        $cardNoTarjeta1 = $cardNo && ! Empleado::withoutTenant()->where('tarjeta_acceso_1', $cardNo)->exists() ? $cardNo : null;
 
         $curp = $bio->national ? trim((string) $bio->national) : null;
         if ($curp && Empleado::withoutTenant()->where('empresa_id', $empresa->id)->where('curp', $curp)->exists()) {
@@ -327,8 +332,9 @@ class BioTimeEmpleadoProvisioner
             'apellidos' => $bio->last_name ?: 'N/A',
             'documento_identidad' => $codigo,
             'codigo_nuevo' => $codigo,
+            'codigo_anterior' => $cardNoCodigoAnterior,
             'codigo_acceso' => $codigoAcceso,
-            'tarjeta_acceso_1' => $cardNo,
+            'tarjeta_acceso_1' => $cardNoTarjeta1,
             'curp' => $curp,
             'telefono' => $bio->mobile ? trim((string) $bio->mobile) : null,
             'correo' => $bio->email ? trim((string) $bio->email) : null,
@@ -395,6 +401,10 @@ class BioTimeEmpleadoProvisioner
                 default => blank($bio->{$origen}) ? null : trim((string) $bio->{$origen}),
             };
 
+            if ($origen === 'card_no' && $valor !== null && trim((string) $valor, '0') === '') {
+                $valor = null;
+            }
+
             if ($valor === null) {
                 continue;
             }
@@ -415,6 +425,9 @@ class BioTimeEmpleadoProvisioner
                     }
                     // Una tarjeta ya usada por otro empleado no se copia: dos
                     // personas con el mismo gafete abrirían la puerta una por otra.
+                    if ($columna === 'codigo_anterior' && Empleado::withoutTenant()->where('codigo_anterior', $valor)->whereKeyNot($empleado->id)->exists()) {
+                        continue;
+                    }
                     if ($columna === 'tarjeta_acceso_1' && Empleado::withoutTenant()->where('tarjeta_acceso_1', $valor)->whereKeyNot($empleado->id)->exists()) {
                         continue;
                     }

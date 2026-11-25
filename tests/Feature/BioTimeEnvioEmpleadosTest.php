@@ -194,6 +194,26 @@ class BioTimeEnvioEmpleadosTest extends TestCase
         $this->assertSame('5559998888', BiotimeEmpleado::where('emp_code', '901')->value('mobile'));
     }
 
+    public function test_codigo_anterior_inserta_y_edita_card_no_en_biotime(): void
+    {
+        $empleado = $this->colaborador(['codigo_anterior' => '856093']);
+
+        $alta = $this->escrituras();
+        $this->assertCount(1, $alta);
+        $this->assertSame('POST', $alta[0][0]->method());
+        $this->assertSame('856093', $alta[0][0]->data()['card_no'] ?? null);
+        $this->assertSame('856093', BiotimeEmpleado::where('emp_code', '901')->value('card_no'));
+
+        $antes = count($this->escrituras());
+        $empleado->update(['codigo_anterior' => '999111']);
+
+        $ultimas = array_slice($this->escrituras(), $antes);
+        $this->assertCount(1, $ultimas);
+        $this->assertSame('PATCH', $ultimas[0][0]->method());
+        $this->assertSame(['card_no' => '999111'], $ultimas[0][0]->data());
+        $this->assertSame('999111', BiotimeEmpleado::where('emp_code', '901')->value('card_no'));
+    }
+
     public function test_fecha_de_nacimiento_viaja_como_birthday(): void
     {
         $empleado = $this->colaborador();

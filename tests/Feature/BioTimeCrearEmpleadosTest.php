@@ -60,6 +60,7 @@ class BioTimeCrearEmpleadosTest extends TestCase
 
         $empleado = Empleado::withoutTenant()->where('documento_identidad', '180')->firstOrFail();
         $this->assertSame('LAURA PATRICIA', $empleado->nombres);
+        $this->assertSame('5002', $empleado->codigo_anterior);
         $this->assertSame('5002', $empleado->tarjeta_acceso_1);
         $this->assertSame($this->sucursal->id, $empleado->sucursal_id);
         $this->assertSame('Producción', $empleado->departamento()->withoutGlobalScope('multitenancy')->value('nombre'));
