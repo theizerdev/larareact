@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\KioskoApiController;
 use App\Http\Controllers\Api\MovilDataController;
 use App\Http\Controllers\Api\UbicacionJornadaController;
 use App\Http\Middleware\EnsureUserActive;
+use App\Http\Middleware\RestringirTokenDeUbicacion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -37,8 +38,9 @@ Route::prefix('enrolamiento/{token}')->middleware('throttle:20,1')->group(functi
 });
 
 // Rutas protegidas por Sanctum. EnsureUserActive: una cuenta desactivada
-// pierde el acceso aunque conserve su token.
-Route::middleware(['auth:sanctum', EnsureUserActive::class])->group(function () {
+// pierde el acceso aunque conserve su token. RestringirTokenDeUbicacion: el
+// token del monitoreo de ubicación sólo llega a sus propias rutas.
+Route::middleware(['auth:sanctum', EnsureUserActive::class, RestringirTokenDeUbicacion::class])->group(function () {
     // Usuario autenticado (incluye roles y permisos para que la app móvil
     // pueda decidir si es un "trabajador" en modo restringido)
     Route::get('/user', function (Request $request) {
@@ -78,9 +80,17 @@ Route::middleware(['auth:sanctum', EnsureUserActive::class])->group(function () 
             ->middleware(['permission:asistencia.kiosko|asistencia.view|empleados.edit', 'throttle:60,1']);
         // Ubicación cada 15 min durante la jornada (de la entrada a la salida),
         // sólo del propio colaborador de la cuenta.
-        Route::get('/ubicaciones/estado', [UbicacionJornadaController::class, 'estado']);
+        // El token de ubicación (que la app conserva tras cerrar sesión) sólo
+        // llega a las rutas `api.ubicaciones.*` (RestringirTokenDeUbicacion).
+        Route::post('/ubicaciones/sesion', [UbicacionJornadaController::class, 'iniciarSesion'])
+            ->name('api.ubicacion-sesion.iniciar');
+        Route::delete('/ubicaciones/sesion', [UbicacionJornadaController::class, 'cerrarSesion'])
+            ->name('api.ubicaciones.cerrar');
+        Route::get('/ubicaciones/estado', [UbicacionJornadaController::class, 'estado'])
+            ->name('api.ubicaciones.estado');
         Route::post('/ubicaciones', [UbicacionJornadaController::class, 'registrar'])
-            ->middleware('throttle:30,1');
+            ->middleware('throttle:30,1')
+            ->name('api.ubicaciones.registrar');
         // Enlace/QR de enrolamiento para que el empleado se enrole desde su
         // teléfono; mismo permiso que "Enviar enlace" en Colaboradores.
         Route::post('/enlace-enrolamiento', [KioskoApiController::class, 'generarEnlaceEnrolamiento'])

@@ -9,6 +9,7 @@ use App\Services\UbicacionJornadaService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Laravel\Sanctum\PersonalAccessToken;
 
 /**
  * Ubicación del colaborador durante su jornada (app móvil), cada 15 minutos o
@@ -50,6 +51,55 @@ class UbicacionJornadaController extends Controller
             'jornada_abierta' => $ubicaciones->jornadaAbierta($empleado),
             'intervalo_minutos' => $ubicaciones->intervaloMinutos($empleado),
         ]);
+    }
+
+    /**
+     * Abre el monitoreo de la jornada: entrega el token de ubicación que la
+     * app guarda para seguir enviando después de cerrar la sesión. Pide la
+     * sesión normal (no se renueva con el propio token de ubicación) y una
+     * jornada abierta.
+     */
+    public function iniciarSesion(Request $request, UbicacionJornadaService $ubicaciones): JsonResponse
+    {
+        $user = $request->user();
+        $empleado = $user->empleado;
+
+        if (! $empleado || ! $empleado->status || ! $empleado->permite_app_movil) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tu cuenta no está ligada a un colaborador activo con la app móvil.',
+            ], 403);
+        }
+
+        if (! $ubicaciones->jornadaAbierta($empleado)) {
+            return response()->json([
+                'success' => false,
+                'jornada_abierta' => false,
+                'message' => 'No hay una jornada abierta: la ubicación se registra de la entrada a la salida.',
+            ], 409);
+        }
+
+        $sesion = $ubicaciones->emitirToken($user);
+
+        return response()->json([
+            'success' => true,
+            'jornada_abierta' => true,
+            'token' => $sesion['token'],
+            'expira_en' => $sesion['expira_en']->toIso8601String(),
+            'intervalo_minutos' => $ubicaciones->intervaloMinutos($empleado),
+        ]);
+    }
+
+    /** La app terminó el monitoreo (salida): el token de ubicación deja de servir. */
+    public function cerrarSesion(Request $request): JsonResponse
+    {
+        $token = $request->user()->currentAccessToken();
+
+        if ($token instanceof PersonalAccessToken && $token->name === UbicacionJornadaService::TOKEN) {
+            $token->delete();
+        }
+
+        return response()->json(['success' => true]);
     }
 
     /** ¿Hay jornada abierta? La app lo pregunta al abrir para reanudar o no el monitoreo. */

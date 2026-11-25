@@ -8,6 +8,7 @@ use App\Models\Empleado;
 use App\Models\EmpleadoUbicacion;
 use App\Models\Empresa;
 use App\Models\User;
+use App\Services\UbicacionJornadaService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
@@ -278,5 +279,62 @@ class PerfilesYUbicacionTest extends TestCase
 
         $norte = $this->cuenta(SmurfitRoles::RESPONSABLE_ZONA, 'Norte');
         $this->actingAs($norte, 'sanctum')->getJson("/api/empleados/{$empleado->id}/ubicaciones")->assertNotFound();
+    }
+
+    public function test_el_token_de_ubicacion_sobrevive_al_cierre_de_sesion_y_solo_sirve_para_ubicar(): void
+    {
+        $colaborador = $this->cuenta(SmurfitRoles::COLABORADOR);
+        $empleado = $this->empleado(['user_id' => $colaborador->id]);
+        $sesion = $colaborador->createToken('movil_app')->plainTextToken;
+        $con = function (string $token) {
+            $this->app['auth']->forgetGuards();
+
+            return $this->withToken($token);
+        };
+
+        // Sin jornada no hay monitoreo.
+        $con($sesion)->postJson('/api/reloj-checador/ubicaciones/sesion')->assertStatus(409);
+
+        $this->marcaje($empleado, 'entrada', now()->subMinute());
+        $respuesta = $con($sesion)->postJson('/api/reloj-checador/ubicaciones/sesion')
+            ->assertOk()
+            ->assertJsonPath('jornada_abierta', true)
+            ->assertJsonPath('intervalo_minutos', 15);
+        $ubicacion = $respuesta->json('token');
+        $this->assertNotEmpty($respuesta->json('expira_en'));
+
+        // La app cierra la sesión tras marcar y el siguiente login borra los
+        // tokens movil_app: el de ubicación sigue sirviendo.
+        $con($sesion)->postJson('/api/logout')->assertOk();
+        $colaborador->tokens()->where('name', 'movil_app')->delete();
+
+        $con($ubicacion)->postJson('/api/reloj-checador/ubicaciones', ['puntos' => [$this->punto()]])
+            ->assertOk()
+            ->assertJsonPath('guardados', 1);
+        $con($ubicacion)->getJson('/api/reloj-checador/ubicaciones/estado')->assertOk();
+
+        // Para nada más: ni datos, ni marcar, ni renovarse.
+        $con($ubicacion)->getJson('/api/user')->assertForbidden();
+        $con($ubicacion)->postJson('/api/reloj-checador/registrar', ['empleado_id' => $empleado->id, 'tipo_marcaje' => 'salida'])
+            ->assertForbidden();
+        $con($ubicacion)->postJson('/api/reloj-checador/ubicaciones/sesion')->assertForbidden();
+
+        // Al terminar la jornada la app lo revoca.
+        $con($ubicacion)->deleteJson('/api/reloj-checador/ubicaciones/sesion')->assertOk();
+        $con($ubicacion)->getJson('/api/reloj-checador/ubicaciones/estado')->assertUnauthorized();
+    }
+
+    public function test_el_token_de_ubicacion_caduca(): void
+    {
+        $colaborador = $this->cuenta(SmurfitRoles::COLABORADOR);
+        $empleado = $this->empleado(['user_id' => $colaborador->id]);
+        $this->marcaje($empleado, 'entrada', now()->subMinute());
+
+        $ubicacion = $this->actingAs($colaborador, 'sanctum')
+            ->postJson('/api/reloj-checador/ubicaciones/sesion')->assertOk()->json('token');
+
+        $this->travel(UbicacionJornadaService::VIGENCIA_TOKEN_HORAS + 1)->hours();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($ubicacion)->getJson('/api/reloj-checador/ubicaciones/estado')->assertUnauthorized();
     }
 }

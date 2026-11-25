@@ -31,6 +31,36 @@ class UbicacionJornadaService
     public const MAX_PUNTOS = 200;
 
     /**
+     * Token propio de la ubicación. La app cierra la sesión tras cada marcaje
+     * y cada inicio de sesión borra los tokens `movil_app`, así que el
+     * monitoreo no puede depender de esos: éste sobrevive a ambos, sólo
+     * permite mandar la ubicación (RestringirTokenDeUbicacion) y caduca solo.
+     */
+    public const TOKEN = 'movil_ubicacion';
+
+    public const HABILIDAD = 'ubicacion:jornada';
+
+    /** Vigencia del token: la jornada más larga y un margen para vaciar la cola. */
+    public const VIGENCIA_TOKEN_HORAS = self::MAX_JORNADA_HORAS + 4;
+
+    /**
+     * Token nuevo para el monitoreo de esta jornada; el de una jornada
+     * anterior deja de servir.
+     *
+     * @return array{token: string, expira_en: Carbon}
+     */
+    public function emitirToken(User $user): array
+    {
+        $user->tokens()->where('name', self::TOKEN)->delete();
+        $expira = Carbon::now()->addHours(self::VIGENCIA_TOKEN_HORAS);
+
+        return [
+            'token' => $user->createToken(self::TOKEN, [self::HABILIDAD], $expira)->plainTextToken,
+            'expira_en' => $expira,
+        ];
+    }
+
+    /**
      * Guarda los puntos que caen dentro de una jornada. Los repetidos (mismo
      * uuid_cliente) no se vuelven a guardar.
      *
