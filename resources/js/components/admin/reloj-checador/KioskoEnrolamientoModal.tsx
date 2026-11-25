@@ -598,16 +598,16 @@ export function KioskoEnrolamientoModal({
     const formularioCompleto = fotosListas && datosListos;
 
     return (
-        <div className="fixed inset-0 z-50 w-screen h-screen bg-background text-foreground flex flex-col overflow-hidden select-none animate-in fade-in-50 duration-200">
+        <div className="fixed inset-0 z-50 h-dvh bg-background text-foreground flex flex-col overflow-hidden select-none animate-in fade-in-50 duration-200">
             {/* CABECERA FULLSCREEN DE LA ESTACIÓN DE ENROLAMIENTO */}
-            <header className="h-18 px-6 md:px-10 border-b border-border/80 bg-card/60 backdrop-blur-md flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
+            <header className="min-h-16 sm:min-h-18 h-auto gap-3 px-3 py-2 sm:px-6 md:px-10 border-b border-border/80 bg-card/60 backdrop-blur-md flex items-center justify-between shrink-0">
+                <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 shrink-0">
                         <ScanFace className="h-6 w-6" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                         <div className="flex items-center gap-2.5">
-                            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">
+                            <h1 className="truncate text-base sm:text-xl md:text-2xl font-bold tracking-tight text-foreground">
                                 Enrolamiento Biométrico Facial
                             </h1>
                             <Badge variant="outline" className="hidden sm:inline-flex bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 text-xs px-2.5 py-0.5 font-bold">
@@ -621,7 +621,7 @@ export function KioskoEnrolamientoModal({
                 </div>
 
                 {/* PASOS DE PROGRESO */}
-                <div className="hidden lg:flex items-center gap-3">
+                <div className="hidden xl:flex items-center gap-3">
                     {[
                         { num: 1, label: 'Datos del Colaborador' },
                         { num: 2, label: 'Toma Facial HD' },
@@ -653,10 +653,10 @@ export function KioskoEnrolamientoModal({
                     type="button"
                     variant="outline"
                     onClick={() => { if (!loading) { stopCamera(); onClose(); } }}
-                    className="h-11 px-5 rounded-xl border-border hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 dark:hover:bg-rose-950/30 dark:hover:text-rose-400 gap-2 font-bold text-xs sm:text-sm"
+                    className="h-10 sm:h-11 shrink-0 px-3 sm:px-5 rounded-xl border-border hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 dark:hover:bg-rose-950/30 dark:hover:text-rose-400 gap-2 font-bold text-xs sm:text-sm"
                 >
                     <X className="w-4 h-4" />
-                    <span>Cancelar</span>
+                    <span className="hidden sm:inline">Cancelar</span>
                 </Button>
             </header>
 
@@ -669,20 +669,20 @@ export function KioskoEnrolamientoModal({
             />
 
             {/* CUERPO PRINCIPAL FULLSCREEN */}
-            <main className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 md:px-14 lg:px-16 flex flex-col justify-center">
+            <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-10 sm:py-6 md:px-14 lg:px-16 flex flex-col">
                 {/* PASO 1: DATOS PRECARGADOS Y AVISO DE PRIVACIDAD */}
                 {paso === 1 && (
-                    <div className="w-full max-w-[1680px] mx-auto space-y-7 md:space-y-8 my-auto animate-in fade-in-50 duration-300 py-2">
+                    <div className="w-full max-w-[1680px] mx-auto space-y-5 sm:space-y-7 md:space-y-8 my-auto animate-in fade-in-50 duration-300 py-2">
                         {/* HERO BIENVENIDA */}
-                        <div className="flex items-center sm:items-start gap-5 sm:gap-6 bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-indigo-500/5 border-2 border-indigo-500/30 p-6 sm:p-8 rounded-3xl shadow-md">
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xl shadow-indigo-600/30">
+                        <div className="flex items-center sm:items-start gap-3 sm:gap-5 md:gap-6 bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-indigo-500/5 border-2 border-indigo-500/30 p-4 sm:p-6 md:p-8 rounded-3xl shadow-md">
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-3xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xl shadow-indigo-600/30">
                                 <Sparkles className="w-8 h-8 sm:w-10 sm:h-10" />
                             </div>
                             <div className="space-y-2">
-                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground tracking-tight">
+                                <h2 className="text-xl sm:text-2xl md:text-4xl font-black text-foreground tracking-tight">
                                     ¡Bienvenido(a), {nombreMostrar}!
                                 </h2>
-                                <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed">
+                                <p className="text-sm sm:text-base md:text-xl text-muted-foreground leading-relaxed">
                                     Tus datos ya forman parte de la plantilla de <strong className="text-foreground font-bold">{empresaFinal}</strong>. Para habilitar tu marcaje en este quiosco y sincronizar tu rostro con las terminales BioTime de planta, realizaremos una rápida toma fotográfica de frente.
                                 </p>
                             </div>
@@ -712,7 +712,7 @@ export function KioskoEnrolamientoModal({
                                 <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                                 <span>Consentimiento y Aviso de Privacidad Biométrico:</span>
                             </div>
-                            <div className="max-h-56 overflow-y-auto rounded-3xl border-2 bg-muted/30 p-6 sm:p-7 text-sm sm:text-base md:text-lg leading-relaxed text-muted-foreground space-y-3 select-none shadow-inner">
+                            <div className="max-h-56 overflow-y-auto rounded-3xl border-2 bg-muted/30 p-4 sm:p-7 text-sm sm:text-base md:text-lg leading-relaxed text-muted-foreground space-y-3 select-none shadow-inner">
                                 <p>
                                     <strong className="text-foreground font-bold">{empresaFinal}</strong> es el responsable del tratamiento y resguardo confidencial de sus datos personales sensibles y biométricos faciales.
                                 </p>
@@ -726,19 +726,19 @@ export function KioskoEnrolamientoModal({
 
                             <label
                                 className={cn(
-                                    'flex cursor-pointer items-center justify-between gap-5 rounded-3xl border-2 p-5 sm:p-7 transition-all shadow-sm select-none',
+                                    'flex cursor-pointer flex-col gap-3 rounded-3xl border-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5 sm:p-7 transition-all shadow-sm select-none',
                                     avisoAceptado
                                         ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/20'
                                         : 'border-border/80 bg-card hover:bg-muted/30 hover:border-indigo-400/60',
                                 )}
                             >
-                                <div className="flex items-center gap-5">
+                                <div className="flex items-start gap-3 sm:items-center sm:gap-5">
                                     <Checkbox
                                         checked={avisoAceptado}
                                         onCheckedChange={(val) => handleToggleAvisoPrivacidad(val === true)}
-                                        className="h-8 w-8 rounded-xl data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 shrink-0"
+                                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 shrink-0"
                                     />
-                                    <span className="text-base sm:text-lg md:text-xl font-bold text-foreground leading-snug">
+                                    <span className="text-sm sm:text-lg md:text-xl font-bold text-foreground leading-snug">
                                         He leído, comprendo y acepto el aviso de privacidad para el tratamiento de mis datos biométricos faciales.
                                     </span>
                                 </div>
@@ -763,13 +763,13 @@ export function KioskoEnrolamientoModal({
                                 disabled={!avisoAceptado}
                                 onClick={() => setPaso(2)}
                                 className={cn(
-                                    'w-full h-20 sm:h-22 md:h-24 text-xl sm:text-2xl font-black rounded-3xl shadow-xl flex items-center justify-center gap-4 transition-all tracking-wide',
+                                    'w-full h-16 sm:h-20 md:h-24 text-base sm:text-xl md:text-2xl font-black rounded-3xl shadow-xl flex items-center justify-center gap-3 sm:gap-4 transition-all tracking-wide',
                                     avisoAceptado
                                         ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/30 active:scale-98 cursor-pointer'
                                         : 'bg-muted text-muted-foreground opacity-60 cursor-not-allowed',
                                 )}
                             >
-                                <Camera className="w-8 h-8" />
+                                <Camera className="w-6 h-6 sm:w-8 sm:h-8" />
                                 <span>COMENZAR TOMA DE FOTOGRAFÍAS</span>
                             </Button>
                         </div>
@@ -778,7 +778,7 @@ export function KioskoEnrolamientoModal({
 
                 {/* PASO 2: TOMA FACIAL FULLSCREEN */}
                 {paso === 2 && (
-                    <form onSubmit={handleFinalizar} className="max-w-7xl w-full mx-auto flex flex-col justify-center h-full space-y-4 my-auto animate-in fade-in-50 duration-300">
+                    <form onSubmit={handleFinalizar} className="max-w-7xl w-full mx-auto flex min-h-full flex-col justify-center space-y-4 my-auto animate-in fade-in-50 duration-300">
                         {errorMsg && (
                             <div className="flex items-start gap-3.5 p-4 sm:p-5 bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-900 rounded-2xl text-rose-700 dark:text-rose-300 text-sm font-semibold shadow-md animate-shake">
                                 <AlertCircle className="w-6 h-6 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
@@ -803,7 +803,7 @@ export function KioskoEnrolamientoModal({
                                 {/* CONTENEDOR DEL VISOR DE CÁMARA */}
                                 <div
                                     className="relative w-full aspect-square rounded-3xl overflow-hidden bg-slate-950 border-4 border-indigo-500/40 shadow-2xl flex items-center justify-center mx-auto"
-                                    style={{ maxWidth: 'min(100%, 56vh)' }}
+                                    style={{ maxWidth: 'min(100%, 56dvh)' }}
                                 >
                                     {cameraActive ? (
                                         <>
