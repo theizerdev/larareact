@@ -33,6 +33,8 @@ class EmpleadoController extends Controller
                     $sub->where('nombres', 'like', "%{$search}%")
                         ->orWhere('apellidos', 'like', "%{$search}%")
                         ->orWhere('documento_identidad', 'like', "%{$search}%")
+                        ->orWhere('codigo_nuevo', 'like', "%{$search}%")
+                        ->orWhere('codigo_anterior', 'like', "%{$search}%")
                         ->orWhere('codigo_acceso', 'like', "%{$search}%")
                         ->orWhere('correo', 'like', "%{$search}%")
                         ->orWhere('telefono', 'like', "%{$search}%");
@@ -107,9 +109,12 @@ class EmpleadoController extends Controller
     {
         $data = $request->validated();
 
-        $data['documento_identidad'] = isset($data['documento_identidad'])
-            ? trim((string) $data['documento_identidad'])
-            : null;
+        $nuevo = trim((string) ($data['codigo_nuevo'] ?? $data['documento_identidad'] ?? ''));
+        $data['documento_identidad'] = $nuevo !== '' ? $nuevo : null;
+        $data['codigo_nuevo'] = $nuevo !== '' ? $nuevo : null;
+        $ant = trim((string) ($data['codigo_anterior'] ?? ''));
+        $data['codigo_anterior'] = $ant !== '' ? $ant : null;
+
         $data['codigo_acceso'] = isset($data['codigo_acceso'])
             ? trim((string) $data['codigo_acceso'])
             : null;
@@ -132,6 +137,7 @@ class EmpleadoController extends Controller
                     ->exists()
             );
             $data['documento_identidad'] = $code;
+            $data['codigo_nuevo'] = $code;
         }
 
         if (empty($data['codigo_acceso']) && mb_strlen($data['documento_identidad']) <= 20) {
@@ -380,9 +386,15 @@ class EmpleadoController extends Controller
             $data['intervalo_geolocalizacion_minutos'] = (int) $request->input('intervalo_geolocalizacion_minutos');
         }
 
-        if (array_key_exists('documento_identidad', $data)) {
-            $doc = trim((string) ($data['documento_identidad'] ?? ''));
+        if (array_key_exists('documento_identidad', $data) || array_key_exists('codigo_nuevo', $data)) {
+            $doc = trim((string) ($data['codigo_nuevo'] ?? $data['documento_identidad'] ?? ''));
             $data['documento_identidad'] = $doc !== '' ? $doc : $empleado->documento_identidad;
+            $data['codigo_nuevo'] = $doc !== '' ? $doc : ($empleado->codigo_nuevo ?: $empleado->documento_identidad);
+        }
+
+        if (array_key_exists('codigo_anterior', $data)) {
+            $ant = trim((string) ($data['codigo_anterior'] ?? ''));
+            $data['codigo_anterior'] = $ant !== '' ? $ant : null;
         }
 
         if (array_key_exists('codigo_acceso', $data)) {

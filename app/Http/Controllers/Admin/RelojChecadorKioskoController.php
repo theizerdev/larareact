@@ -139,9 +139,11 @@ class RelojChecadorKioskoController extends Controller
                 'nombre_completo' => $empleado->nombre_completo,
                 'nombres' => $empleado->nombres,
                 'apellidos' => $empleado->apellidos,
-                'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'numero' => $empleado->documento_identidad,
-                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'documento_identidad' => $empleado->codigo_nuevo ?: ($empleado->codigo_acceso ?: $empleado->documento_identidad),
+                'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_anterior' => $empleado->codigo_anterior,
+                'numero' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso ?: ($empleado->codigo_nuevo ?: $empleado->documento_identidad),
                 'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
                 'departamento' => $empleado->departamento?->nombre,
                 'area' => $empleado->departamento?->nombre,
@@ -179,6 +181,8 @@ class RelojChecadorKioskoController extends Controller
             'nombres' => 'nullable|string|max:100',
             'apellidos' => 'nullable|string|max:100',
             'numero' => 'nullable|string|max:50',
+            'codigo_nuevo' => 'nullable|string|max:50',
+            'codigo_anterior' => 'nullable|string|max:50',
             'correo' => 'nullable|string|max:150',
         ]);
 
@@ -199,9 +203,19 @@ class RelojChecadorKioskoController extends Controller
                 $numero = trim($filtros['numero']);
                 $query->where(function ($query) use ($numero) {
                     $query->where('codigo_acceso', 'like', "%{$numero}%")
-                        ->orWhere('documento_identidad', 'like', "%{$numero}%");
+                        ->orWhere('documento_identidad', 'like', "%{$numero}%")
+                        ->orWhere('codigo_nuevo', 'like', "%{$numero}%")
+                        ->orWhere('codigo_anterior', 'like', "%{$numero}%");
                 });
             })
+            ->when(filled($filtros['codigo_nuevo'] ?? null), function ($query) use ($filtros) {
+                $cn = trim($filtros['codigo_nuevo']);
+                $query->where(function ($q) use ($cn) {
+                    $q->where('codigo_nuevo', 'like', "%{$cn}%")
+                      ->orWhere('documento_identidad', 'like', "%{$cn}%");
+                });
+            })
+            ->when(filled($filtros['codigo_anterior'] ?? null), fn ($query) => $query->where('codigo_anterior', 'like', '%'.trim($filtros['codigo_anterior']).'%'))
             ->when(filled($filtros['correo'] ?? null), fn ($query) => $query->whereRaw('LOWER(correo) LIKE ?', ['%'.mb_strtolower(trim($filtros['correo']), 'UTF-8').'%']))
             ->orderBy('apellidos')
             ->orderBy('nombres')
@@ -213,8 +227,10 @@ class RelojChecadorKioskoController extends Controller
                 'nombres' => $empleado->nombres,
                 'apellidos' => $empleado->apellidos,
                 'correo' => $empleado->correo,
-                'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'numero' => $empleado->documento_identidad ?: $empleado->codigo_acceso,
+                'documento_identidad' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_anterior' => $empleado->codigo_anterior,
+                'numero' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_acceso' => $empleado->codigo_acceso,
                 'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
                 'departamento' => $empleado->departamento?->nombre,
@@ -451,9 +467,11 @@ class RelojChecadorKioskoController extends Controller
                 'nombre_completo' => $empleado->nombre_completo,
                 'nombres' => $empleado->nombres,
                 'apellidos' => $empleado->apellidos,
-                'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'numero' => $empleado->documento_identidad,
-                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
+                'documento_identidad' => $empleado->codigo_nuevo ?: ($empleado->codigo_acceso ?: $empleado->documento_identidad),
+                'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_anterior' => $empleado->codigo_anterior,
+                'numero' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso ?: ($empleado->codigo_nuevo ?: $empleado->documento_identidad),
                 'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
                 'departamento' => $empleado->departamento?->nombre,
                 'area' => $empleado->departamento?->nombre,

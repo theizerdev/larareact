@@ -44,6 +44,7 @@ class BioTimeEmpleadoProvisioner
         'nombres' => 'first_name',
         'apellidos' => 'last_name',
         'documento_identidad' => 'emp_code',
+        'codigo_nuevo' => 'emp_code',
         'codigo_acceso' => 'emp_code',
         'tarjeta_acceso_1' => 'card_no',
         'curp' => 'national',
@@ -117,6 +118,7 @@ class BioTimeEmpleadoProvisioner
                 ->when($vinculadosIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $vinculadosIds))
                 ->where(function ($q) use ($codigo, $bio) {
                     $q->where('documento_identidad', $codigo)
+                        ->orWhere('codigo_nuevo', $codigo)
                         ->orWhere('codigo_acceso', $codigo);
                     if (! empty($bio->card_no)) {
                         $q->orWhere('tarjeta_acceso_1', trim((string) $bio->card_no));
@@ -324,6 +326,7 @@ class BioTimeEmpleadoProvisioner
             'nombres' => $bio->first_name ?: 'N/A',
             'apellidos' => $bio->last_name ?: 'N/A',
             'documento_identidad' => $codigo,
+            'codigo_nuevo' => $codigo,
             'codigo_acceso' => $codigoAcceso,
             'tarjeta_acceso_1' => $cardNo,
             'curp' => $curp,
@@ -400,7 +403,7 @@ class BioTimeEmpleadoProvisioner
             $actual = $actual instanceof \DateTimeInterface ? $actual->format('Y-m-d') : $actual;
 
             $cambioEnReloj = in_array($origen, $cambiados, true);
-            $esCodigoBioTime = in_array($columna, ['codigo_acceso', 'documento_identidad'], true);
+            $esCodigoBioTime = in_array($columna, ['codigo_acceso', 'documento_identidad', 'codigo_nuevo'], true);
 
             if (blank($actual) || $forceUpdate || $esCodigoBioTime || ($cambioEnReloj && (string) $actual !== (string) $valor)) {
                 if ((string) $actual !== (string) $valor) {

@@ -205,6 +205,10 @@ class RegistroMarcajeService
                     ->orWhere('codigo_acceso', $cleanQuery)
                     ->orWhere('documento_identidad', $query)
                     ->orWhere('documento_identidad', $cleanQuery)
+                    ->orWhere('codigo_nuevo', $query)
+                    ->orWhere('codigo_nuevo', $cleanQuery)
+                    ->orWhere('codigo_anterior', $query)
+                    ->orWhere('codigo_anterior', $cleanQuery)
                     ->orWhere('curp', $query)
                     ->orWhere('telefono', $query)
                     ->orWhere('id', $query);
@@ -212,21 +216,25 @@ class RegistroMarcajeService
                 if ($isNumeric && $intVal > 0) {
                     $q->orWhere('codigo_acceso', $padded8)
                         ->orWhere('documento_identidad', $padded6)
+                        ->orWhere('codigo_nuevo', $padded6)
+                        ->orWhere('codigo_anterior', $padded6)
                         ->orWhere('codigo_acceso', (string) $intVal)
                         ->orWhere('documento_identidad', (string) $intVal)
+                        ->orWhere('codigo_nuevo', (string) $intVal)
+                        ->orWhere('codigo_anterior', (string) $intVal)
                         ->orWhere('codigo_acceso', 'like', "%{$cleanQuery}");
                 }
             })
             ->orderByRaw(
                 'CASE
-                    WHEN codigo_acceso = ? OR codigo_acceso = ? OR documento_identidad = ? OR documento_identidad = ? OR curp = ? OR telefono = ? THEN 0
-                    WHEN codigo_acceso = ? OR documento_identidad = ? OR codigo_acceso = ? OR documento_identidad = ? THEN 1
+                    WHEN codigo_nuevo = ? OR codigo_nuevo = ? OR documento_identidad = ? OR documento_identidad = ? OR codigo_acceso = ? OR codigo_acceso = ? OR codigo_anterior = ? OR codigo_anterior = ? OR curp = ? OR telefono = ? THEN 0
+                    WHEN codigo_nuevo = ? OR documento_identidad = ? OR codigo_acceso = ? OR codigo_anterior = ? OR codigo_acceso = ? OR documento_identidad = ? THEN 1
                     WHEN id = ? THEN 2
                     ELSE 3
                 END',
                 [
-                    $query, $cleanQuery, $query, $cleanQuery, $query, $query,
-                    $padded8, $padded6, $isNumeric ? (string) $intVal : null, $isNumeric ? (string) $intVal : null,
+                    $query, $cleanQuery, $query, $cleanQuery, $query, $cleanQuery, $query, $cleanQuery, $query, $query,
+                    $padded8, $padded6, $padded8, $padded6, $isNumeric ? (string) $intVal : null, $isNumeric ? (string) $intVal : null,
                     $query,
                 ]
             )

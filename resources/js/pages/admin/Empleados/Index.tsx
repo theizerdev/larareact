@@ -137,6 +137,8 @@ interface Empleado {
     nombres: string;
     apellidos: string;
     documento_identidad: string;
+    codigo_nuevo?: string | null;
+    codigo_anterior?: string | null;
     codigo_acceso?: string | null;
     tarjeta_acceso_1?: string | null;
     tarjeta_acceso_2?: string | null;
@@ -224,6 +226,8 @@ const initialForm = {
     nombres: '',
     apellidos: '',
     documento_identidad: '',
+    codigo_nuevo: '',
+    codigo_anterior: '',
     codigo_acceso: '',
     curp: '',
     pais_telefono_id: '' as string | number,
@@ -459,6 +463,8 @@ export default function EmpleadosIndexPage({
         setData({
             ...initialForm,
             documento_identidad: randomCode,
+            codigo_nuevo: randomCode,
+            codigo_anterior: '',
             codigo_acceso: randomCode,
             curp: '',
             empresa_id: companyId,
@@ -485,6 +491,8 @@ export default function EmpleadosIndexPage({
             nombres: emp.nombres || '',
             apellidos: emp.apellidos || '',
             documento_identidad: emp.documento_identidad || '',
+            codigo_nuevo: emp.codigo_nuevo || emp.documento_identidad || '',
+            codigo_anterior: emp.codigo_anterior || '',
             codigo_acceso: emp.codigo_acceso || emp.documento_identidad || '',
             curp: emp.curp || '',
             pais_telefono_id: emp.pais_telefono_id || '',
@@ -628,19 +636,18 @@ export default function EmpleadosIndexPage({
                         <div>
                             <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{emp.nombres} {emp.apellidos}</p>
                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                                {(!emp.codigo_acceso || !emp.documento_identidad || emp.codigo_acceso === emp.documento_identidad) ? (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20" title="ID BioTime / Código de Acceso">
-                                        N° EMP / ACCESO: {emp.codigo_acceso || emp.documento_identidad || 'N/A'}
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs tracking-wider border border-indigo-500/20" title="Código Nuevo (Sincronización BioTime)">
+                                    NUEVO: {emp.codigo_nuevo || emp.documento_identidad || 'N/A'}
+                                </span>
+                                {emp.codigo_anterior && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-300 font-mono font-bold text-xs tracking-wider border border-amber-500/30" title="Código Anterior (Enrolamiento)">
+                                        ANTIGUO: {emp.codigo_anterior}
                                     </span>
-                                ) : (
-                                    <>
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20" title="Código de Acceso">
-                                            ACCESO: {emp.codigo_acceso}
-                                        </span>
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs tracking-wider border border-indigo-500/20" title="Código de Empleado">
-                                            N° EMP: {emp.documento_identidad}
-                                        </span>
-                                    </>
+                                )}
+                                {emp.codigo_acceso && emp.codigo_acceso !== (emp.codigo_nuevo || emp.documento_identidad) && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20" title="Código de Acceso / PIN">
+                                        ACCESO: {emp.codigo_acceso}
+                                    </span>
                                 )}
                                 <span className={cn(
                                     'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border',
@@ -1152,14 +1159,89 @@ export default function EmpleadosIndexPage({
                                         )}
                                     </div>
 
-                                    {/* Código de Acceso / ID BioTime */}
-                                    <div className="md:col-span-1 p-4 rounded-xl border border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/40 space-y-2 transition-all shadow-sm">
+                                    {/* Código Nuevo (BioTime) */}
+                                    <div className="md:col-span-1 p-4 rounded-xl border border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/30 space-y-2 transition-all shadow-sm">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <Label htmlFor="codigo_nuevo" className="font-semibold text-xs text-indigo-950 dark:text-indigo-200">
+                                                Código Nuevo (BioTime) *
+                                            </Label>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
+                                                    const shouldSyncAccess =
+                                                        !editingEmpleado &&
+                                                        (!data.codigo_acceso || data.codigo_acceso === data.documento_identidad || data.codigo_acceso === data.codigo_nuevo);
+                                                    setData({
+                                                        ...data,
+                                                        codigo_nuevo: randomCode,
+                                                        documento_identidad: randomCode,
+                                                        ...(shouldSyncAccess ? { codigo_acceso: randomCode } : {}),
+                                                    });
+                                                }}
+                                                className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium flex items-center gap-1"
+                                            >
+                                                <Sparkles className="w-3 h-3 text-emerald-500" />
+                                                Generar 6D
+                                            </button>
+                                        </div>
+                                        <Input
+                                            id="codigo_nuevo"
+                                            value={data.codigo_nuevo || data.documento_identidad}
+                                            onChange={(e) => {
+                                                const nextDoc = e.target.value;
+                                                const shouldSyncAccess =
+                                                    !editingEmpleado &&
+                                                    (!data.codigo_acceso || data.codigo_acceso === data.documento_identidad || data.codigo_acceso === data.codigo_nuevo);
+                                                setData({
+                                                    ...data,
+                                                    codigo_nuevo: nextDoc,
+                                                    documento_identidad: nextDoc,
+                                                    ...(shouldSyncAccess ? { codigo_acceso: nextDoc } : {}),
+                                                });
+                                            }}
+                                            placeholder="ej. 727652"
+                                            maxLength={20}
+                                            className="font-mono font-semibold text-sm"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground">Código enviado a BioTime para sincronización.</p>
+                                        {(errors.codigo_nuevo || errors.documento_identidad) && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.codigo_nuevo || errors.documento_identidad}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Código Anterior / Antiguo (Enrolamiento) */}
+                                    <div className="md:col-span-1 p-4 rounded-xl border border-amber-500/30 bg-amber-50/30 dark:bg-amber-950/30 space-y-2 transition-all shadow-sm">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <Label htmlFor="codigo_anterior" className="font-semibold text-xs text-amber-950 dark:text-amber-200">
+                                                Código Anterior (Enrolamiento)
+                                            </Label>
+                                            <span className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">
+                                                Solo enrolamiento
+                                            </span>
+                                        </div>
+                                        <Input
+                                            id="codigo_anterior"
+                                            value={data.codigo_anterior || ''}
+                                            onChange={(e) => setData('codigo_anterior', e.target.value)}
+                                            placeholder="ej. 10423"
+                                            maxLength={50}
+                                            className="font-mono font-bold text-sm text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700 focus:border-amber-500"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground">Utilizado para buscar y enrolar al empleado con su código previo.</p>
+                                        {errors.codigo_anterior && (
+                                            <p className="text-red-500 text-xs mt-1">{errors.codigo_anterior}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Código de Acceso / PIN */}
+                                    <div className="md:col-span-2 p-4 rounded-xl border border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/40 space-y-2 transition-all shadow-sm">
                                         <div className="flex items-center justify-between mb-1">
                                             <Label htmlFor="codigo_acceso" className="font-semibold text-xs text-emerald-900 dark:text-emerald-200">
-                                                Código de Acceso / ID BioTime
+                                                Código de Acceso / PIN (Reloj Checador)
                                             </Label>
                                             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                                                Igual al ID de empleado
+                                                Identificador en teclado numérico
                                             </span>
                                         </div>
                                         <Input
@@ -1172,54 +1254,6 @@ export default function EmpleadosIndexPage({
                                         />
                                         {errors.codigo_acceso && (
                                             <p className="text-red-500 text-xs mt-1">{errors.codigo_acceso}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Código de Empleado / ID BioTime */}
-                                    <div className="md:col-span-1 p-4 rounded-xl border border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/30 space-y-2 transition-all shadow-sm">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <Label htmlFor="documento_identidad" className="font-semibold text-xs text-indigo-950 dark:text-indigo-200">
-                                                Código de Empleado / ID BioTime *
-                                            </Label>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
-                                                    const shouldSyncAccess =
-                                                        !editingEmpleado &&
-                                                        (!data.codigo_acceso || data.codigo_acceso === data.documento_identidad);
-                                                    setData({
-                                                        ...data,
-                                                        documento_identidad: randomCode,
-                                                        ...(shouldSyncAccess ? { codigo_acceso: randomCode } : {}),
-                                                    });
-                                                }}
-                                                className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium flex items-center gap-1"
-                                            >
-                                                <Sparkles className="w-3 h-3 text-emerald-500" />
-                                                Generar 6D
-                                            </button>
-                                        </div>
-                                        <Input
-                                            id="documento_identidad"
-                                            value={data.documento_identidad}
-                                            onChange={(e) => {
-                                                const nextDoc = e.target.value;
-                                                const shouldSyncAccess =
-                                                    !editingEmpleado &&
-                                                    (!data.codigo_acceso || data.codigo_acceso === data.documento_identidad);
-                                                setData({
-                                                    ...data,
-                                                    documento_identidad: nextDoc,
-                                                    ...(shouldSyncAccess ? { codigo_acceso: nextDoc } : {}),
-                                                });
-                                            }}
-                                            placeholder="ej. 727652"
-                                            maxLength={20}
-                                            className="font-mono font-semibold text-sm"
-                                        />
-                                        {errors.documento_identidad && (
-                                            <p className="text-red-500 text-xs mt-1">{errors.documento_identidad}</p>
                                         )}
                                     </div>
 

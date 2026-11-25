@@ -38,7 +38,9 @@ class EmpleadoEnrolamientoController extends Controller
         return Inertia::render('admin/Empleados/Enrolamiento', [
             'empleado' => [
                 'id' => $empleado->id,
-                'numero' => $empleado->documento_identidad ?: $empleado->codigo_acceso,
+                'numero' => $empleado->codigo_nuevo ?: ($empleado->documento_identidad ?: $empleado->codigo_acceso),
+                'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_anterior' => $empleado->codigo_anterior,
                 'nombres' => $empleado->nombres,
                 'apellidos' => $empleado->apellidos,
                 'area' => $empleado->departamento?->nombre,
@@ -71,6 +73,8 @@ class EmpleadoEnrolamientoController extends Controller
             'nombres' => 'required_without:empleado_id|nullable|string|max:255',
             'apellidos' => 'required_without:empleado_id|nullable|string|max:255',
             'documento_identidad' => 'nullable|string|max:50',
+            'codigo_nuevo' => 'nullable|string|max:50',
+            'codigo_anterior' => 'nullable|string|max:50',
             'departamento_id' => 'nullable|exists:departamentos,id',
             'canal' => 'required|in:whatsapp,correo,ambos',
             'pais_telefono_id' => 'required_if:canal,whatsapp,ambos|nullable|exists:pais,id',
@@ -101,17 +105,28 @@ class EmpleadoEnrolamientoController extends Controller
             }
         } else {
             $empleado = null;
-            $doc = trim((string) ($data['documento_identidad'] ?? ''));
+            $doc = trim((string) ($data['codigo_nuevo'] ?? $data['documento_identidad'] ?? ''));
+            $codigoAnt = trim((string) ($data['codigo_anterior'] ?? ''));
 
-            if ($doc !== '') {
+            if ($doc !== '' || $codigoAnt !== '') {
                 $empleado = Empleado::where('empresa_id', $user->empresa_id)
-                    ->where(function ($q) use ($doc) {
-                        $q->where('documento_identidad', $doc)
-                            ->orWhere('codigo_acceso', $doc);
+                    ->where(function ($q) use ($doc, $codigoAnt) {
+                        if ($doc !== '') {
+                            $q->where('documento_identidad', $doc)
+                                ->orWhere('codigo_nuevo', $doc)
+                                ->orWhere('codigo_acceso', $doc);
+                        }
+                        if ($codigoAnt !== '') {
+                            if ($doc !== '') {
+                                $q->orWhere('codigo_anterior', $codigoAnt);
+                            } else {
+                                $q->where('codigo_anterior', $codigoAnt);
+                            }
+                        }
                     })
                     ->first();
 
-                if (! $empleado && Empleado::withoutTenant()->where('documento_identidad', $doc)->exists()) {
+                if (! $empleado && $doc !== '' && Empleado::withoutTenant()->where('documento_identidad', $doc)->exists()) {
                     throw ValidationException::withMessages([
                         'documento_identidad' => ['Este número de empleado ya está registrado en otra empresa.'],
                     ]);
@@ -125,15 +140,21 @@ class EmpleadoEnrolamientoController extends Controller
 
                 if ($doc !== '') {
                     $empleado->documento_identidad = $doc;
+                    $empleado->codigo_nuevo = $doc;
                 } else {
                     do {
                         $code = (string) mt_rand(100000, 999999);
                     } while (
                         Empleado::withoutTenant()
-                            ->where(fn ($q) => $q->where('documento_identidad', $code)->orWhere('codigo_acceso', $code))
+                            ->where(fn ($q) => $q->where('documento_identidad', $code)->orWhere('codigo_nuevo', $code)->orWhere('codigo_acceso', $code))
                             ->exists()
                     );
                     $empleado->documento_identidad = $code;
+                    $empleado->codigo_nuevo = $code;
+                }
+
+                if ($codigoAnt !== '') {
+                    $empleado->codigo_anterior = $codigoAnt;
                 }
 
                 if (
@@ -262,7 +283,9 @@ class EmpleadoEnrolamientoController extends Controller
         return Inertia::render('admin/Empleados/Enrolamiento', [
             'empleado' => [
                 'id' => $empleado->id,
-                'numero' => $empleado->documento_identidad ?: $empleado->codigo_acceso,
+                'numero' => $empleado->codigo_nuevo ?: ($empleado->documento_identidad ?: $empleado->codigo_acceso),
+                'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_anterior' => $empleado->codigo_anterior,
                 'nombres' => $empleado->nombres,
                 'apellidos' => $empleado->apellidos,
                 'area' => $empleado->departamento?->nombre,

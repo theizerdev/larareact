@@ -42,6 +42,8 @@ export interface EmpleadoSimple {
     nombres: string;
     apellidos: string;
     documento_identidad?: string | null;
+    codigo_nuevo?: string | null;
+    codigo_anterior?: string | null;
     codigo_acceso?: string | null;
     telefono?: string | null;
     correo?: string | null;
@@ -82,6 +84,7 @@ export function EnrolarModal({
     const [nombres, setNombres] = useState('');
     const [apellidos, setApellidos] = useState('');
     const [documentoIdentidad, setDocumentoIdentidad] = useState('');
+    const [codigoAnterior, setCodigoAnterior] = useState('');
     const [departamentoId, setDepartamentoId] = useState<string>('');
     const [canal, setCanal] = useState<CanalNotificacion>('whatsapp');
     const [paisTelefonoId, setPaisTelefonoId] = useState<string | number>(defaultPaisId);
@@ -107,7 +110,8 @@ export function EnrolarModal({
             setSelectedEmpleadoId(String(preselectedEmpleado.id));
             setNombres(preselectedEmpleado.nombres || '');
             setApellidos(preselectedEmpleado.apellidos || '');
-            setDocumentoIdentidad(preselectedEmpleado.documento_identidad || preselectedEmpleado.codigo_acceso || '');
+            setDocumentoIdentidad(preselectedEmpleado.codigo_nuevo || preselectedEmpleado.documento_identidad || preselectedEmpleado.codigo_acceso || '');
+            setCodigoAnterior(preselectedEmpleado.codigo_anterior || '');
             setDepartamentoId(preselectedEmpleado.departamento_id ? String(preselectedEmpleado.departamento_id) : '');
             setTelefono(preselectedEmpleado.telefono || '');
             setCorreo(preselectedEmpleado.correo || '');
@@ -118,6 +122,7 @@ export function EnrolarModal({
             setNombres('');
             setApellidos('');
             setDocumentoIdentidad('');
+            setCodigoAnterior('');
             setDepartamentoId('');
             setTelefono('');
             setCorreo('');
@@ -133,7 +138,8 @@ export function EnrolarModal({
         if (emp) {
             setNombres(emp.nombres || '');
             setApellidos(emp.apellidos || '');
-            setDocumentoIdentidad(emp.documento_identidad || emp.codigo_acceso || '');
+            setDocumentoIdentidad(emp.codigo_nuevo || emp.documento_identidad || emp.codigo_acceso || '');
+            setCodigoAnterior(emp.codigo_anterior || '');
             setDepartamentoId(emp.departamento_id ? String(emp.departamento_id) : '');
             setTelefono(emp.telefono || '');
             setCorreo(emp.correo || '');
@@ -171,6 +177,8 @@ export function EnrolarModal({
                 payload.nombres = nombres;
                 payload.apellidos = apellidos;
                 payload.documento_identidad = documentoIdentidad || null;
+                payload.codigo_nuevo = documentoIdentidad || null;
+                payload.codigo_anterior = codigoAnterior || null;
                 payload.departamento_id = departamentoId || null;
             }
 
@@ -385,6 +393,9 @@ export function EnrolarModal({
                                                     <div className="flex items-center justify-between gap-4 w-full">
                                                         <span className="font-medium">
                                                             {emp.nombres} {emp.apellidos}
+                                                            <span className="text-muted-foreground font-mono text-[11px] ml-2">
+                                                                (Nuevo: {emp.codigo_nuevo || emp.documento_identidad || 'S/N'}{emp.codigo_anterior ? ` · Ant: ${emp.codigo_anterior}` : ''})
+                                                            </span>
                                                         </span>
                                                         <span className={cn(
                                                             'text-[10px] px-1.5 py-0.5 rounded font-mono',
@@ -405,15 +416,22 @@ export function EnrolarModal({
 
                                     {/* Resumen del colaborador seleccionado */}
                                     {selectedEmpleadoId && (
-                                        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-xs space-y-1 dark:border-slate-800 dark:bg-slate-900/40">
+                                        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-xs space-y-1.5 dark:border-slate-800 dark:bg-slate-900/40">
                                             <p className="font-semibold text-slate-800 dark:text-slate-200">
                                                 {nombres} {apellidos}
                                             </p>
-                                            {documentoIdentidad && (
-                                                <p className="text-muted-foreground font-mono">
-                                                    N° EMPLEADO: {documentoIdentidad}
-                                                </p>
-                                            )}
+                                            <div className="flex flex-wrap gap-3 font-mono text-[11px]">
+                                                {documentoIdentidad && (
+                                                    <span className="text-indigo-700 dark:text-indigo-300">
+                                                        CÓDIGO NUEVO: <strong>{documentoIdentidad}</strong>
+                                                    </span>
+                                                )}
+                                                {codigoAnterior && (
+                                                    <span className="text-amber-700 dark:text-amber-300">
+                                                        CÓDIGO ANTERIOR: <strong>{codigoAnterior}</strong>
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -458,10 +476,10 @@ export function EnrolarModal({
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="space-y-1.5">
                                             <Label htmlFor="new_doc" className="text-xs">
-                                                {__('No. de Empleado (Opcional)')}
+                                                {__('Código Nuevo (BioTime)')}
                                             </Label>
                                             <div className="relative">
                                                 <Hash className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
@@ -469,7 +487,23 @@ export function EnrolarModal({
                                                     id="new_doc"
                                                     value={documentoIdentidad}
                                                     onChange={(e) => setDocumentoIdentidad(e.target.value)}
-                                                    placeholder="1234"
+                                                    placeholder="Ej. 1234"
+                                                    className="pl-8 font-mono text-xs"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="new_cod_ant" className="text-xs">
+                                                {__('Código Anterior (Opcional)')}
+                                            </Label>
+                                            <div className="relative">
+                                                <Hash className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                                                <Input
+                                                    id="new_cod_ant"
+                                                    value={codigoAnterior}
+                                                    onChange={(e) => setCodigoAnterior(e.target.value)}
+                                                    placeholder="Ej. 5678"
                                                     className="pl-8 font-mono text-xs"
                                                 />
                                             </div>

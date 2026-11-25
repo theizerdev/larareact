@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils';
 interface EmpleadoEnrolamiento {
     id: number;
     numero: string | null;
+    codigo_nuevo?: string | null;
+    codigo_anterior?: string | null;
     nombres: string;
     apellidos: string;
     area: string | null;
@@ -227,8 +229,13 @@ export default function EnrolamientoPage({ empleado, empresa, isPublic = false, 
                                 )}
 
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <Dato etiqueta="No. de empleado" valor={empleado.numero} mono />
-                                    <Dato etiqueta="Área" valor={empleado.area} />
+                                    <Dato etiqueta="Código Nuevo (BioTime)" valor={empleado.codigo_nuevo || empleado.numero} mono />
+                                    {empleado.codigo_anterior ? (
+                                        <Dato etiqueta="Código Anterior" valor={empleado.codigo_anterior} mono />
+                                    ) : (
+                                        <Dato etiqueta="Área" valor={empleado.area} />
+                                    )}
+                                    {empleado.codigo_anterior && <Dato etiqueta="Área" valor={empleado.area} />}
                                     <Dato etiqueta="Nombre" valor={empleado.nombres} />
                                     <Dato etiqueta="Apellidos" valor={empleado.apellidos} />
                                 </div>

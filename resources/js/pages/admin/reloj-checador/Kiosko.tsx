@@ -100,6 +100,8 @@ interface EmpleadoFound {
     apellidos?: string;
     correo?: string | null;
     documento_identidad: string;
+    codigo_nuevo?: string | null;
+    codigo_anterior?: string | null;
     numero?: string | null;
     codigo_acceso?: string | null;
     foto_empleado?: string | null;
@@ -1997,7 +1999,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                     id="filtro-numero"
                                                     value={filtrosEnrolamiento.numero}
                                                     onChange={(e) => actualizarFiltroEnrolamiento('numero', e.target.value)}
-                                                    placeholder="Número de empleado"
+                                                    placeholder="Código nuevo o anterior"
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
@@ -2051,7 +2053,8 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                             </Badge>
                                                         </span>
                                                         <span className="mt-1 block text-xs text-muted-foreground">
-                                                            No. {resultado.numero || resultado.codigo_acceso || resultado.documento_identidad}
+                                                            No. {resultado.codigo_nuevo || resultado.numero || resultado.codigo_acceso || resultado.documento_identidad}
+                                                            {resultado.codigo_anterior ? ` · Ant: ${resultado.codigo_anterior}` : ''}
                                                             {resultado.correo ? ` · ${resultado.correo}` : ''}
                                                         </span>
                                                     </button>
@@ -2107,7 +2110,11 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                 )}
                                             </div>
                                             <h2 className="text-xl font-bold text-foreground truncate">{empleado.nombre_completo}</h2>
-                                            <p className="text-xs text-muted-foreground truncate">{empleado.cargo || 'Sin cargo'} • {empleado.departamento || empleado.area || 'Sin departamento'}</p>
+                                            <p className="text-xs text-muted-foreground truncate">
+                                                No. Nuevo: <strong className="font-mono text-foreground">{empleado.codigo_nuevo || empleado.numero || empleado.documento_identidad}</strong>
+                                                {empleado.codigo_anterior ? <> · Ant: <strong className="font-mono text-foreground">{empleado.codigo_anterior}</strong></> : null}
+                                                {' • '}{empleado.cargo || 'Sin cargo'} • {empleado.departamento || empleado.area || 'Sin departamento'}
+                                            </p>
                                             <p className="text-xs text-primary font-medium">Turno: {empleado.turno}</p>
                                         </div>
                                         <Button

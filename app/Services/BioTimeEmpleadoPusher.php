@@ -36,7 +36,7 @@ class BioTimeEmpleadoPusher
 {
     /** Columnas de empleados que viajan a BioTime. */
     public const CAMPOS = [
-        'nombres', 'apellidos', 'documento_identidad', 'tarjeta_acceso_1', 'telefono',
+        'nombres', 'apellidos', 'documento_identidad', 'codigo_nuevo', 'tarjeta_acceso_1', 'telefono',
         'correo', 'genero', 'fecha_nacimiento', 'fecha_ingreso', 'departamento_id', 'cargo_id', 'foto_empleado',
     ];
 
@@ -128,7 +128,7 @@ class BioTimeEmpleadoPusher
         }
 
         if ($bio === null) {
-            $codigo = trim((string) $empleado->documento_identidad);
+            $codigo = trim((string) ($empleado->codigo_nuevo ?: $empleado->documento_identidad));
 
             if (! preg_match((string) config('biotime.emp_code_pattern'), $codigo)) {
                 return $this->fallo($empleado, $dryRun, 'omitido', "El número de empleado «{$codigo}» no lo acepta el reloj: deben ser sólo dígitos (".config('biotime.emp_code_pattern').').');
@@ -201,9 +201,10 @@ class BioTimeEmpleadoPusher
 
         $cambios = [];
 
-        if ((string) $empleado->documento_identidad !== $empCode
+        if ((string) ($empleado->codigo_nuevo ?: $empleado->documento_identidad) !== $empCode
             && ! Empleado::withoutTenant()->where('documento_identidad', $empCode)->whereKeyNot($empleado->id)->exists()) {
             $cambios['documento_identidad'] = $empCode;
+            $cambios['codigo_nuevo'] = $empCode;
         }
 
         if (mb_strlen($empCode) <= 20

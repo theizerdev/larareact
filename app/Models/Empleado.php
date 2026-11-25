@@ -17,9 +17,24 @@ class Empleado extends Model
 
     protected static function booted()
     {
+        static::saving(function ($empleado) {
+            $nuevo = trim((string) ($empleado->codigo_nuevo ?? ''));
+            $doc = trim((string) ($empleado->documento_identidad ?? ''));
+
+            if ($nuevo !== '' && $doc === '') {
+                $empleado->documento_identidad = $nuevo;
+            } elseif ($doc !== '' && $nuevo === '') {
+                $empleado->codigo_nuevo = $doc;
+            } elseif ($nuevo !== '' && $doc !== '' && $empleado->isDirty('codigo_nuevo') && ! $empleado->isDirty('documento_identidad')) {
+                $empleado->documento_identidad = $nuevo;
+            } elseif ($nuevo !== '' && $doc !== '' && $empleado->isDirty('documento_identidad') && ! $empleado->isDirty('codigo_nuevo')) {
+                $empleado->codigo_nuevo = $doc;
+            }
+        });
+
         static::creating(function ($empleado) {
             if (empty($empleado->codigo_acceso)) {
-                $doc = trim((string) ($empleado->documento_identidad ?? ''));
+                $doc = trim((string) ($empleado->codigo_nuevo ?: $empleado->documento_identidad ?? ''));
 
                 if ($doc !== '' && mb_strlen($doc) <= 20 && ! static::withoutTenant()->where('codigo_acceso', $doc)->exists()) {
                     $empleado->codigo_acceso = $doc;
@@ -41,6 +56,8 @@ class Empleado extends Model
                 'nombres',
                 'apellidos',
                 'documento_identidad',
+                'codigo_nuevo',
+                'codigo_anterior',
                 'codigo_acceso',
                 'tarjeta_acceso_1',
                 'tarjeta_acceso_2',
@@ -70,6 +87,8 @@ class Empleado extends Model
         'nombres',
         'apellidos',
         'documento_identidad',
+        'codigo_nuevo',
+        'codigo_anterior',
         'codigo_acceso',
         'tarjeta_acceso_1',
         'tarjeta_acceso_2',

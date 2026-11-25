@@ -489,4 +489,120 @@ class BioTimeCodigoUnificadoTest extends TestCase
             ->assertOk()
             ->assertJson(['success' => true]);
     }
+
+    public function test_enrolamiento_busca_por_codigo_nuevo_y_codigo_anterior_y_biotime_recibe_solo_codigo_nuevo(): void
+    {
+        BiotimeDepartamento::create([
+            'empresa_id' => $this->empresa->id,
+            'biotime_id' => 1,
+            'dept_code' => '1',
+            'dept_name' => 'General',
+        ]);
+
+        $postRealizados = [];
+        $idCounter = 770;
+        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::preventStrayRequests();
+        Http::fake(function (Request $r) use (&$postRealizados, &$idCounter) {
+            $path = parse_url($r->url(), PHP_URL_PATH);
+
+            if (str_ends_with($path, '/jwt-api-token-auth/')) {
+                return Http::response(['token' => 't']);
+            }
+            if ($path === '/personnel/api/employees/' && $r->method() === 'GET') {
+                return Http::response(['count' => 0, 'data' => []]);
+            }
+            if ($path === '/personnel/api/employees/' && $r->method() === 'POST') {
+                $postRealizados[] = $r->data();
+                $idCounter++;
+
+                return Http::response([
+                    'id' => $idCounter,
+                    'emp_code' => $r->data()['emp_code'] ?? '990001',
+                    'first_name' => $r->data()['first_name'] ?? 'Juan',
+                    'last_name' => $r->data()['last_name'] ?? 'Perez',
+                ], 201);
+            }
+
+            return Http::response([], 200);
+        });
+
+        // 1. Crear colaborador con código nuevo y código anterior
+        $this->actingAs($this->admin)
+            ->post('/admin/empleados', [
+                'nombres' => 'Juan',
+                'apellidos' => 'Perez',
+                'codigo_nuevo' => '990001',
+                'codigo_anterior' => 'OLD-1234',
+                'departamento_id' => $this->departamento->id,
+                'responsable_id' => $this->responsable->id,
+                'empresa_id' => $this->empresa->id,
+                'sucursal_id' => $this->sucursal->id,
+                'user_id' => $this->admin->id,
+                'status' => 1,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $empleado = Empleado::withoutTenant()->where('codigo_nuevo', '990001')->firstOrFail();
+        $this->assertSame('990001', $empleado->documento_identidad);
+        $this->assertSame('OLD-1234', $empleado->codigo_anterior);
+
+        // 2. Comprobar que BioTime recibió el código nuevo (990001) y NUNCA el código anterior (OLD-1234)
+        $this->assertNotEmpty($postRealizados);
+        $this->assertSame('990001', $postRealizados[0]['emp_code']);
+        $this->assertNotSame('OLD-1234', $postRealizados[0]['emp_code']);
+
+        // 3. Búsqueda de enrolamiento en el Kiosko por CÓDIGO ANTERIOR
+        $resBusquedaAnt = $this->actingAs($this->admin)
+            ->postJson('/admin/api/reloj-checador/buscar-enrolamiento', ['numero' => 'OLD-1234']);
+        $resBusquedaAnt->assertOk()
+            ->assertJsonPath('empleados.0.id', $empleado->id)
+            ->assertJsonPath('empleados.0.codigo_nuevo', '990001')
+            ->assertJsonPath('empleados.0.codigo_anterior', 'OLD-1234');
+
+        // 4. Búsqueda de enrolamiento en el Kiosko por CÓDIGO NUEVO
+        $resBusquedaNuevo = $this->actingAs($this->admin)
+            ->postJson('/admin/api/reloj-checador/buscar-enrolamiento', ['numero' => '990001']);
+        $resBusquedaNuevo->assertOk()
+            ->assertJsonPath('empleados.0.id', $empleado->id)
+            ->assertJsonPath('empleados.0.codigo_nuevo', '990001')
+            ->assertJsonPath('empleados.0.codigo_anterior', 'OLD-1234');
+
+        // 5. Búsqueda general en RegistroMarcajeService por ambos códigos
+        $service = app(\App\Services\RegistroMarcajeService::class);
+        $encontradoPorAnt = $service->buscarEmpleado('OLD-1234', $this->empresa->id);
+        $this->assertNotNull($encontradoPorAnt);
+        $this->assertSame($empleado->id, $encontradoPorAnt->id);
+
+        $encontradoPorNuevo = $service->buscarEmpleado('990001', $this->empresa->id);
+        $this->assertNotNull($encontradoPorNuevo);
+        $this->assertSame($empleado->id, $encontradoPorNuevo->id);
+
+        // 6. Invitación de enrolamiento para empleado existente
+        $resInvitar = $this->actingAs($this->admin)
+            ->postJson('/admin/empleados/enrolamiento/invitar', [
+                'empleado_id' => $empleado->id,
+                'canal' => 'correo',
+                'correo' => 'juan.perez@example.com',
+            ]);
+        $resInvitar->assertOk()
+            ->assertJsonPath('empleado.id', $empleado->id);
+
+        // 7. Invitación de enrolamiento con nuevo colaborador registrando ambos códigos
+        $resInvitarNuevo = $this->actingAs($this->admin)
+            ->postJson('/admin/empleados/enrolamiento/invitar', [
+                'nombres' => 'Carlos',
+                'apellidos' => 'Lopez',
+                'codigo_nuevo' => '990002',
+                'codigo_anterior' => 'OLD-5678',
+                'canal' => 'correo',
+                'correo' => 'carlos.lopez@example.com',
+            ]);
+        $resInvitarNuevo->assertOk();
+
+        $carlos = Empleado::withoutTenant()->where('codigo_nuevo', '990002')->first();
+        $this->assertNotNull($carlos);
+        $this->assertSame('990002', $carlos->documento_identidad);
+        $this->assertSame('OLD-5678', $carlos->codigo_anterior);
+    }
 }

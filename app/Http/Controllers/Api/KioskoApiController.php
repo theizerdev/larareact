@@ -620,7 +620,7 @@ class KioskoApiController extends Controller
 
         // Sin el scope de empresa: documento_identidad es único en toda la tabla.
         $existe = Empleado::withoutTenant()
-            ->where(fn ($q) => $q->where('documento_identidad', $numero)->orWhere('codigo_acceso', $numero))
+            ->where(fn ($q) => $q->where('documento_identidad', $numero)->orWhere('codigo_nuevo', $numero)->orWhere('codigo_anterior', $numero)->orWhere('codigo_acceso', $numero))
             ->exists();
         if ($existe) {
             throw ValidationException::withMessages([
@@ -642,6 +642,7 @@ class KioskoApiController extends Controller
             'nombres' => trim($data['nombres']),
             'apellidos' => trim($data['apellidos']),
             'documento_identidad' => $numero,
+            'codigo_nuevo' => $numero,
             'codigo_acceso' => $codigoAccesoInicial,
             'departamento_id' => $data['departamento_id'] ?? null,
             'empresa_id' => $user->empresa_id,
@@ -735,6 +736,8 @@ class KioskoApiController extends Controller
     {
         return [
             'nombres' => $empleado->nombres,
+            'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+            'codigo_anterior' => $empleado->codigo_anterior,
             'enrolado' => ! empty($empleado->enrolado_en),
             'enrolado_en' => $empleado->enrolado_en?->toIso8601String(),
             'genero' => $empleado->genero,
