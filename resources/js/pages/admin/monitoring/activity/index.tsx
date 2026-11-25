@@ -293,6 +293,22 @@ export default function ActivityMonitoring({
                     className: 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-900/50 font-bold',
                     rowBg: 'border-l-4 border-l-blue-500 hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition-colors',
                 };
+            case 'aviso_privacidad':
+                return {
+                    label: 'Aviso de Privacidad',
+                    variant: 'outline' as const,
+                    icon: <KeyRound className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />,
+                    className: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-900/50 font-bold',
+                    rowBg: 'border-l-4 border-l-indigo-500 hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition-colors',
+                };
+            case 'enrolamiento':
+                return {
+                    label: 'Enrolamiento',
+                    variant: 'outline' as const,
+                    icon: <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />,
+                    className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/50 font-bold',
+                    rowBg: 'border-l-4 border-l-emerald-500 hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition-colors',
+                };
             default:
                 return {
                     label: event.toUpperCase(),

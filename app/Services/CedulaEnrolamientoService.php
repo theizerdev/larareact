@@ -120,7 +120,7 @@ class CedulaEnrolamientoService
             ]);
         }
 
-        // Registrar también en spatie/laravel-activitylog para la bitácora global del sistema
+        // Registrar también en spatie/laravel-activitylog para el Monitoreo de Actividades
         activity('enrolamiento')
             ->causedBy($userId ? \App\Models\User::find($userId) : null)
             ->performedOn($empleado)
@@ -132,7 +132,12 @@ class CedulaEnrolamientoService
                 'log_uuid' => $log->uuid,
                 'hash_evento' => $hashEvento,
                 'origen' => $origen,
-                'ip' => $ip,
+                'ip_address' => $ip,
+                'user_agent' => $userAgent,
+                'url' => request()?->fullUrl(),
+                'method' => request()?->method(),
+                'tabla' => 'empleados',
+                'identificador_registro' => "{$empleado->nombre_completo} (No. {$cedula->no_empleado})",
                 'latitud' => $latitud,
                 'longitud' => $longitud,
             ])
