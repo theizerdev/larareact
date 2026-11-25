@@ -495,7 +495,7 @@ export function EnrolarModal({
 
                                         <div className="space-y-1.5">
                                             <Label htmlFor="new_cod_ant" className="text-xs">
-                                                {__('Código Anterior (Opcional)')}
+                                                {__('N° Tarjeta (Opcional)')}
                                             </Label>
                                             <div className="relative">
                                                 <Hash className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />

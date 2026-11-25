@@ -231,7 +231,7 @@ export default function EnrolamientoPage({ empleado, empresa, isPublic = false, 
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                     <Dato etiqueta="Código Nuevo (BioTime)" valor={empleado.codigo_nuevo || empleado.numero} mono />
                                     {empleado.codigo_anterior ? (
-                                        <Dato etiqueta="Código Anterior" valor={empleado.codigo_anterior} mono />
+                                        <Dato etiqueta="N° Tarjeta" valor={empleado.codigo_anterior} mono />
                                     ) : (
                                         <Dato etiqueta="Área" valor={empleado.area} />
                                     )}
