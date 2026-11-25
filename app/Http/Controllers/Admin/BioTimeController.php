@@ -212,10 +212,10 @@ class BioTimeController extends Controller
             'enable_att' => $b->enable_att,
             'biophoto_path' => $b->biophoto_path,
             'foto_exportada' => $b->foto_exportada,
-            'foto_exportada_at' => $b->foto_exportada_at?->toIso8601String(),
-            'photo_synced_at' => $b->photo_synced_at?->toIso8601String(),
+            'foto_exportada_at' => $this->formatearIso($b->foto_exportada_at),
+            'photo_synced_at' => $this->formatearIso($b->photo_synced_at),
             'foto_biotime_url' => $b->foto_biotime_url,
-            'updated_at' => $b->updated_at?->toIso8601String(),
+            'updated_at' => $this->formatearIso($b->updated_at),
             'link_status' => $b->link_status,
             'empleado_id' => $b->empleado_id,
             'biometrics' => [
@@ -239,10 +239,23 @@ class BioTimeController extends Controller
                 'fecha_nacimiento' => $b->empleado->fecha_nacimiento?->format('Y-m-d'),
                 'fecha_ingreso' => $b->empleado->fecha_ingreso?->format('Y-m-d'),
                 'foto_empleado' => $b->empleado->foto_empleado,
-                'biotime_pushed_at' => $b->empleado->biotime_pushed_at?->toIso8601String(),
+                'biotime_pushed_at' => $this->formatearIso($b->empleado->biotime_pushed_at),
                 'biotime_push_error' => $b->empleado->biotime_push_error,
             ] : null,
         ];
+    }
+
+    private function formatearIso(mixed $valor): ?string
+    {
+        if (blank($valor)) {
+            return null;
+        }
+
+        if ($valor instanceof \DateTimeInterface) {
+            return $valor->format(\DateTimeInterface::ATOM);
+        }
+
+        return \Illuminate\Support\Carbon::parse((string) $valor)->toIso8601String();
     }
 
     public function vincular(Request $request, BiotimeEmpleado $biotimeEmpleado): RedirectResponse

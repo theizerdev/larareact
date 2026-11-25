@@ -76,6 +76,7 @@ class BioTimeAdminTest extends TestCase
             'documento_identidad' => '419900',
             'codigo_nuevo' => '419900',
             'codigo_anterior' => '856093',
+            'biotime_pushed_at' => now()->toDateTimeString(),
             'empresa_id' => $empresa->id,
             'status' => true,
         ]);
