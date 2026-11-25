@@ -1343,7 +1343,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                 {modoEntrada === 'camara' ? 'Escanee su gafete QR' : 'Identificación del colaborador'}
                                             </h3>
                                             <Label className="text-xs text-muted-foreground font-normal">
-                                                {modoEntrada === 'camara' ? 'Acerque el código QR de su gafete a la cámara' : 'N° de empleado, documento o QR gafete'}
+                                                {modoEntrada === 'camara' ? 'Acerque el código QR de su gafete a la cámara' : 'ID empleado'}
                                             </Label>
                                         </div>
                                     </div>
@@ -1459,7 +1459,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                             type="text"
                                             value={documentInput}
                                             onChange={(e) => setDocumentInput(e.target.value)}
-                                            placeholder="Ingrese número o escanee código de barras/QR..."
+                                            placeholder="ID empleado"
                                             className="w-full text-center text-2xl sm:text-3xl font-mono font-bold tracking-widest bg-background border-2 border-input rounded-xl py-4 text-foreground placeholder:text-base placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition"
                                             autoFocus
                                         />
