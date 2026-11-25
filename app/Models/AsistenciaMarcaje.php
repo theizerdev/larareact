@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\AlcancePorLegacy;
 use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class AsistenciaMarcaje extends Model
 {
-    use HasFactory, HasSpanishActivityLog, LogsActivity, Multitenantable;
+    use AlcancePorLegacy, HasFactory, HasSpanishActivityLog, LogsActivity, Multitenantable;
 
     protected $table = 'asistencia_marcajes';
 

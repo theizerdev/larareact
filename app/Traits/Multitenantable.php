@@ -108,11 +108,14 @@ trait Multitenantable
 
     /**
      * Desactivar el scope de multitenancy para consultas cross-tenant.
+     * También quita el alcance por Legacy (AlcancePorLegacy): una consulta
+     * que cruza empresas, como validar que un número no esté repetido,
+     * tampoco debe limitarse a un Legacy.
      * Uso: Modelo::withoutTenant()->get();
      */
     public static function withoutTenant(): Builder
     {
-        return static::withoutGlobalScope('multitenancy');
+        return static::withoutGlobalScopes(['multitenancy', 'alcance_legacy']);
     }
 }
 

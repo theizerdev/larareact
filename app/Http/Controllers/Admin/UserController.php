@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ConfiguracionSox;
+use App\Models\Empleado;
 use App\Models\Empresa;
 use App\Models\Group;
 use App\Models\Pais;
@@ -92,6 +93,9 @@ class UserController extends Controller
             'groups' => Group::where('status', true)->with('roles:id,name')->get(['id', 'name', 'description']),
             'empresas' => Empresa::where('status', true)->orderBy('razon_social')->get(['id', 'razon_social']),
             'sucursales' => Sucursal::where('status', true)->orderBy('nombre')->get(['id', 'nombre', 'empresa_id']),
+            // Legacies (zonas) que ya traen los colaboradores, para asignarlos.
+            'legacies' => Empleado::whereNotNull('legacy')->where('legacy', '!=', '')
+                ->distinct()->orderBy('legacy')->pluck('legacy'),
             'paises' => Pais::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
@@ -111,6 +115,7 @@ class UserController extends Controller
             'status' => ['required', Rule::in(['activo', 'inactivo', 'suspendido'])],
             'empresa_id' => 'nullable|exists:empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
+            'legacy' => 'nullable|string|max:100',
             'roles' => 'array',
             'roles.*' => 'string',
             'groups' => 'nullable|array',
@@ -179,6 +184,7 @@ class UserController extends Controller
             'status' => ['required', Rule::in(['activo', 'inactivo', 'suspendido'])],
             'empresa_id' => 'nullable|exists:empresas,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
+            'legacy' => 'nullable|string|max:100',
             'roles' => 'array',
             'roles.*' => 'string',
             'groups' => 'nullable|array',
@@ -369,6 +375,16 @@ class UserController extends Controller
                 ]);
             }
             $validated['sucursal_id'] = $actor->sucursal_id;
+        }
+
+        // Igual con el Legacy: quien sólo ve una zona no crea usuarios de otra.
+        if (filled($actor->legacy)) {
+            if (filled($validated['legacy'] ?? null) && $validated['legacy'] !== $actor->legacy) {
+                throw ValidationException::withMessages([
+                    'legacy' => __('You are not allowed to assign this legacy.'),
+                ]);
+            }
+            $validated['legacy'] = $actor->legacy;
         }
 
         return $validated;

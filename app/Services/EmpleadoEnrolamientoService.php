@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\BiotimeEmpleado;
 use App\Models\Empleado;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -14,6 +15,79 @@ class EmpleadoEnrolamientoService
 {
     /** Horas que sirve un enlace público de enrolamiento. */
     public const HORAS_ENLACE = 72;
+
+    /** Filtros con los que el kiosko (web y app) busca a quién enrolar. */
+    public const FILTROS_BUSQUEDA = [
+        'nombres' => 'nullable|string|max:100',
+        'apellidos' => 'nullable|string|max:100',
+        'numero' => 'nullable|string|max:50',
+        'codigo_nuevo' => 'nullable|string|max:50',
+        'codigo_anterior' => 'nullable|string|max:50',
+        'correo' => 'nullable|string|max:150',
+    ];
+
+    /**
+     * Colaboradores activos de la empresa que cumplen todos los filtros
+     * llenos (hasta 50), con los datos que el kiosko muestra para enrolarlos.
+     * La usan el kiosko web y la app móvil, para que encuentren lo mismo.
+     *
+     * @param  array<string, string|null>  $filtros
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function buscarParaEnrolamiento(array $filtros, ?int $empresaId): Collection
+    {
+        return Empleado::with(['turnoLaboral', 'departamento', 'cargo', 'empresa'])
+            ->where('status', true)
+            ->when($empresaId, fn ($query) => $query->where('empresa_id', $empresaId))
+            ->when(filled($filtros['nombres'] ?? null), fn ($query) => $query->whereRaw('LOWER(nombres) LIKE ?', ['%'.mb_strtolower(trim($filtros['nombres']), 'UTF-8').'%']))
+            ->when(filled($filtros['apellidos'] ?? null), fn ($query) => $query->whereRaw('LOWER(apellidos) LIKE ?', ['%'.mb_strtolower(trim($filtros['apellidos']), 'UTF-8').'%']))
+            ->when(filled($filtros['numero'] ?? null), function ($query) use ($filtros) {
+                $numero = trim($filtros['numero']);
+                $query->where(function ($query) use ($numero) {
+                    $query->where('codigo_acceso', 'like', "%{$numero}%")
+                        ->orWhere('documento_identidad', 'like', "%{$numero}%")
+                        ->orWhere('codigo_nuevo', 'like', "%{$numero}%")
+                        ->orWhere('codigo_anterior', 'like', "%{$numero}%")
+                        ->orWhere('legacy', 'like', "%{$numero}%");
+                });
+            })
+            ->when(filled($filtros['codigo_nuevo'] ?? null), function ($query) use ($filtros) {
+                $cn = trim($filtros['codigo_nuevo']);
+                $query->where(function ($q) use ($cn) {
+                    $q->where('codigo_nuevo', 'like', "%{$cn}%")
+                        ->orWhere('documento_identidad', 'like', "%{$cn}%");
+                });
+            })
+            ->when(filled($filtros['codigo_anterior'] ?? null), fn ($query) => $query->where('codigo_anterior', 'like', '%'.trim($filtros['codigo_anterior']).'%'))
+            ->when(filled($filtros['correo'] ?? null), fn ($query) => $query->whereRaw('LOWER(correo) LIKE ?', ['%'.mb_strtolower(trim($filtros['correo']), 'UTF-8').'%']))
+            ->orderBy('apellidos')
+            ->orderBy('nombres')
+            ->limit(50)
+            ->get()
+            ->map(fn (Empleado $empleado) => [
+                'id' => $empleado->id,
+                'nombre_completo' => $empleado->nombre_completo,
+                'nombres' => $empleado->nombres,
+                'apellidos' => $empleado->apellidos,
+                'correo' => $empleado->correo,
+                'documento_identidad' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_anterior' => $empleado->codigo_anterior,
+                'legacy' => $empleado->legacy,
+                'numero' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_acceso' => $empleado->codigo_acceso,
+                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
+                'departamento' => $empleado->departamento?->nombre,
+                'area' => $empleado->departamento?->nombre,
+                'cargo' => $empleado->cargo?->nombre,
+                'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
+                'enrolado' => ! empty($empleado->enrolado_en),
+                'enrolado_en' => $empleado->enrolado_en?->toIso8601String(),
+                'genero' => $empleado->genero,
+                'fecha_nacimiento' => $empleado->fecha_nacimiento?->format('Y-m-d'),
+                'empresa_nombre' => $empleado->empresa?->razon_social ?? $empleado->empresa?->nombre_comercial ?? 'Smurfit Westrock',
+            ]);
+    }
 
     /**
      * Enlace público de enrolamiento nuevo (el anterior deja de servir), para
@@ -34,6 +108,7 @@ class EmpleadoEnrolamientoService
      * almacena sus fotografías frontales y sincroniza con BioTime.
      *
      * @param  array<string, mixed>  $datos
+     *
      * @throws ValidationException
      */
     public function guardar(Empleado $empleado, array $datos): Empleado

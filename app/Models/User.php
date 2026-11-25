@@ -32,6 +32,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $telefono
  * @property int|null $empresa_id
  * @property int|null $sucursal_id
+ * @property string|null $legacy Legacy (zona) que administra; limita a sus colaboradores.
  * @property string|null $whatsapp_otp
  * @property Carbon|null $phone_verified_at
  * @property string|null $two_factor_secret
@@ -42,7 +43,7 @@ use App\Traits\HasSpanishActivityLog;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
-#[Fillable(['name', 'username', 'status', 'email', 'password', 'password_changed_at', 'failed_login_attempts', 'locked_until', 'telefono', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'layout_settings'])]
+#[Fillable(['name', 'username', 'status', 'email', 'password', 'password_changed_at', 'failed_login_attempts', 'locked_until', 'telefono', 'pais_telefono_id', 'empresa_id', 'sucursal_id', 'legacy', 'layout_settings'])]
 #[Hidden(['password', 'remember_token', 'whatsapp_otp', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -52,7 +53,7 @@ class User extends Authenticatable implements PasskeyUser
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'username', 'status', 'email', 'telefono', 'empresa_id', 'sucursal_id', 'failed_login_attempts', 'locked_until'])
+            ->logOnly(['name', 'username', 'status', 'email', 'telefono', 'empresa_id', 'sucursal_id', 'legacy', 'failed_login_attempts', 'locked_until'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }

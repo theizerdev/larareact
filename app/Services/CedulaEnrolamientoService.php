@@ -170,21 +170,24 @@ class CedulaEnrolamientoService
             : null;
 
         if (! $cedula || ! $cedula->logs()->where('accion', EmpleadoEnrolamientoLog::ACCION_AVISO_PRIVACIDAD)->exists()) {
-            $resAviso = $this->registrarAccion($empleado, EmpleadoEnrolamientoLog::ACCION_AVISO_PRIVACIDAD, $contexto + [
+            // array_merge y no `+`: el contexto suele traer `cedula_uuid` nulo
+            // (enlace público, enrolamiento sin aviso previo) y `+` lo
+            // conservaría, abriendo una segunda cédula sin el aviso.
+            $resAviso = $this->registrarAccion($empleado, EmpleadoEnrolamientoLog::ACCION_AVISO_PRIVACIDAD, array_merge($contexto, [
                 'cedula_uuid' => $cedula?->uuid,
-            ]);
+            ]));
             $cedula = $resAviso['cedula'];
         }
 
-        // Registrar la acción de Enrolamiento
-        $resEnrol = $this->registrarAccion($empleado, EmpleadoEnrolamientoLog::ACCION_ENROLAMIENTO, $contexto + [
+        // Registrar la acción de Enrolamiento, en la misma cédula
+        $resEnrol = $this->registrarAccion($empleado, EmpleadoEnrolamientoLog::ACCION_ENROLAMIENTO, array_merge($contexto, [
             'cedula_uuid' => $cedula->uuid,
             'metadata' => [
                 'biotime_sincronizado' => true,
                 'genero' => $empleado->genero,
                 'fecha_nacimiento' => $empleado->fecha_nacimiento?->format('Y-m-d'),
             ],
-        ]);
+        ]));
         $cedula = $resEnrol['cedula'];
 
         $foto1Bin = $this->leerBinarioStorage($empleado->foto_empleado);

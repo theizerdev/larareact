@@ -179,14 +179,7 @@ class RelojChecadorKioskoController extends Controller
             abort(403, 'No tiene permiso para buscar empleados para enrolamiento.');
         }
 
-        $filtros = $request->validate([
-            'nombres' => 'nullable|string|max:100',
-            'apellidos' => 'nullable|string|max:100',
-            'numero' => 'nullable|string|max:50',
-            'codigo_nuevo' => 'nullable|string|max:50',
-            'codigo_anterior' => 'nullable|string|max:50',
-            'correo' => 'nullable|string|max:150',
-        ]);
+        $filtros = $request->validate(EmpleadoEnrolamientoService::FILTROS_BUSQUEDA);
 
         if (! collect($filtros)->contains(fn ($valor) => filled($valor))) {
             return response()->json([
@@ -195,58 +188,11 @@ class RelojChecadorKioskoController extends Controller
             ], 422);
         }
 
-        $empresaId = $user?->empresa_id ?? \App\Models\Empresa::value('id');
-        $empleados = Empleado::with(['turnoLaboral', 'departamento', 'cargo', 'empresa'])
-            ->where('status', true)
-            ->when($empresaId, fn ($query) => $query->where('empresa_id', $empresaId))
-            ->when(filled($filtros['nombres'] ?? null), fn ($query) => $query->whereRaw('LOWER(nombres) LIKE ?', ['%'.mb_strtolower(trim($filtros['nombres']), 'UTF-8').'%']))
-            ->when(filled($filtros['apellidos'] ?? null), fn ($query) => $query->whereRaw('LOWER(apellidos) LIKE ?', ['%'.mb_strtolower(trim($filtros['apellidos']), 'UTF-8').'%']))
-            ->when(filled($filtros['numero'] ?? null), function ($query) use ($filtros) {
-                $numero = trim($filtros['numero']);
-                $query->where(function ($query) use ($numero) {
-                    $query->where('codigo_acceso', 'like', "%{$numero}%")
-                        ->orWhere('documento_identidad', 'like', "%{$numero}%")
-                        ->orWhere('codigo_nuevo', 'like', "%{$numero}%")
-                        ->orWhere('codigo_anterior', 'like', "%{$numero}%")
-                        ->orWhere('legacy', 'like', "%{$numero}%");
-                });
-            })
-            ->when(filled($filtros['codigo_nuevo'] ?? null), function ($query) use ($filtros) {
-                $cn = trim($filtros['codigo_nuevo']);
-                $query->where(function ($q) use ($cn) {
-                    $q->where('codigo_nuevo', 'like', "%{$cn}%")
-                      ->orWhere('documento_identidad', 'like', "%{$cn}%");
-                });
-            })
-            ->when(filled($filtros['codigo_anterior'] ?? null), fn ($query) => $query->where('codigo_anterior', 'like', '%'.trim($filtros['codigo_anterior']).'%'))
-            ->when(filled($filtros['correo'] ?? null), fn ($query) => $query->whereRaw('LOWER(correo) LIKE ?', ['%'.mb_strtolower(trim($filtros['correo']), 'UTF-8').'%']))
-            ->orderBy('apellidos')
-            ->orderBy('nombres')
-            ->limit(50)
-            ->get()
-            ->map(fn (Empleado $empleado) => [
-                'id' => $empleado->id,
-                'nombre_completo' => $empleado->nombre_completo,
-                'nombres' => $empleado->nombres,
-                'apellidos' => $empleado->apellidos,
-                'correo' => $empleado->correo,
-                'documento_identidad' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
-                'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
-                'codigo_anterior' => $empleado->codigo_anterior,
-                'legacy' => $empleado->legacy,
-                'numero' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
-                'codigo_acceso' => $empleado->codigo_acceso,
-                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
-                'departamento' => $empleado->departamento?->nombre,
-                'area' => $empleado->departamento?->nombre,
-                'cargo' => $empleado->cargo?->nombre,
-                'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
-                'enrolado' => ! empty($empleado->enrolado_en),
-                'enrolado_en' => $empleado->enrolado_en?->toIso8601String(),
-                'genero' => $empleado->genero,
-                'fecha_nacimiento' => $empleado->fecha_nacimiento?->format('Y-m-d'),
-                'empresa_nombre' => $empleado->empresa?->razon_social ?? $empleado->empresa?->nombre_comercial ?? 'Smurfit Westrock',
-            ]);
+        // La misma búsqueda que usa la app móvil.
+        $empleados = app(EmpleadoEnrolamientoService::class)->buscarParaEnrolamiento(
+            $filtros,
+            $user?->empresa_id ?? \App\Models\Empresa::value('id'),
+        );
 
         return response()->json([
             'success' => true,

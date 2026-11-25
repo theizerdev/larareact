@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\KioskoApiController;
 use App\Http\Controllers\Api\MovilDataController;
+use App\Http\Controllers\Api\UbicacionJornadaController;
 use App\Http\Middleware\EnsureUserActive;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -69,6 +70,17 @@ Route::middleware(['auth:sanctum', EnsureUserActive::class])->group(function () 
         Route::post('/registrar', [KioskoApiController::class, 'registrar']);
         // Igual: el propio empleado, o enrolar a otros con permiso del kiosko.
         Route::post('/enrolar', [KioskoApiController::class, 'enrolar']);
+        // Auditoría del enrolamiento (Aviso de Privacidad), con la misma regla.
+        Route::post('/enrolamiento/accion', [KioskoApiController::class, 'registrarAccionEnrolamiento']);
+        // Buscar a quién enrolar por nombre, apellidos, número o correo: mismo
+        // permiso que en el kiosko web.
+        Route::post('/buscar-enrolamiento', [KioskoApiController::class, 'buscarParaEnrolamiento'])
+            ->middleware(['permission:asistencia.kiosko|asistencia.view|empleados.edit', 'throttle:60,1']);
+        // Ubicación cada 15 min durante la jornada (de la entrada a la salida),
+        // sólo del propio colaborador de la cuenta.
+        Route::get('/ubicaciones/estado', [UbicacionJornadaController::class, 'estado']);
+        Route::post('/ubicaciones', [UbicacionJornadaController::class, 'registrar'])
+            ->middleware('throttle:30,1');
         // Enlace/QR de enrolamiento para que el empleado se enrole desde su
         // teléfono; mismo permiso que "Enviar enlace" en Colaboradores.
         Route::post('/enlace-enrolamiento', [KioskoApiController::class, 'generarEnlaceEnrolamiento'])
@@ -92,6 +104,7 @@ Route::middleware(['auth:sanctum', EnsureUserActive::class])->group(function () 
         Route::get('/empleados', [MovilDataController::class, 'empleados']);
         Route::get('/empleados/{id}', [MovilDataController::class, 'empleadoDetalle'])->whereNumber('id');
         Route::get('/empleados/{id}/marcajes', [MovilDataController::class, 'empleadoMarcajes'])->whereNumber('id');
+        Route::get('/empleados/{id}/ubicaciones', [UbicacionJornadaController::class, 'delEmpleado'])->whereNumber('id');
     });
     Route::get('/asistencia/bitacora', [MovilDataController::class, 'bitacora'])
         ->middleware('permission:asistencia.bitacora|asistencia.view');

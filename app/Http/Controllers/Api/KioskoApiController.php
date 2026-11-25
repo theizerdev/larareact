@@ -8,9 +8,11 @@ use App\Models\AsistenciaResumenDiario;
 use App\Models\ConfiguracionAsistencia;
 use App\Models\Departamento;
 use App\Models\Empleado;
+use App\Models\EmpleadoEnrolamientoCedula;
 use App\Models\Sucursal;
 use App\Services\AccessCodeService;
 use App\Services\CalculoAsistenciaLftService;
+use App\Services\CedulaEnrolamientoService;
 use App\Services\EmpleadoEnrolamientoService;
 use App\Services\RegistroMarcajeService;
 use Carbon\Carbon;
@@ -88,45 +90,12 @@ class KioskoApiController extends Controller
             ->latest('fecha_hora')
             ->first();
 
-        // Sugerir el siguiente marcaje lógico
-        $siguienteMarcaje = 'entrada';
-        if ($ultimoMarcaje) {
-            switch ($ultimoMarcaje->tipo_marcaje) {
-                case 'entrada':
-                    $siguienteMarcaje = 'salida_comida';
-                    break;
-                case 'salida_comida':
-                    $siguienteMarcaje = 'entrada_comida';
-                    break;
-                case 'entrada_comida':
-                    $siguienteMarcaje = 'salida';
-                    break;
-                case 'descanso_inicio':
-                    $siguienteMarcaje = 'descanso_fin';
-                    break;
-                case 'descanso_fin':
-                    $siguienteMarcaje = 'descanso_inicio';
-                    break;
-                case 'incidente_inicio':
-                    $siguienteMarcaje = 'incidente_fin';
-                    break;
-                case 'incidente_fin':
-                    $siguienteMarcaje = 'salida';
-                    break;
-                case 'salida':
-                    $siguienteMarcaje = 'entrada';
-                    break;
-            }
-        }
-
         return response()->json([
             'success' => true,
             'empleado' => [
                 'id' => $empleado->id,
                 'nombre_completo' => $empleado->nombre_completo,
-                'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'numero_empleado' => $empleado->codigo_acceso,
+                ...$this->numerosDeEmpleado($empleado),
                 'departamento' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
@@ -139,7 +108,7 @@ class KioskoApiController extends Controller
                 'hora' => Carbon::parse($ultimoMarcaje->fecha_hora_local)->format('H:i:s'),
             ] : null,
             'tiempo' => $this->semaforoDeTiempo($empleado, $ultimoMarcaje),
-            'sugerencia_marcaje' => $siguienteMarcaje,
+            'sugerencia_marcaje' => $this->siguienteMarcaje($ultimoMarcaje?->tipo_marcaje),
         ]);
     }
 
@@ -177,28 +146,12 @@ class KioskoApiController extends Controller
             ->latest('fecha_hora')
             ->first();
 
-        $siguienteMarcaje = 'entrada';
-        if ($ultimoMarcaje) {
-            switch ($ultimoMarcaje->tipo_marcaje) {
-                case 'entrada': $siguienteMarcaje = 'salida_comida'; break;
-                case 'salida_comida': $siguienteMarcaje = 'entrada_comida'; break;
-                case 'entrada_comida': $siguienteMarcaje = 'salida'; break;
-                case 'descanso_inicio': $siguienteMarcaje = 'descanso_fin'; break;
-                case 'descanso_fin': $siguienteMarcaje = 'descanso_inicio'; break;
-                case 'incidente_inicio': $siguienteMarcaje = 'incidente_fin'; break;
-                case 'incidente_fin': $siguienteMarcaje = 'salida'; break;
-                case 'salida': $siguienteMarcaje = 'entrada'; break;
-            }
-        }
-
         return response()->json([
             'success' => true,
             'empleado' => [
                 'id' => $empleado->id,
                 'nombre_completo' => $empleado->nombre_completo,
-                'documento_identidad' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'numero_empleado' => $empleado->codigo_acceso,
+                ...$this->numerosDeEmpleado($empleado),
                 'departamento' => $empleado->departamento?->nombre,
                 'cargo' => $empleado->cargo?->nombre,
                 'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
@@ -214,7 +167,7 @@ class KioskoApiController extends Controller
                 'hora' => Carbon::parse($ultimoMarcaje->fecha_hora_local)->format('H:i:s'),
             ] : null,
             'tiempo' => $this->semaforoDeTiempo($empleado, $ultimoMarcaje),
-            'sugerencia_marcaje' => $siguienteMarcaje,
+            'sugerencia_marcaje' => $this->siguienteMarcaje($ultimoMarcaje?->tipo_marcaje),
         ]);
     }
 
@@ -439,61 +392,93 @@ class KioskoApiController extends Controller
      * BioTime. Una cuenta vinculada a un empleado sólo se enrola a sí misma;
      * enrolar a otros exige los permisos del kiosko web.
      */
-    public function enrolar(Request $request, EmpleadoEnrolamientoService $enrolamiento)
-    {
-        $request->validate(['empleado_id' => 'nullable|integer']);
+    public function enrolar(
+        Request $request,
+        EmpleadoEnrolamientoService $enrolamiento,
+        CedulaEnrolamientoService $cedulas,
+    ) {
+        $request->validate([
+            'empleado_id' => 'nullable|integer',
+            ...self::EVIDENCIA_ENROLAMIENTO,
+        ]);
 
         $user = $request->user();
-        $propioEmpleado = $user->empleado;
-
-        if ($propioEmpleado) {
-            if (! $propioEmpleado->status || ! $propioEmpleado->permite_app_movil) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No tienes permiso para utilizar la app móvil. Contacta a Recursos Humanos.',
-                ], 403);
-            }
-            $empleado = $propioEmpleado;
-        } else {
-            if (! $user->canAny(['asistencia.kiosko', 'asistencia.view', 'empleados.edit'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No tienes permiso para enrolar a otros empleados.',
-                ], 403);
-            }
-
-            $empleado = Empleado::where('id', $request->integer('empleado_id'))
-                ->when($user->empresa_id, fn ($q) => $q->where('empresa_id', $user->empresa_id))
-                ->first();
-
-            if (! $empleado) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Empleado no encontrado o no pertenece a tu empresa.',
-                ], 404);
-            }
+        $empleado = $this->empleadoAEnrolar($request);
+        if (! $empleado instanceof Empleado) {
+            return $empleado;
         }
 
         $empleado = $enrolamiento->guardar($empleado, $request->only([
             'aviso_privacidad', 'foto_empleado', 'foto_empleado_2', 'genero', 'fecha_nacimiento',
         ]));
 
+        // Cédula con sello digital y PDF en el expediente, igual que el kiosko web.
+        $cedula = $cedulas->completarYGenerarCedula($empleado, $this->contextoEnrolamiento($request, 'app'));
+
         activity('empleados')
             ->causedBy($user)
             ->performedOn($empleado)
-            ->log("Se completó el enrolamiento biométrico de {$empleado->nombre_completo} desde la app móvil.");
+            ->withProperties($this->propiedadesCedula($cedula))
+            ->log("Se completó el enrolamiento biométrico de {$empleado->nombre_completo} desde la app móvil y se generó su Cédula de Enrolamiento.");
+
+        return $this->respuestaEnrolamiento($empleado, $cedula);
+    }
+
+    /**
+     * Acción auditable del flujo de enrolamiento, igual que el kiosko web: la
+     * app la manda al marcar el Aviso de Privacidad y conserva el
+     * `cedula_uuid` que devuelve para enviarlo al enrolar.
+     */
+    public function registrarAccionEnrolamiento(Request $request, CedulaEnrolamientoService $cedulas)
+    {
+        $request->validate([
+            'empleado_id' => 'nullable|integer',
+            'accion' => 'required|in:aviso_privacidad,enrolamiento',
+            ...self::EVIDENCIA_ENROLAMIENTO,
+        ]);
+
+        $empleado = $this->empleadoAEnrolar($request);
+        if (! $empleado instanceof Empleado) {
+            return $empleado;
+        }
+
+        $resultado = $cedulas->registrarAccion(
+            $empleado,
+            $request->input('accion'),
+            $this->contextoEnrolamiento($request, 'app'),
+        );
 
         return response()->json([
             'success' => true,
-            'message' => 'Enrolamiento completado.',
-            'empleado' => [
-                'id' => $empleado->id,
-                'documento_identidad' => $empleado->documento_identidad,
-                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'numero_empleado' => $empleado->documento_identidad ?: $empleado->codigo_acceso,
-                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
-                ...$this->datosEnrolamiento($empleado),
+            'cedula_uuid' => $resultado['cedula']->uuid,
+            'log' => [
+                'uuid' => $resultado['log']->uuid,
+                'accion' => $resultado['log']->accion,
+                'etiqueta' => $resultado['log']->etiqueta,
+                'hash_evento' => $resultado['log']->hash_evento,
+                'ocurrido_en' => $resultado['log']->ocurrido_en?->toIso8601String(),
             ],
+        ]);
+    }
+
+    /**
+     * Busca a quién enrolar con los filtros del kiosko web (nombres,
+     * apellidos, número actual o anterior, correo). Misma consulta que el web.
+     */
+    public function buscarParaEnrolamiento(Request $request, EmpleadoEnrolamientoService $enrolamiento)
+    {
+        $filtros = $request->validate(EmpleadoEnrolamientoService::FILTROS_BUSQUEDA);
+
+        if (! collect($filtros)->contains(fn ($valor) => filled($valor))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ingrese al menos un filtro para buscar colaboradores.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'empleados' => $enrolamiento->buscarParaEnrolamiento($filtros, $request->user()->empresa_id),
         ]);
     }
 
@@ -555,8 +540,14 @@ class KioskoApiController extends Controller
      * Enrolamiento con el enlace, sin sesión: mismas validaciones que la
      * página pública del web y que enrolar().
      */
-    public function enrolarConEnlace(Request $request, string $token, EmpleadoEnrolamientoService $enrolamiento)
-    {
+    public function enrolarConEnlace(
+        Request $request,
+        string $token,
+        EmpleadoEnrolamientoService $enrolamiento,
+        CedulaEnrolamientoService $cedulas,
+    ) {
+        $request->validate(self::EVIDENCIA_ENROLAMIENTO);
+
         $empleado = $this->empleadoDelEnlace($token);
         if (! $empleado instanceof Empleado) {
             return $empleado;
@@ -566,22 +557,14 @@ class KioskoApiController extends Controller
             'aviso_privacidad', 'foto_empleado', 'foto_empleado_2', 'genero', 'fecha_nacimiento',
         ]));
 
+        $cedula = $cedulas->completarYGenerarCedula($empleado, $this->contextoEnrolamiento($request, 'publico'));
+
         activity('empleados')
             ->performedOn($empleado)
-            ->log("Se completó el enrolamiento biométrico de {$empleado->nombre_completo} desde la app móvil con el enlace de enrolamiento.");
+            ->withProperties($this->propiedadesCedula($cedula))
+            ->log("Se completó el enrolamiento biométrico de {$empleado->nombre_completo} desde la app móvil con el enlace de enrolamiento y se generó su Cédula de Enrolamiento.");
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Enrolamiento completado.',
-            'empleado' => [
-                'id' => $empleado->id,
-                'documento_identidad' => $empleado->documento_identidad,
-                'codigo_acceso' => $empleado->codigo_acceso ?: $empleado->documento_identidad,
-                'numero_empleado' => $empleado->documento_identidad ?: $empleado->codigo_acceso,
-                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
-                ...$this->datosEnrolamiento($empleado),
-            ],
-        ]);
+        return $this->respuestaEnrolamiento($empleado, $cedula);
     }
 
     /**
@@ -662,6 +645,131 @@ class KioskoApiController extends Controller
         ], 201);
     }
 
+    /** Evidencia opcional que acompaña al enrolamiento, como en el kiosko web. */
+    private const EVIDENCIA_ENROLAMIENTO = [
+        'cedula_uuid' => 'nullable|uuid',
+        'latitud' => 'nullable|numeric',
+        'longitud' => 'nullable|numeric',
+    ];
+
+    /**
+     * A quién se enrola: una cuenta vinculada a un empleado sólo a sí misma
+     * (ignora `empleado_id`); enrolar a otros exige los permisos del kiosko
+     * web y que sean de la misma empresa.
+     */
+    private function empleadoAEnrolar(Request $request): Empleado|JsonResponse
+    {
+        $user = $request->user();
+        $propioEmpleado = $user->empleado;
+
+        if ($propioEmpleado) {
+            if (! $propioEmpleado->status || ! $propioEmpleado->permite_app_movil) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para utilizar la app móvil. Contacta a Recursos Humanos.',
+                ], 403);
+            }
+
+            return $propioEmpleado;
+        }
+
+        if (! $user->canAny(['asistencia.kiosko', 'asistencia.view', 'empleados.edit'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permiso para enrolar a otros empleados.',
+            ], 403);
+        }
+
+        $empleado = Empleado::where('id', $request->integer('empleado_id'))
+            ->when($user->empresa_id, fn ($q) => $q->where('empresa_id', $user->empresa_id))
+            ->first();
+
+        return $empleado ?? response()->json([
+            'success' => false,
+            'message' => 'Empleado no encontrado o no pertenece a tu empresa.',
+        ], 404);
+    }
+
+    /** Contexto de auditoría de la cédula: quién, desde dónde y con qué equipo. */
+    private function contextoEnrolamiento(Request $request, string $origen): array
+    {
+        return [
+            'origen' => $origen,
+            'cedula_uuid' => $request->input('cedula_uuid'),
+            'user_id' => $request->user()?->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'latitud' => $request->input('latitud'),
+            'longitud' => $request->input('longitud'),
+        ];
+    }
+
+    private function propiedadesCedula(EmpleadoEnrolamientoCedula $cedula): array
+    {
+        return [
+            'cedula_uuid' => $cedula->uuid,
+            'sello_digital' => $cedula->sello_digital,
+            'pdf_path' => $cedula->pdf_path,
+        ];
+    }
+
+    private function respuestaEnrolamiento(Empleado $empleado, EmpleadoEnrolamientoCedula $cedula): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Enrolamiento completado.',
+            'cedula' => [
+                'uuid' => $cedula->uuid,
+                'estado' => $cedula->estado,
+                'sello_digital' => $cedula->sello_digital,
+                'pdf_url' => $cedula->pdf_url,
+                'enrolado_en' => $cedula->enrolado_en?->toIso8601String(),
+            ],
+            'empleado' => [
+                'id' => $empleado->id,
+                ...$this->numerosDeEmpleado($empleado),
+                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
+                ...$this->datosEnrolamiento($empleado),
+            ],
+        ]);
+    }
+
+    /**
+     * Números del empleado como los muestra el kiosko web: el número vigente
+     * (`codigo_nuevo`, unificado con `documento_identidad`), el anterior y el
+     * Legacy. `codigo_acceso` cae al número vigente si no tiene uno propio.
+     */
+    private function numerosDeEmpleado(Empleado $empleado): array
+    {
+        $numero = $empleado->codigo_nuevo ?: $empleado->documento_identidad;
+
+        return [
+            'documento_identidad' => $numero ?: $empleado->codigo_acceso,
+            'codigo_nuevo' => $numero,
+            'codigo_anterior' => $empleado->codigo_anterior,
+            'legacy' => $empleado->legacy,
+            'numero' => $numero,
+            'numero_empleado' => $numero ?: $empleado->codigo_acceso,
+            'codigo_acceso' => $empleado->codigo_acceso ?: $numero,
+        ];
+    }
+
+    /**
+     * El marcaje que sigue al último de hoy, igual que el kiosko web: la
+     * comida sólo se marca al iniciar, así que tras ella sigue la salida.
+     */
+    private function siguienteMarcaje(?string $ultimo): string
+    {
+        return match ($ultimo) {
+            'entrada' => 'salida_comida',
+            'salida_comida', 'entrada_comida', 'incidente_fin' => 'salida',
+            'descanso_inicio' => 'descanso_fin',
+            'descanso_fin' => 'descanso_inicio',
+            'incidente_inicio' => 'incidente_fin',
+            default => 'entrada',
+        };
+    }
+
     /**
      * Empleado activo dueño del token, o la respuesta de error si el enlace
      * no existe o ya venció.
@@ -700,9 +808,7 @@ class KioskoApiController extends Controller
         return [
             'id' => $empleado->id,
             'nombre_completo' => $empleado->nombre_completo,
-            'documento_identidad' => $empleado->documento_identidad,
-            'codigo_acceso' => $empleado->codigo_acceso,
-            'numero_empleado' => $empleado->codigo_acceso,
+            ...$this->numerosDeEmpleado($empleado),
             'departamento' => $empleado->departamento?->nombre,
             'cargo' => $empleado->cargo?->nombre,
             'turno' => $empleado->turnoLaboral?->nombre ?? 'Sin turno asignado',
@@ -736,8 +842,7 @@ class KioskoApiController extends Controller
     {
         return [
             'nombres' => $empleado->nombres,
-            'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
-            'codigo_anterior' => $empleado->codigo_anterior,
+            'apellidos' => $empleado->apellidos,
             'enrolado' => ! empty($empleado->enrolado_en),
             'enrolado_en' => $empleado->enrolado_en?->toIso8601String(),
             'genero' => $empleado->genero,

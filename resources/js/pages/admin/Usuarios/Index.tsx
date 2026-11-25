@@ -111,6 +111,7 @@ interface User {
     status: 'activo' | 'inactivo' | 'suspendido';
     empresa_id?: number | null;
     sucursal_id?: number | null;
+    legacy?: string | null;
     empresa?: Empresa | null;
     sucursal?: Sucursal | null;
     roles: Role[];
@@ -139,6 +140,7 @@ interface UsersPageProps {
     groups: Group[];
     empresas: Empresa[];
     sucursales: Sucursal[];
+    legacies?: string[];
     paises: Pais[];
     filters: {
         search?: string;
@@ -160,12 +162,13 @@ const initialForm = {
     status: 'activo' as 'activo' | 'inactivo' | 'suspendido',
     empresa_id: '' as string | number,
     sucursal_id: '' as string | number,
+    legacy: '',
     roles: [] as string[],
     groups: [] as number[],
 };
 
 export default function UsersIndexPage({
-    auth, users, stats, soxPolicies, roles, groups = [], empresas, sucursales, paises, filters,
+    auth, users, stats, soxPolicies, roles, groups = [], empresas, sucursales, legacies = [], paises, filters,
 }: UsersPageProps) {
     const { __ } = useTranslate();
     const { can } = usePermission();
@@ -281,6 +284,7 @@ export default function UsersIndexPage({
             status: user.status,
             empresa_id: user.empresa_id || '',
             sucursal_id: user.sucursal_id || '',
+            legacy: user.legacy || '',
             roles: user.roles.map((r) => r.name),
             groups: user.groups ? user.groups.map((g) => g.id) : [],
         });
@@ -301,6 +305,7 @@ export default function UsersIndexPage({
             status: user.status,
             empresa_id: user.empresa_id || '',
             sucursal_id: user.sucursal_id || '',
+            legacy: user.legacy || '',
             roles: user.roles.map((r) => r.name),
             groups: user.groups ? user.groups.map((g) => g.id) : [],
         });
@@ -882,6 +887,29 @@ export default function UsersIndexPage({
                                                 </SelectContent>
                                             </Select>
                                             {errors.sucursal_id && <p className="text-red-500 text-xs mt-1">{errors.sucursal_id}</p>}
+                                        </div>
+
+                                        {/* Legacy (zona): Responsable de zona y Gerente RRHH sólo ven a sus colaboradores */}
+                                        <div className="md:col-span-2 space-y-1.5">
+                                            <Label htmlFor="legacy" className="text-xs font-semibold">{__('Legacy (zone)')}</Label>
+                                            <Input
+                                                id="legacy"
+                                                list="legacies-usuario"
+                                                value={data.legacy}
+                                                onChange={(e) => setData('legacy', e.target.value)}
+                                                placeholder={__('All legacies')}
+                                                maxLength={100}
+                                                className="h-9"
+                                            />
+                                            <datalist id="legacies-usuario">
+                                                {legacies.map((l) => (
+                                                    <option key={l} value={l} />
+                                                ))}
+                                            </datalist>
+                                            <p className="text-muted-foreground text-xs">
+                                                {__('Leave it empty to see every legacy. With a legacy, the user only sees the employees of that legacy.')}
+                                            </p>
+                                            {errors.legacy && <p className="text-red-500 text-xs mt-1">{errors.legacy}</p>}
                                         </div>
 
                                         {/* Estado */}

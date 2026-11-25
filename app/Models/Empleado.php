@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\AlcancePorLegacy;
 use App\Traits\HasKycValidaciones;
 use App\Traits\HasSpanishActivityLog;
 use App\Traits\Multitenantable;
@@ -13,7 +14,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Empleado extends Model
 {
-    use HasFactory, HasKycValidaciones, HasSpanishActivityLog, LogsActivity, Multitenantable;
+    use AlcancePorLegacy, HasFactory, HasKycValidaciones, HasSpanishActivityLog, LogsActivity, Multitenantable;
 
     protected static function booted()
     {
