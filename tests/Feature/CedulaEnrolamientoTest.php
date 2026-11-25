@@ -160,10 +160,15 @@ class CedulaEnrolamientoTest extends TestCase
             ->assertJsonPath('cedulas.0.uuid', $cedulaUuid)
             ->assertJsonPath('cedulas.0.integridad_valida', true);
 
+        Storage::disk('public')->put($relPdf, '%PDF-stale-archive');
+
         $resPdf = $this->actingAs($user)
             ->get(route('admin.empleados.cedulas-enrolamiento.pdf', [$empleado->id, $cedula->id]));
 
         $resPdf->assertOk()
-            ->assertHeader('Content-Type', 'application/pdf');
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('Cache-Control', 'no-store, private');
+        $this->assertNotSame('%PDF-stale-archive', $resPdf->getContent());
+        $this->assertSame($resPdf->getContent(), Storage::disk('public')->get($relPdf));
     }
 }

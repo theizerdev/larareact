@@ -248,6 +248,19 @@ class CedulaEnrolamientoService
         return $cedula->fresh(['logs']);
     }
 
+    public function regenerarPdf(EmpleadoEnrolamientoCedula $cedula, Empleado $empleado): string
+    {
+        $empleado->loadMissing(['empresa', 'sucursal']);
+
+        return $this->generarYGuardarPdf(
+            $cedula,
+            $empleado,
+            $cedula->logs()->get(),
+            $this->leerBinarioStorage($cedula->foto_1_path),
+            $this->leerBinarioStorage($cedula->foto_2_path),
+        );
+    }
+
     /**
      * Renderiza la vista Blade de la Cédula a PDF y la almacena en el expediente público.
      */
@@ -266,7 +279,7 @@ class CedulaEnrolamientoService
             ?? $empleado->empresa?->nombre_comercial
             ?? 'Smurfit Westrock';
 
-        $fechaEmision = now()->timezone($zonaHoraria)->format('d/m/Y H:i:s');
+        $fechaEmision = ($cedula->created_at ?? now())->timezone($zonaHoraria)->format('d/m/Y H:i:s');
         $fechaValidacion = ($cedula->enrolado_en ?? now())->timezone($zonaHoraria)->format('d/m/Y H:i:s');
 
         $foto1DataUri = $foto1Bin ? 'data:image/jpeg;base64,' . base64_encode($foto1Bin) : null;
