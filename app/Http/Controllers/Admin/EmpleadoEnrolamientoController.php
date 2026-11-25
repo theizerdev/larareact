@@ -371,6 +371,8 @@ class EmpleadoEnrolamientoController extends Controller
                 'nombre_completo' => $empleado->nombre_completo,
                 'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_anterior' => $empleado->codigo_anterior,
+                'tarjeta_acceso_1' => $empleado->tarjeta_acceso_1,
+                'numero_tarjeta' => $empleado->numeroTarjeta(),
                 'legacy' => $empleado->legacy,
             ],
             'cedulas' => $cedulas,

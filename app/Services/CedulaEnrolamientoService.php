@@ -288,6 +288,7 @@ class CedulaEnrolamientoService
         $pdf = Pdf::loadView('pdf.cedula-enrolamiento', [
             'cedula' => $cedula,
             'empleado' => $empleado,
+            'numeroTarjeta' => $empleado->numeroTarjeta(),
             'logs' => $logs,
             'empresaNombre' => $empresaNombre,
             'zonaHoraria' => $zonaHoraria,

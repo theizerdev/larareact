@@ -245,8 +245,9 @@
     </style>
 </head>
 <body>
+    @php($numeroTarjeta = $numeroTarjeta ?? $empleado->numeroTarjeta())
     <div class="footer">
-        Cédula de Enrolamiento Biométrico • Folio: <span class="mono">{{ $cedula->uuid }}</span> • N° de Tarjeta: {{ $empleado->codigo_anterior ?: '—' }} • {{ $empresaNombre }}
+        Cédula de Enrolamiento Biométrico • Folio: <span class="mono">{{ $cedula->uuid }}</span> • N° de Tarjeta: {{ $numeroTarjeta ?: '—' }} • {{ $empresaNombre }}
     </div>
 
     {{-- PÁGINA 1: INFORME DE ENROLAMIENTO, LOGS Y SELLO DIGITAL --}}
@@ -291,19 +292,19 @@
     <div class="section-title">1. Información Oficial del Colaborador</div>
     <table class="grid-table">
         <tr>
-            <td style="width: 25%;">
+            <td style="width: 20%;">
                 <div class="field-label">No. de Empleado</div>
                 <div class="field-value mono">{{ $cedula->no_empleado ?: '—' }}</div>
             </td>
-            <td style="width: 25%;">
+            <td style="width: 20%;">
                 <div class="field-label">N° de Tarjeta</div>
-                <div class="field-value mono">{{ $empleado->codigo_anterior ?: '—' }}</div>
+                <div class="field-value mono">{{ $numeroTarjeta ?: '—' }}</div>
             </td>
-            <td style="width: 25%;">
+            <td style="width: 20%;">
                 <div class="field-label">Legacy</div>
                 <div class="field-value mono">{{ $cedula->codigo_legacy ?: '—' }}</div>
             </td>
-            <td style="width: 35%;">
+            <td style="width: 40%;">
                 <div class="field-label">Nombre Completo</div>
                 <div class="field-value">{{ $cedula->nombre_completo }}</div>
             </td>
@@ -389,7 +390,7 @@
             <td class="brand-box" style="width: 35%;">
                 <p class="brand-name">{{ $empresaNombre }}</p>
                 <p class="brand-sub">{{ $cedula->nombre_completo }}</p>
-                <p class="brand-sub">No. Empleado: {{ $cedula->no_empleado }} • N° de Tarjeta: {{ $empleado->codigo_anterior ?: '—' }}</p>
+                <p class="brand-sub">No. Empleado: {{ $cedula->no_empleado }} • N° de Tarjeta: {{ $numeroTarjeta ?: '—' }}</p>
             </td>
         </tr>
     </table>
@@ -436,7 +437,7 @@
     <div class="seal-box" style="margin-top: 18px;">
         <p class="seal-title">Resguardo en Expediente del Colaborador</p>
         <p class="seal-text">
-            Esta cédula y sus anexos fotográficos forman parte integral del expediente digital del colaborador <strong>{{ $cedula->nombre_completo }}</strong> (No. Empleado: <strong>{{ $cedula->no_empleado }}</strong>, N° de Tarjeta: <strong>{{ $empleado->codigo_anterior ?: '—' }}</strong>, Legacy: <strong>{{ $cedula->codigo_legacy ?: '—' }}</strong>). Su alteración invalida el sello digital de integridad.
+            Esta cédula y sus anexos fotográficos forman parte integral del expediente digital del colaborador <strong>{{ $cedula->nombre_completo }}</strong> (No. Empleado: <strong>{{ $cedula->no_empleado }}</strong>, N° de Tarjeta: <strong>{{ $numeroTarjeta ?: '—' }}</strong>, Legacy: <strong>{{ $cedula->codigo_legacy ?: '—' }}</strong>). Su alteración invalida el sello digital de integridad.
         </p>
     </div>
 </body>
