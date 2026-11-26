@@ -248,6 +248,19 @@ class CedulaEnrolamientoService
         return $cedula->fresh(['logs']);
     }
 
+    public function regenerarPdf(EmpleadoEnrolamientoCedula $cedula, Empleado $empleado): string
+    {
+        $empleado->loadMissing(['empresa', 'sucursal']);
+
+        return $this->generarYGuardarPdf(
+            $cedula,
+            $empleado,
+            $cedula->logs()->get(),
+            $this->leerBinarioStorage($cedula->foto_1_path),
+            $this->leerBinarioStorage($cedula->foto_2_path),
+        );
+    }
+
     /**
      * Renderiza la vista Blade de la Cédula a PDF y la almacena en el expediente público.
      */
@@ -266,13 +279,7 @@ class CedulaEnrolamientoService
             ?? $empleado->empresa?->nombre_comercial
             ?? 'Smurfit Westrock';
 
-        $generoLabel = match ($empleado->genero) {
-            'M' => 'Hombre',
-            'F' => 'Mujer',
-            default => '—',
-        };
-
-        $fechaEmision = now()->timezone($zonaHoraria)->format('d/m/Y H:i:s');
+        $fechaEmision = ($cedula->created_at ?? now())->timezone($zonaHoraria)->format('d/m/Y H:i:s');
         $fechaValidacion = ($cedula->enrolado_en ?? now())->timezone($zonaHoraria)->format('d/m/Y H:i:s');
 
         $foto1DataUri = $foto1Bin ? 'data:image/jpeg;base64,' . base64_encode($foto1Bin) : null;
@@ -281,11 +288,10 @@ class CedulaEnrolamientoService
         $pdf = Pdf::loadView('pdf.cedula-enrolamiento', [
             'cedula' => $cedula,
             'empleado' => $empleado,
+            'numeroTarjeta' => $empleado->numeroTarjeta(),
             'logs' => $logs,
             'empresaNombre' => $empresaNombre,
             'zonaHoraria' => $zonaHoraria,
-            'generoLabel' => $generoLabel,
-            'fechaNacimiento' => $empleado->fecha_nacimiento?->format('d/m/Y') ?? '—',
             'fechaEmision' => $fechaEmision,
             'fechaValidacion' => $fechaValidacion,
             'foto1DataUri' => $foto1DataUri,

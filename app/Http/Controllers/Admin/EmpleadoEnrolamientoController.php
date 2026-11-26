@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Mail\EnrolamientoInvitacionMail;
 use App\Models\BiotimeEmpleado;
 use App\Models\Empleado;
+use App\Models\EmpleadoEnrolamientoCedula;
 use App\Models\Empresa;
 use App\Models\Pais;
 use App\Services\BioTimeEmpleadoPusher;
+use App\Services\CedulaEnrolamientoService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -369,6 +371,8 @@ class EmpleadoEnrolamientoController extends Controller
                 'nombre_completo' => $empleado->nombre_completo,
                 'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
                 'codigo_anterior' => $empleado->codigo_anterior,
+                'tarjeta_acceso_1' => $empleado->tarjeta_acceso_1,
+                'numero_tarjeta' => $empleado->numeroTarjeta(),
                 'legacy' => $empleado->legacy,
             ],
             'cedulas' => $cedulas,
@@ -378,19 +382,26 @@ class EmpleadoEnrolamientoController extends Controller
     /**
      * Descarga o muestra en el navegador el PDF de la Cédula de Enrolamiento del expediente.
      */
-    public function descargarCedulaPdf(Empleado $empleado, \App\Models\EmpleadoEnrolamientoCedula $cedula)
+    public function descargarCedulaPdf(
+        Empleado $empleado,
+        EmpleadoEnrolamientoCedula $cedula,
+        CedulaEnrolamientoService $cedulaService,
+    )
     {
         if ((int) $cedula->empleado_id !== (int) $empleado->id) {
             abort(404);
         }
 
-        $rel = $cedula->pdf_path ? preg_replace('#^/?(storage/)+#', '', ltrim($cedula->pdf_path, '/')) : null;
+        $pdfPath = $cedulaService->regenerarPdf($cedula, $empleado);
+        $rel = preg_replace('#^/?(storage/)+#', '', ltrim($pdfPath, '/'));
+
         if (! $rel || ! Storage::disk('public')->exists($rel)) {
             abort(404, 'El archivo PDF de la cédula no se encuentra en el expediente.');
         }
 
         return response(Storage::disk('public')->get($rel), 200, [
             'Content-Type' => 'application/pdf',
+            'Cache-Control' => 'no-store, private',
             'Content-Disposition' => 'inline; filename="cedula-enrolamiento-' . $cedula->uuid . '.pdf"',
         ]);
     }

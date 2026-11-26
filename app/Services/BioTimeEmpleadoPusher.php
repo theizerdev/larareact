@@ -36,7 +36,7 @@ class BioTimeEmpleadoPusher
 {
     /** Columnas de empleados que viajan a BioTime. */
     public const CAMPOS = [
-        'nombres', 'apellidos', 'documento_identidad', 'codigo_nuevo', 'tarjeta_acceso_1', 'telefono',
+        'nombres', 'apellidos', 'documento_identidad', 'codigo_nuevo', 'codigo_anterior', 'tarjeta_acceso_1', 'telefono',
         'correo', 'genero', 'fecha_nacimiento', 'fecha_ingreso', 'departamento_id', 'cargo_id', 'foto_empleado',
     ];
 
@@ -165,21 +165,26 @@ class BioTimeEmpleadoPusher
     private function buscarEnEspejoPorIdentificadores(Empresa $empresa, Empleado $empleado): ?BiotimeEmpleado
     {
         $curp = trim((string) ($empleado->curp ?? ''));
-        $tarjeta = trim((string) ($empleado->tarjeta_acceso_1 ?? ''));
+        $tarjetas = collect([$empleado->codigo_anterior, $empleado->tarjeta_acceso_1])
+            ->map(fn ($v) => trim((string) ($v ?? '')))
+            ->filter(fn ($v) => $v !== '' && trim($v, '0') !== '')
+            ->unique()
+            ->values()
+            ->all();
 
-        if ($curp === '' && ($tarjeta === '' || trim($tarjeta, '0') === '')) {
+        if ($curp === '' && $tarjetas === []) {
             return null;
         }
 
         $candidatos = BiotimeEmpleado::query()
             ->where('empresa_id', $empresa->id)
             ->whereNull('empleado_id')
-            ->where(function ($q) use ($curp, $tarjeta) {
+            ->where(function ($q) use ($curp, $tarjetas) {
                 if ($curp !== '') {
                     $q->orWhere('national', $curp);
                 }
-                if ($tarjeta !== '' && trim($tarjeta, '0') !== '') {
-                    $q->orWhere('card_no', $tarjeta);
+                if ($tarjetas !== []) {
+                    $q->orWhereIn('card_no', $tarjetas);
                 }
             })
             ->limit(2)
@@ -189,28 +194,34 @@ class BioTimeEmpleadoPusher
     }
 
     /**
-     * Alinea codigo_acceso y documento_identidad en empleados con el emp_code de BioTime
+     * Alinea codigo_acceso, documento_identidad y codigo_anterior en empleados con BioTime
      * sin disparar otro envío a BioTime.
      */
     public function sincronizarCodigoDesdeBioTime(Empleado $empleado, BiotimeEmpleado $bio): void
     {
         $empCode = trim((string) $bio->emp_code);
-        if ($empCode === '') {
-            return;
-        }
-
         $cambios = [];
 
-        if ((string) ($empleado->codigo_nuevo ?: $empleado->documento_identidad) !== $empCode
-            && ! Empleado::withoutTenant()->where('documento_identidad', $empCode)->whereKeyNot($empleado->id)->exists()) {
-            $cambios['documento_identidad'] = $empCode;
-            $cambios['codigo_nuevo'] = $empCode;
+        if ($empCode !== '') {
+            if ((string) ($empleado->codigo_nuevo ?: $empleado->documento_identidad) !== $empCode
+                && ! Empleado::withoutTenant()->where('documento_identidad', $empCode)->whereKeyNot($empleado->id)->exists()) {
+                $cambios['documento_identidad'] = $empCode;
+                $cambios['codigo_nuevo'] = $empCode;
+            }
+
+            if (mb_strlen($empCode) <= 20
+                && (string) $empleado->codigo_acceso !== $empCode
+                && ! Empleado::withoutTenant()->where('codigo_acceso', $empCode)->whereKeyNot($empleado->id)->exists()) {
+                $cambios['codigo_acceso'] = $empCode;
+            }
         }
 
-        if (mb_strlen($empCode) <= 20
-            && (string) $empleado->codigo_acceso !== $empCode
-            && ! Empleado::withoutTenant()->where('codigo_acceso', $empCode)->whereKeyNot($empleado->id)->exists()) {
-            $cambios['codigo_acceso'] = $empCode;
+        $cardNo = trim((string) ($bio->card_no ?? ''));
+        if ($cardNo !== ''
+            && trim($cardNo, '0') !== ''
+            && blank($empleado->codigo_anterior)
+            && ! Empleado::withoutTenant()->where('codigo_anterior', $cardNo)->whereKeyNot($empleado->id)->exists()) {
+            $cambios['codigo_anterior'] = $cardNo;
         }
 
         if ($cambios !== []) {
@@ -422,14 +433,17 @@ class BioTimeEmpleadoPusher
     private function deseado(Empleado $empleado): array
     {
         $correo = trim((string) $empleado->correo);
-        $tarjeta = $this->texto($empleado->tarjeta_acceso_1);
+        $tarjeta = collect([
+            $this->texto($empleado->codigo_anterior),
+            $this->texto($empleado->tarjeta_acceso_1),
+        ])->first(fn (?string $valor) => $valor !== null && trim($valor, '0') !== '');
         $telefono = $this->telefonoFormateado($empleado);
 
         return [
             'first_name' => $this->texto($empleado->nombres),
             'last_name' => $this->texto($empleado->apellidos),
-            // La columna nace en '0' = sin tarjeta.
-            'card_no' => $tarjeta !== null && trim($tarjeta, '0') !== '' ? $tarjeta : null,
+            // La columna tarjeta_acceso_1 nace en '0' = sin tarjeta; prioridad a codigo_anterior (N° de Tarjeta).
+            'card_no' => $tarjeta,
             'mobile' => $telefono,
             'email' => filter_var($correo, FILTER_VALIDATE_EMAIL) ? $correo : null,
             'gender' => in_array($empleado->genero, ['M', 'F'], true) ? $empleado->genero : null,

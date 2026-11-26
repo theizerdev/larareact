@@ -245,8 +245,9 @@
     </style>
 </head>
 <body>
+    @php($numeroTarjeta = $numeroTarjeta ?? $empleado->numeroTarjeta())
     <div class="footer">
-        Cédula de Enrolamiento Biométrico • Folio: <span class="mono">{{ $cedula->uuid }}</span> • Expediente Colaborador ID #{{ $cedula->empleado_id }} • {{ $empresaNombre }}
+        Cédula de Enrolamiento Biométrico • Folio: <span class="mono">{{ $cedula->uuid }}</span> • N° de Tarjeta: {{ $numeroTarjeta ?: '—' }} • {{ $empresaNombre }}
     </div>
 
     {{-- PÁGINA 1: INFORME DE ENROLAMIENTO, LOGS Y SELLO DIGITAL --}}
@@ -291,38 +292,21 @@
     <div class="section-title">1. Información Oficial del Colaborador</div>
     <table class="grid-table">
         <tr>
-            <td style="width: 25%;">
+            <td style="width: 20%;">
                 <div class="field-label">No. de Empleado</div>
                 <div class="field-value mono">{{ $cedula->no_empleado ?: '—' }}</div>
             </td>
-            <td style="width: 15%;">
-                <div class="field-label">ID</div>
-                <div class="field-value mono">#{{ $cedula->empleado_id }}</div>
+            <td style="width: 20%;">
+                <div class="field-label">N° de Tarjeta</div>
+                <div class="field-value mono">{{ $numeroTarjeta ?: '—' }}</div>
             </td>
-            <td style="width: 25%;">
+            <td style="width: 20%;">
                 <div class="field-label">Legacy</div>
                 <div class="field-value mono">{{ $cedula->codigo_legacy ?: '—' }}</div>
             </td>
-            <td style="width: 35%;">
+            <td style="width: 40%;">
                 <div class="field-label">Nombre Completo</div>
                 <div class="field-value">{{ $cedula->nombre_completo }}</div>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="2">
-                <div class="field-label">Área / Departamento</div>
-                <div class="field-value">{{ $cedula->area_departamento ?: 'General' }}</div>
-            </td>
-            <td>
-                <div class="field-label">Puesto / Cargo</div>
-                <div class="field-value">{{ $cedula->puesto_cargo ?: 'Operativo' }}</div>
-            </td>
-            <td>
-                <div class="field-label">Correo / Datos Complementarios</div>
-                <div class="field-value" style="font-size: 8.8px;">
-                    {{ $cedula->correo ?: 'Sin correo' }}<br>
-                    <span style="font-weight: normal; color: #475569;">Sexo: {{ $generoLabel }} • F. Nac.: {{ $fechaNacimiento }}</span>
-                </div>
             </td>
         </tr>
     </table>
@@ -406,7 +390,7 @@
             <td class="brand-box" style="width: 35%;">
                 <p class="brand-name">{{ $empresaNombre }}</p>
                 <p class="brand-sub">{{ $cedula->nombre_completo }}</p>
-                <p class="brand-sub">No. Empleado: {{ $cedula->no_empleado }} • ID #{{ $cedula->empleado_id }}</p>
+                <p class="brand-sub">No. Empleado: {{ $cedula->no_empleado }} • N° de Tarjeta: {{ $numeroTarjeta ?: '—' }}</p>
             </td>
         </tr>
     </table>
@@ -453,7 +437,7 @@
     <div class="seal-box" style="margin-top: 18px;">
         <p class="seal-title">Resguardo en Expediente del Colaborador</p>
         <p class="seal-text">
-            Esta cédula y sus anexos fotográficos forman parte integral del expediente digital del colaborador <strong>{{ $cedula->nombre_completo }}</strong> (No. Empleado: <strong>{{ $cedula->no_empleado }}</strong>, ID: <strong>#{{ $cedula->empleado_id }}</strong>, Legacy: <strong>{{ $cedula->codigo_legacy ?: '—' }}</strong>). Su alteración invalida el sello digital de integridad.
+            Esta cédula y sus anexos fotográficos forman parte integral del expediente digital del colaborador <strong>{{ $cedula->nombre_completo }}</strong> (No. Empleado: <strong>{{ $cedula->no_empleado }}</strong>, N° de Tarjeta: <strong>{{ $numeroTarjeta ?: '—' }}</strong>, Legacy: <strong>{{ $cedula->codigo_legacy ?: '—' }}</strong>). Su alteración invalida el sello digital de integridad.
         </p>
     </div>
 </body>

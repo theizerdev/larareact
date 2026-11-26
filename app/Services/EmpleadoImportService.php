@@ -740,8 +740,12 @@ class EmpleadoImportService
                 continue;
             }
 
-            // 3. Código Anterior / ID Empleado Anterior
-            if ($map['codigo_anterior'] === null && (str_contains($h, 'anterior') || str_contains($h, 'antiguo'))) {
+            // 3. Código Anterior / ID Empleado Anterior / N° de Tarjeta
+            if (
+                $map['codigo_anterior'] === null
+                && ! str_contains($h, 'vehiculo')
+                && (str_contains($h, 'anterior') || str_contains($h, 'antiguo') || str_contains($h, 'tarjeta') || $h === 'card no' || $h === 'cardno')
+            ) {
                 $map['codigo_anterior'] = $colLetter;
                 continue;
             }

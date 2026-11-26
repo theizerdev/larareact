@@ -84,19 +84,21 @@ class BioTimeAltaAutomaticaTest extends TestCase
 
         $e = Empleado::withoutTenant()->where('documento_identidad', '100')->firstOrFail();
         $this->assertSame('Ana', $e->nombres);
+        $this->assertSame('777', $e->codigo_anterior);
         $this->assertSame('F', $e->genero);
         $this->assertSame('2021-06-24', $e->fecha_ingreso->toDateString());
         $this->assertSame('Producción', $e->departamento()->withoutGlobalScope('multitenancy')->value('nombre'));
         $this->assertSame('Montacargista', $e->cargo()->withoutGlobalScope('multitenancy')->value('nombre'));
         $this->assertNull($e->turno_laboral_id);
 
-        // Alguien corrige a mano el correo y el teléfono; BioTime cambia sólo el apellido.
+        // Alguien corrige a mano el correo y el teléfono; BioTime cambia sólo el apellido y la tarjeta.
         $e->update(['correo' => 'ana@ejemplo.test', 'telefono' => '999']);
-        $this->reloj([$this->ana(['last_name' => 'López Ruiz'])]);
+        $this->reloj([$this->ana(['last_name' => 'López Ruiz', 'card_no' => '778'])]);
         $this->sync();
 
         $e->refresh();
         $this->assertSame('López Ruiz', $e->apellidos, 'Lo que cambia en el reloj llega solo.');
+        $this->assertSame('778', $e->codigo_anterior, 'El card_no cambiado en BioTime actualiza codigo_anterior.');
         $this->assertSame('999', $e->telefono, 'Lo editado a mano y sin cambio en el reloj se respeta.');
         $this->assertSame('ana@ejemplo.test', $e->correo);
 
@@ -105,7 +107,7 @@ class BioTimeAltaAutomaticaTest extends TestCase
         $this->assertSame(1, Empleado::withoutTenant()->count());
 
         // Alta de una persona nueva en el reloj.
-        $this->reloj([$this->ana(['last_name' => 'López Ruiz']), $this->ana(['id' => 11, 'emp_code' => '101', 'first_name' => 'Beto', 'card_no' => '888', 'mobile' => null])]);
+        $this->reloj([$this->ana(['last_name' => 'López Ruiz', 'card_no' => '778']), $this->ana(['id' => 11, 'emp_code' => '101', 'first_name' => 'Beto', 'card_no' => '888', 'mobile' => null])]);
         $this->sync();
         $this->assertSame(2, Empleado::withoutTenant()->count());
     }

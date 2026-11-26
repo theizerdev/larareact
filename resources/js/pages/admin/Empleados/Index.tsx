@@ -10,7 +10,6 @@ import {
     ToggleRight,
     Building2,
     Tag,
-    Layers,
     Briefcase,
     Mail,
     Phone,
@@ -645,44 +644,35 @@ export default function EmpleadosIndexPage({
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs tracking-wider border border-indigo-500/20" title="Código Nuevo (Sincronización BioTime)">
                                     NUEVO: {emp.codigo_nuevo || emp.documento_identidad || 'N/A'}
                                 </span>
-                                {emp.codigo_anterior && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-300 font-mono font-bold text-xs tracking-wider border border-amber-500/30" title="Código Anterior (Enrolamiento)">
-                                        ANTIGUO: {emp.codigo_anterior}
-                                    </span>
-                                )}
-                                {emp.legacy && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-800 dark:text-purple-300 font-mono font-bold text-xs tracking-wider border border-purple-500/30" title="Código Legacy">
-                                        LEGACY: {emp.legacy}
-                                    </span>
-                                )}
-                                {emp.codigo_acceso && emp.codigo_acceso !== (emp.codigo_nuevo || emp.documento_identidad) && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs tracking-wider border border-emerald-500/20" title="Código de Acceso / PIN">
-                                        ACCESO: {emp.codigo_acceso}
-                                    </span>
-                                )}
-                                <span className={cn(
-                                    'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border',
-                                    emp.enrolado_en
-                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900'
-                                        : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900'
-                                )}>
-                                    <ScanFace className="w-3 h-3" />
-                                    {emp.enrolado_en ? __('Enrolado') : __('Sin enrolar')}
-                                </span>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px] border border-slate-200 dark:border-slate-700" title="Tarjetas de Acceso">
-                                    T1: {emp.tarjeta_acceso_1 || '0'} | T2: {emp.tarjeta_acceso_2 || '0'} | T3: {emp.tarjeta_acceso_3 || '0'}
-                                </span>
-                                {emp.curp ? (
-                                    <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
-                                        CURP: {emp.curp}
-                                    </span>
-                                ) : (
-                                    <span className="font-mono text-[11px] text-slate-400 opacity-60">
-                                        CURP: N/A
-                                    </span>
-                                )}
                             </div>
                         </div>
+                    </div>
+                );
+            },
+        },
+        {
+            header: 'N° Tarjeta',
+            hideOn: 'mobile',
+            className: 'whitespace-nowrap',
+            cell: (emp) => {
+                const numeroTarjeta = emp.codigo_anterior || emp.tarjeta_acceso_1;
+                const tarjetasAdicionales = [emp.tarjeta_acceso_2, emp.tarjeta_acceso_3]
+                    .filter((tarjeta): tarjeta is string => Boolean(tarjeta));
+
+                return (
+                    <div className="space-y-1">
+                        {numeroTarjeta ? (
+                            <span className="inline-flex rounded-md border border-amber-300 bg-amber-50 px-2 py-1 font-mono text-xs font-bold text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                                {numeroTarjeta}
+                            </span>
+                        ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                        {tarjetasAdicionales.length > 0 && (
+                            <p className="font-mono text-[10px] text-muted-foreground">
+                                T2/T3: {tarjetasAdicionales.join(' / ')}
+                            </p>
+                        )}
                     </div>
                 );
             },
@@ -705,38 +695,6 @@ export default function EmpleadosIndexPage({
                                 {emp.pais_telefono?.codigo_telefonico ? `+${emp.pais_telefono.codigo_telefonico} ` : ''}
                                 {emp.telefono}
                             </span>
-                        </div>
-                    )}
-                </div>
-            ),
-        },
-        {
-            header: __('Department / Position'),
-            hideOn: 'mobile',
-            cell: (emp) => (
-                <div className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
-                    {emp.sucursal && (
-                        <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] border border-emerald-200 dark:border-emerald-800">
-                                <Building2 className="w-3 h-3 shrink-0" />
-                                {emp.sucursal.nombre}
-                            </span>
-                            {emp.sucursal.zona_horaria && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono text-[10px] border border-slate-200 dark:border-slate-700">
-                                    <Clock className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
-                                    {emp.sucursal.zona_horaria}
-                                </span>
-                            )}
-                        </div>
-                    )}
-                    <div className="flex items-center gap-1.5 font-medium">
-                        <Layers className="w-3.5 h-3.5 text-indigo-500" />
-                        <span>{emp.departamento?.nombre || '—'}</span>
-                    </div>
-                    {emp.cargo && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Briefcase className="w-3.5 h-3.5" />
-                            <span>{emp.cargo?.nombre}</span>
                         </div>
                     )}
                 </div>
@@ -1225,11 +1183,11 @@ export default function EmpleadosIndexPage({
                                         )}
                                     </div>
 
-                                    {/* Código Anterior / Antiguo (Enrolamiento) */}
+                                    {/* N° Tarjeta (Enrolamiento) */}
                                     <div className="md:col-span-1 p-4 rounded-xl border border-amber-500/30 bg-amber-50/30 dark:bg-amber-950/30 space-y-2 transition-all shadow-sm">
                                         <div className="flex items-center justify-between mb-1">
                                             <Label htmlFor="codigo_anterior" className="font-semibold text-xs text-amber-950 dark:text-amber-200">
-                                                Código Anterior (Enrolamiento)
+                                                N° Tarjeta (Enrolamiento)
                                             </Label>
                                             <span className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">
                                                 Solo enrolamiento

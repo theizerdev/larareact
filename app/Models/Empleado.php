@@ -247,4 +247,22 @@ class Empleado extends Model
     {
         return "{$this->nombres} {$this->apellidos}";
     }
+
+    /**
+     * Devuelve el número de tarjeta oficial del colaborador (código anterior o tarjeta principal de BioTime).
+     */
+    public function numeroTarjeta(): ?string
+    {
+        $codigoAnterior = trim((string) ($this->codigo_anterior ?? ''));
+        if ($codigoAnterior !== '') {
+            return $codigoAnterior;
+        }
+
+        $tarjeta = trim((string) ($this->tarjeta_acceso_1 ?? ''));
+        if ($tarjeta !== '' && trim($tarjeta, '0') !== '') {
+            return $tarjeta;
+        }
+
+        return null;
+    }
 }

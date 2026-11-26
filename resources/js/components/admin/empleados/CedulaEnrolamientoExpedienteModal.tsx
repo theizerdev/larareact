@@ -62,6 +62,8 @@ interface Props {
         nombre_completo?: string;
         codigo_nuevo?: string | null;
         codigo_anterior?: string | null;
+        tarjeta_acceso_1?: string | null;
+        numero_tarjeta?: string | null;
         legacy?: string | null;
         documento_identidad?: string | null;
     } | null;
@@ -110,6 +112,10 @@ export function CedulaEnrolamientoExpedienteModal({ open, onOpenChange, empleado
     }, [open, empleado?.id]);
 
     const nombre = empleado?.nombre_completo || `${empleado?.nombres || ''} ${empleado?.apellidos || ''}`.trim();
+    const numeroTarjeta =
+        empleado?.numero_tarjeta ||
+        empleado?.codigo_anterior ||
+        (empleado?.tarjeta_acceso_1 && empleado.tarjeta_acceso_1 !== '0' ? empleado.tarjeta_acceso_1 : null);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,7 +126,7 @@ export function CedulaEnrolamientoExpedienteModal({ open, onOpenChange, empleado
                         <span>Expediente — Cédulas de Enrolamiento</span>
                     </DialogTitle>
                     <DialogDescription>
-                        {nombre} • No. Empleado: <strong className="font-mono">{empleado?.codigo_nuevo || empleado?.documento_identidad || '—'}</strong> • ID: <strong className="font-mono">#{empleado?.id}</strong> • Legacy: <strong className="font-mono">{empleado?.legacy || empleado?.codigo_anterior || '—'}</strong>
+                        {nombre} • No. Empleado: <strong className="font-mono">{empleado?.codigo_nuevo || empleado?.documento_identidad || '—'}</strong> • N° de Tarjeta: <strong className="font-mono">{numeroTarjeta || '—'}</strong> • Legacy: <strong className="font-mono">{empleado?.legacy || empleado?.codigo_anterior || '—'}</strong>
                     </DialogDescription>
                 </DialogHeader>
 

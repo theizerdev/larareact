@@ -157,13 +157,58 @@ class CedulaEnrolamientoTest extends TestCase
 
         $resExp->assertOk()
             ->assertJsonPath('success', true)
+            ->assertJsonPath('empleado.numero_tarjeta', 'ANT-9001')
             ->assertJsonPath('cedulas.0.uuid', $cedulaUuid)
             ->assertJsonPath('cedulas.0.integridad_valida', true);
+
+        Storage::disk('public')->put($relPdf, '%PDF-stale-archive');
 
         $resPdf = $this->actingAs($user)
             ->get(route('admin.empleados.cedulas-enrolamiento.pdf', [$empleado->id, $cedula->id]));
 
         $resPdf->assertOk()
-            ->assertHeader('Content-Type', 'application/pdf');
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('Cache-Control', 'no-store, private');
+        $this->assertNotSame('%PDF-stale-archive', $resPdf->getContent());
+        $this->assertSame($resPdf->getContent(), Storage::disk('public')->get($relPdf));
+    }
+
+    public function test_pdf_informacion_oficial_usa_numero_tarjeta_y_omite_campos_eliminados(): void
+    {
+        [$user, $empleado] = $this->crearContexto();
+        $empleado->update([
+            'codigo_anterior' => null,
+            'tarjeta_acceso_1' => '856093',
+            'legacy' => null,
+        ]);
+
+        $cedula = app(\App\Services\CedulaEnrolamientoService::class)->completarYGenerarCedula($empleado, [
+            'origen' => 'kiosko',
+            'user_id' => $user->id,
+        ]);
+
+        $html = view('pdf.cedula-enrolamiento', [
+            'cedula' => $cedula,
+            'empleado' => $empleado->fresh(),
+            'numeroTarjeta' => $empleado->fresh()->numeroTarjeta(),
+            'logs' => $cedula->logs()->get(),
+            'empresaNombre' => 'Smurfit Westrock',
+            'zonaHoraria' => 'America/Mexico_City',
+            'fechaEmision' => '25/11/2026 13:46:02',
+            'fechaValidacion' => '25/11/2026 13:46:02',
+            'foto1DataUri' => null,
+            'foto2DataUri' => null,
+        ])->render();
+
+        $this->assertStringContainsString('N° de Tarjeta', $html);
+        $this->assertStringContainsString('856093', $html);
+        $this->assertStringNotContainsString('Área / Departamento', $html);
+        $this->assertStringNotContainsString('Puesto / Cargo', $html);
+        $this->assertStringNotContainsString('Correo / Datos Complementarios', $html);
+        $this->assertStringNotContainsString('>ID<', $html);
+        $this->assertStringNotContainsString('ID #' . $empleado->id, $html);
+
+        $empleado->update(['tarjeta_acceso_1' => '0']);
+        $this->assertNull($empleado->fresh()->numeroTarjeta());
     }
 }

@@ -89,4 +89,25 @@ class EmpleadoImportTest extends TestCase
         $responseValid->assertStatus(200);
         $responseValid->assertJson(['success' => true]);
     }
+
+    public function test_parse_preview_mapea_n_de_tarjeta_como_codigo_anterior(): void
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray([
+            ['ID del empleado Nuevo', 'N° de Tarjeta', 'Nombre (s)', 'Apellido (s)'],
+            ['419900', '856093', 'MAURICIO', 'NAVARRO IBARRA'],
+        ]);
+
+        $tmp = tempnam(sys_get_temp_dir(), 'imp_') . '.xlsx';
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save($tmp);
+
+        try {
+            $preview = (new EmpleadoImportService())->parsePreview($tmp);
+            $this->assertTrue($preview['success']);
+            $this->assertSame('856093', $preview['records'][0]['codigo_anterior'] ?? null);
+        } finally {
+            @unlink($tmp);
+        }
+    }
 }
