@@ -193,16 +193,16 @@ export default function Register({
                     </div>
                 </header>
 
-                <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-                    <div className="mb-8">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#ff5a00] bg-orange-50 border border-orange-200 px-3 py-1 rounded-full">
+                <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
+                    <div className="mb-10">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#ff5a00] bg-orange-50 border border-orange-200 px-3.5 py-1.5 rounded-full">
                             <Lock className="w-3.5 h-3.5" />
                             Checkout Seguro · FixSale
                         </span>
-                        <h1 className="text-2xl sm:text-4xl font-black text-[#08264e] mt-3 tracking-tight">
+                        <h1 className="text-3xl sm:text-4xl font-black text-[#08264e] mt-3 tracking-tight">
                             Finaliza tu registro y activa tu cuenta
                         </h1>
-                        <p className="text-sm sm:text-base text-slate-600 mt-1">
+                        <p className="text-sm sm:text-base text-slate-600 mt-1.5">
                             Completa los 3 pasos para verificar tu WhatsApp y vincular tu sucursal.
                         </p>
                     </div>
@@ -219,14 +219,14 @@ export default function Register({
                             const step3HasError = Boolean(errors.plan_id || errors.payment_method);
 
                             return (
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
                                     <input type="hidden" name="pais_id" value={paisId} />
                                     <input type="hidden" name="company_phone" value={companyPhone} />
                                     <input type="hidden" name="plan_id" value={selectedPlan?.id ?? ''} />
                                     <input type="hidden" name="payment_method" value={isFreePlan ? 'free_trial' : paymentMethod} />
 
                                     {/* Columna Izquierda: Wizard Vertical */}
-                                    <div className="lg:col-span-8 space-y-4">
+                                    <div className="lg:col-span-7 space-y-5">
                                         {stepError && (
                                             <div className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-xs sm:text-sm font-semibold text-rose-700">
                                                 {stepError}
@@ -562,40 +562,40 @@ export default function Register({
                                     </div>
 
                                     {/* Columna Derecha: Resumen del Carrito */}
-                                    <aside className="lg:col-span-4 lg:sticky lg:top-28">
-                                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-md space-y-5">
-                                            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                                                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#ff5a00] flex items-center justify-center shrink-0">
+                                    <aside className="lg:col-span-5 lg:sticky lg:top-28">
+                                        <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-md space-y-6">
+                                            <div className="flex items-center gap-3.5 border-b border-slate-100 pb-5">
+                                                <div className="w-11 h-11 rounded-xl bg-orange-50 border border-orange-200 text-[#ff5a00] flex items-center justify-center shrink-0">
                                                     <ShoppingBag className="w-5 h-5" />
                                                 </div>
-                                                <div>
+                                                <div className="min-w-0">
                                                     <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                                                         Resumen de Compra
                                                     </p>
-                                                    <h2 className="text-base font-black text-[#08264e]">
+                                                    <h2 className="text-lg font-black text-[#08264e] truncate">
                                                         {selectedPlan?.nombre || 'Selecciona un Plan'}
                                                     </h2>
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-2.5 text-xs sm:text-sm text-slate-600">
-                                                <div className="flex items-center justify-between">
+                                            <div className="space-y-3.5 text-sm text-slate-600">
+                                                <div className="flex items-center justify-between gap-4">
                                                     <span>Plan seleccionado</span>
-                                                    <span className="font-bold text-[#08264e]">{selectedPlan?.nombre || '—'}</span>
+                                                    <span className="font-bold text-[#08264e] whitespace-nowrap">{selectedPlan?.nombre || '—'}</span>
                                                 </div>
-                                                <div className="flex items-center justify-between">
+                                                <div className="flex items-center justify-between gap-4">
                                                     <span>Mensajes WhatsApp incluidos</span>
-                                                    <span className="font-bold text-emerald-600">60 gratis / ciclo</span>
+                                                    <span className="font-bold text-emerald-600 whitespace-nowrap">60 gratis / ciclo</span>
                                                 </div>
-                                                <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-base font-black text-[#08264e]">
+                                                <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-4 text-lg font-black text-[#08264e]">
                                                     <span>Total hoy</span>
-                                                    <span className="font-mono text-[#ff5a00]">
+                                                    <span className="font-mono text-[#ff5a00] whitespace-nowrap">
                                                         {isFreePlan ? '$0 MXN' : `$${planPrice.toLocaleString('es-MX')} MXN`}
                                                     </span>
                                                 </div>
                                             </div>
 
-                                            <div className="rounded-xl bg-slate-50 border border-slate-100 p-3.5 space-y-2 text-xs text-slate-600">
+                                            <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 space-y-2.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
                                                 <div className="flex items-center gap-2 font-bold text-[#08264e]">
                                                     <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                                                     <span>Flujo de activación seguro</span>

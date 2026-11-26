@@ -18,7 +18,7 @@ class SubscriptionController extends Controller
     /**
      * Panel principal de Suscripción para la empresa actual.
      */
-    public function index(\App\Services\BcvRateService $bcvService)
+    public function index(Request $request, \App\Services\BcvRateService $bcvService)
     {
         $user = auth()->user();
         $empresa = $user->empresa;
@@ -28,8 +28,11 @@ class SubscriptionController extends Controller
         }
 
         SubscriptionPlan::ensureDefaultPlansExist();
-        $planes = SubscriptionPlan::where('activo', true)->get();
-        $plan = SubscriptionPlan::getPlanRenovacionDefault() ?? $planes->first();
+        $planes = SubscriptionPlan::available()->orderBy('orden', 'asc')->get();
+        $requestedPlanId = $request->integer('plan_id');
+        $plan = ($requestedPlanId ? $planes->firstWhere('id', $requestedPlanId) : null)
+            ?? SubscriptionPlan::getPlanRenovacionDefault()
+            ?? $planes->first();
         $totalSucursales = $empresa->sucursales()->count();
 
         $pagos = SubscriptionPayment::where('empresa_id', $empresa->id)
@@ -44,26 +47,33 @@ class SubscriptionController extends Controller
 
         $bcvRate = $bcvService->getRate() ?? 36.50; // Tasa por defecto de respaldo si falla el API
 
-        // Opciones de cálculo de precios (cobro puramente mensual)
+        // Opciones de cálculo de precios respetando el ciclo del plan (mensual o anual)
         $opcionesPrecios = [];
         foreach ($planes as $p) {
-            $precioMensual = $p->precio_mensual_efectivo;
+            $meses = max(1, (int) ($p->ciclo_meses ?: 1));
+            $subtotal = $meses === 12 && (float) $p->precio_12_meses > 0
+                ? (float) $p->precio_12_meses
+                : $p->precio_mensual_efectivo;
             $opcionesPrecios[$p->id] = [
                 'plan_id' => $p->id,
                 'nombre' => $p->nombre,
-                'meses' => 1,
-                'subtotal_plan' => $precioMensual,
-                'precio_mensual_promedio' => $precioMensual,
-                'total' => $p->calcularPrecio(1, max(1, $totalSucursales)),
+                'meses' => $meses,
+                'subtotal_plan' => $subtotal,
+                'precio_mensual_promedio' => round($subtotal / $meses, 2),
+                'total' => $p->calcularPrecio($meses, max(1, $totalSucursales)),
             ];
         }
 
-        // Opción predeterminada para el ciclo 1 mes (compatibilidad con vistas)
-        $opcionesPrecios[1] = [
-            'meses' => 1,
-            'subtotal_plan' => $plan?->precio_mensual_efectivo ?? 149.00,
-            'precio_mensual_promedio' => $plan?->precio_mensual_efectivo ?? 149.00,
-            'total' => $plan?->calcularPrecio(1, max(1, $totalSucursales)) ?? 149.00,
+        // Opción predeterminada (compatibilidad con vistas)
+        $defaultMeses = max(1, (int) ($plan?->ciclo_meses ?: 1));
+        $defaultSubtotal = $defaultMeses === 12 && (float) ($plan?->precio_12_meses ?? 0) > 0
+            ? (float) $plan->precio_12_meses
+            : ($plan?->precio_mensual_efectivo ?? 149.00);
+        $opcionesPrecios[1] = $opcionesPrecios[1] ?? [
+            'meses' => $defaultMeses,
+            'subtotal_plan' => $defaultSubtotal,
+            'precio_mensual_promedio' => round($defaultSubtotal / $defaultMeses, 2),
+            'total' => $plan?->calcularPrecio($defaultMeses, max(1, $totalSucursales)) ?? 149.00,
         ];
 
         // Obtener la configuración activa de pasarelas de pago de la plataforma (Empresa ID 1 / Dueño del SaaS)
@@ -620,6 +630,11 @@ class SubscriptionController extends Controller
                         $sessionId,
                         'Pago automático procesado y acreditado exitosamente vía Stripe Checkout.'
                     );
+                }
+
+                if ($request->user() && ! empty($request->user()->telefono) && ! $request->user()->whatsapp_verified_at) {
+                    return redirect()->route('verify-whatsapp.index')
+                        ->with('status', '¡Pago con Stripe completado! Ahora verifica tu WhatsApp para vincular tu código QR.');
                 }
 
                 return $this->renderPopupClose(true, '¡Pago con Stripe completado exitosamente! Tu suscripción ha sido activada y extendida de forma inmediata.', $sessionId);

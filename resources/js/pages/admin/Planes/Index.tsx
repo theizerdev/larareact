@@ -565,10 +565,12 @@ export default function PlanesIndex({ planes = [], pricingSetting, stats, curren
                 {viewMode === 'cards' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {planes.map((plan) => {
-                            const isFree = Number(plan.precio_regular_mensual) === 0 && Number(plan.precio_promocional_mensual) === 0 && Number(plan.precio_3_meses) === 0;
-                            const precioReg = Number(plan.precio_regular_mensual) || (Number(plan.precio_3_meses) > 0 ? Math.round(Number(plan.precio_3_meses) / 3) : 0);
-                            const precioPromo = Number(plan.precio_promocional_mensual) || precioReg;
-                            const tienePromo = Boolean(plan.tiene_promocion) && precioPromo < precioReg && precioPromo > 0;
+                            const isFree = Number(plan.precio_regular_mensual) === 0 && Number(plan.precio_promocional_mensual) === 0 && Number(plan.precio_3_meses) === 0 && Number(plan.precio_12_meses) === 0;
+                            const isAnnual = Number(plan.ciclo_meses) === 12;
+                            const precioAnual = Number(plan.precio_12_meses) > 0 ? Number(plan.precio_12_meses) : 1000;
+                            const precioReg = isAnnual ? precioAnual : (Number(plan.precio_regular_mensual) || (Number(plan.precio_3_meses) > 0 ? Math.round(Number(plan.precio_3_meses) / 3) : 0));
+                            const precioPromo = isAnnual ? precioAnual : (Number(plan.precio_promocional_mensual) || precioReg);
+                            const tienePromo = !isAnnual && Boolean(plan.tiene_promocion) && precioPromo < precioReg && precioPromo > 0;
                             const porcentajeAhorro = precioReg > 0 ? Math.round(((precioReg - precioPromo) / precioReg) * 100) : 0;
 
                             return (
@@ -632,15 +634,24 @@ export default function PlanesIndex({ planes = [], pricingSetting, stats, curren
 
                                                 <div className="flex items-baseline gap-1">
                                                     <span className="text-3xl font-black text-slate-900 dark:text-white">
-                                                        {currencySymbol}{tienePromo ? precioPromo : precioReg}
+                                                        {currencySymbol}{(isAnnual ? precioAnual : (tienePromo ? precioPromo : precioReg)).toLocaleString('es-MX')}
                                                     </span>
                                                     <span className="text-xs font-semibold text-slate-500">
-                                                        {__('MXN / mes')}
+                                                        {isAnnual ? __('MXN / año') : __('MXN / mes')}
                                                     </span>
                                                 </div>
 
-                                                {/* Leyenda Transparente */}
-                                                {tienePromo ? (
+                                                {isAnnual ? (
+                                                    <div className="mt-2.5 p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg text-[11px] text-orange-800 dark:text-orange-300 leading-snug space-y-0.5">
+                                                        <div className="font-bold">
+                                                            {__('Pago único anual')}
+                                                            {plan.max_suscripciones ? ` · ${plan.cupos_ocupados ?? 0}/${plan.max_suscripciones} cupos` : ''}
+                                                        </div>
+                                                        {plan.badge_promocion && (
+                                                            <span className="text-[10px] block">{plan.badge_promocion}</span>
+                                                        )}
+                                                    </div>
+                                                ) : tienePromo ? (
                                                     <div className="mt-2.5 p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg text-[11px] text-orange-800 dark:text-orange-300 leading-snug">
                                                         <div className="font-bold flex items-center gap-1">
                                                             <Clock className="w-3.5 h-3.5 shrink-0" />
@@ -773,10 +784,16 @@ export default function PlanesIndex({ planes = [], pricingSetting, stats, curren
                                                 </p>
                                             </td>
                                             <td className="py-3 px-4 font-semibold text-slate-500">
-                                                {currencySymbol}{plan.precio_regular_mensual || Math.round(plan.precio_3_meses / 3)} /mes
+                                                {Number(plan.ciclo_meses) === 12
+                                                    ? `${currencySymbol}${Number(plan.precio_12_meses || 1000).toLocaleString('es-MX')} /año`
+                                                    : `${currencySymbol}${plan.precio_regular_mensual || Math.round(plan.precio_3_meses / 3)} /mes`}
                                             </td>
                                             <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
-                                                {plan.tiene_promocion ? (
+                                                {Number(plan.ciclo_meses) === 12 ? (
+                                                    <span className="text-orange-600 dark:text-orange-400">
+                                                        {currencySymbol}{Number(plan.precio_12_meses || 1000).toLocaleString('es-MX')} /año
+                                                    </span>
+                                                ) : plan.tiene_promocion ? (
                                                     <span className="text-orange-600 dark:text-orange-400">
                                                         {currencySymbol}{plan.precio_promocional_mensual || Math.round(plan.precio_3_meses / 3)} /mes
                                                     </span>

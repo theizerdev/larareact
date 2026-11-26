@@ -77,8 +77,20 @@ class CreateNewUser implements CreatesNewUsers
             $paisId = $input['pais_id'] ?? ($input['pais_telefono_id'] ?? null);
             $nombreComercial = ! empty($input['nombre_comercial']) ? trim($input['nombre_comercial']) : null;
 
-            // 1. Crear Empresa con plan de prueba de 7 días
+            // 1. Crear Empresa con el plan seleccionado (Prueba Gratuita o Plan de Pago)
             $documento = !empty($input['company_document']) ? $input['company_document'] : 'S/D-' . Str::upper(Str::random(6));
+
+            $chosenPlan = $selectedPlan
+                ?? \App\Models\SubscriptionPlan::where('nombre', 'like', '%Prueba%')->first()
+                ?? \App\Models\SubscriptionPlan::first();
+
+            $isFreePlan = ! $chosenPlan
+                || (int) ($chosenPlan->ciclo_meses ?? 0) === 0
+                || stripos((string) $chosenPlan->nombre, 'prueba') !== false
+                || ((float) $chosenPlan->precio_12_meses <= 0 && (float) $chosenPlan->precio_regular_mensual <= 0);
+
+            $cicloMeses = $isFreePlan ? 0 : max(1, (int) ($chosenPlan->ciclo_meses ?: 1));
+            $montoPlan = $isFreePlan ? 0.00 : $chosenPlan->calcularPrecio($cicloMeses, 1);
 
             $empresa = Empresa::create([
                 'razon_social' => $input['company_name'],
@@ -93,25 +105,22 @@ class CreateNewUser implements CreatesNewUsers
                 'api_key' => Str::random(32),
                 'whatsapp_api_key' => Str::random(32),
                 'whatsapp_api_url' => config('whatsapp.api_url', 'http://127.0.0.1:3001'),
-                'subscription_status' => 'trial',
-                'trial_ends_at' => now()->addDays(7),
+                'subscription_status' => $isFreePlan ? 'trial' : 'pending_payment',
+                'trial_ends_at' => $isFreePlan ? now()->addDays(7) : null,
+                'billing_cycle' => $isFreePlan ? 'trial' : ($cicloMeses . '_months'),
                 'max_sucursales' => 1,
             ]);
 
-            $trialPlan = $selectedPlan
-                ?? \App\Models\SubscriptionPlan::where('nombre', 'like', '%Prueba%')->first()
-                ?? \App\Models\SubscriptionPlan::first();
-
             \App\Models\Subscription::create([
                 'empresa_id' => $empresa->id,
-                'plan_id' => $trialPlan?->id,
-                'nombre_plan' => 'Prueba Gratuita',
-                'ciclo_meses' => 0,
+                'plan_id' => $chosenPlan?->id,
+                'nombre_plan' => $chosenPlan?->nombre ?? 'Prueba Gratuita',
+                'ciclo_meses' => $cicloMeses,
                 'max_sucursales' => 1,
-                'monto_total' => 0.00,
+                'monto_total' => $montoPlan,
                 'fecha_inicio' => now(),
-                'fecha_vencimiento' => now()->addDays(7),
-                'estado' => 'trial',
+                'fecha_vencimiento' => $isFreePlan ? now()->addDays(7) : now(),
+                'estado' => $isFreePlan ? 'trial' : 'pending',
             ]);
 
             // 2. Crear Sucursal Principal (la instancia en el microservicio se crea después del commit)
