@@ -50,6 +50,9 @@ interface Plan {
     badge_promocion: string | null;
     destacado: boolean;
     orden: number;
+    ciclo_meses?: number;
+    max_suscripciones?: number | null;
+    fecha_expiracion?: string | null;
     precio_3_meses: number;
     precio_6_meses: number;
     precio_12_meses: number;
@@ -58,6 +61,9 @@ interface Plan {
     modulos_incluidos: string[] | null;
     activo: boolean;
     subscriptions_count?: number;
+    cupos_ocupados?: number;
+    cupos_restantes?: number | null;
+    esta_expirado?: boolean;
 }
 
 interface PageProps {
@@ -101,6 +107,9 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
         badge_promocion: '',
         destacado: false,
         orden: 1,
+        ciclo_meses: 1,
+        max_suscripciones: '' as string | number,
+        fecha_expiracion: '',
         precio_3_meses: 149,
         precio_6_meses: 149,
         precio_12_meses: 149,
@@ -126,6 +135,9 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
             badge_promocion: '',
             destacado: false,
             orden: planes.length + 1,
+            ciclo_meses: 1,
+            max_suscripciones: '',
+            fecha_expiracion: '',
             precio_3_meses: 499,
             precio_6_meses: 499,
             precio_12_meses: 499,
@@ -151,9 +163,12 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
             badge_promocion: plan.badge_promocion || '',
             destacado: Boolean(plan.destacado),
             orden: plan.orden || 1,
-            precio_3_meses: promoMensual,
-            precio_6_meses: promoMensual,
-            precio_12_meses: promoMensual,
+            ciclo_meses: plan.ciclo_meses ?? 1,
+            max_suscripciones: plan.max_suscripciones ?? '',
+            fecha_expiracion: plan.fecha_expiracion ? plan.fecha_expiracion.slice(0, 16) : '',
+            precio_3_meses: Number(plan.precio_3_meses) || promoMensual,
+            precio_6_meses: Number(plan.precio_6_meses) || promoMensual,
+            precio_12_meses: Number(plan.precio_12_meses) || promoMensual,
             precio_sucursal_extra_mensual: Number(plan.precio_sucursal_extra_mensual) || 20,
             sucursales_incluidas: plan.sucursales_incluidas || 1,
             modulos_incluidos: plan.modulos_incluidos || ['todos'],
@@ -171,7 +186,7 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                 precio_regular_mensual: val,
                 precio_3_meses: promo,
                 precio_6_meses: promo,
-                precio_12_meses: promo,
+                precio_12_meses: prev.ciclo_meses === 12 ? prev.precio_12_meses : promo,
             };
         });
     };
@@ -182,7 +197,7 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
             precio_promocional_mensual: val,
             precio_3_meses: val,
             precio_6_meses: val,
-            precio_12_meses: val,
+            precio_12_meses: prev.ciclo_meses === 12 ? prev.precio_12_meses : val,
         }));
     };
 
@@ -215,6 +230,12 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
             const url = editingPlan ? `/admin/planes/${editingPlan.id}` : '/admin/planes';
             const method = editingPlan ? 'PUT' : 'POST';
 
+            const payload = {
+                ...formData,
+                max_suscripciones: formData.max_suscripciones === '' ? null : Number(formData.max_suscripciones),
+                fecha_expiracion: formData.fecha_expiracion || null,
+            };
+
             const res = await fetch(url, {
                 method: method,
                 headers: {
@@ -222,7 +243,7 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': getCsrfToken(),
                 },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(payload),
             });
 
             const data = await res.json();
@@ -909,16 +930,75 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                             )}
                         </div>
 
-                        {/* 3. Configuración de Sucursales y Facturación Mensual */}
+                        {/* 3. Configuración de Sucursales, Caducidad y Cupos */}
                         <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
                             <div className="flex items-center justify-between">
-                                <h5 className="text-xs font-bold uppercase text-slate-500">{__('Configuración de Sucursales & Modalidad')}</h5>
+                                <h5 className="text-xs font-bold uppercase text-slate-500">{__('Configuración de Sucursales, Caducidad & Cupos')}</h5>
                                 <Badge variant="outline" className="text-[10px] font-bold text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800">
-                                    {__('Cobro Mensual')}
+                                    {formData.ciclo_meses === 12 ? __('Cobro Anual') : formData.ciclo_meses === 0 ? __('Prueba') : __('Cobro Mensual')}
                                 </Badge>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                                <div className="space-y-1">
+                                    <Label htmlFor="ciclo_meses">{__('Ciclo del Plan')}</Label>
+                                    <select
+                                        id="ciclo_meses"
+                                        value={formData.ciclo_meses}
+                                        onChange={(e) => setFormData({ ...formData, ciclo_meses: parseInt(e.target.value, 10) })}
+                                        className="w-full h-8 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs font-medium"
+                                    >
+                                        <option value={0}>{__('Prueba (0 meses)')}</option>
+                                        <option value={1}>{__('Mensual (1 mes)')}</option>
+                                        <option value={12}>{__('Anual (12 meses)')}</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <Label htmlFor="max_suscripciones">{__('Límite de Cupos (Negocios)')}</Label>
+                                    <Input
+                                        id="max_suscripciones"
+                                        type="number"
+                                        min="1"
+                                        placeholder={__('Ilimitado')}
+                                        value={formData.max_suscripciones}
+                                        onChange={(e) => setFormData({ ...formData, max_suscripciones: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
+                                        className="h-8 text-xs font-semibold"
+                                    />
+                                    <p className="text-[10px] text-slate-400">{__('Ej: 5 lugares. Vacío = ilimitado.')}</p>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <Label htmlFor="fecha_expiracion">{__('Caducidad del Plan')}</Label>
+                                    <Input
+                                        id="fecha_expiracion"
+                                        type="datetime-local"
+                                        value={formData.fecha_expiracion}
+                                        onChange={(e) => setFormData({ ...formData, fecha_expiracion: e.target.value })}
+                                        className="h-8 text-xs font-medium"
+                                    />
+                                    <p className="text-[10px] text-slate-400">{__('Fecha límite de vigencia. Vacío = sin caducidad.')}</p>
+                                </div>
+                            </div>
+
+                            {formData.ciclo_meses === 12 && (
+                                <div className="space-y-1 pt-1">
+                                    <Label htmlFor="precio_12_meses">{__('Precio Total Anual (12 Meses)')}</Label>
+                                    <div className="relative max-w-xs">
+                                        <span className="absolute left-2.5 top-2 text-xs text-slate-400">{currencySymbol}</span>
+                                        <Input
+                                            id="precio_12_meses"
+                                            type="number"
+                                            step="0.01"
+                                            value={formData.precio_12_meses}
+                                            onChange={(e) => setFormData({ ...formData, precio_12_meses: parseFloat(e.target.value) || 0 })}
+                                            className="pl-6 h-8 text-xs font-bold"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1">
                                 <div className="space-y-1">
                                     <Label htmlFor="sucursales_incluidas">{__('Sucursales Incluidas en el Plan')}</Label>
                                     <Input

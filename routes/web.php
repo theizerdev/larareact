@@ -21,9 +21,16 @@ Route::get('/', function () {
         ->orderBy('orden', 'asc')
         ->get();
 
-    $planes = SubscriptionPlan::where('activo', true)
+    $planes = SubscriptionPlan::available()
+        ->orderBy('orden', 'asc')
         ->orderBy('id', 'asc')
-        ->get();
+        ->get()
+        ->map(function (SubscriptionPlan $plan) {
+            $plan->setAttribute('cupos_ocupados', $plan->activeSubscriptionsCount());
+            $plan->setAttribute('cupos_restantes', $plan->remainingSlots());
+            $plan->setAttribute('esta_expirado', $plan->isExpired());
+            return $plan;
+        });
 
     return Inertia::render('welcome', [
         'testimonios' => $testimonios,

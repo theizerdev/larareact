@@ -696,164 +696,231 @@ export default function Welcome() {
 
                 {/* ─── SECCIÓN DE PRECIOS & PLANES COMPLETA ─────────────────────────────── */}
                 <section id="pricing" className="py-20 md:py-28 bg-slate-50/50">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-14">
                         {/* Encabezado de la Sección */}
                         <div className="text-center space-y-4 max-w-3xl mx-auto">
-                            <span className="text-xs font-bold font-mono uppercase tracking-widest text-[#ff5a00] bg-orange-50 border border-orange-200 px-3.5 py-1.5 rounded-full shadow-sm">
-                                {__('Planes & Precios Transparentes')}
+                            <span className="inline-block text-xs font-bold font-mono uppercase tracking-widest text-[#ff5a00] bg-orange-50 border border-orange-200 px-3.5 py-1.5 rounded-full shadow-sm">
+                                {__('🔥 PRECIO EXCLUSIVO DE LANZAMIENTO')}
                             </span>
                             <h2 className="text-3xl sm:text-5xl font-black text-[#08264e] tracking-tight leading-tight">
-                                {__('Elige el plan ideal para impulsar tu negocio')}
+                                {__('Plan Anual de Lanzamiento')}
                             </h2>
-                            <p className="text-slate-600 text-base sm:text-lg">
-                                {__('Sin sorpresas ni contratos forzosos. Todos los planes incluyen 7 días de prueba gratuita sin requerir tarjeta de crédito.')}
+                            <p className="text-slate-600 text-base sm:text-lg leading-relaxed">
+                                {__('Buscamos 5 negocios mexicanos que quieran ser nuestros primeros usuarios y participar en la evolución del sistema con sus ideas y sugerencias.')}
                             </p>
                         </div>
 
-                        {/* Grid de Planes Dinámico desde Base de Datos */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-8 items-stretch">
-                            {((pageProps.planes && pageProps.planes.length > 0)
-                                ? pageProps.planes.filter((p: any) => p.activo !== false)
+                        {/* Tarjetas Dinámicas desde Base de Datos */}
+                        {(() => {
+                            const activePlans = (pageProps.planes && pageProps.planes.length > 0)
+                                ? pageProps.planes.filter((p: any) => p.activo !== false && !p.esta_expirado)
                                 : [
                                     {
                                         id: 1,
                                         nombre: 'Plan Prueba',
-                                        descripcion: '7 días de acceso completo sin costo para evaluar todas las herramientas de FixSale.',
+                                        descripcion: '7 días de acceso completo para evaluar todas las herramientas de tu negocio sin tarjeta de crédito.',
                                         precio_regular_mensual: 0,
                                         precio_promocional_mensual: 0,
+                                        ciclo_meses: 0,
                                         tiene_promocion: false,
                                         sucursales_incluidas: 1,
                                         precio_sucursal_extra_mensual: 84.72,
                                     },
                                     {
                                         id: 2,
+                                        nombre: 'Plan Anual',
+                                        descripcion: 'Buscamos 5 negocios mexicanos que quieran ser nuestros primeros usuarios y participar en la evolución del sistema con sus ideas y sugerencias.',
+                                        precio_regular_mensual: 83.33,
+                                        precio_promocional_mensual: 83.33,
+                                        precio_12_meses: 1000,
+                                        ciclo_meses: 12,
+                                        max_suscripciones: 5,
+                                        cupos_restantes: 5,
+                                        tiene_promocion: true,
+                                        badge_promocion: '🔥 PRECIO EXCLUSIVO DE LANZAMIENTO',
+                                        destacado: true,
+                                        sucursales_incluidas: 1,
+                                    },
+                                    {
+                                        id: 3,
                                         nombre: 'Plan Mensual',
                                         descripcion: 'Acceso total e ilimitado a todos los módulos operativos y sincronización en tiempo real.',
                                         precio_regular_mensual: 149,
                                         precio_promocional_mensual: 149,
+                                        ciclo_meses: 1,
                                         tiene_promocion: false,
-                                        destacado: true,
+                                        destacado: false,
                                         sucursales_incluidas: 1,
                                         precio_sucursal_extra_mensual: 84.72,
                                     },
-                                ]
-                            ).map((plan: any) => {
-                                const nameLower = (plan.nombre || '').toLowerCase();
-                                const isFree = nameLower.includes('prueba') || (Number(plan.precio_regular_mensual) === 0 && Number(plan.precio_promocional_mensual) === 0 && Number(plan.precio_3_meses) === 0);
-                                const isPopular = Boolean(plan.destacado) || !isFree;
+                                ];
 
-                                const precioRegular = Number(plan.precio_regular_mensual) || (Number(plan.precio_3_meses) > 0 ? Math.round(Number(plan.precio_3_meses) / 3) : (isFree ? 0 : 149));
-                                const precioPromo = Number(plan.precio_promocional_mensual) || precioRegular;
-                                const tienePromo = Boolean(plan.tiene_promocion) && precioPromo < precioRegular && precioPromo > 0;
-                                const porcentajeAhorro = precioRegular > 0 ? Math.round(((precioRegular - precioPromo) / precioRegular) * 100) : 0;
+                            const gridCols = activePlans.length === 1
+                                ? 'max-w-xl mx-auto'
+                                : activePlans.length === 2
+                                    ? 'grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-8 items-stretch'
+                                    : 'grid grid-cols-1 lg:grid-cols-3 max-w-6xl mx-auto gap-8 items-stretch';
 
-                                return (
-                                    <div
-                                        key={plan.id}
-                                        className={`bg-white p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between transition-all relative ${isPopular
-                                            ? 'border-2 border-[#ff5a00] shadow-2xl transform lg:-translate-y-2'
-                                            : 'border border-slate-200 shadow-sm hover:shadow-xl'
-                                            }`}
-                                    >
-                                        {isPopular && (
-                                            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#ff5a00] to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md shrink-0 whitespace-nowrap">
-                                                {__('⭐ 🔥 ¡PLAN RECOMENDADO!')}
-                                            </div>
-                                        )}
+                            return (
+                                <div className={gridCols}>
+                                    {activePlans.map((plan: any) => {
+                                        const nameLower = (plan.nombre || '').toLowerCase();
+                                        const isFree = Number(plan.ciclo_meses) === 0 || nameLower.includes('prueba') || (Number(plan.precio_regular_mensual) === 0 && Number(plan.precio_12_meses) === 0);
+                                        const isAnnual = Number(plan.ciclo_meses) === 12;
+                                        const isFeatured = Boolean(plan.destacado) || isAnnual;
+                                        const cuposRestantes = plan.cupos_restantes !== undefined && plan.cupos_restantes !== null
+                                            ? Number(plan.cupos_restantes)
+                                            : (plan.max_suscripciones ? Number(plan.max_suscripciones) : null);
+                                        const isSoldOut = cuposRestantes !== null && cuposRestantes <= 0;
+                                        const precioAnual = Number(plan.precio_12_meses) > 0 ? Number(plan.precio_12_meses) : 1000;
+                                        const precioMensualEquiv = isAnnual ? Math.ceil(precioAnual / 12) : Number(plan.precio_promocional_mensual || plan.precio_regular_mensual || 149);
 
-                                        <div className="space-y-4 pt-2">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${isFree
-                                                    ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
-                                                    : 'bg-orange-50 border border-orange-200 text-[#ff5a00]'
-                                                    }`}>
-                                                    {isFree ? __('Sin Compromiso') : __('Acceso Completo')}
-                                                </span>
-
-                                                {tienePromo && (
-                                                    <span className="bg-red-500/10 text-red-600 text-[11px] font-extrabold px-2 py-0.5 rounded-md border border-red-500/20">
-                                                        -{porcentajeAhorro}% OFF
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div>
-                                                <h3 className="text-2xl font-black text-[#08264e]">{__(plan.nombre)}</h3>
-                                                {plan.descripcion && (
-                                                    <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{__(plan.descripcion)}</p>
-                                                )}
-                                            </div>
-
-                                            {/* Precios Mensuales */}
-                                            <div className="pt-2">
-                                                {isFree ? (
-                                                    <div>
-                                                        <span className="text-4xl font-black text-[#08264e] font-mono">$0</span>
-                                                        <span className="text-xs font-extrabold text-slate-500 uppercase ml-1">MXN / 7 {__('Días')}</span>
+                                        return (
+                                            <div
+                                                key={plan.id}
+                                                className={`bg-white p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between transition-all relative ${isFeatured
+                                                    ? 'border-2 border-[#ff5a00] shadow-2xl transform lg:-translate-y-2'
+                                                    : 'border border-slate-200 shadow-sm hover:shadow-xl'
+                                                    }`}
+                                            >
+                                                {isFeatured && (
+                                                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#ff5a00] to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md shrink-0 whitespace-nowrap">
+                                                        {plan.badge_promocion || __('🔥 PRECIO EXCLUSIVO DE LANZAMIENTO')}
                                                     </div>
-                                                ) : (
-                                                    <div>
-                                                        {tienePromo && (
-                                                            <div className="flex items-center gap-1.5 mb-1">
-                                                                <span className="text-xs font-bold text-slate-400 line-through">
-                                                                    ${precioRegular} MXN
-                                                                </span>
-                                                                <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
-                                                                    {plan.badge_promocion || __('Oferta Especial')}
-                                                                </span>
-                                                            </div>
+                                                )}
+
+                                                <div className="space-y-4 pt-2">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${isFree
+                                                            ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                                                            : 'bg-orange-50 border border-orange-200 text-[#ff5a00]'
+                                                            }`}>
+                                                            {isFree ? __('Sin Compromiso') : isAnnual ? __('1 Plan Anual') : __('Acceso Completo')}
+                                                        </span>
+                                                        {isAnnual && (
+                                                            <span className="bg-emerald-50 text-emerald-700 text-[11px] font-extrabold px-2.5 py-1 rounded-full border border-emerald-200">
+                                                                {__('🇲🇽 Promoción exclusiva para México')}
+                                                            </span>
                                                         )}
-
-                                                        <div className="flex items-baseline gap-1">
-                                                            <span className="text-5xl font-black text-[#08264e] font-mono">
-                                                                ${tienePromo ? precioPromo : precioRegular}
-                                                            </span>
-                                                            <span className="text-xs font-extrabold text-slate-500 font-mono uppercase">
-                                                                MXN / {__('mes')}
-                                                            </span>
-                                                        </div>
-
-                                                        {/* Desglose de cobro mensual transparente */}
-                                                        <p className="text-[11px] text-slate-500 mt-2 bg-slate-50 border border-slate-100 p-2.5 rounded-lg leading-relaxed">
-                                                            {__('Facturación mensual recurrente de')} <strong>${precioRegular} MXN/mes</strong>. {__('Cancela cuando quieras.')}
-                                                        </p>
                                                     </div>
+
+                                                    <div>
+                                                        <h3 className="text-2xl font-black text-[#08264e]">
+                                                            {__(plan.nombre)}
+                                                        </h3>
+                                                        {plan.descripcion && (
+                                                            <p className="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed">
+                                                                {__(plan.descripcion)}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Precio */}
+                                                    <div className="pt-1 space-y-3">
+                                                        {isFree ? (
+                                                            <div>
+                                                                <span className="text-4xl font-black text-[#08264e] font-mono">$0</span>
+                                                                <span className="text-xs font-extrabold text-slate-500 uppercase ml-1">MXN / 7 {__('Días')}</span>
+                                                            </div>
+                                                        ) : isAnnual ? (
+                                                            <>
+                                                                <p className="text-xs sm:text-sm font-extrabold text-[#ff5a00]">
+                                                                    {`¡Solo $${precioAnual.toLocaleString('es-MX')} pesos mexicanos al año!`}
+                                                                </p>
+
+                                                                <div className="flex items-baseline gap-2">
+                                                                    <span className="text-5xl font-black text-[#08264e] font-mono">
+                                                                        ${precioAnual.toLocaleString('es-MX')}
+                                                                    </span>
+                                                                    <span className="text-xs font-extrabold text-slate-500 font-mono uppercase">
+                                                                        MXN / {__('año')}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 text-xs font-bold text-emerald-800">
+                                                                    {`💰 Equivale a menos de $${precioMensualEquiv} pesos al mes.`}
+                                                                </div>
+
+                                                                <p className="text-xs text-slate-700 bg-slate-50 border border-slate-200 p-3 rounded-xl leading-relaxed">
+                                                                    {__('Lo mejor es que respetaremos tu tarifa anual')} <strong className="text-[#08264e]">{__('DE POR VIDA')}</strong>, {__('aunque el precio aumente para nuevos usuarios.')}
+                                                                </p>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <div className="flex items-baseline gap-1">
+                                                                    <span className="text-5xl font-black text-[#08264e] font-mono">
+                                                                        ${precioMensualEquiv.toLocaleString('es-MX')}
+                                                                    </span>
+                                                                    <span className="text-xs font-extrabold text-slate-500 font-mono uppercase">
+                                                                        MXN / {__('mes')}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 p-2.5 rounded-lg leading-relaxed">
+                                                                    {__('Facturación mensual recurrente de')} <strong>${precioMensualEquiv} MXN/mes</strong>. {__('Cancela cuando quieras.')}
+                                                                </p>
+                                                            </>
+                                                        )}
+                                                    </div>
+
+                                                    <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
+                                                        <li className="flex items-center gap-2 font-semibold text-slate-800">
+                                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                            <span>{__('Acceso Total al Sistema (Todos los módulos)')}</span>
+                                                        </li>
+                                                        <li className="flex items-center gap-2 font-semibold text-slate-800">
+                                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                            <span>
+                                                                {isAnnual
+                                                                    ? `${__('Tarifa anual congelada de por vida')} ($${precioAnual.toLocaleString('es-MX')} MXN/${__('año')})`
+                                                                    : `${plan.sucursales_incluidas ?? 1} ${__('Sucursal incluida')}`}
+                                                            </span>
+                                                        </li>
+                                                        <li className="flex items-center gap-2 text-slate-700">
+                                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                            <span>
+                                                                {isAnnual
+                                                                    ? __('Participación directa con tus ideas y sugerencias')
+                                                                    : `${__('Sucursales adicionales:')} $${plan.precio_sucursal_extra_mensual ?? 84.72} MXN ($5 USD)/${__('mes')}`}
+                                                            </span>
+                                                        </li>
+                                                        <li className="flex items-center gap-2">
+                                                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                            <span>{__('Soporte técnico y actualizaciones continuas')}</span>
+                                                        </li>
+                                                    </ul>
+
+                                                    {cuposRestantes !== null && (
+                                                        <div className={`border rounded-xl px-4 py-2.5 text-center ${isSoldOut ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+                                                            <p className={`text-xs font-extrabold ${isSoldOut ? 'text-red-700' : 'text-amber-800'}`}>
+                                                                {isSoldOut
+                                                                    ? __('⚠️ Lugares agotados por el momento.')
+                                                                    : `⚠️ Solo ${cuposRestantes} ${cuposRestantes === 1 ? 'lugar disponible' : 'lugares disponibles'}.`}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {isSoldOut ? (
+                                                    <span className="w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center block mt-4 bg-slate-200 text-slate-500 cursor-not-allowed">
+                                                        {__('Cupos Agotados')}
+                                                    </span>
+                                                ) : (
+                                                    <Link
+                                                        href={`/register?plan_id=${plan.id}`}
+                                                        className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all block mt-4 ${isFeatured
+                                                            ? 'bg-gradient-to-r from-[#ff5a00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25'
+                                                            : 'bg-slate-100 hover:bg-slate-200 text-[#08264e]'
+                                                            }`}
+                                                    >
+                                                        {isFree ? __('Probar 7 Días Gratis') : isAnnual ? __('Apartar mi lugar ahora') : `${__('Elegir')} ${__(plan.nombre)}`}
+                                                    </Link>
                                                 )}
                                             </div>
-
-                                            <ul className="space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4 font-medium">
-                                                <li className="flex items-center gap-2 font-semibold text-slate-800">
-                                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                    <span>{__('Acceso Total al Sistema (Todos los módulos)')}</span>
-                                                </li>
-                                                <li className="flex items-center gap-2 font-semibold text-slate-800">
-                                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                    <span>{plan.sucursales_incluidas ?? 1} {__('Sucursal incluida')}</span>
-                                                </li>
-                                                <li className="flex items-center gap-2 text-slate-700">
-                                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                    <span>{__('Sucursales adicionales:')} <strong className="text-slate-900">${plan.precio_sucursal_extra_mensual ?? 84.72} MXN ({__('$5 USD')})/{__('mes')}</strong></span>
-                                                </li>
-                                                <li className="flex items-center gap-2">
-                                                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                    <span>{__('Soporte técnico y actualizaciones continuas')}</span>
-                                                </li>
-                                            </ul>
-                                        </div>
-
-                                        <Link
-                                            href={`/register?plan_id=${plan.id}`}
-                                            className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all block mt-6 ${isPopular
-                                                ? 'bg-gradient-to-r from-[#ff5a00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25'
-                                                : 'bg-slate-100 hover:bg-slate-200 text-[#08264e]'
-                                                }`}
-                                        >
-                                            {isFree ? __('Probar 7 Días Gratis') : `${__('Elegir')} ${__(plan.nombre)}`}
-                                        </Link>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
                     </div>
                 </section>
 

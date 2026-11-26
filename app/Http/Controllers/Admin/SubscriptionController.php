@@ -149,8 +149,14 @@ class SubscriptionController extends Controller
             ]);
         }
 
-        $cicloMeses = (int) ($request->input('ciclo_meses') ?: 1);
         $plan = $request->plan_id ? SubscriptionPlan::find($request->plan_id) : SubscriptionPlan::getPlanRenovacionDefault();
+        if ($plan && ! $plan->hasAvailableSlotsForEmpresa($empresa->id)) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => 'Este plan ha alcanzado su límite de cupos disponibles o ya caducó.',
+            ]);
+        }
+        $cicloMeses = (int) ($request->input('ciclo_meses') ?: ($plan?->ciclo_meses ?: 1));
         $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
         if ($hasActivePaidSubscription) {
@@ -207,10 +213,13 @@ class SubscriptionController extends Controller
             'sucursales_contratadas' => 'required|integer|min:1',
         ]);
 
-        $cicloMeses = (int) ($request->input('ciclo_meses') ?: 1);
         $empresa = $request->user()->empresa;
         $planId = $request->input('plan_id');
         $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
+        if ($plan && ! $plan->hasAvailableSlotsForEmpresa($empresa->id)) {
+            return response()->json(['error' => 'Este plan ha alcanzado su límite de cupos disponibles o ya caducó.'], 422);
+        }
+        $cicloMeses = (int) ($request->input('ciclo_meses') ?: ($plan?->ciclo_meses ?: 1));
         $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
         if ($hasActivePaidSubscription) {
@@ -417,9 +426,12 @@ class SubscriptionController extends Controller
             ], 400);
         }
 
-        $cicloMeses = (int) ($request->input('ciclo_meses') ?: 1);
         $planId = $request->input('plan_id');
         $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
+        if ($plan && ! $plan->hasAvailableSlotsForEmpresa($empresa->id)) {
+            return response()->json(['error' => 'Este plan ha alcanzado su límite de cupos disponibles o ya caducó.'], 422);
+        }
+        $cicloMeses = (int) ($request->input('ciclo_meses') ?: ($plan?->ciclo_meses ?: 1));
         $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
         if ($hasActivePaidSubscription) {

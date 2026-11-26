@@ -25,6 +25,9 @@ class SubscriptionPlan extends Model
         'badge_promocion',
         'destacado',
         'orden',
+        'ciclo_meses',
+        'max_suscripciones',
+        'fecha_expiracion',
         'precio_sucursal_extra_mensual',
         'sucursales_incluidas',
         'modulos_incluidos',
@@ -41,6 +44,9 @@ class SubscriptionPlan extends Model
         'meses_duracion_promocion' => 'integer',
         'destacado' => 'boolean',
         'orden' => 'integer',
+        'ciclo_meses' => 'integer',
+        'max_suscripciones' => 'integer',
+        'fecha_expiracion' => 'datetime',
         'precio_sucursal_extra_mensual' => 'float',
         'sucursales_incluidas' => 'integer',
         'modulos_incluidos' => 'array',
@@ -87,6 +93,72 @@ class SubscriptionPlan extends Model
     }
 
     /**
+     * Indica si el plan superó su fecha de caducidad.
+     */
+    public function isExpired(): bool
+    {
+        return $this->fecha_expiracion !== null && now()->gt($this->fecha_expiracion);
+    }
+
+    /**
+     * Cantidad de empresas únicas con suscripción activa o en prueba en este plan.
+     */
+    public function activeSubscriptionsCount(): int
+    {
+        return (int) $this->subscriptions()
+            ->whereIn('estado', ['active', 'trial'])
+            ->distinct('empresa_id')
+            ->count('empresa_id');
+    }
+
+    /**
+     * Cupos disponibles restantes (null si es ilimitado).
+     */
+    public function remainingSlots(): ?int
+    {
+        if ($this->max_suscripciones === null) {
+            return null;
+        }
+
+        return max(0, $this->max_suscripciones - $this->activeSubscriptionsCount());
+    }
+
+    /**
+     * Verifica si el plan está vigente y tiene cupo para la empresa indicada.
+     */
+    public function hasAvailableSlotsForEmpresa(?int $empresaId = null): bool
+    {
+        if (! $this->activo || $this->isExpired()) {
+            return false;
+        }
+
+        if ($this->max_suscripciones === null) {
+            return true;
+        }
+
+        if ($empresaId !== null && $this->subscriptions()
+            ->where('empresa_id', $empresaId)
+            ->whereIn('estado', ['active', 'trial'])
+            ->exists()) {
+            return true;
+        }
+
+        return $this->activeSubscriptionsCount() < $this->max_suscripciones;
+    }
+
+    /**
+     * Scope de planes activos y no caducados.
+     */
+    public function scopeAvailable($query)
+    {
+        return $query->where('activo', true)
+            ->where(function ($q) {
+                $q->whereNull('fecha_expiracion')
+                    ->orWhere('fecha_expiracion', '>', now());
+            });
+    }
+
+    /**
      * Garantizar que existan los planes oficiales.
      */
     public static function ensureDefaultPlansExist(): void
@@ -97,15 +169,27 @@ class SubscriptionPlan extends Model
     }
 
     /**
-     * Obtener el plan de renovación por defecto (plan de pago activo).
+     * Obtener el plan de renovación por defecto (plan de pago activo y con cupo).
      */
     public static function getPlanRenovacionDefault(): ?self
     {
         self::ensureDefaultPlansExist();
 
-        return self::where('activo', true)
-            ->where('precio_regular_mensual', '>', 0)
-            ->first()
+        $candidates = self::available()
+            ->where(function ($q) {
+                $q->where('precio_regular_mensual', '>', 0)
+                    ->orWhere('precio_12_meses', '>', 0);
+            })
+            ->orderBy('orden', 'asc')
+            ->get();
+
+        foreach ($candidates as $candidate) {
+            if ($candidate->hasAvailableSlotsForEmpresa()) {
+                return $candidate;
+            }
+        }
+
+        return $candidates->first()
             ?? self::where('nombre', '!=', 'Plan Prueba')->first()
             ?? self::first();
     }
@@ -116,15 +200,23 @@ class SubscriptionPlan extends Model
     public function calcularPrecio(int $meses = 1, int $totalSucursales = 1, bool $aplicarPromo = false): float
     {
         $meses = max(1, $meses);
-        $precioUnitario = ($aplicarPromo && $this->tiene_promocion && $this->precio_promocional_mensual > 0)
-            ? $this->precio_promocional_mensual
-            : ($this->tiene_promocion && $this->precio_promocional_mensual > 0 ? $this->precio_promocional_mensual : ($this->precio_regular_mensual ?: 149.00));
+        $ciclo = (int) ($this->ciclo_meses ?? 1);
 
-        $basePrice = $precioUnitario * $meses;
+        if ($ciclo === 12 && $this->precio_12_meses > 0 && ($meses === 12 || $meses === 1)) {
+            $basePrice = (float) $this->precio_12_meses;
+            $mesesExtra = 12;
+        } else {
+            $precioUnitario = ($aplicarPromo && $this->tiene_promocion && $this->precio_promocional_mensual > 0)
+                ? $this->precio_promocional_mensual
+                : ($this->tiene_promocion && $this->precio_promocional_mensual > 0 ? $this->precio_promocional_mensual : ($this->precio_regular_mensual ?: 149.00));
+
+            $basePrice = $precioUnitario * $meses;
+            $mesesExtra = $meses;
+        }
 
         $precioExtra = $this->precio_sucursal_extra_mensual > 0 ? $this->precio_sucursal_extra_mensual : 84.72;
         $sucursalesExtra = max(0, $totalSucursales - ($this->sucursales_incluidas ?: 1));
-        $costoSucursalesExtra = $sucursalesExtra * $precioExtra * $meses;
+        $costoSucursalesExtra = $sucursalesExtra * $precioExtra * $mesesExtra;
 
         return round($basePrice + $costoSucursalesExtra, 2);
     }

@@ -12,11 +12,11 @@ class SubscriptionPlansSeeder extends Seeder
      */
     public function run(): void
     {
-        // Desactivar cualquier plan antiguo que no corresponda al plan único oficial
-        SubscriptionPlan::whereNotIn('nombre', ['Plan Prueba', 'Plan Mensual'])
+        // Desactivar cualquier plan antiguo que no corresponda a los planes oficiales
+        SubscriptionPlan::whereNotIn('nombre', ['Plan Prueba', 'Plan Mensual', 'Plan Anual'])
             ->update(['activo' => false]);
 
-        // 0. Plan Prueba (7 Días Gratis)
+        // 0. Plan Prueba (7 Días Gratis - inactivo mientras dure el lanzamiento anual)
         SubscriptionPlan::updateOrCreate(
             ['nombre' => 'Plan Prueba'],
             [
@@ -28,6 +28,9 @@ class SubscriptionPlansSeeder extends Seeder
                 'badge_promocion' => 'Prueba Gratuita',
                 'destacado' => false,
                 'orden' => 0,
+                'ciclo_meses' => 0,
+                'max_suscripciones' => null,
+                'fecha_expiracion' => null,
                 'precio_3_meses' => 0.00,
                 'precio_6_meses' => 0.00,
                 'precio_12_meses' => 0.00,
@@ -38,7 +41,32 @@ class SubscriptionPlansSeeder extends Seeder
             ]
         );
 
-        // 1. Plan Mensual Único ($149 MXN / mes)
+        // 1. Plan Anual de Lanzamiento ($1,000 MXN / año - máximo 5 negocios mexicanos)
+        SubscriptionPlan::updateOrCreate(
+            ['nombre' => 'Plan Anual'],
+            [
+                'descripcion' => 'Buscamos 5 negocios mexicanos que quieran ser nuestros primeros usuarios y participar en la evolución del sistema con sus ideas y sugerencias.',
+                'precio_regular_mensual' => 83.33,
+                'precio_promocional_mensual' => 83.33,
+                'tiene_promocion' => true,
+                'meses_duracion_promocion' => 12,
+                'badge_promocion' => '🔥 PRECIO EXCLUSIVO DE LANZAMIENTO',
+                'destacado' => true,
+                'orden' => 1,
+                'ciclo_meses' => 12,
+                'max_suscripciones' => 5,
+                'fecha_expiracion' => null,
+                'precio_3_meses' => 1000.00,
+                'precio_6_meses' => 1000.00,
+                'precio_12_meses' => 1000.00,
+                'precio_sucursal_extra_mensual' => 84.72,
+                'sucursales_incluidas' => 1,
+                'modulos_incluidos' => ['todos'],
+                'activo' => true,
+            ]
+        );
+
+        // 2. Plan Mensual Estándar ($149 MXN / mes)
         SubscriptionPlan::updateOrCreate(
             ['nombre' => 'Plan Mensual'],
             [
@@ -48,8 +76,11 @@ class SubscriptionPlansSeeder extends Seeder
                 'tiene_promocion' => false,
                 'meses_duracion_promocion' => 0,
                 'badge_promocion' => null,
-                'destacado' => true,
-                'orden' => 1,
+                'destacado' => false,
+                'orden' => 2,
+                'ciclo_meses' => 1,
+                'max_suscripciones' => null,
+                'fecha_expiracion' => null,
                 'precio_3_meses' => 149.00,
                 'precio_6_meses' => 149.00,
                 'precio_12_meses' => 149.00,

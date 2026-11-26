@@ -33,7 +33,13 @@ class SubscriptionPlanController extends Controller
         }])
         ->orderBy('orden', 'asc')
         ->orderBy('id', 'asc')
-        ->get();
+        ->get()
+        ->map(function (SubscriptionPlan $plan) {
+            $plan->setAttribute('cupos_ocupados', $plan->activeSubscriptionsCount());
+            $plan->setAttribute('cupos_restantes', $plan->remainingSlots());
+            $plan->setAttribute('esta_expirado', $plan->isExpired());
+            return $plan;
+        });
 
         // Estadísticas para el header del módulo
         $totalPlanes = $planes->count();
@@ -65,6 +71,9 @@ class SubscriptionPlanController extends Controller
             'badge_promocion' => 'nullable|string|max:100',
             'destacado' => 'boolean',
             'orden' => 'nullable|integer|min:0',
+            'ciclo_meses' => 'nullable|integer|min:0|max:36',
+            'max_suscripciones' => 'nullable|integer|min:1|max:10000',
+            'fecha_expiracion' => 'nullable|date',
             'precio_3_meses' => 'nullable|numeric|min:0',
             'precio_6_meses' => 'nullable|numeric|min:0',
             'precio_12_meses' => 'nullable|numeric|min:0',
@@ -117,6 +126,9 @@ class SubscriptionPlanController extends Controller
             'badge_promocion' => 'nullable|string|max:100',
             'destacado' => 'boolean',
             'orden' => 'nullable|integer|min:0',
+            'ciclo_meses' => 'nullable|integer|min:0|max:36',
+            'max_suscripciones' => 'nullable|integer|min:1|max:10000',
+            'fecha_expiracion' => 'nullable|date',
             'precio_3_meses' => 'nullable|numeric|min:0',
             'precio_6_meses' => 'nullable|numeric|min:0',
             'precio_12_meses' => 'nullable|numeric|min:0',
