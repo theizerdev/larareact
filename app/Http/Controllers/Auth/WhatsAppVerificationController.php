@@ -97,7 +97,7 @@ class WhatsAppVerificationController extends Controller
         $checkoutPlanId = session()->pull('checkout_plan_id');
         $checkoutMethod = session()->pull('checkout_payment_method');
         if ($checkoutPlanId) {
-            return redirect()->route('subscription.index', [
+            return redirect()->route('admin.subscription.index', [
                 'plan_id' => $checkoutPlanId,
                 'method' => $checkoutMethod,
             ])->with('status', __('¡WhatsApp verificado! Completa el pago de tu plan para activar tu cuenta y vincular tu QR.'));

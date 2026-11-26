@@ -3634,7 +3634,7 @@ export default function WhatsAppIntegration({
 
                 {/* ── MODAL COMPRA DE MENSAJES WHATSAPP (MÍN. 100) ── */}
                 <Dialog open={topupOpen} onOpenChange={setTopupOpen}>
-                    <DialogContent className="sm:max-w-md">
+                    <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>Comprar Paquete de Mensajes WhatsApp</DialogTitle>
                             <DialogDescription className="text-xs">
@@ -3645,7 +3645,7 @@ export default function WhatsAppIntegration({
                         <form onSubmit={handleTopupSubmit} className="space-y-4">
                             <div className="space-y-2">
                                 <Label className="text-xs font-semibold">Paquetes rápidos</Label>
-                                <div className="grid grid-cols-4 gap-2">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                     {(wallet_summary?.packages || [100, 500, 1000, 5000]).map((pkg) => (
                                         <Button
                                             key={pkg}
@@ -3660,7 +3660,7 @@ export default function WhatsAppIntegration({
                                     ))}
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                     <Label className="text-xs font-semibold">Cantidad de mensajes</Label>
                                     <Input
@@ -3679,7 +3679,7 @@ export default function WhatsAppIntegration({
                                     </div>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                     <Label className="text-xs font-semibold">Método de pago</Label>
                                     <Select value={topupMethod} onValueChange={setTopupMethod}>

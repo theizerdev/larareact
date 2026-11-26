@@ -263,7 +263,7 @@ export default function Welcome() {
                                     </button>
 
                                     {cartOpen && (
-                                        <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-2xl p-4 z-50 space-y-3">
+                                        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-72 rounded-2xl bg-white border border-slate-200 shadow-2xl p-4 z-50 space-y-3">
                                             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                                                 <span className="text-xs font-extrabold uppercase tracking-wider text-[#08264e]">
                                                     {__('Tu Carrito')}

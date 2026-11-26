@@ -15,6 +15,8 @@ class SubscriptionPayment extends Model
     protected $fillable = [
         'subscription_id',
         'plan_id',
+        'tipo_pago',
+        'mensajes_comprados',
         'empresa_id',
         'user_id',
         'monto',
@@ -31,6 +33,7 @@ class SubscriptionPayment extends Model
 
     protected $casts = [
         'monto' => 'float',
+        'mensajes_comprados' => 'integer',
         'ciclo_meses' => 'integer',
         'sucursales_contratadas' => 'integer',
         'aprobado_at' => 'datetime',

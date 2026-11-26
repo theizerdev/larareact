@@ -1058,13 +1058,13 @@ export default function AdminSaasLayout({
                     {/* Top bar */}
                     <header
                         className={cn(
-                            'h-16 items-center justify-between border-b px-6 transition-all flex',
+                            'h-16 items-center justify-between gap-2 border-b px-3 sm:px-6 transition-all flex min-w-0 max-w-full overflow-hidden',
                             settings.navbarType === 'sticky' && 'sticky top-0 z-30 bg-background/80 backdrop-blur-xl',
                             settings.navbarType === 'static' && 'relative bg-background',
                             settings.navbarType === 'hidden' && 'hidden'
                         )}
                     >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                             <Button
                                 variant="ghost"
                                 size="icon"
