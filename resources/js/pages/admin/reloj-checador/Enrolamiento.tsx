@@ -810,7 +810,7 @@ function EnrolamientoKiosko({ empleado }: Props) {
                                 />
                                 <DatoTarjeta
                                     etiqueta="N° de Tarjeta"
-                                    valor={`#${empleado.codigo_anterior}`}
+                                    valor={empleado.codigo_anterior || '—'}
                                     mono
                                 />
                                 <DatoTarjeta
