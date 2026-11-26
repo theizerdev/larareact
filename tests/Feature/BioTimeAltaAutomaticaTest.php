@@ -110,6 +110,7 @@ class BioTimeAltaAutomaticaTest extends TestCase
         $this->reloj([$this->ana(['last_name' => 'López Ruiz', 'card_no' => '778']), $this->ana(['id' => 11, 'emp_code' => '101', 'first_name' => 'Beto', 'card_no' => '888', 'mobile' => null])]);
         $this->sync();
         $this->assertSame(2, Empleado::withoutTenant()->count());
+        $this->assertSame(1, User::withoutTenant()->count(), 'La sincronización de BioTime no debe crear usuarios.');
     }
 
     public function test_rellena_lo_vacio_de_empleados_ya_vinculados_y_no_toca_otras_empresas(): void

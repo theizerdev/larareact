@@ -245,7 +245,6 @@ class BioTimeSyncService
             $resultado += [
                 'created' => $alta['creados'],
                 'updated' => $alta['actualizados'],
-                'accounts' => $alta['cuentas'],
                 'skipped' => count($alta['omitidos']),
                 'omitidos_motivos' => $alta['omitidos'],
                 'diag' => $alta['diag'] ?? '',
@@ -253,9 +252,6 @@ class BioTimeSyncService
 
             foreach ($alta['omitidos'] as $motivo) {
                 Log::channel('biotime')->warning("BioTime sincronización omitida: {$motivo}", ['empresa_id' => $empresa->id]);
-            }
-            foreach ($alta['sin_cuenta'] as $motivo) {
-                Log::channel('biotime')->info("BioTime cuenta de usuario no creada: {$motivo}", ['empresa_id' => $empresa->id]);
             }
         }
 

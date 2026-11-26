@@ -8,7 +8,6 @@ use App\Models\Empleado;
 use App\Models\Empresa;
 use App\Models\Sucursal;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -100,44 +99,21 @@ class BioTimeCrearEmpleadosTest extends TestCase
         $this->assertSame(0, Empleado::withoutTenant()->count());
     }
 
-    public function test_da_cuenta_sin_rol_y_manda_enlace_para_definir_contrasena(): void
+    public function test_no_crea_cuentas_de_usuario_ni_envia_correos_al_sincronizar_empleados(): void
     {
         Notification::fake();
+        $usuariosIniciales = User::withoutTenant()->count();
+
         $this->delReloj('01', 'Francisco', 'Perez', ['email' => 'Paco@Ejemplo.com']);
+        $this->delReloj('02', 'Maria', 'Lopez', ['email' => 'maria@smurfitwestrock.com']);
 
         $this->artisan('biotime:crear-empleados', ['--empresa' => $this->empresa->id])->assertSuccessful();
 
-        $empleado = Empleado::withoutTenant()->where('documento_identidad', '01')->firstOrFail();
-        $user = User::withoutTenant()->findOrFail($empleado->user_id);
-
-        $this->assertSame('paco@ejemplo.com', $user->email);
-        $this->assertSame('Francisco Perez', $user->name);
-        $this->assertSame($this->empresa->id, (int) $user->empresa_id);
-        $this->assertTrue($user->getRoleNames()->isEmpty());
-        Notification::assertSentTo($user, ResetPassword::class);
-
-        // Reejecutar no crea otra cuenta ni vuelve a mandar el correo.
-        $this->artisan('biotime:crear-empleados', ['--empresa' => $this->empresa->id])->assertSuccessful();
-        $this->assertSame(1, User::withoutTenant()->where('email', 'paco@ejemplo.com')->count());
-        Notification::assertSentToTimes($user, ResetPassword::class, 1);
-    }
-
-    public function test_sin_correo_o_con_correo_ajeno_no_crea_cuenta(): void
-    {
-        Notification::fake();
-        $ajeno = User::factory()->create(['email' => 'admin@ejemplo.com', 'empresa_id' => $this->empresa->id]);
-        $this->delReloj('02', 'Sin', 'Correo');
-        $this->delReloj('03', 'Correo', 'Ajeno', ['email' => 'admin@ejemplo.com']);
-        $this->delReloj('04', 'Del', 'Demo', ['email' => 'colaborador04@demo.invalid']);
-
-        $this->artisan('biotime:crear-empleados', ['--empresa' => $this->empresa->id])->assertSuccessful();
-
-        // El colaborador sí se crea; la cuenta no.
-        foreach (['02', '03', '04'] as $codigo) {
+        $this->assertSame($usuariosIniciales, User::withoutTenant()->count());
+        foreach (['01', '02'] as $codigo) {
             $this->assertNull(Empleado::withoutTenant()->where('documento_identidad', $codigo)->firstOrFail()->user_id, $codigo);
         }
-        $this->assertSame(0, User::withoutTenant()->where('email', 'colaborador04@demo.invalid')->count());
-        Notification::assertNothingSentTo($ajeno);
+        Notification::assertNothingSent();
     }
 
     private function delReloj(string $empCode, string $nombres, string $apellidos, array $extra = []): BiotimeEmpleado
