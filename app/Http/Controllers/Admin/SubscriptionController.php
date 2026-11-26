@@ -35,7 +35,9 @@ class SubscriptionController extends Controller
             ->first();
 
         $requestedPlanId = $request->integer('plan_id');
-        $activeSubPlan = ($suscripcionActiva?->plan && $suscripcionActiva->plan->activo)
+        $activeSubPlan = ($suscripcionActiva?->plan
+            && $suscripcionActiva->plan->activo
+            && ((float) $suscripcionActiva->plan->precio_regular_mensual > 0 || (float) $suscripcionActiva->plan->precio_12_meses > 0))
             ? $planes->firstWhere('id', $suscripcionActiva->plan->id)
             : null;
 
@@ -106,6 +108,7 @@ class SubscriptionController extends Controller
         ];
 
         $latestSub = $empresa->getLatestSubscriptionRecord();
+        $hasActivePaidSubscription = $this->hasActivePaidSubscription($empresa, $latestSub);
 
         return inertia('admin/subscription/index', [
             'empresa' => [
@@ -121,6 +124,7 @@ class SubscriptionController extends Controller
                 'max_sucursales' => $latestSub?->max_sucursales ?? $empresa->max_sucursales ?? 1,
                 'sucursales_activas' => $totalSucursales,
             ],
+            'hasActivePaidSubscription' => $hasActivePaidSubscription,
             'plan' => $plan,
             'planes' => $planes,
             'opcionesPrecios' => $opcionesPrecios,
@@ -132,6 +136,146 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Determina si la empresa tiene una suscripción paga vigente (no exenta y no vencida).
+     */
+    protected function hasActivePaidSubscription(Empresa $empresa, ?Subscription $latestSub = null): bool
+    {
+        if ($empresa->isExemptFromSubscription()) {
+            return false;
+        }
+
+        $sub = $latestSub ?? $empresa->getLatestSubscriptionRecord();
+
+        return $sub !== null
+            && $sub->estado === 'active'
+            && $sub->fecha_vencimiento !== null
+            && now()->lte($sub->fecha_vencimiento);
+    }
+
+    /**
+     * Normaliza la duración en meses según el ciclo del plan seleccionado.
+     */
+    protected function normalizeCicloMeses(?SubscriptionPlan $plan, int $requestedMonths): int
+    {
+        $raw = max(1, $requestedMonths);
+
+        if ($plan && (int) $plan->ciclo_meses === 12) {
+            $periodos = ($raw <= 12) ? 1 : min(3, max(1, (int) round($raw / 12)));
+
+            return 12 * $periodos;
+        }
+
+        return min(24, $raw);
+    }
+
+    /**
+     * Calcula cotización unificada para adelanto de mensualidad, prorrateo de sucursales o renovación.
+     *
+     * @return array{
+     *   has_active_paid: bool,
+     *   modo_pago: string,
+     *   tipo_pago: string,
+     *   ciclo_meses: int,
+     *   sucursales_contratadas: int,
+     *   nuevas_sucursales: int,
+     *   dias_restantes: int,
+     *   monto_plan_ciclo: float,
+     *   monto_prorrateo: float,
+     *   monto: float,
+     *   nota: ?string
+     * }
+     */
+    protected function calculateSubscriptionQuote(
+        Empresa $empresa,
+        ?SubscriptionPlan $plan,
+        int $requestedMonths,
+        int $sucursalesContratadas,
+        ?string $requestedMode = null
+    ): array {
+        $latestSub = $empresa->getLatestSubscriptionRecord();
+        $hasActivePaid = $this->hasActivePaidSubscription($empresa, $latestSub);
+        $currentMaxSucursales = max(1, (int) ($latestSub?->max_sucursales ?? $empresa->max_sucursales ?? 1));
+        $sucursalesFinal = $hasActivePaid
+            ? max($currentMaxSucursales, $sucursalesContratadas)
+            : max(1, $sucursalesContratadas);
+
+        $cicloMeses = $this->normalizeCicloMeses($plan, $requestedMonths);
+        $diasRestantes = max(1, $empresa->dias_restantes_suscripcion);
+        $nuevasSucursales = max(0, $sucursalesFinal - $currentMaxSucursales);
+
+        if ($hasActivePaid && $requestedMode === 'proration') {
+            $montoProrrateo = $nuevasSucursales > 0
+                ? ($plan
+                    ? $plan->calcularProrrateoSucursalExtra($nuevasSucursales, $diasRestantes)
+                    : round($nuevasSucursales * (84.72 / 30) * $diasRestantes, 2))
+                : 0.00;
+
+            return [
+                'has_active_paid' => true,
+                'modo_pago' => 'proration',
+                'tipo_pago' => 'proration',
+                'ciclo_meses' => 0,
+                'sucursales_contratadas' => $sucursalesFinal,
+                'nuevas_sucursales' => $nuevasSucursales,
+                'dias_restantes' => $diasRestantes,
+                'monto_plan_ciclo' => 0.00,
+                'monto_prorrateo' => round($montoProrrateo, 2),
+                'monto' => round($montoProrrateo, 2),
+                'nota' => "Prorrateo por {$diasRestantes} día(s) restante(s): {$nuevasSucursales} sucursal(es) extra.",
+            ];
+        }
+
+        $montoPlanCiclo = $plan
+            ? $plan->calcularPrecio($cicloMeses, $sucursalesFinal)
+            : round((149.00 + (max(0, $sucursalesFinal - 1) * 84.72)) * $cicloMeses, 2);
+
+        if ($hasActivePaid) {
+            $montoProrrateo = $nuevasSucursales > 0
+                ? ($plan
+                    ? $plan->calcularProrrateoSucursalExtra($nuevasSucursales, $diasRestantes)
+                    : round($nuevasSucursales * (84.72 / 30) * $diasRestantes, 2))
+                : 0.00;
+
+            $montoTotal = round($montoPlanCiclo + $montoProrrateo, 2);
+            $mesLabel = $cicloMeses === 1 ? '1 mes' : "{$cicloMeses} meses";
+            $nota = "Pago adelantado de {$mesLabel} ({$sucursalesFinal} sucursal(es))";
+            if ($nuevasSucursales > 0) {
+                $nota .= " + prorrateo {$nuevasSucursales} sucursal(es) extra ({$diasRestantes}d)";
+            }
+
+            return [
+                'has_active_paid' => true,
+                'modo_pago' => 'advance',
+                'tipo_pago' => 'advance',
+                'ciclo_meses' => $cicloMeses,
+                'sucursales_contratadas' => $sucursalesFinal,
+                'nuevas_sucursales' => $nuevasSucursales,
+                'dias_restantes' => $diasRestantes,
+                'monto_plan_ciclo' => round($montoPlanCiclo, 2),
+                'monto_prorrateo' => round($montoProrrateo, 2),
+                'monto' => $montoTotal,
+                'nota' => $nota . '.',
+            ];
+        }
+
+        $mesLabel = $cicloMeses === 1 ? '1 mes' : "{$cicloMeses} meses";
+
+        return [
+            'has_active_paid' => false,
+            'modo_pago' => 'renewal',
+            'tipo_pago' => 'subscription',
+            'ciclo_meses' => $cicloMeses,
+            'sucursales_contratadas' => $sucursalesFinal,
+            'nuevas_sucursales' => 0,
+            'dias_restantes' => $diasRestantes,
+            'monto_plan_ciclo' => round($montoPlanCiclo, 2),
+            'monto_prorrateo' => 0.00,
+            'monto' => round($montoPlanCiclo, 2),
+            'nota' => $cicloMeses > 1 ? "Renovación adelantada por {$mesLabel} ({$sucursalesFinal} sucursal(es))." : null,
+        ];
+    }
+
+    /**
      * Vista de bloqueo por suscripción vencida.
      */
     public function expired()
@@ -140,14 +284,15 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Registrar solicitud de renovación o pago.
+     * Registrar solicitud de renovación, adelanto de mensualidad o prorrateo de sucursales.
      */
     public function renew(Request $request)
     {
         $request->validate([
             'plan_id' => 'nullable|exists:subscription_plans,id',
-            'ciclo_meses' => 'nullable|integer|min:1',
+            'ciclo_meses' => 'nullable|integer|min:1|max:36',
             'sucursales_contratadas' => 'required|integer|min:1',
+            'modo_pago' => 'nullable|in:advance,proration,renewal',
             'metodo_pago' => 'required|string',
             'referencia_pago' => 'nullable|string|max:100',
             'comprobante' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
@@ -171,23 +316,21 @@ class SubscriptionController extends Controller
                 'message' => 'Este plan ha alcanzado su límite de cupos disponibles o ya caducó.',
             ]);
         }
-        $cicloMeses = (int) ($request->input('ciclo_meses') ?: ($plan?->ciclo_meses ?: 1));
-        $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
-        if ($hasActivePaidSubscription) {
-            $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
-            $diasRestantes = max(1, $empresa->dias_restantes_suscripcion);
-            $montoCalculado = $plan
-                ? $plan->calcularProrrateoSucursalExtra($nuevasSucursales, $diasRestantes)
-                : round($nuevasSucursales * (84.72 / 30) * $diasRestantes, 2);
-            $cicloPago = 1;
-            $notaProrrateo = "Prorrateo por {$diasRestantes} día(s) restante(s): {$nuevasSucursales} sucursal(es) extra.";
-        } else {
-            $montoCalculado = $plan
-                ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas)
-                : (149.00 + (max(0, (int) $request->sucursales_contratadas - 1) * 84.72));
-            $cicloPago = $cicloMeses;
-            $notaProrrateo = null;
+        $requestedMonths = (int) ($request->input('ciclo_meses') ?: ($plan?->ciclo_meses ?: 1));
+        $quote = $this->calculateSubscriptionQuote(
+            $empresa,
+            $plan,
+            $requestedMonths,
+            (int) $request->sucursales_contratadas,
+            $request->input('modo_pago')
+        );
+
+        if ($quote['monto'] <= 0) {
+            return back()->with('notification', [
+                'type' => 'error',
+                'message' => 'Para agregar sucursales por prorrateo debes incrementar al menos 1 sucursal adicional, o selecciona "Adelantar Mensualidad".',
+            ]);
         }
 
         $comprobantePath = null;
@@ -195,15 +338,16 @@ class SubscriptionController extends Controller
             $comprobantePath = $request->file('comprobante')->store('comprobantes_suscripcion', 'public');
         }
 
-        $notasCompletas = trim(($request->notas ? $request->notas . " | " : '') . ($notaProrrateo ?? ''));
+        $notasCompletas = trim(($request->notas ? $request->notas . ' | ' : '') . ($quote['nota'] ?? ''));
 
         SubscriptionPayment::create([
             'empresa_id' => $empresa->id,
             'plan_id' => $plan?->id,
+            'tipo_pago' => $quote['tipo_pago'],
             'user_id' => $user->id,
-            'monto' => $montoCalculado,
-            'ciclo_meses' => $cicloPago,
-            'sucursales_contratadas' => (int) $request->sucursales_contratadas,
+            'monto' => $quote['monto'],
+            'ciclo_meses' => $quote['ciclo_meses'],
+            'sucursales_contratadas' => $quote['sucursales_contratadas'],
             'metodo_pago' => $request->metodo_pago,
             'referencia_pago' => $request->referencia_pago,
             'comprobante_path' => $comprobantePath,
@@ -211,9 +355,13 @@ class SubscriptionController extends Controller
             'notas' => $notasCompletas ?: null,
         ]);
 
+        $successMessage = $quote['tipo_pago'] === 'advance'
+            ? 'Tu pago adelantado ha sido registrado exitosamente. Al aprobarse se sumará a tu fecha de corte actual.'
+            : 'Tu comprobante de pago ha sido registrado exitosamente. Será revisado y aprobado a la brevedad posible.';
+
         return back()->with('notification', [
             'type' => 'success',
-            'message' => 'Tu comprobante de pago ha sido registrado exitosamente. Será revisado y aprobado a la brevedad posible.',
+            'message' => $successMessage,
         ]);
     }
 
@@ -287,8 +435,9 @@ class SubscriptionController extends Controller
     {
         $request->validate([
             'plan_id' => 'nullable|exists:subscription_plans,id',
-            'ciclo_meses' => 'nullable|integer|min:1',
+            'ciclo_meses' => 'nullable|integer|min:1|max:36',
             'sucursales_contratadas' => 'required|integer|min:1',
+            'modo_pago' => 'nullable|in:advance,proration,renewal',
         ]);
 
         $empresa = $request->user()->empresa;
@@ -297,18 +446,26 @@ class SubscriptionController extends Controller
         if ($plan && ! $plan->hasAvailableSlotsForEmpresa($empresa->id)) {
             return response()->json(['error' => 'Este plan ha alcanzado su límite de cupos disponibles o ya caducó.'], 422);
         }
-        $cicloMeses = (int) ($request->input('ciclo_meses') ?: ($plan?->ciclo_meses ?: 1));
-        $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
-        if ($hasActivePaidSubscription) {
-            $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
-            $diasRestantes = max(1, $empresa->dias_restantes_suscripcion);
-            $monto = $plan
-                ? $plan->calcularProrrateoSucursalExtra($nuevasSucursales, $diasRestantes)
-                : round($nuevasSucursales * (84.72 / 30) * $diasRestantes, 2);
-        } else {
-            $monto = $plan ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas) : (149.00 + (max(0, (int) $request->sucursales_contratadas - 1) * 84.72));
+        $requestedMonths = (int) ($request->input('ciclo_meses') ?: ($plan?->ciclo_meses ?: 1));
+        $quote = $this->calculateSubscriptionQuote(
+            $empresa,
+            $plan,
+            $requestedMonths,
+            (int) $request->sucursales_contratadas,
+            $request->input('modo_pago')
+        );
+
+        if ($quote['monto'] <= 0) {
+            return response()->json(['error' => 'Selecciona al menos 1 sucursal extra para prorrateo o usa Adelantar Mensualidad.'], 422);
         }
+
+        $monto = $quote['monto'];
+        $descPrefix = match ($quote['tipo_pago']) {
+            'advance' => "Adelanto ({$quote['ciclo_meses']} mes(es))",
+            'proration' => 'Prorrateo sucursales',
+            default => 'Renovación Suscripción',
+        };
 
         $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
         $clientId = $masterEmpresa->paypal_client_id;
@@ -339,7 +496,7 @@ class SubscriptionController extends Controller
                             'currency_code' => 'MXN',
                             'value' => number_format($monto, 2, '.', ''),
                         ],
-                        'description' => "Renovación Suscripción Fix Sale - {$plan?->nombre} ({$empresa->razon_social})",
+                        'description' => "{$descPrefix} Fix Sale - {$plan?->nombre} ({$empresa->razon_social})",
                     ],
                 ],
             ]);
@@ -348,17 +505,17 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Capturar orden de PayPal completada y activar la suscripción inmediatamente.
+     * Capturar orden de PayPal completada y activar o adelantar la suscripción inmediatamente.
      */
     public function capturePaypalOrder(Request $request, $orderId)
     {
         $request->validate([
             'plan_id' => 'nullable|exists:subscription_plans,id',
-            'ciclo_meses' => 'nullable|integer|min:1',
+            'ciclo_meses' => 'nullable|integer|min:1|max:36',
             'sucursales_contratadas' => 'required|integer|min:1',
+            'modo_pago' => 'nullable|in:advance,proration,renewal',
         ]);
 
-        $cicloMeses = (int) ($request->input('ciclo_meses') ?: 1);
         $empresa = $request->user()->empresa;
         $masterEmpresa = Empresa::withoutGlobalScopes()->find(1) ?? $empresa;
         $clientId = $masterEmpresa->paypal_client_id;
@@ -388,90 +545,38 @@ class SubscriptionController extends Controller
 
         if ($captureResponse->successful() && isset($data['status']) && $data['status'] === 'COMPLETED') {
             $transactionId = $data['purchase_units'][0]['payments']['captures'][0]['id'] ?? $orderId;
-            $planId = $request->input('plan_id');
-            $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
-            $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
+            $existing = SubscriptionPayment::where('referencia_pago', $transactionId)->first();
 
-            if ($hasActivePaidSubscription) {
-                $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
-                $diasRestantes = max(1, $empresa->dias_restantes_suscripcion);
-                $monto = $plan
-                    ? $plan->calcularProrrateoSucursalExtra($nuevasSucursales, $diasRestantes)
-                    : round($nuevasSucursales * (84.72 / 30) * $diasRestantes, 2);
-            } else {
-                $monto = $plan ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas) : (149.00 + (max(0, (int) $request->sucursales_contratadas - 1) * 84.72));
+            if (! $existing && $empresa) {
+                $planId = $request->input('plan_id');
+                $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
+                $requestedMonths = (int) ($request->input('ciclo_meses') ?: ($plan?->ciclo_meses ?: 1));
+                $quote = $this->calculateSubscriptionQuote(
+                    $empresa,
+                    $plan,
+                    $requestedMonths,
+                    (int) $request->sucursales_contratadas,
+                    $request->input('modo_pago')
+                );
+
+                $notes = match ($quote['tipo_pago']) {
+                    'advance' => 'Pago adelantado vía PayPal: ' . ($quote['nota'] ?? ''),
+                    'proration' => 'Pago automático vía PayPal: ' . ($quote['nota'] ?? ''),
+                    default => 'Pago automático procesado exitosamente vía PayPal SDK Checkout.',
+                };
+
+                $this->activateSubscription(
+                    $empresa,
+                    $plan,
+                    $quote['ciclo_meses'],
+                    $quote['sucursales_contratadas'],
+                    $quote['monto'],
+                    'paypal',
+                    $transactionId,
+                    $notes,
+                    $quote['tipo_pago']
+                );
             }
-
-            // Extender fecha de expiración calculando desde la tabla subscriptions
-            $latestSub = $empresa->getLatestSubscriptionRecord();
-            if ($hasActivePaidSubscription) {
-                $nuevaFechaExpiracion = $latestSub?->fecha_vencimiento ?? $empresa->subscription_expires_at ?? now();
-            } else {
-                $baseDate = now();
-                if ($latestSub?->fecha_vencimiento && $latestSub->fecha_vencimiento->isFuture()) {
-                    $baseDate = $latestSub->fecha_vencimiento->copy();
-                }
-                $nuevaFechaExpiracion = $baseDate->addMonths($cicloMeses);
-            }
-
-            $empresaUpdate = [
-                'subscription_status' => 'active',
-                'subscription_expires_at' => $nuevaFechaExpiracion,
-                'max_sucursales' => max($empresa->max_sucursales ?? 1, (int) $request->sucursales_contratadas),
-            ];
-            if (! $hasActivePaidSubscription) {
-                $empresaUpdate['billing_cycle'] = (string) $cicloMeses;
-            }
-            $empresa->update($empresaUpdate);
-
-            $subscription = $empresa->getLatestSubscriptionRecord();
-            $nombrePlan = $hasActivePaidSubscription
-                ? ($subscription?->nombre_plan && $subscription->nombre_plan !== 'Sucursales Adicionales' ? $subscription->nombre_plan : ($plan?->nombre ?? 'Plan Mensual'))
-                : ($plan?->nombre ?? Subscription::getNombrePlanByCiclo($cicloMeses));
-
-            // Actualizar la suscripción existente de la empresa (NO crear registros duplicados)
-            if ($subscription) {
-                $subscription->update([
-                    'plan_id' => $plan?->id,
-                    'nombre_plan' => $nombrePlan,
-                    'ciclo_meses' => $hasActivePaidSubscription ? ($subscription->ciclo_meses ?: $cicloMeses) : $cicloMeses,
-                    'max_sucursales' => max($empresa->max_sucursales ?? 1, (int) $request->sucursales_contratadas),
-                    'monto_total' => $hasActivePaidSubscription ? ($subscription->monto_total ?: $monto) : $monto,
-                    'fecha_vencimiento' => $nuevaFechaExpiracion,
-                    'estado' => 'active',
-                ]);
-            } else {
-                $subscription = Subscription::create([
-                    'empresa_id' => $empresa->id,
-                    'plan_id' => $plan?->id,
-                    'nombre_plan' => $nombrePlan,
-                    'ciclo_meses' => $cicloMeses,
-                    'max_sucursales' => (int) $request->sucursales_contratadas,
-                    'monto_total' => $monto,
-                    'fecha_inicio' => now(),
-                    'fecha_vencimiento' => $nuevaFechaExpiracion,
-                    'estado' => 'active',
-                ]);
-            }
-
-            // Registrar Pago Aprobado enlazando subscription_id y plan_id
-            SubscriptionPayment::create([
-                'subscription_id' => $subscription->id,
-                'plan_id' => $plan?->id,
-                'empresa_id' => $empresa->id,
-                'user_id' => auth()->id(),
-                'monto' => $monto,
-                'ciclo_meses' => $hasActivePaidSubscription ? 1 : $cicloMeses,
-                'sucursales_contratadas' => (int) $request->sucursales_contratadas,
-                'metodo_pago' => 'paypal',
-                'referencia_pago' => $transactionId,
-                'estado' => 'approved',
-                'aprobado_por' => auth()->id(),
-                'aprobado_at' => now(),
-                'notas' => $hasActivePaidSubscription
-                    ? "Pago automático vía PayPal: Prorrateo de {$nuevasSucursales} sucursal(es) extra por {$diasRestantes} día(s) restante(s)."
-                    : 'Pago automático procesado exitosamente vía PayPal SDK Checkout.',
-            ]);
         }
 
         return response()->json($data, $captureResponse->status());
@@ -484,8 +589,9 @@ class SubscriptionController extends Controller
     {
         $request->validate([
             'plan_id' => 'nullable|exists:subscription_plans,id',
-            'ciclo_meses' => 'nullable|integer|min:1',
+            'ciclo_meses' => 'nullable|integer|min:1|max:36',
             'sucursales_contratadas' => 'required|integer|min:1',
+            'modo_pago' => 'nullable|in:advance,proration,renewal',
         ]);
 
         $user = $request->user();
@@ -509,27 +615,38 @@ class SubscriptionController extends Controller
         if ($plan && ! $plan->hasAvailableSlotsForEmpresa($empresa->id)) {
             return response()->json(['error' => 'Este plan ha alcanzado su límite de cupos disponibles o ya caducó.'], 422);
         }
-        $cicloMeses = (int) ($request->input('ciclo_meses') ?: ($plan?->ciclo_meses ?: 1));
-        $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
 
-        if ($hasActivePaidSubscription) {
-            $nuevasSucursales = max(0, (int) $request->sucursales_contratadas - ($empresa->max_sucursales ?? 1));
-            $diasRestantes = max(1, $empresa->dias_restantes_suscripcion);
-            $monto = $plan
-                ? $plan->calcularProrrateoSucursalExtra($nuevasSucursales, $diasRestantes)
-                : round($nuevasSucursales * (84.72 / 30) * $diasRestantes, 2);
-        } else {
-            $monto = $plan
-                ? $plan->calcularPrecio($cicloMeses, (int) $request->sucursales_contratadas)
-                : (149.00 + (max(0, (int) $request->sucursales_contratadas - 1) * 84.72));
+        $requestedMonths = (int) ($request->input('ciclo_meses') ?: ($plan?->ciclo_meses ?: 1));
+        $quote = $this->calculateSubscriptionQuote(
+            $empresa,
+            $plan,
+            $requestedMonths,
+            (int) $request->sucursales_contratadas,
+            $request->input('modo_pago')
+        );
+
+        if ($quote['monto'] <= 0) {
+            return response()->json([
+                'error' => 'Para agregar sucursales por prorrateo debes incrementar al menos 1 sucursal adicional, o selecciona "Adelantar Mensualidad".',
+            ], 422);
         }
 
-        if ($monto <= 0) {
-            $monto = 1.00;
-        }
-
+        $monto = $quote['monto'];
+        $cicloMeses = $quote['ciclo_meses'];
+        $sucursalesContratadas = $quote['sucursales_contratadas'];
         $nombrePlan = $plan?->nombre ?? "Plan {$cicloMeses} " . ($cicloMeses === 1 ? 'Mes' : 'Meses');
         $unitAmount = (int) round($monto * 100);
+
+        $productName = match ($quote['tipo_pago']) {
+            'advance' => "FixSale POS - Pago Adelantado: {$nombrePlan}",
+            'proration' => "FixSale POS - Prorrateo de Sucursales ({$nombrePlan})",
+            default => "FixSale POS - Suscripción: {$nombrePlan}",
+        };
+        $productDescription = match ($quote['tipo_pago']) {
+            'advance' => "Adelanto de {$cicloMeses} mes(es) para {$sucursalesContratadas} sucursal(es) - {$empresa->razon_social}",
+            'proration' => "Prorrateo por {$quote['dias_restantes']} día(s) para {$quote['nuevas_sucursales']} sucursal(es) adicional(es) - {$empresa->razon_social}",
+            default => "Renovación por {$cicloMeses} mes(es) para {$sucursalesContratadas} sucursal(es) - {$empresa->razon_social}",
+        };
 
         try {
             $sessionData = [
@@ -544,8 +661,8 @@ class SubscriptionController extends Controller
                             'currency' => 'mxn',
                             'unit_amount' => $unitAmount,
                             'product_data' => [
-                                'name' => "FixSale POS - Suscripción: {$nombrePlan}",
-                                'description' => "Renovación por {$cicloMeses} mes(es) para {$request->sucursales_contratadas} sucursal(es) - {$empresa->razon_social}",
+                                'name' => $productName,
+                                'description' => $productDescription,
                             ],
                         ],
                         'quantity' => 1,
@@ -556,7 +673,9 @@ class SubscriptionController extends Controller
                     'user_id' => (string) $user->id,
                     'plan_id' => (string) ($plan?->id ?? ''),
                     'ciclo_meses' => (string) $cicloMeses,
-                    'sucursales_contratadas' => (string) $request->sucursales_contratadas,
+                    'sucursales_contratadas' => (string) $sucursalesContratadas,
+                    'tipo_pago' => $quote['tipo_pago'],
+                    'modo_pago' => $quote['modo_pago'],
                     'monto' => (string) $monto,
                     'currency' => 'mxn',
                 ],
@@ -616,14 +735,20 @@ class SubscriptionController extends Controller
 
             if (($session['payment_status'] ?? '') === 'paid') {
                 $existing = SubscriptionPayment::where('referencia_pago', $sessionId)->first();
+                $meta = $session['metadata'] ?? [];
+                $tipoPago = $meta['tipo_pago'] ?? 'subscription';
+                $cicloMeses = (int) ($meta['ciclo_meses'] ?? 1);
 
                 if (! $existing && $empresa) {
-                    $meta = $session['metadata'] ?? [];
                     $planId = ! empty($meta['plan_id']) ? (int) $meta['plan_id'] : null;
-                    $cicloMeses = (int) ($meta['ciclo_meses'] ?? 1);
                     $sucursales = (int) ($meta['sucursales_contratadas'] ?? ($empresa->max_sucursales ?? 1));
                     $monto = ($session['amount_total'] ?? 0) / 100;
                     $plan = $planId ? SubscriptionPlan::find($planId) : SubscriptionPlan::getPlanRenovacionDefault();
+                    $notes = $tipoPago === 'advance'
+                        ? "Pago adelantado de {$cicloMeses} mes(es) procesado y acreditado exitosamente vía Stripe Checkout."
+                        : ($tipoPago === 'proration'
+                            ? 'Prorrateo de sucursal(es) extra procesado exitosamente vía Stripe Checkout.'
+                            : 'Pago automático procesado y acreditado exitosamente vía Stripe Checkout.');
 
                     $this->activateSubscription(
                         $empresa,
@@ -633,7 +758,8 @@ class SubscriptionController extends Controller
                         $monto,
                         'stripe',
                         $sessionId,
-                        'Pago automático procesado y acreditado exitosamente vía Stripe Checkout.'
+                        $notes,
+                        $tipoPago
                     );
                 }
 
@@ -642,7 +768,11 @@ class SubscriptionController extends Controller
                         ->with('status', '¡Pago con Stripe completado! Ahora verifica tu WhatsApp para vincular tu código QR.');
                 }
 
-                return $this->renderPopupClose(true, '¡Pago con Stripe completado exitosamente! Tu suscripción ha sido activada y extendida de forma inmediata.', $sessionId);
+                $popupMessage = $tipoPago === 'advance'
+                    ? "¡Pago adelantado con Stripe completado! Se han sumado {$cicloMeses} mes(es) adicionales a tu fecha de vencimiento."
+                    : '¡Pago con Stripe completado exitosamente! Tu suscripción ha sido activada y extendida de forma inmediata.';
+
+                return $this->renderPopupClose(true, $popupMessage, $sessionId);
             }
 
             return $this->renderPopupClose(false, 'El pago en Stripe está en proceso de confirmación.');
@@ -781,7 +911,83 @@ HTML;
     }
 
     /**
-     * Helper para activar y extender la suscripción luego de un pago aprobado (Stripe / PayPal / Aprobación manual).
+     * Helper central para aplicar la activación o extensión de una suscripción tras pago aprobado.
+     */
+    protected function applySubscriptionActivation(
+        Empresa $empresa,
+        ?SubscriptionPlan $plan,
+        int $cicloMeses,
+        int $sucursalesContratadas,
+        float $monto,
+        string $tipoPago = 'subscription'
+    ): Subscription {
+        $latestSub = $empresa->getLatestSubscriptionRecord();
+        $isProrationOnly = $tipoPago === 'proration';
+        $effectiveMonths = max(1, $cicloMeses);
+        $newMaxSucursales = max($empresa->max_sucursales ?? 1, $sucursalesContratadas);
+
+        if ($isProrationOnly) {
+            $nuevaFechaExpiracion = $latestSub?->fecha_vencimiento ?? $empresa->subscription_expires_at ?? now();
+        } else {
+            $baseDate = now();
+            if ($latestSub?->fecha_vencimiento && $latestSub->fecha_vencimiento->isFuture()) {
+                $baseDate = $latestSub->fecha_vencimiento->copy();
+            }
+            $nuevaFechaExpiracion = $baseDate->addMonths($effectiveMonths);
+        }
+
+        $empresaUpdate = [
+            'subscription_status' => 'active',
+            'subscription_expires_at' => $nuevaFechaExpiracion,
+            'max_sucursales' => $newMaxSucursales,
+        ];
+        if (! $isProrationOnly) {
+            $empresaUpdate['billing_cycle'] = $effectiveMonths . '_months';
+        }
+        $empresa->update($empresaUpdate);
+
+        $nombrePlan = $isProrationOnly
+            ? ($latestSub?->nombre_plan && $latestSub->nombre_plan !== 'Sucursales Adicionales' ? $latestSub->nombre_plan : ($plan?->nombre ?? 'Plan Mensual'))
+            : ($plan?->nombre ?? Subscription::getNombrePlanByCiclo($effectiveMonths));
+
+        $montoCicloPlan = $isProrationOnly
+            ? ($latestSub?->monto_total ?: $monto)
+            : ($plan ? $plan->calcularPrecio($effectiveMonths, $newMaxSucursales) : $monto);
+
+        if ($latestSub) {
+            $subUpdate = [
+                'plan_id' => $plan?->id ?? $latestSub->plan_id,
+                'nombre_plan' => $nombrePlan,
+                'ciclo_meses' => $isProrationOnly ? ($latestSub->ciclo_meses ?: $effectiveMonths) : $effectiveMonths,
+                'max_sucursales' => $newMaxSucursales,
+                'monto_total' => $montoCicloPlan,
+                'fecha_vencimiento' => $nuevaFechaExpiracion,
+                'estado' => 'active',
+            ];
+            if (! $isProrationOnly) {
+                $subUpdate['last_reminder_sent_at'] = null;
+                $subUpdate['reminder_sent_count'] = 0;
+            }
+            $latestSub->update($subUpdate);
+
+            return $latestSub;
+        }
+
+        return Subscription::create([
+            'empresa_id' => $empresa->id,
+            'plan_id' => $plan?->id,
+            'nombre_plan' => $nombrePlan,
+            'ciclo_meses' => $effectiveMonths,
+            'max_sucursales' => $newMaxSucursales,
+            'monto_total' => $montoCicloPlan,
+            'fecha_inicio' => now(),
+            'fecha_vencimiento' => $nuevaFechaExpiracion,
+            'estado' => 'active',
+        ]);
+    }
+
+    /**
+     * Helper para activar y extender la suscripción luego de un pago aprobado (Stripe / PayPal).
      */
     protected function activateSubscription(
         Empresa $empresa,
@@ -791,7 +997,8 @@ HTML;
         float $monto,
         string $metodoPago,
         string $transactionId,
-        ?string $customNotes = null
+        ?string $customNotes = null,
+        string $tipoPago = 'subscription'
     ): void {
         \Illuminate\Support\Facades\DB::transaction(function () use (
             $empresa,
@@ -801,68 +1008,26 @@ HTML;
             $monto,
             $metodoPago,
             $transactionId,
-            $customNotes
+            $customNotes,
+            $tipoPago
         ) {
-            $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
-            $latestSub = $empresa->getLatestSubscriptionRecord();
-
-            if ($hasActivePaidSubscription) {
-                $nuevaFechaExpiracion = $latestSub?->fecha_vencimiento ?? $empresa->subscription_expires_at ?? now();
-            } else {
-                $baseDate = now();
-                if ($latestSub?->fecha_vencimiento && $latestSub->fecha_vencimiento->isFuture()) {
-                    $baseDate = $latestSub->fecha_vencimiento->copy();
-                }
-                $nuevaFechaExpiracion = $baseDate->addMonths($cicloMeses);
-            }
-
-            $empresaUpdate = [
-                'subscription_status' => 'active',
-                'subscription_expires_at' => $nuevaFechaExpiracion,
-                'max_sucursales' => max($empresa->max_sucursales ?? 1, $sucursalesContratadas),
-            ];
-            if (! $hasActivePaidSubscription) {
-                $empresaUpdate['billing_cycle'] = (string) $cicloMeses;
-            }
-            $empresa->update($empresaUpdate);
-
-            $nombrePlan = $hasActivePaidSubscription
-                ? ($latestSub?->nombre_plan && $latestSub->nombre_plan !== 'Sucursales Adicionales' ? $latestSub->nombre_plan : ($plan?->nombre ?? 'Plan Mensual'))
-                : ($plan?->nombre ?? Subscription::getNombrePlanByCiclo($cicloMeses));
-
-            if ($latestSub) {
-                $latestSub->update([
-                    'plan_id' => $plan?->id,
-                    'nombre_plan' => $nombrePlan,
-                    'ciclo_meses' => $hasActivePaidSubscription ? ($latestSub->ciclo_meses ?: $cicloMeses) : $cicloMeses,
-                    'max_sucursales' => max($empresa->max_sucursales ?? 1, $sucursalesContratadas),
-                    'monto_total' => $hasActivePaidSubscription ? ($latestSub->monto_total ?: $monto) : $monto,
-                    'fecha_vencimiento' => $nuevaFechaExpiracion,
-                    'estado' => 'active',
-                ]);
-                $subscriptionId = $latestSub->id;
-            } else {
-                $newSub = Subscription::create([
-                    'empresa_id' => $empresa->id,
-                    'plan_id' => $plan?->id,
-                    'nombre_plan' => $nombrePlan,
-                    'ciclo_meses' => $cicloMeses,
-                    'max_sucursales' => $sucursalesContratadas,
-                    'monto_total' => $monto,
-                    'fecha_inicio' => now(),
-                    'fecha_vencimiento' => $nuevaFechaExpiracion,
-                    'estado' => 'active',
-                ]);
-                $subscriptionId = $newSub->id;
-            }
+            $subscription = $this->applySubscriptionActivation(
+                $empresa,
+                $plan,
+                $cicloMeses,
+                $sucursalesContratadas,
+                $monto,
+                $tipoPago
+            );
 
             SubscriptionPayment::create([
-                'subscription_id' => $subscriptionId,
+                'subscription_id' => $subscription->id,
                 'plan_id' => $plan?->id,
+                'tipo_pago' => $tipoPago,
                 'empresa_id' => $empresa->id,
                 'user_id' => auth()->id() ?? $empresa->users()->first()?->id ?? 1,
                 'monto' => $monto,
-                'ciclo_meses' => $hasActivePaidSubscription ? 1 : $cicloMeses,
+                'ciclo_meses' => $tipoPago === 'proration' ? 0 : max(1, $cicloMeses),
                 'sucursales_contratadas' => $sucursalesContratadas,
                 'metodo_pago' => $metodoPago,
                 'referencia_pago' => $transactionId,
@@ -976,67 +1141,26 @@ HTML;
                 ]);
             }
 
-            $meses = max(1, (int) $payment->ciclo_meses);
-
-            $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();
-
-            // Extender vigencia calculando desde la tabla subscriptions
-            $latestSub = $empresa->getLatestSubscriptionRecord();
-            if ($hasActivePaidSubscription) {
-                $nuevaFechaVencimiento = $latestSub?->fecha_vencimiento ?? $empresa->subscription_expires_at ?? now()->addMonths($meses);
-            } else {
-                $baseDate = now();
-                if ($latestSub?->fecha_vencimiento && $latestSub->fecha_vencimiento->isFuture()) {
-                    $baseDate = $latestSub->fecha_vencimiento->copy();
-                }
-                $nuevaFechaVencimiento = $baseDate->addMonths($meses);
-            }
-
-            $empresaUpdate = [
-                'subscription_status' => 'active',
-                'subscription_expires_at' => $nuevaFechaVencimiento,
-                'max_sucursales' => max($empresa->max_sucursales ?? 1, $payment->sucursales_contratadas),
-            ];
-            if (! $hasActivePaidSubscription) {
-                $empresaUpdate['billing_cycle'] = $meses . '_months';
-            }
-            $empresa->update($empresaUpdate);
+            $paymentTipo = $payment->tipo_pago ?? 'subscription';
+            $isLegacyProration = $paymentTipo === 'subscription'
+                && str_contains((string) $payment->notas, 'Prorrateo por')
+                && ! str_contains((string) $payment->notas, 'Pago adelantado');
+            $effectiveTipo = $isLegacyProration ? 'proration' : $paymentTipo;
 
             $plan = $payment->plan ?? ($payment->plan_id ? SubscriptionPlan::find($payment->plan_id) : SubscriptionPlan::getPlanRenovacionDefault());
-
-            $subscription = $empresa->getLatestSubscriptionRecord();
-            $nombrePlan = $hasActivePaidSubscription
-                ? ($subscription?->nombre_plan && $subscription->nombre_plan !== 'Sucursales Adicionales' ? $subscription->nombre_plan : ($plan?->nombre ?? 'Plan Mensual'))
-                : ($plan?->nombre ?? Subscription::getNombrePlanByCiclo($meses));
-
-            // Actualizar la suscripción existente de la empresa (NO crear registros duplicados)
-            if ($subscription) {
-                $subscription->update([
-                    'plan_id' => $plan?->id,
-                    'nombre_plan' => $nombrePlan,
-                    'ciclo_meses' => $hasActivePaidSubscription ? ($subscription->ciclo_meses ?: $meses) : $meses,
-                    'max_sucursales' => max($empresa->max_sucursales ?? 1, $payment->sucursales_contratadas),
-                    'monto_total' => $hasActivePaidSubscription ? ($subscription->monto_total ?: $payment->monto) : $payment->monto,
-                    'fecha_vencimiento' => $nuevaFechaVencimiento,
-                    'estado' => 'active',
-                ]);
-            } else {
-                $subscription = Subscription::create([
-                    'empresa_id' => $empresa->id,
-                    'plan_id' => $plan?->id,
-                    'nombre_plan' => $nombrePlan,
-                    'ciclo_meses' => $meses,
-                    'max_sucursales' => $payment->sucursales_contratadas,
-                    'monto_total' => $payment->monto,
-                    'fecha_inicio' => now(),
-                    'fecha_vencimiento' => $nuevaFechaVencimiento,
-                    'estado' => 'active',
-                ]);
-            }
+            $subscription = $this->applySubscriptionActivation(
+                $empresa,
+                $plan,
+                (int) $payment->ciclo_meses,
+                (int) $payment->sucursales_contratadas,
+                (float) $payment->monto,
+                $effectiveTipo
+            );
 
             $payment->update([
                 'subscription_id' => $subscription->id,
                 'plan_id' => $plan?->id,
+                'tipo_pago' => $effectiveTipo,
                 'estado' => 'approved',
                 'aprobado_por' => $user->id,
                 'aprobado_at' => now(),
@@ -1044,9 +1168,11 @@ HTML;
 
             DB::commit();
 
+            $nuevaFechaVencimiento = $subscription->fecha_vencimiento;
+
             return back()->with('notification', [
                 'type' => 'success',
-                'message' => "Pago aprobado y suscripción activada para {$empresa->razon_social} hasta " . $nuevaFechaVencimiento->format('d/m/Y') . '.',
+                'message' => "Pago aprobado y suscripción activada para {$empresa->razon_social} hasta " . ($nuevaFechaVencimiento ? $nuevaFechaVencimiento->format('d/m/Y') : 'vigente') . '.',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

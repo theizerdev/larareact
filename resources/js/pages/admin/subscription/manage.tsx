@@ -57,15 +57,19 @@ interface EmpresaItem {
 
 interface PagoPendiente {
     id: number;
+    tipo_pago?: string;
+    mensajes_comprados?: number | null;
     monto: number;
     ciclo_meses: number;
     sucursales_contratadas: number;
     metodo_pago: string;
     referencia_pago: string | null;
     comprobante_path: string | null;
+    notas?: string | null;
     created_at: string;
     empresa?: { razon_social: string };
     user?: { name: string };
+    plan?: { nombre: string };
 }
 
 interface SaaSStats {
@@ -341,7 +345,37 @@ export default function SubscriptionManage({ empresas, pagosPendientes, stats, s
                                     <TableRow key={pago.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/60">
                                         <TableCell className="font-bold text-xs">{pago.empresa?.razon_social}</TableCell>
                                         <TableCell className="text-xs text-muted-foreground">{pago.user?.name}</TableCell>
-                                        <TableCell className="text-xs font-semibold">{pago.ciclo_meses} {__('Meses')}</TableCell>
+                                        <TableCell className="text-xs font-semibold">
+                                            <div className="space-y-1">
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`text-[10px] font-bold ${
+                                                        pago.tipo_pago === 'advance'
+                                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                                            : pago.tipo_pago === 'proration'
+                                                                ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300'
+                                                                : pago.tipo_pago === 'whatsapp_topup'
+                                                                    ? 'border-purple-300 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300'
+                                                                    : 'border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                                                    }`}
+                                                >
+                                                    {pago.tipo_pago === 'advance'
+                                                        ? __('Adelanto de Mensualidad')
+                                                        : pago.tipo_pago === 'proration'
+                                                            ? __('Prorrateo Sucursales')
+                                                            : pago.tipo_pago === 'whatsapp_topup'
+                                                                ? __('Recarga WhatsApp')
+                                                                : __('Renovación')}
+                                                </Badge>
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    {pago.tipo_pago === 'whatsapp_topup'
+                                                        ? `${pago.mensajes_comprados ?? 0} ${__('mensajes')}`
+                                                        : pago.tipo_pago === 'proration'
+                                                            ? __('Ciclo vigente')
+                                                            : `${pago.plan?.nombre ? `${pago.plan.nombre} · ` : ''}${pago.ciclo_meses} ${pago.ciclo_meses === 1 ? __('Mes') : __('Meses')}`}
+                                                </p>
+                                            </div>
+                                        </TableCell>
                                         <TableCell className="text-xs font-medium">{pago.sucursales_contratadas}</TableCell>
                                         <TableCell className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
                                             {currencySymbol}{pago.monto.toFixed(2)}

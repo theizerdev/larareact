@@ -6,6 +6,7 @@ interface PayPalButtonProps {
     selectedCycle: number;
     extraSucursales: number;
     planId?: number;
+    modoPago?: 'advance' | 'proration' | 'renewal';
     currency?: string;
     __: (key: string) => string;
 }
@@ -16,17 +17,19 @@ declare global {
     }
 }
 
-export function PayPalButtonComponent({ clientId, selectedCycle, extraSucursales, planId, currency = 'MXN', __ }: PayPalButtonProps) {
+export function PayPalButtonComponent({ clientId, selectedCycle, extraSucursales, planId, modoPago = 'renewal', currency = 'MXN', __ }: PayPalButtonProps) {
     const paypalContainerRef = useRef<HTMLDivElement>(null);
     const selectedCycleRef = useRef(selectedCycle);
     const extraSucursalesRef = useRef(extraSucursales);
     const planIdRef = useRef(planId);
+    const modoPagoRef = useRef(modoPago);
 
     useEffect(() => {
         selectedCycleRef.current = selectedCycle;
         extraSucursalesRef.current = extraSucursales;
         planIdRef.current = planId;
-    }, [selectedCycle, extraSucursales, planId]);
+        modoPagoRef.current = modoPago;
+    }, [selectedCycle, extraSucursales, planId, modoPago]);
 
     useEffect(() => {
         if (!clientId) return;
@@ -58,6 +61,7 @@ export function PayPalButtonComponent({ clientId, selectedCycle, extraSucursales
                                         plan_id: planIdRef.current,
                                         ciclo_meses: selectedCycleRef.current,
                                         sucursales_contratadas: extraSucursalesRef.current,
+                                        modo_pago: modoPagoRef.current,
                                     }),
                                 });
                                 const orderData = await response.json();
@@ -87,6 +91,7 @@ export function PayPalButtonComponent({ clientId, selectedCycle, extraSucursales
                                         plan_id: planIdRef.current,
                                         ciclo_meses: selectedCycleRef.current,
                                         sucursales_contratadas: extraSucursalesRef.current,
+                                        modo_pago: modoPagoRef.current,
                                     }),
                                 });
                                 const captureData = await response.json();
@@ -137,10 +142,13 @@ export function PayPalButtonComponent({ clientId, selectedCycle, extraSucursales
             script.async = true;
             script.onload = renderPayPalButtons;
             document.body.appendChild(script);
-        } else {
+        } else if (window.paypal) {
             renderPayPalButtons();
+        } else {
+            script.addEventListener('load', renderPayPalButtons);
+            return () => script?.removeEventListener('load', renderPayPalButtons);
         }
-    }, [clientId, currency, selectedCycle, extraSucursales, planId]);
+    }, [clientId, currency]);
 
     return <div ref={paypalContainerRef} className="paypal-button-container max-w-md min-h-[150px] w-full" />;
 }

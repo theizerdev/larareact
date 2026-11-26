@@ -210,9 +210,10 @@ class SubscriptionPlan extends Model
         $meses = max(1, $meses);
         $ciclo = (int) ($this->ciclo_meses ?? 1);
 
-        if ($ciclo === 12 && $this->precio_12_meses > 0 && ($meses === 12 || $meses === 1)) {
-            $basePrice = (float) $this->precio_12_meses;
-            $mesesExtra = 12;
+        if ($ciclo === 12 && $this->precio_12_meses > 0) {
+            $periodos = ($meses === 1) ? 1 : max(1, (int) round($meses / 12));
+            $basePrice = (float) $this->precio_12_meses * $periodos;
+            $mesesExtra = 12 * $periodos;
         } else {
             $precioUnitario = ($aplicarPromo && $this->tiene_promocion && $this->precio_promocional_mensual > 0)
                 ? $this->precio_promocional_mensual

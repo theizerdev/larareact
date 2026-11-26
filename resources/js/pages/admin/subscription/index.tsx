@@ -23,7 +23,9 @@ import {
     Award,
     Star,
     Lock,
-    Loader2
+    Loader2,
+    FastForward,
+    CalendarPlus
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -81,15 +83,19 @@ interface PlanInfo {
 
 interface PagoItem {
     id: number;
+    tipo_pago?: string;
+    mensajes_comprados?: number | null;
     monto: number;
     ciclo_meses: number;
     sucursales_contratadas: number;
     metodo_pago: string;
     referencia_pago: string | null;
     comprobante_path: string | null;
+    notas?: string | null;
     estado: string;
     created_at: string;
     user?: { name: string };
+    plan?: { nombre: string };
 }
 
 interface PaymentGatewayInfo {
@@ -103,6 +109,7 @@ interface PaymentGatewayInfo {
 
 interface PageProps {
     empresa: EmpresaInfo;
+    hasActivePaidSubscription?: boolean;
     plan: PlanInfo | null;
     planes?: PlanInfo[];
     opcionesPrecios: Record<number, PlanOption>;
@@ -116,17 +123,22 @@ interface PageProps {
     };
 }
 
-export default function SubscriptionIndex({ empresa, plan, planes = [], opcionesPrecios, pagos, suscripcionActiva, bcvRate = 36.50, paymentGateways }: PageProps) {
+export default function SubscriptionIndex({ empresa, hasActivePaidSubscription: hasActivePaidSubscriptionProp, plan, planes = [], opcionesPrecios, pagos, suscripcionActiva, bcvRate = 36.50, paymentGateways }: PageProps) {
     const { __ } = useTranslate();
     const pageProps = usePage().props as any;
     const { currencySymbol = '$', isVenezuela = false } = pageProps;
 
-    // Determinar si la empresa posee una suscripción activa pagada (monto_total > 0 y estado 'active')
-    const hasActivePaidSubscription = empresa.subscription_status === 'active'
-        && !empresa.is_exempt
-        && suscripcionActiva
-        && parseFloat(suscripcionActiva.monto_total ?? 0) > 0
-        && suscripcionActiva.estado === 'active';
+    // Determinar si la empresa posee una suscripción activa pagada y vigente
+    const hasActivePaidSubscription = typeof hasActivePaidSubscriptionProp === 'boolean'
+        ? hasActivePaidSubscriptionProp
+        : (empresa.subscription_status === 'active'
+            && !empresa.is_exempt
+            && empresa.dias_restantes > 0);
+
+    const [modoPago, setModoPago] = useState<'advance' | 'proration'>('advance');
+    const effectiveModoPago: 'advance' | 'proration' | 'renewal' = hasActivePaidSubscription ? modoPago : 'renewal';
+    const isProrationOnly = effectiveModoPago === 'proration';
+    const isAdvanceMode = effectiveModoPago === 'advance';
 
     const [selectedPlanId, setSelectedPlanId] = useState<number>(() => {
         if (typeof window !== 'undefined') {
@@ -137,13 +149,22 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
         }
         return plan?.id ?? (planes[0]?.id ?? 1);
     });
+    const [selectedMonths, setSelectedMonths] = useState<number>(() => {
+        const initPlan = planes.find((p) => p.id === (plan?.id ?? planes[0]?.id)) || plan || planes[0];
+        return Number(initPlan?.ciclo_meses) === 12 ? 12 : 1;
+    });
     const [extraSucursales, setExtraSucursales] = useState<number>(Math.max(1, empresa.max_sucursales || 1, empresa.sucursales_activas || 1));
     const [previewReceipt, setPreviewReceipt] = useState<string | null>(null);
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
     const activeSelectedPlan = planes.find((p) => p.id === selectedPlanId) || plan || planes[0];
     const isAnnualSelected = Number(activeSelectedPlan?.ciclo_meses) === 12;
-    const selectedCycle = isAnnualSelected ? 12 : 1;
+    const effectiveMonths = isProrationOnly
+        ? 0
+        : (isAnnualSelected
+            ? (selectedMonths <= 12 ? 12 : Math.min(36, Math.max(1, Math.round(selectedMonths / 12)) * 12))
+            : Math.max(1, Math.min(24, selectedMonths)));
+    const selectedCycle = Math.max(1, effectiveMonths || 1);
 
     const getPlanDisplayPrice = (p: PlanInfo | null) => {
         if (!p) return 149;
@@ -157,19 +178,57 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
     };
 
     const selectedMonthlyPrice = getPlanDisplayPrice(activeSelectedPlan);
-    const currentSubtotalPlan = hasActivePaidSubscription ? 0 : selectedMonthlyPrice;
-    const sucursalesExtrasCount = hasActivePaidSubscription
+    const annualPeriods = isAnnualSelected ? Math.max(1, Math.round(selectedCycle / 12)) : 0;
+    const currentSubtotalPlan = isProrationOnly
+        ? 0
+        : (isAnnualSelected ? selectedMonthlyPrice * annualPeriods : selectedMonthlyPrice * effectiveMonths);
+    const sucursalesPlanExtrasCount = Math.max(0, extraSucursales - (activeSelectedPlan?.sucursales_incluidas ?? 1));
+    const sucursalesNuevasHoyCount = hasActivePaidSubscription
         ? Math.max(0, extraSucursales - empresa.max_sucursales)
-        : Math.max(0, extraSucursales - (activeSelectedPlan?.sucursales_incluidas ?? 1));
+        : 0;
+    const sucursalesExtrasCount = isProrationOnly ? sucursalesNuevasHoyCount : sucursalesPlanExtrasCount;
     const precioSucursalExtra = (activeSelectedPlan?.precio_sucursal_extra_mensual && activeSelectedPlan.precio_sucursal_extra_mensual > 0) ? activeSelectedPlan.precio_sucursal_extra_mensual : 84.72;
 
     const diasRestantesCiclo = Math.max(1, empresa.dias_restantes || 1);
     const tarifaDiariaSucursal = precioSucursalExtra / 30;
-    const costoExtraSucursales = hasActivePaidSubscription
-        ? Math.round(sucursalesExtrasCount * tarifaDiariaSucursal * diasRestantesCiclo * 100) / 100
-        : sucursalesExtrasCount * precioSucursalExtra * selectedCycle;
+    const costoExtraSucursalesCiclo = isProrationOnly
+        ? 0
+        : Math.round(sucursalesPlanExtrasCount * precioSucursalExtra * effectiveMonths * 100) / 100;
+    const costoProrrateoHoy = hasActivePaidSubscription && sucursalesNuevasHoyCount > 0
+        ? Math.round(sucursalesNuevasHoyCount * tarifaDiariaSucursal * diasRestantesCiclo * 100) / 100
+        : 0;
+    const costoExtraSucursales = isProrationOnly ? costoProrrateoHoy : costoExtraSucursalesCiclo;
 
-    const precioFinalEstimado = currentSubtotalPlan + costoExtraSucursales;
+    const precioFinalEstimado = isProrationOnly
+        ? costoProrrateoHoy
+        : Math.round((currentSubtotalPlan + costoExtraSucursalesCiclo + costoProrrateoHoy) * 100) / 100;
+    const isQuoteValid = precioFinalEstimado > 0;
+
+    // Fecha actual de vencimiento y proyección tras el pago adelantado
+    const currentExpirationRaw = empresa.subscription_expires_at || empresa.trial_ends_at;
+    const currentExpirationDate = currentExpirationRaw ? new Date(currentExpirationRaw.replace(' ', 'T')) : null;
+    const projectedExpirationDate = React.useMemo(() => {
+        if (isProrationOnly) {
+            return currentExpirationDate;
+        }
+        const now = new Date();
+        const base = currentExpirationDate && currentExpirationDate.getTime() > now.getTime()
+            ? new Date(currentExpirationDate.getTime())
+            : now;
+        const targetMonth = base.getMonth() + selectedCycle;
+        const result = new Date(base.getTime());
+        const expectedDay = result.getDate();
+        result.setMonth(targetMonth);
+        if (result.getDate() !== expectedDay) {
+            result.setDate(0);
+        }
+        return result;
+    }, [currentExpirationRaw, selectedCycle, isProrationOnly]);
+
+    const pendingSubscriptionPayments = React.useMemo(
+        () => pagos.filter((p) => p.estado === 'pending' && p.tipo_pago !== 'whatsapp_topup'),
+        [pagos]
+    );
 
     // Formateador especial (con moneda de referencia mexicana MXN o Bolívares para Venezuela)
     const formatPrice = (usdAmount: number) => {
@@ -190,11 +249,22 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
         plan_id: selectedPlanId,
         ciclo_meses: selectedCycle,
         sucursales_contratadas: extraSucursales,
+        modo_pago: effectiveModoPago,
         metodo_pago: initialMethod,
         referencia_pago: '',
         comprobante: null as File | null,
         notas: '',
     });
+
+    React.useEffect(() => {
+        setData((prev) => ({
+            ...prev,
+            plan_id: selectedPlanId,
+            ciclo_meses: selectedCycle,
+            sucursales_contratadas: extraSucursales,
+            modo_pago: effectiveModoPago,
+        }));
+    }, [selectedPlanId, selectedCycle, extraSucursales, effectiveModoPago]);
 
     React.useEffect(() => {
         const handleStripeMessage = (event: MessageEvent) => {
@@ -226,6 +296,14 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
     }, []);
 
     const handleStripeCheckout = async () => {
+        if (!isQuoteValid) {
+            Swal.fire({
+                title: __('Monto no válido'),
+                text: __('Para agregar sucursales por prorrateo debes incrementar al menos 1 sucursal, o selecciona "Adelantar Mensualidad".'),
+                icon: 'warning',
+            });
+            return;
+        }
         setIsStripeLoading(true);
         try {
             const metaToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
@@ -247,6 +325,7 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                     plan_id: selectedPlanId,
                     ciclo_meses: selectedCycle,
                     sucursales_contratadas: extraSucursales,
+                    modo_pago: effectiveModoPago,
                 }),
             });
 
@@ -296,20 +375,29 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
         }
     };
 
+    const handleModeChange = (nextMode: 'advance' | 'proration') => {
+        setModoPago(nextMode);
+        if (nextMode === 'proration' && plan?.id) {
+            setSelectedPlanId(plan.id);
+        }
+    };
+
     const handlePlanSelect = (planId: number) => {
-        if (hasActivePaidSubscription) return;
+        if (isProrationOnly) return;
         const chosen = planes.find((p) => p.id === planId);
-        const cycle = Number(chosen?.ciclo_meses) === 12 ? 12 : 1;
+        const isChosenAnnual = Number(chosen?.ciclo_meses) === 12;
         setSelectedPlanId(planId);
-        setData((prev) => ({
-            ...prev,
-            plan_id: planId,
-            ciclo_meses: cycle,
-        }));
+        setSelectedMonths((prev) => {
+            if (isChosenAnnual) {
+                return prev >= 24 ? 24 : 12;
+            }
+            return isAnnualSelected ? 1 : Math.max(1, Math.min(24, prev));
+        });
     };
 
     const handleSucursalChange = (count: number) => {
-        const val = Math.max(1, count);
+        const minAllowed = hasActivePaidSubscription ? Math.max(1, empresa.max_sucursales) : 1;
+        const val = Math.max(minAllowed, Math.min(50, count));
         setExtraSucursales(val);
         setData('sucursales_contratadas', val);
     };
@@ -326,6 +414,14 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
 
     const handleSubmitRenewal = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isQuoteValid) {
+            Swal.fire({
+                title: __('Monto no válido'),
+                text: __('Para agregar sucursales por prorrateo debes incrementar al menos 1 sucursal, o selecciona "Adelantar Mensualidad".'),
+                icon: 'warning',
+            });
+            return;
+        }
         post('/admin/monitoring/subscription/renew', {
             onSuccess: () => {
                 reset('referencia_pago', 'comprobante', 'notas');
@@ -341,7 +437,9 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
     ];
 
     // Porcentaje de días restantes para la barra de progreso
-    const maxDays = empresa.subscription_status === 'trial' ? 7 : 365;
+    const maxDays = empresa.subscription_status === 'trial'
+        ? 7
+        : Math.max(30, empresa.dias_restantes || 30, (Number(suscripcionActiva?.ciclo_meses) || 1) * 30);
     const progressPercent = Math.min(100, Math.max(0, (empresa.dias_restantes / maxDays) * 100));
 
     return (
@@ -369,7 +467,7 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                             </p>
                         </div>
 
-                        <div className="shrink-0 flex items-center gap-3">
+                        <div className="shrink-0 flex flex-wrap items-center gap-3">
                             <div className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5 border backdrop-blur-md shadow-inner ${empresa.is_exempt
                                 ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40'
                                 : empresa.subscription_status === 'active'
@@ -384,6 +482,22 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                     }`} />
                                 <span>{empresa.estado_legible}</span>
                             </div>
+                            {!empresa.is_exempt && (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => {
+                                        if (hasActivePaidSubscription) {
+                                            handleModeChange('advance');
+                                        }
+                                        document.getElementById('subscription-payment-section')?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-1.5 shadow-md"
+                                >
+                                    <CalendarPlus className="h-4 w-4" />
+                                    {hasActivePaidSubscription ? __('Adelantar Mensualidad') : __('Pagar / Activar Plan')}
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -500,36 +614,122 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                     </Card>
                 </div>
 
-                {/* Formulario de Renovación / Selección de Período */}
+                {/* Formulario de Renovación / Pago Adelantado */}
                 {!empresa.is_exempt && (
-                    <Card className="shadow-md border-2 border-primary/20 overflow-hidden">
+                    <Card id="subscription-payment-section" className="shadow-md border-2 border-primary/20 overflow-hidden scroll-mt-20">
                         <CardHeader className="bg-muted/40 border-b">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-primary text-primary-foreground rounded-xl shadow-sm">
-                                    <Calendar className="h-6 w-6" />
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-primary text-primary-foreground rounded-xl shadow-sm">
+                                        {isAdvanceMode ? <CalendarPlus className="h-6 w-6" /> : <Calendar className="h-6 w-6" />}
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-xl font-bold">
+                                            {hasActivePaidSubscription
+                                                ? __('Adelantar Pago o Ampliar Suscripción')
+                                                : __('Renovar, Activar o Adelantar Suscripción')}
+                                        </CardTitle>
+                                        <CardDescription className="text-xs sm:text-sm">
+                                            {hasActivePaidSubscription
+                                                ? __('Paga tu mensualidad por adelantado para sumar meses a tu vigencia actual sin perder días, o agrega sucursales por prorrateo.')
+                                                : __('Elige tu plan, los meses que deseas pagar por adelantado y las sucursales requeridas para tu negocio.')}
+                                        </CardDescription>
+                                    </div>
                                 </div>
-                                <div>
-                                    <CardTitle className="text-xl font-bold">
-                                        {__('Renovar o Ampliar Suscripción')}
-                                    </CardTitle>
-                                    <CardDescription className="text-xs sm:text-sm">
-                                        {__('Elige la duración de tu plan y ajusta las sucursales requeridas para tu negocio.')}
-                                    </CardDescription>
-                                </div>
+                                {hasActivePaidSubscription && projectedExpirationDate && isAdvanceMode && (
+                                    <Badge className="bg-emerald-600 text-white font-semibold text-xs px-3 py-1.5 self-start sm:self-center">
+                                        {__('Nueva vigencia:')} {projectedExpirationDate.toLocaleDateString()}
+                                    </Badge>
+                                )}
                             </div>
                         </CardHeader>
                         <CardContent className="p-6">
+                            {pendingSubscriptionPayments.length > 0 && (
+                                <div className="mb-6 p-4 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 flex items-start gap-3 text-xs">
+                                    <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                                    <div className="space-y-1">
+                                        <p className="font-bold">
+                                            {__('Tienes')} {pendingSubscriptionPayments.length} {pendingSubscriptionPayments.length === 1 ? __('solicitud de pago pendiente de aprobación') : __('solicitudes de pago pendientes de aprobación')}
+                                        </p>
+                                        <p className="text-amber-800/80 dark:text-amber-300/80">
+                                            {__('Última solicitud:')} {formatPrice(pendingSubscriptionPayments[0].monto)} ({pendingSubscriptionPayments[0].metodo_pago.replace('_', ' ')}). {__('Si pagas con Stripe o PayPal la acreditación es instantánea.')}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {hasActivePaidSubscription && (
+                                <div className="mb-8 space-y-2.5">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                        {__('¿Qué deseas hacer hoy?')}
+                                    </Label>
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleModeChange('advance')}
+                                            className={`text-left p-4 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-3 ${
+                                                modoPago === 'advance'
+                                                    ? 'border-emerald-600 bg-emerald-50/70 dark:bg-emerald-950/30 shadow-sm ring-2 ring-emerald-500/20'
+                                                    : 'border-border bg-card hover:border-muted-foreground/40'
+                                            }`}
+                                        >
+                                            <div className={`p-2.5 rounded-lg shrink-0 ${
+                                                modoPago === 'advance'
+                                                    ? 'bg-emerald-600 text-white'
+                                                    : 'bg-muted text-muted-foreground'
+                                            }`}>
+                                                <FastForward className="h-5 w-5" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-bold text-sm text-foreground">{__('Adelantar Mensualidad / Pago Anticipado')}</span>
+                                                    <Badge className="bg-emerald-600 text-white text-[10px]">{__('Recomendado')}</Badge>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                                    {__('Paga 1 o más meses por adelantado. Se suman directamente a tu fecha de vencimiento actual sin perder días restantes.')}
+                                                </p>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleModeChange('proration')}
+                                            className={`text-left p-4 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-3 ${
+                                                modoPago === 'proration'
+                                                    ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/30 shadow-sm ring-2 ring-indigo-500/20'
+                                                    : 'border-border bg-card hover:border-muted-foreground/40'
+                                            }`}
+                                        >
+                                            <div className={`p-2.5 rounded-lg shrink-0 ${
+                                                modoPago === 'proration'
+                                                    ? 'bg-indigo-600 text-white'
+                                                    : 'bg-muted text-muted-foreground'
+                                            }`}>
+                                                <Store className="h-5 w-5" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="font-bold text-sm text-foreground block">{__('Solo Agregar Sucursales (Prorrateo)')}</span>
+                                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                                    {__('Añade sucursales extras al ciclo actual pagando únicamente los días restantes hasta tu próximo corte.')}
+                                                </p>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             <form onSubmit={handleSubmitRenewal} className="space-y-8">
-                                {/* 1. Selección del Plan Mensual */}
+                                {/* 1. Selección del Plan */}
                                 <div className="space-y-3">
                                     <Label className="text-sm font-bold flex items-center gap-2">
                                         <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">1</span>
-                                        {__('Selecciona tu Plan Mensual')}
+                                        {__('Selecciona tu Plan')}
                                     </Label>
                                     <div className="grid gap-6 sm:grid-cols-3">
                                         {(planes.length > 0 ? planes.filter(p => !p.nombre.toLowerCase().includes('prueba') || p.id === selectedPlanId) : [plan || { id: 1, nombre: 'Plan Mensual', descripcion: 'Control total de tu negocio', precio_regular_mensual: 149, precio_promocional_mensual: 149, sucursales_incluidas: 1, precio_sucursal_extra_mensual: 84.72, modulos_incluidos: ['todos'] }]).map((pItem: any) => {
                                             const isSelected = selectedPlanId === pItem.id;
-                                            const isLocked = hasActivePaidSubscription && !isSelected;
+                                            const isLocked = isProrationOnly && !isSelected;
+                                            const isCurrentActivePlan = hasActivePaidSubscription && (plan?.id === pItem.id || suscripcionActiva?.plan_id === pItem.id);
                                             const isAnnualItem = Number(pItem.ciclo_meses) === 12;
                                             const regularMensual = Number(pItem.precio_regular_mensual) || Number(pItem.precio_3_meses) || 149;
                                             const promoMensual = Number(pItem.precio_promocional_mensual) || regularMensual;
@@ -551,9 +751,9 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                             : !isLocked ? 'border-border hover:border-muted-foreground/30 bg-card' : ''
                                                         }`}
                                                 >
-                                                    {isSelected && hasActivePaidSubscription ? (
+                                                    {isCurrentActivePlan ? (
                                                         <Badge className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
-                                                            {__('✓ Plan Activo')}
+                                                            {__('✓ Plan Actual')}
                                                         </Badge>
                                                     ) : pItem.destacado ? (
                                                         <Badge className="absolute -top-3 right-4 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 shadow-sm">
@@ -604,27 +804,137 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                     </div>
                                 </div>
 
-                                {/* 2. Selección de Sucursales & Resumen Financiero */}
+                                {/* 2. Meses a Pagar por Adelantado */}
+                                {!isProrationOnly && (
+                                    <div className="space-y-3 pt-4 border-t">
+                                        <Label className="text-sm font-bold flex items-center gap-2">
+                                            <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">2</span>
+                                            {hasActivePaidSubscription
+                                                ? __('¿Cuántos meses deseas pagar por adelantado?')
+                                                : __('Selecciona los meses a pagar por adelantado')}
+                                        </Label>
+
+                                        <div className="p-4 rounded-xl border bg-muted/25 space-y-4">
+                                            {isAnnualSelected ? (
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    {[
+                                                        { months: 12, label: __('1 Año (12 meses)') },
+                                                        { months: 24, label: __('2 Años (24 meses)') },
+                                                    ].map((opt) => (
+                                                        <Button
+                                                            key={opt.months}
+                                                            type="button"
+                                                            variant={effectiveMonths === opt.months ? 'default' : 'outline'}
+                                                            onClick={() => setSelectedMonths(opt.months)}
+                                                            className="font-bold text-xs h-10 px-4"
+                                                        >
+                                                            {opt.label}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        {[1, 2, 3, 6, 12].map((m) => (
+                                                            <Button
+                                                                key={m}
+                                                                type="button"
+                                                                variant={effectiveMonths === m ? 'default' : 'outline'}
+                                                                size="sm"
+                                                                onClick={() => setSelectedMonths(m)}
+                                                                className={`font-bold text-xs h-9 px-3.5 ${
+                                                                    effectiveMonths === m ? 'shadow-sm' : ''
+                                                                }`}
+                                                            >
+                                                                {m} {m === 1 ? __('Mes') : __('Meses')}
+                                                            </Button>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-medium text-muted-foreground">{__('Otro:')}</span>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => setSelectedMonths((prev) => Math.max(1, prev - 1))}
+                                                            disabled={effectiveMonths <= 1}
+                                                            className="h-9 w-9"
+                                                        >
+                                                            <Minus className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Input
+                                                            type="number"
+                                                            min={1}
+                                                            max={24}
+                                                            value={effectiveMonths}
+                                                            onChange={(e) => setSelectedMonths(Math.max(1, Math.min(24, parseInt(e.target.value) || 1)))}
+                                                            className="w-16 h-9 text-center font-bold text-sm"
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => setSelectedMonths((prev) => Math.min(24, prev + 1))}
+                                                            disabled={effectiveMonths >= 24}
+                                                            className="h-9 w-9"
+                                                        >
+                                                            <Plus className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {projectedExpirationDate && (
+                                                <div className="p-3 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-900 dark:text-emerald-200 text-xs flex flex-wrap items-center justify-between gap-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                        <span>
+                                                            {currentExpirationDate && currentExpirationDate.getTime() > Date.now() ? (
+                                                                <>
+                                                                    {__('Tu vigencia actual')} (<strong>{currentExpirationDate.toLocaleDateString()}</strong>) {__('se extenderá')} <strong>+{effectiveMonths} {effectiveMonths === 1 ? __('mes') : __('meses')}</strong> {__('hasta el')} <strong className="underline">{projectedExpirationDate.toLocaleDateString()}</strong> — {__('sin perder días pagados.')}
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    {__('Tu suscripción quedará activa por')} <strong>{effectiveMonths} {effectiveMonths === 1 ? __('mes') : __('meses')}</strong> {__('hasta el')} <strong className="underline">{projectedExpirationDate.toLocaleDateString()}</strong>.
+                                                                </>
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 3. Selección de Sucursales & Resumen Financiero */}
                                 <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
                                     <div className="space-y-4">
                                         <Label className="text-sm font-bold flex items-center gap-2">
-                                            <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">2</span>
+                                            <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">{isProrationOnly ? '2' : '3'}</span>
                                             {__('Cantidad de Sucursales a Contratar')}
                                         </Label>
 
                                         <div className="p-4 bg-muted/30 rounded-xl border space-y-3">
                                             <div className="text-xs text-muted-foreground space-y-1.5 leading-relaxed">
-                                                {hasActivePaidSubscription ? (
+                                                {isProrationOnly ? (
                                                     <>
                                                         <p>
                                                             {__('Actualmente tienes')} <strong className="text-primary font-bold">{empresa.max_sucursales} {__('sucursal(es) autorizada(s)')}</strong>. {__('Tu corte de facturación vence el')} <strong className="text-foreground font-semibold">{empresa.subscription_expires_at ? new Date(empresa.subscription_expires_at).toLocaleDateString() : __('próximamente')}</strong> ({diasRestantesCiclo} {__('días restantes')}).
                                                         </p>
                                                         <div className="p-2.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800/40 text-indigo-900 dark:text-indigo-200 font-medium">
-                                                            💡 <strong>{__('Cobro justo por prorrateo:')}</strong> {__('Cada nueva sucursal se cobra únicamente por los')} <strong>{diasRestantesCiclo} {__('días restantes')}</strong> {__('hasta tu corte')} ({formatPrice(tarifaDiariaSucursal)}/{__('día')}). {__('En tu próxima mensualidad se unificarán todas tus sucursales en un solo pago.')}
+                                                            💡 <strong>{__('Cobro justo por prorrateo:')}</strong> {__('Cada nueva sucursal se cobra únicamente por los')} <strong>{diasRestantesCiclo} {__('días restantes')}</strong> {__('hasta tu corte')} ({formatPrice(tarifaDiariaSucursal)}/{__('día')}).
                                                         </div>
                                                     </>
                                                 ) : (
-                                                    <p>{__('El plan base incluye')} <strong>{activeSelectedPlan?.sucursales_incluidas ?? 1} {__('sucursal(es)')}</strong>. {__('Cada sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(activeSelectedPlan?.precio_sucursal_extra_mensual ?? 84.72)}/{__('mes')}</strong>.</p>
+                                                    <>
+                                                        <p>{__('El plan base incluye')} <strong>{activeSelectedPlan?.sucursales_incluidas ?? 1} {__('sucursal(es)')}</strong>. {__('Cada sucursal adicional suma +')}<strong className="text-primary font-bold">{formatPrice(precioSucursalExtra)}/{__('mes')}</strong>.</p>
+                                                        {hasActivePaidSubscription && sucursalesNuevasHoyCount > 0 && (
+                                                            <div className="p-2.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800/40 text-indigo-900 dark:text-indigo-200 font-medium">
+                                                                💡 {__('Al agregar')} <strong>+{sucursalesNuevasHoyCount}</strong> {__('sucursal(es) nueva(s) hoy, se suma el prorrateo de los')} <strong>{diasRestantesCiclo} {__('días restantes')}</strong> {__('del ciclo vigente para activarlas de inmediato.')}
+                                                            </div>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
 
@@ -660,17 +970,23 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                 </Button>
 
                                                 <span className="text-xs text-muted-foreground font-medium">
-                                                    {hasActivePaidSubscription ? (
-                                                        sucursalesExtrasCount === 0
+                                                    {isProrationOnly ? (
+                                                        sucursalesNuevasHoyCount === 0
                                                             ? __('(Sin nuevas sucursales adicionadas)')
-                                                            : `+${sucursalesExtrasCount} ${__('nueva(s) sucursal(es) extra')}`
+                                                            : `+${sucursalesNuevasHoyCount} ${__('nueva(s) sucursal(es) extra')}`
                                                     ) : (
                                                         extraSucursales <= (activeSelectedPlan?.sucursales_incluidas ?? 1)
                                                             ? `${activeSelectedPlan?.sucursales_incluidas ?? 1} ${__('Sucursal(es) Incluida(s)')}`
-                                                            : `+${sucursalesExtrasCount} ${__('sucursal(es) extra')}`
+                                                            : `+${sucursalesPlanExtrasCount} ${__('sucursal(es) extra')}`
                                                     )}
                                                 </span>
                                             </div>
+
+                                            {isProrationOnly && sucursalesNuevasHoyCount === 0 && (
+                                                <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs">
+                                                    {__('Incrementa el contador (+) para añadir sucursales, o selecciona')} <strong>{__('Adelantar Mensualidad')}</strong> {__('arriba para pagar tu próximo mes.')}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -682,23 +998,30 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                 <div className="flex items-center gap-2">
                                                     {isVenezuela && (
                                                         <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-300 bg-amber-500/10">
-                                                             Tasa BCV: Bs. {bcvRate.toFixed(2)} / USD
+                                                            Tasa BCV: Bs. {bcvRate.toFixed(2)} / USD
                                                         </Badge>
                                                     )}
                                                     <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-300">
-                                                        {hasActivePaidSubscription ? __('Prorrateo Ciclo') : __('Cobro Mensual')}
+                                                        {isProrationOnly
+                                                            ? __('Prorrateo Ciclo')
+                                                            : isAdvanceMode
+                                                                ? __('Pago Adelantado')
+                                                                : (effectiveMonths > 1 ? __('Pago Multi-Mes') : __('Cobro Mensual'))}
                                                     </Badge>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-1.5 text-xs text-slate-300">
                                                 <div className="flex justify-between">
-                                                    <span>{activeSelectedPlan?.nombre ?? __('Plan Mensual')} (1 {__('mes')}):</span>
+                                                    <span>
+                                                        {activeSelectedPlan?.nombre ?? __('Plan Mensual')}
+                                                        {!isProrationOnly ? ` (${effectiveMonths} ${effectiveMonths === 1 ? __('mes') : __('meses')})` : ''}:
+                                                    </span>
                                                     <span className="font-mono font-semibold">
-                                                        {hasActivePaidSubscription ? (
+                                                        {isProrationOnly ? (
                                                             <span className="text-emerald-400 font-bold">{__('✓ Pagado (Vigente)')}</span>
                                                         ) : (
-                                                            formatPrice(selectedMonthlyPrice)
+                                                            formatPrice(currentSubtotalPlan)
                                                         )}
                                                     </span>
                                                 </div>
@@ -707,15 +1030,29 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                         <div className="flex justify-between text-indigo-300">
                                                             <span>
                                                                 {sucursalesExtrasCount} {__('Sucursal(es) Extra')}
-                                                                {hasActivePaidSubscription ? ` (${diasRestantesCiclo} ${__('días')})` : ''}:
+                                                                {isProrationOnly
+                                                                    ? ` (${diasRestantesCiclo} ${__('días')})`
+                                                                    : ` × ${effectiveMonths} ${effectiveMonths === 1 ? __('mes') : __('meses')}`}:
                                                             </span>
                                                             <span className="font-mono font-semibold">+{formatPrice(costoExtraSucursales)}</span>
                                                         </div>
-                                                        {hasActivePaidSubscription && (
+                                                        {isProrationOnly && (
                                                             <p className="text-[10px] text-slate-400 italic">
                                                                 {formatPrice(tarifaDiariaSucursal)}/{__('día')} × {diasRestantesCiclo} {__('días')} × {sucursalesExtrasCount} {__('suc.')}
                                                             </p>
                                                         )}
+                                                    </div>
+                                                )}
+                                                {!isProrationOnly && costoProrrateoHoy > 0 && (
+                                                    <div className="flex justify-between text-sky-300 pt-1 border-t border-slate-800">
+                                                        <span>{__('Prorrateo')} +{sucursalesNuevasHoyCount} {__('suc. ciclo actual')} ({diasRestantesCiclo}d):</span>
+                                                        <span className="font-mono font-semibold">+{formatPrice(costoProrrateoHoy)}</span>
+                                                    </div>
+                                                )}
+                                                {!isProrationOnly && projectedExpirationDate && (
+                                                    <div className="flex justify-between text-emerald-300 pt-1 border-t border-slate-800">
+                                                        <span>{__('Nueva fecha de corte:')}</span>
+                                                        <span className="font-mono font-bold">{projectedExpirationDate.toLocaleDateString()}</span>
                                                     </div>
                                                 )}
                                                 {isVenezuela && (
@@ -730,9 +1067,11 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                         <div className="pt-4 border-t border-slate-800 mt-4 flex items-baseline justify-between relative z-10">
                                             <div>
                                                 <p className="text-xs text-slate-400 font-medium">
-                                                    {hasActivePaidSubscription
+                                                    {isProrationOnly
                                                         ? (isVenezuela ? __('Total Prorrateo Sucursales (Bolívares):') : __('Total Prorrateo Sucursales:'))
-                                                        : (isVenezuela ? __('Total a Transferir (Bolívares):') : __('Total a Transferir:'))
+                                                        : isAdvanceMode
+                                                            ? (isVenezuela ? __('Total Pago Adelantado (Bolívares):') : __('Total Pago Adelantado:'))
+                                                            : (isVenezuela ? __('Total a Transferir (Bolívares):') : __('Total a Transferir:'))
                                                     }
                                                 </p>
                                                 <p className="text-3xl font-black font-mono text-emerald-400">
@@ -743,10 +1082,10 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                     </div>
                                 </div>
 
-                                {/* 3. Datos del Pago */}
+                                {/* 4. Datos del Pago */}
                                 <div className="space-y-4 pt-4 border-t">
                                     <Label className="text-sm font-bold flex items-center gap-2">
-                                        <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">3</span>
+                                        <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">{isProrationOnly ? '3' : '4'}</span>
                                         {__('Registro del Pago y Comprobante')}
                                     </Label>
 
@@ -808,7 +1147,15 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                     </div>
                                                 </div>
                                                 <div className="text-xs text-muted-foreground leading-relaxed flex items-center justify-between border-t border-b border-amber-200/60 dark:border-amber-900/30 py-2 my-1">
-                                                    <span>{__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{activeSelectedPlan?.nombre ?? __('Plan Mensual')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong></span>
+                                                    <span>
+                                                        {__('Plan Seleccionado:')}{' '}
+                                                        <strong className="text-slate-800 dark:text-slate-200">
+                                                            {activeSelectedPlan?.nombre ?? __('Plan Mensual')}
+                                                            {isProrationOnly
+                                                                ? ` · ${__('Prorrateo')} (${extraSucursales} ${extraSucursales === 1 ? __('sucursal') : __('sucursales')})`
+                                                                : ` · ${effectiveMonths} ${effectiveMonths === 1 ? __('mes') : __('meses')} (${extraSucursales} ${extraSucursales === 1 ? __('sucursal') : __('sucursales')})`}
+                                                        </strong>
+                                                    </span>
                                                     <span className="font-bold font-mono text-amber-800 dark:text-amber-300 text-sm">${precioFinalEstimado.toFixed(2)} MXN</span>
                                                 </div>
                                                 <p className="text-xs text-muted-foreground leading-relaxed">
@@ -816,12 +1163,20 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                 </p>
 
                                                 {paymentGateways?.paypal?.client_id ? (
-                                                    <PayPalButtonComponent
-                                                        clientId={paymentGateways.paypal.client_id}
-                                                        selectedCycle={selectedCycle}
-                                                        extraSucursales={extraSucursales}
-                                                        __={__}
-                                                    />
+                                                    isQuoteValid ? (
+                                                        <PayPalButtonComponent
+                                                            clientId={paymentGateways.paypal.client_id}
+                                                            planId={selectedPlanId}
+                                                            selectedCycle={selectedCycle}
+                                                            extraSucursales={extraSucursales}
+                                                            modoPago={effectiveModoPago}
+                                                            __={__}
+                                                        />
+                                                    ) : (
+                                                        <div className="p-3 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 text-xs border border-amber-500/30">
+                                                            {__('Agrega al menos 1 sucursal extra o cambia a "Adelantar Mensualidad" para habilitar el pago.')}
+                                                        </div>
+                                                    )
                                                 ) : (
                                                     <div className="p-3 rounded bg-amber-500/20 text-amber-300 text-xs border border-amber-500/30">
                                                         {__('Las credenciales de PayPal están en configuración. Puedes realizar tu pago por transferencia bancaria o contactar soporte.')}
@@ -849,7 +1204,13 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
 
                                                 <div className="text-xs text-muted-foreground leading-relaxed flex items-center justify-between border-t border-b border-indigo-200/60 dark:border-indigo-900/40 py-2.5 my-1">
                                                     <span>
-                                                        {__('Plan Seleccionado:')} <strong className="text-slate-800 dark:text-slate-200">{activeSelectedPlan?.nombre ?? __('Plan Mensual')} ({extraSucursales} {extraSucursales === 1 ? __('sucursal') : __('sucursales')})</strong>
+                                                        {__('Plan Seleccionado:')}{' '}
+                                                        <strong className="text-slate-800 dark:text-slate-200">
+                                                            {activeSelectedPlan?.nombre ?? __('Plan Mensual')}
+                                                            {isProrationOnly
+                                                                ? ` · ${__('Prorrateo')} (${extraSucursales} ${extraSucursales === 1 ? __('sucursal') : __('sucursales')})`
+                                                                : ` · ${effectiveMonths} ${effectiveMonths === 1 ? __('mes') : __('meses')} (${extraSucursales} ${extraSucursales === 1 ? __('sucursal') : __('sucursales')})`}
+                                                        </strong>
                                                     </span>
                                                     <span className="font-bold font-mono text-indigo-800 dark:text-indigo-300 text-base">
                                                         ${precioFinalEstimado.toFixed(2)} MXN
@@ -864,7 +1225,7 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                     <Button
                                                         type="button"
                                                         onClick={handleStripeCheckout}
-                                                        disabled={isStripeLoading}
+                                                        disabled={isStripeLoading || !isQuoteValid}
                                                         className="w-full sm:w-auto h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 text-sm shadow-md transition-all duration-200"
                                                     >
                                                         {isStripeLoading ? (
@@ -872,7 +1233,7 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                                         ) : (
                                                             <Lock className="h-4 w-4" />
                                                         )}
-                                                        {__('Pagar con Stripe Checkout')} (${precioFinalEstimado.toFixed(2)} MXN)
+                                                        {isAdvanceMode ? __('Adelantar Pago con Stripe') : __('Pagar con Stripe Checkout')} (${precioFinalEstimado.toFixed(2)} MXN)
                                                     </Button>
                                                     <span className="text-[11px] text-muted-foreground">
                                                         🔒 {__('Procesamiento cifrado SSL por Stripe')}
@@ -916,12 +1277,14 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                 {data.metodo_pago !== 'paypal' && (
                                     <Button
                                         type="submit"
-                                        disabled={processing}
+                                        disabled={processing || !isQuoteValid}
                                         size="lg"
                                         className="w-full sm:w-auto gap-2 font-bold px-8 shadow-md h-11"
                                     >
                                         <Upload className="h-5 w-5" />
-                                        {processing ? __('Enviando...') : __('Enviar Solicitud de Renovación')}
+                                        {processing
+                                            ? __('Enviando...')
+                                            : (isAdvanceMode ? __('Enviar Pago Adelantado') : __('Enviar Solicitud de Renovación'))}
                                     </Button>
                                 )}
                             </form>
@@ -960,7 +1323,42 @@ export default function SubscriptionIndex({ empresa, plan, planes = [], opciones
                                         <TableCell className="text-xs font-mono font-medium">
                                             {new Date(pago.created_at).toLocaleDateString()}
                                         </TableCell>
-                                        <TableCell className="font-semibold text-xs">{pago.ciclo_meses} {__('Meses')}</TableCell>
+                                        <TableCell className="font-semibold text-xs">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="inline-flex items-center gap-1.5">
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={`text-[10px] font-bold ${
+                                                            pago.tipo_pago === 'advance'
+                                                                ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                                                : pago.tipo_pago === 'proration'
+                                                                    ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300'
+                                                                    : pago.tipo_pago === 'whatsapp_topup'
+                                                                        ? 'border-purple-300 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300'
+                                                                        : 'border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                                                        }`}
+                                                    >
+                                                        {pago.tipo_pago === 'advance'
+                                                            ? __('Adelanto')
+                                                            : pago.tipo_pago === 'proration'
+                                                                ? __('Prorrateo')
+                                                                : pago.tipo_pago === 'whatsapp_topup'
+                                                                    ? __('WhatsApp')
+                                                                    : __('Renovación')}
+                                                    </Badge>
+                                                    <span>
+                                                        {pago.tipo_pago === 'whatsapp_topup'
+                                                            ? `${pago.mensajes_comprados ?? 0} ${__('msgs')}`
+                                                            : pago.tipo_pago === 'proration'
+                                                                ? __('Ciclo vigente')
+                                                                : `${pago.ciclo_meses} ${pago.ciclo_meses === 1 ? __('Mes') : __('Meses')}`}
+                                                    </span>
+                                                </span>
+                                                {pago.plan?.nombre && pago.tipo_pago !== 'whatsapp_topup' && (
+                                                    <span className="text-[10px] text-muted-foreground">{pago.plan.nombre}</span>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                         <TableCell className="text-xs font-medium">{pago.sucursales_contratadas}</TableCell>
                                         <TableCell className="font-mono font-bold text-xs text-primary">
                                             {formatPrice(pago.monto)}
