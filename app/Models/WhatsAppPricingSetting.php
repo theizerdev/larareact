@@ -11,6 +11,7 @@ class WhatsAppPricingSetting extends Model
     protected $fillable = [
         'costo_por_mensaje_usd',
         'mensajes_gratis_defecto',
+        'max_mensajes_acumulados_defecto',
         'min_compra_mensajes',
         'paquetes_recarga',
         'cobro_activo',
@@ -19,6 +20,7 @@ class WhatsAppPricingSetting extends Model
     protected $casts = [
         'costo_por_mensaje_usd' => 'float',
         'mensajes_gratis_defecto' => 'integer',
+        'max_mensajes_acumulados_defecto' => 'integer',
         'min_compra_mensajes' => 'integer',
         'paquetes_recarga' => 'array',
         'cobro_activo' => 'boolean',
@@ -31,7 +33,8 @@ class WhatsAppPricingSetting extends Model
         if (! $setting) {
             $setting = self::create([
                 'costo_por_mensaje_usd' => 0.0050,
-                'mensajes_gratis_defecto' => 60,
+                'mensajes_gratis_defecto' => 500,
+                'max_mensajes_acumulados_defecto' => 1000,
                 'min_compra_mensajes' => 100,
                 'paquetes_recarga' => [100, 500, 1000, 5000],
                 'cobro_activo' => true,

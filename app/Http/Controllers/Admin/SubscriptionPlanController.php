@@ -91,6 +91,7 @@ class SubscriptionPlanController extends Controller
             'precio_sucursal_extra_mensual' => 'nullable|numeric|min:0',
             'costo_por_mensaje_usd' => 'nullable|numeric|min:0.0001|max:10',
             'mensajes_incluidos_mes' => 'nullable|integer|min:0|max:100000',
+            'max_mensajes_acumulados' => 'nullable|integer|min:0|max:100000',
             'min_compra_mensajes' => 'nullable|integer|min:100|max:100000',
             'sucursales_incluidas' => 'nullable|integer|min:1',
             'modulos_incluidos' => 'nullable|array',
@@ -149,6 +150,7 @@ class SubscriptionPlanController extends Controller
             'precio_sucursal_extra_mensual' => 'nullable|numeric|min:0',
             'costo_por_mensaje_usd' => 'nullable|numeric|min:0.0001|max:10',
             'mensajes_incluidos_mes' => 'nullable|integer|min:0|max:100000',
+            'max_mensajes_acumulados' => 'nullable|integer|min:0|max:100000',
             'min_compra_mensajes' => 'nullable|integer|min:100|max:100000',
             'sucursales_incluidas' => 'nullable|integer|min:1',
             'modulos_incluidos' => 'nullable|array',
@@ -179,6 +181,7 @@ class SubscriptionPlanController extends Controller
         $validated = $request->validate([
             'costo_por_mensaje_usd' => 'required|numeric|min:0.0001|max:10',
             'mensajes_gratis_defecto' => 'required|integer|min:0|max:100000',
+            'max_mensajes_acumulados_defecto' => 'nullable|integer|min:0|max:100000',
             'min_compra_mensajes' => 'required|integer|min:100|max:100000',
             'paquetes_recarga' => 'nullable|array',
             'paquetes_recarga.*' => 'integer|min:100',
@@ -187,9 +190,11 @@ class SubscriptionPlanController extends Controller
         ]);
 
         $setting = WhatsAppPricingSetting::current();
+        $maxAcum = (int) ($validated['max_mensajes_acumulados_defecto'] ?? $setting->max_mensajes_acumulados_defecto ?? 1000);
         $setting->update([
             'costo_por_mensaje_usd' => (float) $validated['costo_por_mensaje_usd'],
             'mensajes_gratis_defecto' => (int) $validated['mensajes_gratis_defecto'],
+            'max_mensajes_acumulados_defecto' => $maxAcum,
             'min_compra_mensajes' => (int) $validated['min_compra_mensajes'],
             'paquetes_recarga' => $validated['paquetes_recarga'] ?? $setting->paquetes_recarga,
             'cobro_activo' => (bool) ($validated['cobro_activo'] ?? true),
@@ -199,6 +204,7 @@ class SubscriptionPlanController extends Controller
             SubscriptionPlan::query()->update([
                 'costo_por_mensaje_usd' => (float) $validated['costo_por_mensaje_usd'],
                 'mensajes_incluidos_mes' => (int) $validated['mensajes_gratis_defecto'],
+                'max_mensajes_acumulados' => $maxAcum,
                 'min_compra_mensajes' => (int) $validated['min_compra_mensajes'],
             ]);
         }

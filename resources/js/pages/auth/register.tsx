@@ -585,7 +585,7 @@ export default function Register({
                                                 </div>
                                                 <div className="flex items-center justify-between gap-4">
                                                     <span>Mensajes WhatsApp incluidos</span>
-                                                    <span className="font-bold text-emerald-600 whitespace-nowrap">60 gratis / ciclo</span>
+                                                    <span className="font-bold text-emerald-600 whitespace-nowrap">500 / mes (tope 1,000)</span>
                                                 </div>
                                                 <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-4 text-lg font-black text-[#08264e]">
                                                     <span>Total hoy</span>

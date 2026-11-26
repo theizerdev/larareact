@@ -118,7 +118,8 @@ export default function PlanesIndex({ planes = [], pricingSetting, stats, curren
     const [isSavingPricing, setIsSavingPricing] = useState(false);
     const [pricingForm, setPricingForm] = useState({
         costo_por_mensaje_usd: pricingSetting?.costo_por_mensaje_usd ?? 0.005,
-        mensajes_gratis_defecto: pricingSetting?.mensajes_gratis_defecto ?? 60,
+        mensajes_gratis_defecto: pricingSetting?.mensajes_gratis_defecto ?? 500,
+        max_mensajes_acumulados_defecto: (pricingSetting as any)?.max_mensajes_acumulados_defecto ?? 1000,
         min_compra_mensajes: pricingSetting?.min_compra_mensajes ?? 100,
         cobro_activo: pricingSetting?.cobro_activo ?? true,
         aplicar_a_todos_los_planes: true,
@@ -1257,7 +1258,7 @@ export default function PlanesIndex({ planes = [], pricingSetting, stats, curren
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleSaveMessagingPricing} className="space-y-4 pt-2">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <Label className="text-xs font-semibold">{__('Precio / Mensaje (USD)')}</Label>
                                 <Input
@@ -1270,12 +1271,22 @@ export default function PlanesIndex({ planes = [], pricingSetting, stats, curren
                                 />
                             </div>
                             <div className="space-y-1">
-                                <Label className="text-xs font-semibold">{__('Mensajes Gratis')}</Label>
+                                <Label className="text-xs font-semibold">{__('Mensajes Incluidos / Mes')}</Label>
                                 <Input
                                     type="number"
                                     min="0"
                                     value={pricingForm.mensajes_gratis_defecto}
                                     onChange={(e) => setPricingForm({ ...pricingForm, mensajes_gratis_defecto: parseInt(e.target.value, 10) || 0 })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold">{__('Tope Acumulable (Rollover)')}</Label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    value={pricingForm.max_mensajes_acumulados_defecto}
+                                    onChange={(e) => setPricingForm({ ...pricingForm, max_mensajes_acumulados_defecto: parseInt(e.target.value, 10) || 0 })}
                                     required
                                 />
                             </div>

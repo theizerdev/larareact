@@ -30,7 +30,8 @@ class WhatsAppBillingService
             $unitCost = (float) ($global?->costo_por_mensaje_usd ?? 0.0050);
         }
 
-        $freeQuota = (int) ($plan?->mensajes_incluidos_mes ?? $global?->mensajes_gratis_defecto ?? 60);
+        $freeQuota = (int) ($plan?->mensajes_incluidos_mes ?? $global?->mensajes_gratis_defecto ?? 500);
+        $maxRollover = max($freeQuota, (int) ($plan?->max_mensajes_acumulados ?? $global?->max_mensajes_acumulados_defecto ?? 1000));
         $minPurchase = max(100, (int) ($plan?->min_compra_mensajes ?? $global?->min_compra_mensajes ?? 100));
         $billingEnabled = $global ? (bool) $global->cobro_activo : true;
         $packages = $global?->paquetes_recarga ?: [100, 500, 1000, 5000];
@@ -38,6 +39,7 @@ class WhatsAppBillingService
         return [
             'unit_cost_usd' => round($unitCost, 4),
             'free_quota' => max(0, $freeQuota),
+            'max_rollover_messages' => $maxRollover,
             'min_purchase_messages' => $minPurchase,
             'billing_enabled' => $billingEnabled,
             'packages' => array_values(array_filter(array_map('intval', $packages), fn ($v) => $v >= $minPurchase)),
@@ -47,15 +49,36 @@ class WhatsAppBillingService
     }
 
     /**
-     * Reinicia el contador gratuito mensual si el ciclo ya venció.
+     * Reinicia el ciclo mensual aplicando Rollover con tope (ej. hasta 1,000 mensajes acumulados).
      */
-    private function syncCycleReset(Empresa $empresa): void
+    private function syncCycleReset(Empresa $empresa, ?array $pricing = null): void
     {
         if (! Schema::hasColumn('empresas', 'whatsapp_cycle_reset_at')) {
             return;
         }
 
-        if ($empresa->whatsapp_cycle_reset_at === null || now()->gte($empresa->whatsapp_cycle_reset_at)) {
+        if ($empresa->whatsapp_cycle_reset_at === null) {
+            $empresa->whatsapp_messages_used_cycle = 0;
+            $empresa->whatsapp_cycle_reset_at = now()->addMonth();
+            $empresa->save();
+
+            return;
+        }
+
+        $resetAt = Carbon::parse($empresa->whatsapp_cycle_reset_at);
+        if (now()->gte($resetAt)) {
+            $pricing = $pricing ?? $this->resolvePricingForEmpresa($empresa);
+            $freeQuota = $pricing['free_quota'];
+            $maxRollover = $pricing['max_rollover_messages'];
+
+            if (Schema::hasColumn('empresas', 'whatsapp_rollover_messages')) {
+                $used = (int) ($empresa->whatsapp_messages_used_cycle ?? 0);
+                $unusedThisCycle = max(0, $freeQuota - $used);
+                $currentRollover = (int) ($empresa->whatsapp_rollover_messages ?? 0);
+                $maxExtraRollover = max(0, $maxRollover - $freeQuota);
+                $empresa->whatsapp_rollover_messages = min($maxExtraRollover, $currentRollover + $unusedThisCycle);
+            }
+
             $empresa->whatsapp_messages_used_cycle = 0;
             $empresa->whatsapp_cycle_reset_at = now()->addMonth();
             $empresa->save();
@@ -91,6 +114,9 @@ class WhatsAppBillingService
         $balance = round((float) ($empresa->whatsapp_balance_usd ?? 0), 4);
         $used = (int) ($empresa->whatsapp_messages_used_cycle ?? 0);
         $freeRemaining = max(0, $pricing['free_quota'] - $used);
+        $rolloverRemaining = Schema::hasColumn('empresas', 'whatsapp_rollover_messages')
+            ? max(0, (int) ($empresa->whatsapp_rollover_messages ?? 0))
+            : 0;
         $unitCost = $pricing['unit_cost_usd'];
         $paidRemaining = $unitCost > 0 ? (int) floor(($balance + 1e-9) / $unitCost) : 0;
 
@@ -107,8 +133,10 @@ class WhatsAppBillingService
             'free_quota' => $pricing['free_quota'],
             'free_used' => $used,
             'free_remaining' => $freeRemaining,
+            'rollover_remaining' => $rolloverRemaining,
+            'max_rollover_messages' => $pricing['max_rollover_messages'],
             'paid_remaining_messages' => $paidRemaining,
-            'total_remaining_messages' => $freeRemaining + $paidRemaining,
+            'total_remaining_messages' => $freeRemaining + $rolloverRemaining + $paidRemaining,
             'unit_cost_usd' => $unitCost,
             'min_purchase_messages' => $pricing['min_purchase_messages'],
             'packages' => $pricing['packages'],
@@ -207,7 +235,7 @@ class WhatsAppBillingService
             $unitCost = $pricing['unit_cost_usd'];
             $balance = round((float) ($empresa->whatsapp_balance_usd ?? 0), 4);
 
-            // 1. Consumir del cupo gratuito (60 mensajes) si aún hay disponibles
+            // 1. Consumir del cupo incluido del mes (500 mensajes) si aún hay disponibles
             if ($used < $freeQuota) {
                 $empresa->whatsapp_messages_used_cycle = $used + 1;
                 $empresa->save();
@@ -221,7 +249,7 @@ class WhatsAppBillingService
                         'saldo_anterior' => $balance,
                         'saldo_nuevo' => $balance,
                         'whatsapp_message_id' => $localMessageId,
-                        'descripcion' => $description.' (Cupo gratuito '.($used + 1).'/'.$freeQuota.')',
+                        'descripcion' => $description.' (Cupo mensual '.($used + 1).'/'.$freeQuota.')',
                     ]);
                 }
 
@@ -232,7 +260,35 @@ class WhatsAppBillingService
                 ];
             }
 
-            // 2. Descontar del saldo prepago ($0.005 USD por mensaje)
+            // 2. Consumir de mensajes acumulados (Rollover del mes anterior)
+            $rollover = Schema::hasColumn('empresas', 'whatsapp_rollover_messages')
+                ? (int) ($empresa->whatsapp_rollover_messages ?? 0)
+                : 0;
+            if ($rollover > 0) {
+                $empresa->whatsapp_rollover_messages = $rollover - 1;
+                $empresa->save();
+
+                if (Schema::hasTable('whatsapp_wallet_transactions')) {
+                    WhatsAppWalletTransaction::create([
+                        'empresa_id' => $empresaId,
+                        'user_id' => auth()->id(),
+                        'tipo' => 'rollover_quota',
+                        'monto_usd' => 0.0000,
+                        'saldo_anterior' => $balance,
+                        'saldo_nuevo' => $balance,
+                        'whatsapp_message_id' => $localMessageId,
+                        'descripcion' => $description.' (Acumulado rollover restante: '.($rollover - 1).')',
+                    ]);
+                }
+
+                return [
+                    'allowed' => true,
+                    'billing_source' => 'rollover',
+                    'cost' => 0.0,
+                ];
+            }
+
+            // 3. Descontar del saldo prepago ($0.005 USD por mensaje)
             if ($balance + 1e-9 < $unitCost) {
                 return [
                     'allowed' => false,
@@ -273,7 +329,7 @@ class WhatsAppBillingService
      */
     public function refund(int $empresaId, string $billingSource, float $cost, ?int $localMessageId = null, string $reason = 'Fallo en envío'): void
     {
-        if (! in_array($billingSource, ['free_quota', 'wallet'], true)) {
+        if (! in_array($billingSource, ['free_quota', 'rollover', 'wallet'], true)) {
             return;
         }
 
@@ -299,6 +355,15 @@ class WhatsAppBillingService
             if ($billingSource === 'free_quota') {
                 if ((int) $empresa->whatsapp_messages_used_cycle > 0) {
                     $empresa->whatsapp_messages_used_cycle = (int) $empresa->whatsapp_messages_used_cycle - 1;
+                    $empresa->save();
+                }
+
+                return;
+            }
+
+            if ($billingSource === 'rollover') {
+                if (Schema::hasColumn('empresas', 'whatsapp_rollover_messages')) {
+                    $empresa->whatsapp_rollover_messages = (int) ($empresa->whatsapp_rollover_messages ?? 0) + 1;
                     $empresa->save();
                 }
 

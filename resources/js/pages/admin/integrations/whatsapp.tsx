@@ -232,6 +232,8 @@ interface WalletSummary {
     free_quota: number;
     free_used: number;
     free_remaining: number;
+    rollover_remaining?: number;
+    max_rollover_messages?: number;
     paid_remaining_messages: number;
     total_remaining_messages: number;
     unit_cost_usd: number;
@@ -1722,10 +1724,15 @@ export default function WhatsAppIntegration({
                             <div className="flex flex-wrap items-center gap-4">
                                 <div>
                                     <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                                        Cupo Gratis del Ciclo
+                                        Cupo del Mes (Tope {wallet_summary.max_rollover_messages ?? 1000})
                                     </p>
                                     <p className="text-base font-black text-foreground">
                                         {wallet_summary.free_remaining} / {wallet_summary.free_quota} disponibles
+                                        {(wallet_summary.rollover_remaining ?? 0) > 0 && (
+                                            <span className="ml-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                                (+{wallet_summary.rollover_remaining} acumulados)
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
                                 <div className="h-8 w-px bg-border hidden sm:block" />
