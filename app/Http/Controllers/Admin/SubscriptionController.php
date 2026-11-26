@@ -29,8 +29,18 @@ class SubscriptionController extends Controller
 
         SubscriptionPlan::ensureDefaultPlansExist();
         $planes = SubscriptionPlan::available()->orderBy('orden', 'asc')->get();
+        $suscripcionActiva = Subscription::where('empresa_id', $empresa->id)
+            ->with('plan')
+            ->orderBy('id', 'desc')
+            ->first();
+
         $requestedPlanId = $request->integer('plan_id');
+        $activeSubPlan = ($suscripcionActiva?->plan && $suscripcionActiva->plan->activo)
+            ? $planes->firstWhere('id', $suscripcionActiva->plan->id)
+            : null;
+
         $plan = ($requestedPlanId ? $planes->firstWhere('id', $requestedPlanId) : null)
+            ?? $activeSubPlan
             ?? SubscriptionPlan::getPlanRenovacionDefault()
             ?? $planes->first();
         $totalSucursales = $empresa->sucursales()->count();
@@ -39,11 +49,6 @@ class SubscriptionController extends Controller
             ->with(['user', 'aprobador', 'plan'])
             ->orderBy('created_at', 'desc')
             ->get();
-
-        $suscripcionActiva = Subscription::where('empresa_id', $empresa->id)
-            ->with('plan')
-            ->orderBy('id', 'desc')
-            ->first();
 
         $bcvRate = $bcvService->getRate() ?? 36.50; // Tasa por defecto de respaldo si falla el API
 
