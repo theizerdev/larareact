@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
 class CreateNewUser implements CreatesNewUsers
@@ -34,6 +35,8 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
             'company_phone' => ['nullable', 'string', 'max:255'],
             'pais_id' => ['nullable', 'exists:pais,id'],
+            'plan_id' => ['nullable', 'exists:subscription_plans,id'],
+            'payment_method' => ['nullable', 'string', 'max:50'],
         ], [
             'company_name.required' => __('El nombre de la empresa es obligatorio.'),
             'representante_legal.required' => __('El nombre del representante legal es obligatorio.'),
@@ -41,12 +44,36 @@ class CreateNewUser implements CreatesNewUsers
             'email.unique' => __('Este correo electrónico ya se encuentra registrado.'),
         ])->validate();
 
+        $selectedPlan = ! empty($input['plan_id'])
+            ? \App\Models\SubscriptionPlan::find((int) $input['plan_id'])
+            : null;
+
+        if ($selectedPlan && ! $selectedPlan->hasAvailableSlotsForEmpresa()) {
+            throw ValidationException::withMessages([
+                'plan_id' => __('El plan seleccionado ha alcanzado el límite de cupos disponibles o ya caducó.'),
+            ]);
+        }
+
         $createdEmpresa = null;
+        $createdSucursal = null;
         $createdUser = null;
         $otpCode = null;
 
-        $createdUser = DB::transaction(function () use ($input, &$createdEmpresa, &$otpCode) {
-            $phone = $input['company_phone'] ?? ($input['phone'] ?? null);
+        $createdUser = DB::transaction(function () use ($input, $selectedPlan, &$createdEmpresa, &$createdSucursal, &$otpCode) {
+            // Guardar en sesión el plan de pago elegido en el checkout (si aplica)
+        if ($selectedPlan && (float) ($selectedPlan->precio_12_meses ?: $selectedPlan->precio_regular_mensual) > 0) {
+            session([
+                'checkout_plan_id' => $selectedPlan->id,
+                'checkout_payment_method' => $input['payment_method'] ?? null,
+            ]);
+        }
+
+        // Inicializar instancia en el microservicio fuera de la transacción para no bloquear el registro
+        if ($createdSucursal) {
+            $createdSucursal->createWhatsAppInstanceOnMicroservice();
+        }
+
+        $phone = $input['company_phone'] ?? ($input['phone'] ?? null);
             $paisId = $input['pais_id'] ?? ($input['pais_telefono_id'] ?? null);
             $nombreComercial = ! empty($input['nombre_comercial']) ? trim($input['nombre_comercial']) : null;
 
@@ -65,13 +92,14 @@ class CreateNewUser implements CreatesNewUsers
                 'status' => true,
                 'api_key' => Str::random(32),
                 'whatsapp_api_key' => Str::random(32),
-                'whatsapp_api_url' => config('whatsapp.api_url', 'http://127.0.0.1:3000'),
+                'whatsapp_api_url' => config('whatsapp.api_url', 'http://127.0.0.1:3001'),
                 'subscription_status' => 'trial',
                 'trial_ends_at' => now()->addDays(7),
                 'max_sucursales' => 1,
             ]);
 
-            $trialPlan = \App\Models\SubscriptionPlan::where('nombre', 'like', '%Prueba%')->first()
+            $trialPlan = $selectedPlan
+                ?? \App\Models\SubscriptionPlan::where('nombre', 'like', '%Prueba%')->first()
                 ?? \App\Models\SubscriptionPlan::first();
 
             \App\Models\Subscription::create([
@@ -86,7 +114,7 @@ class CreateNewUser implements CreatesNewUsers
                 'estado' => 'trial',
             ]);
 
-            // 2. Crear Sucursal Principal
+            // 2. Crear Sucursal Principal (la instancia en el microservicio se crea después del commit)
             $sucursal = Sucursal::create([
                 'empresa_id' => $empresa->id,
                 'nombre' => 'Sucursal Principal',
@@ -97,9 +125,8 @@ class CreateNewUser implements CreatesNewUsers
                 'whatsapp_status' => 'disconnected',
                 'whatsapp_active' => true,
             ]);
-
-            // Crear instancia inmediatamente en el microservicio de WhatsApp a nombre de la sucursal
-            $sucursal->createWhatsAppInstanceOnMicroservice();
+            $sucursal->update(['whatsapp_instance' => $sucursal->buildWhatsAppInstanceName()]);
+            $createdSucursal = $sucursal;
 
             // 3. Crear Usuario Administrador asociado a la empresa y sucursal
             $user = User::create([
@@ -179,6 +206,19 @@ class CreateNewUser implements CreatesNewUsers
 
             return $user;
         });
+
+        // Guardar en sesión el plan de pago elegido en el checkout (si aplica)
+        if ($selectedPlan && (float) ($selectedPlan->precio_12_meses ?: $selectedPlan->precio_regular_mensual) > 0) {
+            session([
+                'checkout_plan_id' => $selectedPlan->id,
+                'checkout_payment_method' => $input['payment_method'] ?? null,
+            ]);
+        }
+
+        // Inicializar instancia en el microservicio fuera de la transacción para no bloquear el registro
+        if ($createdSucursal) {
+            $createdSucursal->createWhatsAppInstanceOnMicroservice();
+        }
 
         $phone = $input['company_phone'] ?? ($input['phone'] ?? null);
         if ($phone && $createdUser && $createdEmpresa && $otpCode) {

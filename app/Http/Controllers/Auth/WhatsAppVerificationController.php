@@ -88,6 +88,26 @@ class WhatsAppVerificationController extends Controller
             'whatsapp_otp_expires_at' => null,
         ])->save();
 
+        // Asegurar que la sucursal tenga su instancia creada en el microservicio de WhatsApp
+        $sucursal = $user->sucursal ?? $user->empresa?->sucursales()->first();
+        if ($sucursal) {
+            $sucursal->createWhatsAppInstanceOnMicroservice();
+        }
+
+        $checkoutPlanId = session()->pull('checkout_plan_id');
+        $checkoutMethod = session()->pull('checkout_payment_method');
+        if ($checkoutPlanId) {
+            return redirect()->route('subscription.index', [
+                'plan_id' => $checkoutPlanId,
+                'method' => $checkoutMethod,
+            ])->with('status', __('¡WhatsApp verificado! Completa el pago de tu plan para activar tu cuenta y vincular tu QR.'));
+        }
+
+        if ($sucursal) {
+            return redirect()->route('admin.integrations.whatsapp.index', ['sucursal_id' => $sucursal->id])
+                ->with('status', __('¡Teléfono verificado con éxito! Escanea tu código QR para vincular tu WhatsApp y continuar.'));
+        }
+
         return redirect()->route('dashboard')->with('status', __('¡Teléfono verificado con éxito! Bienvenido al sistema.'));
     }
 

@@ -94,12 +94,27 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::registerView(fn () => Inertia::render('auth/register', [
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
-            'paises' => \App\Models\Pais::where('activo', true)
-                ->orderBy('nombre', 'asc')
-                ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
-        ]));
+        Fortify::registerView(function () {
+            \App\Models\SubscriptionPlan::ensureDefaultPlansExist();
+
+            $planes = \App\Models\SubscriptionPlan::available()
+                ->orderBy('orden', 'asc')
+                ->orderBy('id', 'asc')
+                ->get()
+                ->map(function (\App\Models\SubscriptionPlan $plan) {
+                    $plan->setAttribute('cupos_restantes', $plan->remainingSlots());
+                    return $plan;
+                });
+
+            return Inertia::render('auth/register', [
+                'passwordRules' => Password::defaults()->toPasswordRulesString(),
+                'paises' => \App\Models\Pais::where('activo', true)
+                    ->orderBy('nombre', 'asc')
+                    ->get(['id', 'nombre', 'codigo_iso2', 'codigo_telefonico']),
+                'planes' => $planes,
+                'paymentMethods' => app(\App\Services\WhatsAppBillingService::class)->getActivePaymentMethods(),
+            ]);
+        });
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
 

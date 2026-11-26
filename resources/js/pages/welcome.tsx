@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Zap,
     Smartphone,
@@ -34,8 +34,10 @@ import {
     Database,
     Activity,
     Shield,
+    ShoppingCart,
+    Trash2,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslate } from '@/hooks/use-translate';
 import BackgroundParticles from '@/components/background-particles';
 import PagePreloader from '@/components/page-preloader';
@@ -44,6 +46,48 @@ export default function Welcome() {
     const pageProps = usePage().props as any;
     const auth = pageProps.auth || {};
     const { __ } = useTranslate();
+
+    const [cartPlan, setCartPlan] = useState<any>(() => {
+        if (typeof window === 'undefined') return null;
+        try {
+            const raw = window.localStorage.getItem('fixsale_cart_plan');
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
+    });
+    const [cartOpen, setCartOpen] = useState(false);
+
+    useEffect(() => {
+        try {
+            if (cartPlan) {
+                window.localStorage.setItem('fixsale_cart_plan', JSON.stringify(cartPlan));
+            } else {
+                window.localStorage.removeItem('fixsale_cart_plan');
+            }
+        } catch {
+            // ignore storage errors
+        }
+    }, [cartPlan]);
+
+    const handleSelectPlanToCart = (plan: any) => {
+        const isFree = Number(plan.ciclo_meses) === 0 || (plan.nombre || '').toLowerCase().includes('prueba');
+        const isAnnual = Number(plan.ciclo_meses) === 12;
+        const price = isFree
+            ? 0
+            : isAnnual
+                ? (Number(plan.precio_12_meses) > 0 ? Number(plan.precio_12_meses) : 1000)
+                : Number(plan.precio_promocional_mensual || plan.precio_regular_mensual || 149);
+
+        setCartPlan({
+            id: plan.id,
+            nombre: plan.nombre,
+            ciclo_meses: Number(plan.ciclo_meses ?? (isAnnual ? 12 : isFree ? 0 : 1)),
+            precio: price,
+            descripcion: plan.descripcion || '',
+        });
+        setCartOpen(true);
+    };
 
     // Detección dinámica de país (Venezuela vs Internacional)
     const isVenezuela = Boolean(pageProps.isVenezuela);
@@ -157,7 +201,7 @@ export default function Welcome() {
             {/* ─── PRELOADER CON ISOTIPO MINI FIXSALE (2.PNG) ────────────────────────── */}
             <PagePreloader logoPath="/image/logo/2.png" durationMs={1100} slogan={__('Controla. Vende. Crece.')} />
 
-            <div className="relative min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-orange-500 selection:text-white antialiased overflow-x-hidden">
+            <div className="relative min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-orange-500 selection:text-white antialiased overflow-x-hidden pt-20">
                 {/* ─── CANVASES & PARTICLES DECORATION ──────────────────────────────────── */}
                 <BackgroundParticles particleCount={40} colorScheme="brand" />
 
@@ -166,8 +210,8 @@ export default function Welcome() {
                 <div className="fixed top-1/3 left-0 w-96 h-96 bg-blue-600/5 blur-[120px] pointer-events-none -z-10" />
                 <div className="fixed bottom-10 right-0 w-96 h-96 bg-orange-500/5 blur-[120px] pointer-events-none -z-10" />
 
-                {/* ─── HEADER / NAVBAR ────────────────────────────────────────────────────── */}
-                <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/90 border-b border-slate-200/80 shadow-sm transition-all">
+                {/* ─── HEADER / NAVBAR SIEMPRE VISIBLE ────────────────────────────────────── */}
+                <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/95 border-b border-slate-200/80 shadow-sm transition-all">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
                         {/* Logo Horizontal Completo FixSale (Light Mode) */}
                         <Link href="/" className="flex items-center gap-3 group">
@@ -200,8 +244,78 @@ export default function Welcome() {
                             </a>
                         </nav>
 
-                        {/* Acciones de Auth */}
-                        <div className="flex items-center gap-3">
+                        {/* Acciones de Auth + Carrito */}
+                        <div className="flex items-center gap-3 relative">
+                            {!auth.user && (
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCartOpen((prev) => !prev)}
+                                        className="relative inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors shadow-sm"
+                                        title={__('Carrito de compra')}
+                                    >
+                                        <ShoppingCart className="w-4 h-4" />
+                                        {cartPlan && (
+                                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#ff5a00] text-white text-[10px] font-black flex items-center justify-center shadow">
+                                                1
+                                            </span>
+                                        )}
+                                    </button>
+
+                                    {cartOpen && (
+                                        <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-2xl p-4 z-50 space-y-3">
+                                            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                                <span className="text-xs font-extrabold uppercase tracking-wider text-[#08264e]">
+                                                    {__('Tu Carrito')}
+                                                </span>
+                                                {cartPlan && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCartPlan(null)}
+                                                        className="text-[11px] text-rose-500 hover:text-rose-600 inline-flex items-center gap-1 font-semibold"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                        {__('Vaciar')}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {cartPlan ? (
+                                                <div className="space-y-3">
+                                                    <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                                                        <p className="text-sm font-black text-[#08264e]">{cartPlan.nombre}</p>
+                                                        <p className="text-xs font-bold text-[#ff5a00] mt-0.5">
+                                                            {cartPlan.precio === 0
+                                                                ? '$0 MXN (7 días gratis)'
+                                                                : `$${Number(cartPlan.precio).toLocaleString('es-MX')} MXN / ${cartPlan.ciclo_meses === 12 ? 'año' : 'mes'}`}
+                                                        </p>
+                                                    </div>
+                                                    <Link
+                                                        href={`/register?plan_id=${cartPlan.id}`}
+                                                        onClick={() => setCartOpen(false)}
+                                                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#ff5a00] to-orange-600 text-white text-xs font-extrabold text-center inline-flex items-center justify-center gap-1.5 shadow-md"
+                                                    >
+                                                        {__('Ir al Checkout')}
+                                                        <ArrowRight className="w-3.5 h-3.5" />
+                                                    </Link>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-3 space-y-2">
+                                                    <p className="text-xs text-slate-500">
+                                                        {__('Tu carrito está vacío. Selecciona un plan para comenzar.')}
+                                                    </p>
+                                                    <a
+                                                        href="#pricing"
+                                                        onClick={() => setCartOpen(false)}
+                                                        className="inline-block text-xs font-bold text-[#ff5a00] hover:underline"
+                                                    >
+                                                        {__('Ver planes disponibles')}
+                                                    </a>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             {auth.user ? (
                                 <Link
                                     href="/admin/dashboard"
@@ -904,16 +1018,26 @@ export default function Welcome() {
                                                     <span className="w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center block mt-4 bg-slate-200 text-slate-500 cursor-not-allowed">
                                                         {__('Cupos Agotados')}
                                                     </span>
-                                                ) : (
+                                                ) : cartPlan?.id === plan.id ? (
                                                     <Link
                                                         href={`/register?plan_id=${plan.id}`}
-                                                        className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all block mt-4 ${isFeatured
+                                                        className="w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all inline-flex items-center justify-center gap-2 mt-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/25"
+                                                    >
+                                                        <Check className="w-4 h-4" />
+                                                        {__('En tu carrito · Ir al Checkout')}
+                                                    </Link>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSelectPlanToCart(plan)}
+                                                        className={`w-full py-3.5 px-4 rounded-xl text-xs font-extrabold text-center transition-all inline-flex items-center justify-center gap-2 mt-4 cursor-pointer ${isFeatured
                                                             ? 'bg-gradient-to-r from-[#ff5a00] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25'
                                                             : 'bg-slate-100 hover:bg-slate-200 text-[#08264e]'
                                                             }`}
                                                     >
-                                                        {isFree ? __('Probar 7 Días Gratis') : isAnnual ? __('Apartar mi lugar ahora') : `${__('Elegir')} ${__(plan.nombre)}`}
-                                                    </Link>
+                                                        <ShoppingCart className="w-4 h-4" />
+                                                        {__('Añadir al carrito')}
+                                                    </button>
                                                 )}
                                             </div>
                                         );
