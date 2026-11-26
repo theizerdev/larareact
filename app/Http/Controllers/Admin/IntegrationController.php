@@ -996,6 +996,13 @@ class IntegrationController extends Controller
      */
     public function whatsappUpdateAntiBan(Request $request)
     {
+        if (! $request->user()?->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Solo el Super Administrador puede modificar las políticas anti-baneo.',
+            ], 403);
+        }
+
         [$target, $whatsappService, $empresa] = $this->resolveWhatsAppTarget($request);
 
         if (! $empresa || ! $target) {

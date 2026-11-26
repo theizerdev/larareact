@@ -7,6 +7,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\WhatsAppMessage;
 use App\Models\WhatsAppPricingSetting;
 use App\Models\WhatsAppWalletTransaction;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -113,7 +114,9 @@ class WhatsAppBillingService
             'packages' => $pricing['packages'],
             'billing_enabled' => $pricing['billing_enabled'],
             'payment_methods' => $this->getActivePaymentMethods(),
-            'cycle_reset_at' => $empresa->whatsapp_cycle_reset_at?->toIso8601String(),
+            'cycle_reset_at' => $empresa->whatsapp_cycle_reset_at
+                ? Carbon::parse($empresa->whatsapp_cycle_reset_at)->toIso8601String()
+                : null,
             'transactions' => $transactions,
         ];
     }

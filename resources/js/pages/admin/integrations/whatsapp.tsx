@@ -1911,10 +1911,12 @@ export default function WhatsAppIntegration({
                             <QrCode className="size-3.5" />
                             <span>Instancia & Conexión</span>
                         </TabsTrigger>
-                        <TabsTrigger value="antiban" className="gap-1.5 text-xs py-2 cursor-pointer">
-                            <Shield className="size-3.5" />
-                            <span>Seguridad Anti-Baneo</span>
-                        </TabsTrigger>
+                        {is_superadmin && (
+                            <TabsTrigger value="antiban" className="gap-1.5 text-xs py-2 cursor-pointer">
+                                <Shield className="size-3.5" />
+                                <span>Seguridad Anti-Baneo</span>
+                            </TabsTrigger>
+                        )}
                         <TabsTrigger value="broadcast" className="gap-1.5 text-xs py-2 cursor-pointer">
                             <Megaphone className="size-3.5" />
                             <span>Difusión Segura</span>
@@ -2460,7 +2462,8 @@ export default function WhatsAppIntegration({
                     {/* ═══════════════════════════════════════════════════════ */}
                     {/* TAB 2: SEGURIDAD ANTI-BANEO POR SUCURSAL                */}
                     {/* ═══════════════════════════════════════════════════════ */}
-                    <TabsContent value="antiban" className="space-y-4">
+                    {is_superadmin && (
+                        <TabsContent value="antiban" className="space-y-4">
                         <Card className="border-border/80">
                             <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
@@ -2783,6 +2786,7 @@ export default function WhatsAppIntegration({
                             </Card>
                         </div>
                     </TabsContent>
+                    )}
 
                     {/* ═══════════════════════════════════════════════════════ */}
                     {/* TAB 3: DIFUSIÓN SEGURA EN COLA ANTI-BANEO (FIXSALE)     */}
