@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Head, router } from '@inertiajs/react';
 import {
     ScanFace,
     ShieldCheck,
@@ -26,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { TemplateSettingsProvider } from '@/hooks/use-template-settings';
 
 export interface EmpleadoKioskoEnrolar {
     id: number;
@@ -37,9 +39,6 @@ export interface EmpleadoKioskoEnrolar {
     codigo_anterior?: string | null;
     legacy?: string | null;
     numero?: string | null;
-    area?: string | null;
-    departamento?: string | null;
-    cargo?: string | null;
     genero?: string | null;
     fecha_nacimiento?: string | null;
     empresa_nombre?: string | null;
@@ -48,12 +47,14 @@ export interface EmpleadoKioskoEnrolar {
 }
 
 interface Props {
-    isOpen: boolean;
-    onClose: () => void;
-    empleado: EmpleadoKioskoEnrolar | null;
-    empresaNombre?: string;
-    csrfToken: string;
-    onSuccess: (updatedEmpleado: any) => void;
+    empleado: EmpleadoKioskoEnrolar;
+}
+
+const KIOSKO_URL = '/admin/reloj-checador/kiosko';
+
+function obtenerCsrfToken(): string {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') || '' : '';
 }
 
 const FOTO_BIOTIME_ANCHO = 500;
@@ -131,15 +132,23 @@ function DatoTarjeta({
     );
 }
 
-export function KioskoEnrolamientoModal({
-    isOpen,
-    onClose,
-    empleado,
-    empresaNombre = 'Smurfit Westrock',
-    csrfToken,
-    onSuccess,
-}: Props) {
+function EnrolamientoKiosko({ empleado }: Props) {
+    const isOpen = true;
+    const empresaNombre = 'Smurfit Westrock';
+    const csrfToken = obtenerCsrfToken();
     const [paso, setPaso] = useState<number>(1);
+    const [fotoFallida, setFotoFallida] = useState<boolean>(false);
+
+    // Vuelve al Kiosko (pantalla principal). Tras un enrolamiento exitoso se
+    // abre directamente el marcaje del colaborador recién enrolado.
+    const onClose = useCallback(() => {
+        router.visit(KIOSKO_URL);
+    }, []);
+    const volverAlMarcaje = () => {
+        const codigo = empleado.codigo_nuevo || empleado.numero || empleado.documento_identidad;
+        router.visit(`${KIOSKO_URL}?empleado=${encodeURIComponent(codigo)}`);
+    };
+    const onSuccess = (_actualizado: any) => { /* el estado se recarga al volver al Kiosko */ };
 
     // Formulario
     const [avisoAceptado, setAvisoAceptado] = useState<boolean>(false);
@@ -359,6 +368,7 @@ export function KioskoEnrolamientoModal({
 
     const nombreMostrar = empleado.nombres || empleado.nombre_completo.split(' ')[0] || 'Colaborador';
     const empresaFinal = empleado.empresa_nombre || empresaNombre;
+    const iniciales = `${(empleado.nombres || empleado.nombre_completo || '?').trim().charAt(0)}${(empleado.apellidos || '').trim().charAt(0)}`.toUpperCase();
 
     // Disparo inmediato de foto desde el canvas
     const capturarSnapshot = (targetFoto: 1 | 2): string | null => {
@@ -598,7 +608,8 @@ export function KioskoEnrolamientoModal({
     const formularioCompleto = fotosListas && datosListos;
 
     return (
-        <div className="fixed inset-0 z-50 w-screen h-screen bg-background text-foreground flex flex-col overflow-hidden select-none animate-in fade-in-50 duration-200">
+        <div className="w-screen h-screen bg-background text-foreground flex flex-col overflow-hidden select-none animate-in fade-in-50 duration-200">
+            <Head title="Enrolamiento Biométrico Facial" />
             {/* CABECERA FULLSCREEN DE LA ESTACIÓN DE ENROLAMIENTO */}
             <header className="h-18 px-6 md:px-10 border-b border-border/80 bg-card/60 backdrop-blur-md flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-4">
@@ -655,8 +666,8 @@ export function KioskoEnrolamientoModal({
                     onClick={() => { if (!loading) { stopCamera(); onClose(); } }}
                     className="h-11 px-5 rounded-xl border-border hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 dark:hover:bg-rose-950/30 dark:hover:text-rose-400 gap-2 font-bold text-xs sm:text-sm"
                 >
-                    <X className="w-4 h-4" />
-                    <span>Cancelar</span>
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Volver al Kiosko</span>
                 </Button>
             </header>
 
@@ -669,116 +680,129 @@ export function KioskoEnrolamientoModal({
             />
 
             {/* CUERPO PRINCIPAL FULLSCREEN */}
-            <main className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 md:px-14 lg:px-16 flex flex-col justify-center">
-                {/* PASO 1: DATOS PRECARGADOS Y AVISO DE PRIVACIDAD */}
+            <main className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 md:px-14 lg:px-20 flex flex-col justify-center">
+                {/* PASO 1: CONFIRMAR COLABORADOR Y ACEPTAR AVISO DE PRIVACIDAD */}
                 {paso === 1 && (
-                    <div className="w-full max-w-[1680px] mx-auto space-y-7 md:space-y-8 my-auto animate-in fade-in-50 duration-300 py-2">
-                        {/* HERO BIENVENIDA */}
-                        <div className="flex items-center sm:items-start gap-5 sm:gap-6 bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-indigo-500/5 border-2 border-indigo-500/30 p-6 sm:p-8 rounded-3xl shadow-md">
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xl shadow-indigo-600/30">
-                                <Sparkles className="w-8 h-8 sm:w-10 sm:h-10" />
-                            </div>
-                            <div className="space-y-2">
-                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground tracking-tight">
-                                    ¡Bienvenido(a), {nombreMostrar}!
+                    <div className="w-full max-w-[1680px] mx-auto my-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-stretch animate-in fade-in-50 duration-300">
+                        {/* COLUMNA IZQUIERDA: IDENTIDAD DEL COLABORADOR */}
+                        <aside className="lg:col-span-5 rounded-3xl border-2 border-border/80 bg-card shadow-sm overflow-hidden flex flex-col">
+                            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 px-8 py-10 sm:py-14 flex flex-col items-center text-center text-white">
+                                <div className="relative w-32 h-32 sm:w-44 sm:h-44 rounded-full overflow-hidden border-4 border-white/40 shadow-xl bg-white/15 flex items-center justify-center">
+                                    {empleado.foto_empleado && !fotoFallida ? (
+                                        <img
+                                            src={empleado.foto_empleado}
+                                            alt={empleado.nombre_completo}
+                                            className="w-full h-full object-cover"
+                                            onError={() => setFotoFallida(true)}
+                                        />
+                                    ) : (
+                                        <span className="text-4xl sm:text-5xl font-black tracking-wide">{iniciales}</span>
+                                    )}
+                                </div>
+                                <p className="mt-5 text-sm font-semibold text-indigo-100">¡Bienvenido(a)!</p>
+                                <h2 className="mt-1 text-3xl sm:text-4xl font-black leading-tight break-words">
+                                    {empleado.nombre_completo}
                                 </h2>
-                                <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed">
-                                    Tus datos ya forman parte de la plantilla de <strong className="text-foreground font-bold">{empresaFinal}</strong>. Para habilitar tu marcaje en este quiosco y sincronizar tu rostro con las terminales BioTime de planta, realizaremos una rápida toma fotográfica de frente.
-                                </p>
+                                <Badge
+                                    variant="outline"
+                                    className="mt-4 border-white/40 bg-white/15 text-white text-xs font-bold px-3 py-1"
+                                >
+                                    {empleado.enrolado ? 'Actualización de fotografías' : 'Primer enrolamiento facial'}
+                                </Badge>
                             </div>
-                        </div>
 
-                        {/* TARJETAS DE DATOS */}
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2.5">
-                                <UserCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                                <Label className="text-sm sm:text-base font-extrabold uppercase tracking-wider text-muted-foreground">
-                                    Información Oficial del Colaborador:
-                                </Label>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                            <div className="p-6 sm:p-8 flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 content-center">
                                 <DatoTarjeta etiqueta="No. de Empleado" valor={empleado.codigo_nuevo || empleado.numero || empleado.documento_identidad} mono />
                                 <DatoTarjeta etiqueta="ID" valor={`#${empleado.id}`} mono />
                                 <DatoTarjeta etiqueta="Legacy" valor={empleado.legacy || empleado.codigo_anterior || '—'} mono />
-                                <DatoTarjeta etiqueta="Nombre Completo" valor={empleado.nombre_completo} />
-                                <DatoTarjeta etiqueta="Área / Departamento" valor={empleado.area || empleado.departamento || 'General'} />
-                                <DatoTarjeta etiqueta="Puesto / Cargo" valor={empleado.cargo || 'Operativo'} />
                             </div>
-                        </div>
+                        </aside>
 
-                        {/* AVISO DE PRIVACIDAD */}
-                        <div className="space-y-3 sm:space-y-4">
-                            <div className="flex items-center gap-2.5 text-sm sm:text-base font-extrabold uppercase tracking-wider text-muted-foreground">
-                                <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                                <span>Consentimiento y Aviso de Privacidad Biométrico:</span>
-                            </div>
-                            <div className="max-h-56 overflow-y-auto rounded-3xl border-2 bg-muted/30 p-6 sm:p-7 text-sm sm:text-base md:text-lg leading-relaxed text-muted-foreground space-y-3 select-none shadow-inner">
-                                <p>
-                                    <strong className="text-foreground font-bold">{empresaFinal}</strong> es el responsable del tratamiento y resguardo confidencial de sus datos personales sensibles y biométricos faciales.
-                                </p>
-                                <p>
-                                    Dichos datos se emplean estrictamente para el registro de asistencia laboral, puntualidad y control de accesos a las instalaciones de la empresa en cumplimiento con las políticas internas.
-                                </p>
-                                <p>
-                                    Al marcar la casilla, otorga su consentimiento expreso para la toma fotográfica y su sincronización biométrica con el sistema BioTime.
-                                </p>
-                            </div>
-
-                            <label
-                                className={cn(
-                                    'flex cursor-pointer items-center justify-between gap-5 rounded-3xl border-2 p-5 sm:p-7 transition-all shadow-sm select-none',
-                                    avisoAceptado
-                                        ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/20'
-                                        : 'border-border/80 bg-card hover:bg-muted/30 hover:border-indigo-400/60',
-                                )}
-                            >
-                                <div className="flex items-center gap-5">
-                                    <Checkbox
-                                        checked={avisoAceptado}
-                                        onCheckedChange={(val) => handleToggleAvisoPrivacidad(val === true)}
-                                        className="h-8 w-8 rounded-xl data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 shrink-0"
-                                    />
-                                    <span className="text-base sm:text-lg md:text-xl font-bold text-foreground leading-snug">
-                                        He leído, comprendo y acepto el aviso de privacidad para el tratamiento de mis datos biométricos faciales.
-                                    </span>
+                        {/* COLUMNA DERECHA: AVISO DE PRIVACIDAD Y ACCIÓN */}
+                        <section className="lg:col-span-7 flex flex-col gap-5">
+                            <div className="rounded-3xl border-2 border-border/80 bg-card p-8 sm:p-10 shadow-sm space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
+                                        <ShieldCheck className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl sm:text-2xl font-black text-foreground">Aviso de Privacidad Biométrico</h3>
+                                        <p className="text-xs sm:text-sm text-muted-foreground">Lee y acepta para continuar con la toma de fotografías.</p>
+                                    </div>
                                 </div>
-                                {registrandoAviso ? (
-                                    <Badge variant="outline" className="shrink-0 gap-1.5 text-xs">
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        Registrando...
-                                    </Badge>
-                                ) : avisoAceptado && avisoRegistradoEn ? (
-                                    <Badge variant="outline" className="shrink-0 bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-bold">
-                                        ✓ Acción Aviso de Privacidad registrada
-                                    </Badge>
-                                ) : null}
-                            </label>
-                        </div>
 
-                        {/* BOTÓN INICIAR */}
-                        <div className="pt-2">
+                                <div className="max-h-64 overflow-y-auto rounded-2xl border bg-muted/30 p-6 text-base sm:text-lg leading-relaxed text-muted-foreground space-y-3 shadow-inner">
+                                    <p>
+                                        <strong className="text-foreground font-bold">{empresaFinal}</strong> es el responsable del tratamiento y resguardo confidencial de sus datos personales sensibles y biométricos faciales.
+                                    </p>
+                                    <p>
+                                        Dichos datos se emplean estrictamente para el registro de asistencia laboral, puntualidad y control de accesos a las instalaciones de la empresa en cumplimiento con las políticas internas.
+                                    </p>
+                                    <p>
+                                        Al marcar la casilla, otorga su consentimiento expreso para la toma fotográfica y su sincronización biométrica con el sistema BioTime.
+                                    </p>
+                                </div>
+
+                                <label
+                                    className={cn(
+                                        'flex cursor-pointer items-center justify-between gap-4 rounded-2xl border-2 p-5 sm:p-6 transition-all select-none',
+                                        avisoAceptado
+                                            ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/20'
+                                            : 'border-border/80 bg-card hover:bg-muted/30 hover:border-indigo-400/60',
+                                    )}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <Checkbox
+                                            checked={avisoAceptado}
+                                            onCheckedChange={(val) => handleToggleAvisoPrivacidad(val === true)}
+                                            className="h-7 w-7 rounded-lg data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 shrink-0"
+                                        />
+                                        <span className="text-base sm:text-lg md:text-xl font-bold text-foreground leading-snug">
+                                            He leído, comprendo y acepto el aviso de privacidad para el tratamiento de mis datos biométricos faciales.
+                                        </span>
+                                    </div>
+                                    {registrandoAviso ? (
+                                        <Badge variant="outline" className="shrink-0 gap-1.5 text-xs">
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            Registrando...
+                                        </Badge>
+                                    ) : avisoAceptado && avisoRegistradoEn ? (
+                                        <Badge variant="outline" className="shrink-0 bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-bold">
+                                            ✓ Registrado
+                                        </Badge>
+                                    ) : null}
+                                </label>
+                            </div>
+
+                            <div className="rounded-3xl border-2 border-dashed border-border/80 p-5 sm:p-6 flex items-start gap-3 text-sm sm:text-base text-muted-foreground">
+                                <Camera className="w-5 h-5 shrink-0 text-indigo-600 dark:text-indigo-400 mt-0.5" />
+                                <p>
+                                    Se tomarán <strong className="text-foreground">2 fotografías frontales</strong> con buena iluminación y sin gorra ni lentes oscuros. Después se sincronizarán con las terminales BioTime.
+                                </p>
+                            </div>
+
                             <Button
                                 type="button"
                                 size="lg"
                                 disabled={!avisoAceptado}
                                 onClick={() => setPaso(2)}
                                 className={cn(
-                                    'w-full h-20 sm:h-22 md:h-24 text-xl sm:text-2xl font-black rounded-3xl shadow-xl flex items-center justify-center gap-4 transition-all tracking-wide',
+                                    'w-full h-20 sm:h-24 text-xl sm:text-2xl font-black rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-all tracking-wide',
                                     avisoAceptado
                                         ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/30 active:scale-98 cursor-pointer'
                                         : 'bg-muted text-muted-foreground opacity-60 cursor-not-allowed',
                                 )}
                             >
-                                <Camera className="w-8 h-8" />
+                                <Camera className="w-7 h-7" />
                                 <span>COMENZAR TOMA DE FOTOGRAFÍAS</span>
                             </Button>
-                        </div>
+                        </section>
                     </div>
                 )}
 
                 {/* PASO 2: TOMA FACIAL FULLSCREEN */}
                 {paso === 2 && (
-                    <form onSubmit={handleFinalizar} className="max-w-7xl w-full mx-auto flex flex-col justify-center h-full space-y-4 my-auto animate-in fade-in-50 duration-300">
+                    <form onSubmit={handleFinalizar} className="max-w-[1680px] w-full mx-auto flex flex-col justify-center h-full space-y-4 my-auto animate-in fade-in-50 duration-300">
                         {errorMsg && (
                             <div className="flex items-start gap-3.5 p-4 sm:p-5 bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-900 rounded-2xl text-rose-700 dark:text-rose-300 text-sm font-semibold shadow-md animate-shake">
                                 <AlertCircle className="w-6 h-6 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
@@ -1244,7 +1268,7 @@ export function KioskoEnrolamientoModal({
                                 type="button"
                                 size="lg"
                                 className="w-full h-18 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg rounded-2xl shadow-xl shadow-emerald-600/30 transition-all active:scale-95"
-                                onClick={onClose}
+                                onClick={volverAlMarcaje}
                             >
                                 CONTINUAR AL RELOJ CHECADOR
                             </Button>
@@ -1253,5 +1277,15 @@ export function KioskoEnrolamientoModal({
                 )}
             </main>
         </div>
+    );
+}
+
+// La pantalla se abre fuera del layout del panel: se envuelve en el proveedor de
+// plantilla para heredar el color primario y el modo claro/oscuro del usuario.
+export default function KioskoEnrolamientoPantalla(props: Props) {
+    return (
+        <TemplateSettingsProvider>
+            <EnrolamientoKiosko {...props} />
+        </TemplateSettingsProvider>
     );
 }

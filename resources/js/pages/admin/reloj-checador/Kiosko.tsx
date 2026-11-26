@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router } from '@inertiajs/react';
 import {
     ShieldCheck,
     UserCheck,
@@ -50,7 +50,6 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import ClientLogo from '@/components/client-logo';
 import { TemplateSettingsProvider } from '@/hooks/use-template-settings';
-import { KioskoEnrolamientoModal } from '@/components/admin/reloj-checador/KioskoEnrolamientoModal';
 
 interface Configuracion {
     requiere_foto_marcaje?: boolean;
@@ -303,20 +302,11 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
     const [isIncidenteModalOpen, setIsIncidenteModalOpen] = useState(false);
     const [isComidaModalOpen, setIsComidaModalOpen] = useState(false);
     const [incidenteCausaInput, setIncidenteCausaInput] = useState<string>('');
-    const [isEnrolamientoModalOpen, setIsEnrolamientoModalOpen] = useState(false);
 
-    const handleEnrolamientoSuccess = (updatedEmpleado: any) => {
-        setEmpleado((prev) => prev ? {
-            ...prev,
-            ...updatedEmpleado,
-            enrolado: true,
-            foto_empleado: updatedEmpleado.foto_empleado || prev.foto_empleado,
-        } : null);
-        playBeepSound();
-        triggerHaptic();
-        const primerNombre = (updatedEmpleado.nombres || updatedEmpleado.nombre_completo || '').split(' ')[0];
-        speakMessage(`¡Enrolamiento completado exitosamente para ${primerNombre}! Ya puedes registrar tu asistencia.`);
-        setInactivityCountdown(25);
+    // El enrolamiento facial se realiza en una pantalla propia (no modal).
+    const irAEnrolamiento = () => {
+        if (!empleado) return;
+        router.visit(`/admin/reloj-checador/kiosko/enrolamiento/${empleado.id}`);
     };
 
     const inputRef = useRef<HTMLInputElement | null>(null);
@@ -480,7 +470,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
 
     // Temporizador de Inactividad (15s) cuando hay empleado verificado
     useEffect(() => {
-        if (!empleado || isComidaModalOpen || isDescansoModalOpen || isIncidenteModalOpen || isEnrolamientoModalOpen || successMessage) {
+        if (!empleado || isComidaModalOpen || isDescansoModalOpen || isIncidenteModalOpen || successMessage) {
             return;
         }
 
@@ -505,7 +495,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
             window.removeEventListener('pointerdown', resetInactivity);
             window.removeEventListener('keydown', resetInactivity);
         };
-    }, [empleado, isComidaModalOpen, isDescansoModalOpen, isIncidenteModalOpen, isEnrolamientoModalOpen, successMessage]);
+    }, [empleado, isComidaModalOpen, isDescansoModalOpen, isIncidenteModalOpen, successMessage]);
 
     // Temporizador de Cuenta Regresiva de Éxito (4s para volver al selector)
     useEffect(() => {
@@ -531,7 +521,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
 
     // Temporizador de inactividad general para volver al Selector (Hub de bienvenida)
     useEffect(() => {
-        if (modoVista === 'selector' || isComidaModalOpen || isDescansoModalOpen || isIncidenteModalOpen || isEnrolamientoModalOpen || isAdminPinModalOpen || successMessage) {
+        if (modoVista === 'selector' || isComidaModalOpen || isDescansoModalOpen || isIncidenteModalOpen || isAdminPinModalOpen || successMessage) {
             return;
         }
 
@@ -558,7 +548,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
             window.removeEventListener('pointerdown', resetTimer);
             window.removeEventListener('keydown', resetTimer);
         };
-    }, [modoVista, isComidaModalOpen, isDescansoModalOpen, isIncidenteModalOpen, isEnrolamientoModalOpen, isAdminPinModalOpen, successMessage]);
+    }, [modoVista, isComidaModalOpen, isDescansoModalOpen, isIncidenteModalOpen, isAdminPinModalOpen, successMessage]);
 
     // Reproducir tono de confirmación tipo escáner pos
     const playBeepSound = () => {
@@ -578,7 +568,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
         }
     };
 
-    const necesitaCamara = modoVista === 'marcaje' && (modoEntrada === 'camara' || Boolean(configuracion?.requiere_foto_marcaje)) && !isEnrolamientoModalOpen;
+    const necesitaCamara = modoVista === 'marcaje' && (modoEntrada === 'camara' || Boolean(configuracion?.requiere_foto_marcaje));
 
     useEffect(() => {
         if (!necesitaCamara) return;
@@ -641,6 +631,16 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [documentInput, empleado, loadingSearch, modoVista]);
+
+    // Al volver de la pantalla de enrolamiento (?empleado=CODIGO) se abre el marcaje del colaborador.
+    useEffect(() => {
+        const codigo = new URLSearchParams(window.location.search).get('empleado');
+        if (!codigo) return;
+        window.history.replaceState(window.history.state, '', window.location.pathname);
+        setModoVista('marcaje');
+        setDocumentInput(codigo);
+        performSearch(codigo);
+    }, []);
 
     // Cargar jsQR dinámicamente si el navegador no tiene BarcodeDetector nativo (idéntico a Garita Control)
     useEffect(() => {
@@ -772,7 +772,6 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
         setUltimoMarcaje(null);
         setMarcajesHoy([]);
         setErrorMessage(null);
-        setIsEnrolamientoModalOpen(false);
         setInactivityCountdown(15);
         if (inputRef.current) inputRef.current.focus();
     };
@@ -929,7 +928,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
             triggerHaptic();
             setErrorMessage('El colaborador debe completar su enrolamiento biométrico antes de registrar asistencia.');
             speakMessage('Atención: Debe completar su enrolamiento biométrico antes de registrar asistencia.');
-            setIsEnrolamientoModalOpen(true);
+            irAEnrolamiento();
             return;
         }
 
@@ -1621,7 +1620,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                             {empleado.enrolado && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => setIsEnrolamientoModalOpen(true)}
+                                                    onClick={() => irAEnrolamiento()}
                                                     className="text-[11px] text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 underline decoration-dotted flex items-center gap-1 transition-colors"
                                                 >
                                                     <ScanFace className="w-3 h-3" />
@@ -1666,7 +1665,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                         <Button
                                             type="button"
                                             size="lg"
-                                            onClick={() => setIsEnrolamientoModalOpen(true)}
+                                            onClick={() => irAEnrolamiento()}
                                             className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm sm:text-base py-6 px-8 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2.5 hover:scale-[1.02] active:scale-[0.98] transition-all"
                                         >
                                             <ScanFace className="w-5 h-5" />
@@ -2177,7 +2176,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                             <Button
                                                 type="button"
                                                 size="lg"
-                                                onClick={() => setIsEnrolamientoModalOpen(true)}
+                                                onClick={() => irAEnrolamiento()}
                                                 className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm sm:text-base rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2"
                                             >
                                                 <ScanFace className="w-5 h-5" />
@@ -2198,7 +2197,7 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                                                 <Button
                                                     type="button"
                                                     variant="outline"
-                                                    onClick={() => setIsEnrolamientoModalOpen(true)}
+                                                    onClick={() => irAEnrolamiento()}
                                                     className="h-12 border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 font-bold text-xs sm:text-sm rounded-xl gap-2"
                                                 >
                                                     <ScanFace className="w-4 h-4" />
@@ -2631,16 +2630,6 @@ function KioskoChecador({ configuracion, zona_horaria, opciones_comida = [], emp
                     </form>
                 </DialogContent>
             </Dialog>
-
-            {/* MODAL DE ENROLAMIENTO BIOMÉTRICO FACIAL EN KIOSKO */}
-            <KioskoEnrolamientoModal
-                isOpen={isEnrolamientoModalOpen}
-                onClose={() => setIsEnrolamientoModalOpen(false)}
-                empleado={empleado}
-                empresaNombre={empresaAuth?.nombre_comercial || empresaAuth?.razon_social || 'Smurfit Westrock'}
-                csrfToken={getCsrfToken()}
-                onSuccess={handleEnrolamientoSuccess}
-            />
 
             {/* PIE DE PÁGINA CON ESTADO DE RED, COLA OFFLINE Y SINCRONIZACIÓN */}
             <footer className="border-t bg-card px-4 md:px-8 py-3 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-2">

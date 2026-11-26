@@ -144,6 +144,10 @@ Route::middleware('modulo:productores')->group(function () {
 Route::get('admin/reloj-checador/kiosko', [RelojChecadorKioskoController::class, 'kioskoView'])
     ->name('reloj-checador.kiosko');
 
+Route::get('admin/reloj-checador/kiosko/enrolamiento/{empleado}', [RelojChecadorKioskoController::class, 'enrolamientoView'])
+    ->whereNumber('empleado')
+    ->name('reloj-checador.kiosko.enrolamiento');
+
 Route::post('admin/api/reloj-checador/buscar', [RelojChecadorKioskoController::class, 'buscarEmpleado'])
     ->middleware('throttle:120,1')
     ->name('api.reloj-checador.buscar');

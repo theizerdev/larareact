@@ -55,6 +55,43 @@ class RelojChecadorKioskoController extends Controller
     }
 
     /**
+     * Pantalla completa (no modal) de enrolamiento biométrico facial del Kiosko.
+     */
+    public function enrolamientoView(Request $request, int $empleado)
+    {
+        $user = $request->user();
+        if ($user && ! $user->can('asistencia.kiosko') && ! $user->can('asistencia.view') && ! $user->can('empleados.edit')) {
+            abort(403, 'No tiene permiso para enrolar colaboradores en el reloj checador.');
+        }
+
+        $empresaId = $user?->empresa_id ?? \App\Models\Empresa::value('id');
+        $empleado = Empleado::with('empresa')
+            ->where('id', $empleado)
+            ->where('status', true)
+            ->when($empresaId, fn ($query) => $query->where('empresa_id', $empresaId))
+            ->firstOrFail();
+
+        return Inertia::render('admin/reloj-checador/Enrolamiento', [
+            'empleado' => [
+                'id' => $empleado->id,
+                'nombre_completo' => $empleado->nombre_completo,
+                'nombres' => $empleado->nombres,
+                'apellidos' => $empleado->apellidos,
+                'documento_identidad' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_nuevo' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'codigo_anterior' => $empleado->codigo_anterior,
+                'legacy' => $empleado->legacy,
+                'numero' => $empleado->codigo_nuevo ?: $empleado->documento_identidad,
+                'foto_empleado' => Empleado::urlFoto($empleado->foto_empleado),
+                'enrolado' => ! empty($empleado->enrolado_en),
+                'genero' => $empleado->genero,
+                'fecha_nacimiento' => $empleado->fecha_nacimiento?->format('Y-m-d'),
+                'empresa_nombre' => $empleado->empresa?->razon_social ?? $empleado->empresa?->nombre_comercial ?? 'Smurfit Westrock',
+            ],
+        ]);
+    }
+
+    /**
      * Busca al empleado por documento de identidad o teléfono y sugiere el siguiente tipo de marcaje.
      */
     public function buscarEmpleado(Request $request)

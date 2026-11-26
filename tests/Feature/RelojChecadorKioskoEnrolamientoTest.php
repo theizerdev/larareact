@@ -71,6 +71,21 @@ class RelojChecadorKioskoEnrolamientoTest extends TestCase
         return 'data:image/jpeg;base64,'.base64_encode((string) ob_get_clean());
     }
 
+    public function test_pantalla_de_enrolamiento_no_es_modal_y_no_expone_area_ni_cargo(): void
+    {
+        $this->actingAs($this->user)
+            ->get('/admin/reloj-checador/kiosko/enrolamiento/'.$this->empleado->id)
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('admin/reloj-checador/Enrolamiento')
+                ->where('empleado.id', $this->empleado->id)
+                ->where('empleado.nombres', 'Carlos')
+                ->where('empleado.numero', '880011')
+                ->missing('empleado.area')
+                ->missing('empleado.departamento')
+                ->missing('empleado.cargo'));
+    }
+
     public function test_buscar_empleado_detecta_si_no_esta_enrolado(): void
     {
         $response = $this->actingAs($this->user)
