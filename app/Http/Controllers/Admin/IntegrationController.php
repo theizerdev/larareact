@@ -449,6 +449,7 @@ class IntegrationController extends Controller
             'templates' => $templates,
             'empresa_id' => $empresa->id,
             'empresa_nombre' => $empresa->nombre_comercial ?: ($empresa->razon_social ?: 'FixSale'),
+            'wallet_summary' => app(\App\Services\WhatsAppBillingService::class)->getWalletSummary($empresa->id),
             'sucursales' => $instancesSummary,
             'active_sucursal_id' => $activeSucursalId,
             'target_type' => 'sucursal',
@@ -1999,6 +2000,19 @@ class IntegrationController extends Controller
                     $update['error_message'] = $data['error'] ?? 'Error enviando mensaje.';
                 }
                 WhatsAppMessage::where('id', $localId)->update($update);
+
+                if ($newStatus === 'failed') {
+                    $failedMsg = WhatsAppMessage::find($localId);
+                    if ($failedMsg && $failedMsg->empresa_id && ! empty($failedMsg->metadata['billing_source'])) {
+                        app(\App\Services\WhatsAppBillingService::class)->refund(
+                            (int) $failedMsg->empresa_id,
+                            (string) $failedMsg->metadata['billing_source'],
+                            (float) ($failedMsg->metadata['billing_cost'] ?? $failedMsg->cost ?? 0),
+                            $failedMsg->id,
+                            (string) ($update['error_message'] ?? 'Fallo en envío')
+                        );
+                    }
+                }
             }
         } elseif ($event === 'queue_bulk_cancelled') {
             $ids = $data['local_message_ids'] ?? [];
@@ -2007,6 +2021,18 @@ class IntegrationController extends Controller
                     'status' => 'cancelled',
                     'error_message' => 'Cancelado desde el panel.',
                 ]);
+                $billingService = app(\App\Services\WhatsAppBillingService::class);
+                foreach (WhatsAppMessage::whereIn('id', $ids)->get() as $cancelledMsg) {
+                    if ($cancelledMsg->empresa_id && ! empty($cancelledMsg->metadata['billing_source'])) {
+                        $billingService->refund(
+                            (int) $cancelledMsg->empresa_id,
+                            (string) $cancelledMsg->metadata['billing_source'],
+                            (float) ($cancelledMsg->metadata['billing_cost'] ?? $cancelledMsg->cost ?? 0),
+                            $cancelledMsg->id,
+                            'Cancelado en cola'
+                        );
+                    }
+                }
             }
         } elseif ($event === 'receipt') {
             $ids = $data['message_ids'] ?? [];

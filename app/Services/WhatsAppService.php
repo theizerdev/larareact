@@ -626,6 +626,40 @@ class WhatsAppService
             Log::warning('Failed to create local WhatsAppMessage record: '.$e->getMessage());
         }
 
+        // Control estricto de cupo gratuito (60) y saldo prepago ($0.005/msg) antes de enviar
+        $billingService = app(WhatsAppBillingService::class);
+        $billing = $billingService->authorizeAndCharge(
+            $this->companyId,
+            $localMsg?->id,
+            "Envío de mensaje a {$toFormatted}"
+        );
+
+        if (! ($billing['allowed'] ?? false)) {
+            $billingError = $billing['error'] ?? 'Saldo insuficiente para enviar mensajes de WhatsApp.';
+            if ($localMsg) {
+                $localMsg->update([
+                    'status' => 'failed',
+                    'error_message' => $billingError,
+                ]);
+            }
+
+            return [
+                'success' => false,
+                'error' => $billingError,
+                'code' => $billing['code'] ?? 'BILLING_BLOCKED',
+            ];
+        }
+
+        if ($localMsg) {
+            $localMsg->update([
+                'cost' => (float) ($billing['cost'] ?? 0),
+                'metadata' => array_merge($localMsg->metadata ?? [], [
+                    'billing_source' => $billing['billing_source'] ?? 'unmetered',
+                    'billing_cost' => (float) ($billing['cost'] ?? 0),
+                ]),
+            ]);
+        }
+
         try {
             $url = "{$this->baseUrl}/api/message/send-text/{$instanceName}";
             $payload = [
@@ -683,6 +717,14 @@ class WhatsAppService
                 ]);
             }
 
+            $billingService->refund(
+                $this->companyId,
+                (string) ($billing['billing_source'] ?? ''),
+                (float) ($billing['cost'] ?? 0),
+                $localMsg?->id,
+                $errText
+            );
+
             Log::error('WhatsApp Send Message Failed', [
                 'instance' => $instanceName,
                 'to' => $toFormatted,
@@ -692,16 +734,30 @@ class WhatsAppService
 
             return ['success' => false, 'error' => $errText];
         } catch (ConnectionException $e) {
-            $errText = 'El motor Python de WhatsApp está fuera de línea ('.$this->baseUrl.').';
+            $errText = 'El servicio de WhatsApp está fuera de línea ('.$this->baseUrl.').';
             if ($localMsg) {
                 $localMsg->update(['status' => 'failed', 'error_message' => $errText]);
             }
+            $billingService->refund(
+                $this->companyId,
+                (string) ($billing['billing_source'] ?? ''),
+                (float) ($billing['cost'] ?? 0),
+                $localMsg?->id,
+                $errText
+            );
 
             return ['success' => false, 'error' => $errText];
         } catch (\Throwable $e) {
             if ($localMsg) {
                 $localMsg->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
             }
+            $billingService->refund(
+                $this->companyId,
+                (string) ($billing['billing_source'] ?? ''),
+                (float) ($billing['cost'] ?? 0),
+                $localMsg?->id,
+                $e->getMessage()
+            );
 
             return ['success' => false, 'error' => $e->getMessage()];
         }
@@ -753,6 +809,20 @@ class WhatsAppService
         $instanceName = $instance ?? $this->instanceName;
         $toFormatted = self::formatPhoneNumber($to, $this->countryCode);
 
+        $billingService = app(WhatsAppBillingService::class);
+        $billing = $billingService->authorizeAndCharge(
+            $this->companyId,
+            null,
+            "Envío multimedia WhatsApp a {$toFormatted}"
+        );
+        if (! ($billing['allowed'] ?? false)) {
+            return [
+                'success' => false,
+                'error' => $billing['error'] ?? 'Saldo insuficiente para enviar mensajes de WhatsApp.',
+                'code' => $billing['code'] ?? 'BILLING_BLOCKED',
+            ];
+        }
+
         try {
             $url = "{$this->baseUrl}/api/message/send-media/{$instanceName}";
             $response = $this->client()->timeout(max($this->timeout, 35))->post($url, [
@@ -771,10 +841,13 @@ class WhatsAppService
             }
 
             $body = $response->json();
+            $errText = $body['detail'] ?? $body['error'] ?? ('HTTP '.$response->status());
+            $billingService->refund($this->companyId, (string) ($billing['billing_source'] ?? ''), (float) ($billing['cost'] ?? 0), null, $errText);
 
-            return ['success' => false, 'error' => $body['detail'] ?? $body['error'] ?? ('HTTP '.$response->status())];
+            return ['success' => false, 'error' => $errText];
         } catch (\Throwable $e) {
             Log::error('WhatsApp Send Media Error: '.$e->getMessage());
+            $billingService->refund($this->companyId, (string) ($billing['billing_source'] ?? ''), (float) ($billing['cost'] ?? 0), null, $e->getMessage());
 
             return null;
         }
@@ -802,6 +875,20 @@ class WhatsAppService
             return null;
         }
 
+        $billingService = app(WhatsAppBillingService::class);
+        $billing = $billingService->authorizeAndCharge(
+            $this->companyId,
+            null,
+            "Envío de archivo WhatsApp a {$formattedPhone}"
+        );
+        if (! ($billing['allowed'] ?? false)) {
+            return [
+                'success' => false,
+                'error' => $billing['error'] ?? 'Saldo insuficiente para enviar mensajes de WhatsApp.',
+                'code' => $billing['code'] ?? 'BILLING_BLOCKED',
+            ];
+        }
+
         try {
             $response = Http::withHeaders([
                 'x-api-key' => (string) ($this->apiKey ?? ''),
@@ -816,9 +903,14 @@ class WhatsAppService
                     'simulateTyping' => true,
                 ]);
 
+            if (! $response->successful()) {
+                $billingService->refund($this->companyId, (string) ($billing['billing_source'] ?? ''), (float) ($billing['cost'] ?? 0), null, 'HTTP '.$response->status());
+            }
+
             return $response->json();
         } catch (\Throwable $e) {
             Log::error('WhatsApp Send Local Media Error: '.$e->getMessage());
+            $billingService->refund($this->companyId, (string) ($billing['billing_source'] ?? ''), (float) ($billing['cost'] ?? 0), null, $e->getMessage());
 
             return null;
         }

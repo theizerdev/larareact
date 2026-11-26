@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SubscriptionPlan;
 use App\Models\Subscription;
+use App\Models\WhatsAppPricingSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class SubscriptionPlanController extends Controller
@@ -49,6 +51,15 @@ class SubscriptionPlanController extends Controller
 
         return Inertia::render('admin/Planes/Index', [
             'planes' => $planes,
+            'pricingSetting' => Schema::hasTable('whatsapp_pricing_settings')
+                ? WhatsAppPricingSetting::current()
+                : [
+                    'costo_por_mensaje_usd' => 0.005,
+                    'mensajes_gratis_defecto' => 60,
+                    'min_compra_mensajes' => 100,
+                    'paquetes_recarga' => [100, 500, 1000, 5000],
+                    'cobro_activo' => true,
+                ],
             'stats' => [
                 'totalPlanes' => $totalPlanes,
                 'planesActivos' => $planesActivos,
@@ -78,6 +89,9 @@ class SubscriptionPlanController extends Controller
             'precio_6_meses' => 'nullable|numeric|min:0',
             'precio_12_meses' => 'nullable|numeric|min:0',
             'precio_sucursal_extra_mensual' => 'nullable|numeric|min:0',
+            'costo_por_mensaje_usd' => 'nullable|numeric|min:0.0001|max:10',
+            'mensajes_incluidos_mes' => 'nullable|integer|min:0|max:100000',
+            'min_compra_mensajes' => 'nullable|integer|min:100|max:100000',
             'sucursales_incluidas' => 'nullable|integer|min:1',
             'modulos_incluidos' => 'nullable|array',
             'activo' => 'boolean',
@@ -133,6 +147,9 @@ class SubscriptionPlanController extends Controller
             'precio_6_meses' => 'nullable|numeric|min:0',
             'precio_12_meses' => 'nullable|numeric|min:0',
             'precio_sucursal_extra_mensual' => 'nullable|numeric|min:0',
+            'costo_por_mensaje_usd' => 'nullable|numeric|min:0.0001|max:10',
+            'mensajes_incluidos_mes' => 'nullable|integer|min:0|max:100000',
+            'min_compra_mensajes' => 'nullable|integer|min:100|max:100000',
             'sucursales_incluidas' => 'nullable|integer|min:1',
             'modulos_incluidos' => 'nullable|array',
             'activo' => 'boolean',
@@ -151,6 +168,52 @@ class SubscriptionPlanController extends Controller
         return back()->with('notification', [
             'type' => 'success',
             'message' => __('Plan actualizado correctamente.'),
+        ]);
+    }
+
+    /**
+     * Actualizar configuración global de precios de mensajería WhatsApp.
+     */
+    public function updateMessagingPricing(Request $request)
+    {
+        $validated = $request->validate([
+            'costo_por_mensaje_usd' => 'required|numeric|min:0.0001|max:10',
+            'mensajes_gratis_defecto' => 'required|integer|min:0|max:100000',
+            'min_compra_mensajes' => 'required|integer|min:100|max:100000',
+            'paquetes_recarga' => 'nullable|array',
+            'paquetes_recarga.*' => 'integer|min:100',
+            'cobro_activo' => 'boolean',
+            'aplicar_a_todos_los_planes' => 'boolean',
+        ]);
+
+        $setting = WhatsAppPricingSetting::current();
+        $setting->update([
+            'costo_por_mensaje_usd' => (float) $validated['costo_por_mensaje_usd'],
+            'mensajes_gratis_defecto' => (int) $validated['mensajes_gratis_defecto'],
+            'min_compra_mensajes' => (int) $validated['min_compra_mensajes'],
+            'paquetes_recarga' => $validated['paquetes_recarga'] ?? $setting->paquetes_recarga,
+            'cobro_activo' => (bool) ($validated['cobro_activo'] ?? true),
+        ]);
+
+        if (! empty($validated['aplicar_a_todos_los_planes'])) {
+            SubscriptionPlan::query()->update([
+                'costo_por_mensaje_usd' => (float) $validated['costo_por_mensaje_usd'],
+                'mensajes_incluidos_mes' => (int) $validated['mensajes_gratis_defecto'],
+                'min_compra_mensajes' => (int) $validated['min_compra_mensajes'],
+            ]);
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => $setting->fresh(),
+                'message' => __('Configuración de precios de mensajería actualizada.'),
+            ]);
+        }
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => __('Configuración de precios de mensajería actualizada.'),
         ]);
     }
 

@@ -203,6 +203,69 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Registrar solicitud de compra/recarga de mensajes de WhatsApp (mínimo 100 mensajes).
+     */
+    public function topupWhatsApp(Request $request)
+    {
+        $user = auth()->user();
+        $empresa = $user?->empresa;
+        if (! $empresa) {
+            return response()->json(['error' => 'No se encontró la empresa asociada al usuario.'], 404);
+        }
+
+        $billingService = app(\App\Services\WhatsAppBillingService::class);
+        $pricing = $billingService->resolvePricingForEmpresa($empresa);
+        $minMensajes = max(100, (int) ($pricing['min_purchase_messages'] ?? 100));
+
+        $validated = $request->validate([
+            'mensajes' => "required|integer|min:{$minMensajes}|max:1000000",
+            'metodo_pago' => 'required|string|max:50',
+            'referencia_pago' => 'nullable|string|max:100',
+            'comprobante' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'notas' => 'nullable|string|max:500',
+        ], [
+            'mensajes.min' => "La compra mínima es de {$minMensajes} mensajes.",
+        ]);
+
+        $mensajes = (int) $validated['mensajes'];
+        $montoUsd = round($mensajes * (float) $pricing['unit_cost_usd'], 4);
+
+        $comprobantePath = null;
+        if ($request->hasFile('comprobante')) {
+            $comprobantePath = $request->file('comprobante')->store('comprobantes_suscripcion', 'public');
+        }
+
+        $payment = SubscriptionPayment::create([
+            'empresa_id' => $empresa->id,
+            'plan_id' => $pricing['subscription']?->plan_id,
+            'tipo_pago' => 'whatsapp_topup',
+            'mensajes_comprados' => $mensajes,
+            'user_id' => $user->id,
+            'monto' => $montoUsd,
+            'ciclo_meses' => 0,
+            'sucursales_contratadas' => 1,
+            'metodo_pago' => $validated['metodo_pago'],
+            'referencia_pago' => $validated['referencia_pago'] ?? null,
+            'comprobante_path' => $comprobantePath,
+            'estado' => 'pending',
+            'notas' => trim("Recarga WhatsApp: {$mensajes} mensajes (\${$montoUsd} USD). " . ($validated['notas'] ?? '')),
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'payment' => $payment,
+                'message' => "Solicitud de recarga por {$mensajes} mensajes (\${$montoUsd} USD) registrada. Será acreditada al aprobarse el pago.",
+            ]);
+        }
+
+        return back()->with('notification', [
+            'type' => 'success',
+            'message' => "Solicitud de recarga por {$mensajes} mensajes (\${$montoUsd} USD) registrada.",
+        ]);
+    }
+
+    /**
      * Crear orden de PayPal en la API.
      */
     public function createPaypalOrder(Request $request)
@@ -867,6 +930,32 @@ HTML;
             DB::beginTransaction();
 
             $empresa = $payment->empresa;
+
+            if (($payment->tipo_pago ?? 'subscription') === 'whatsapp_topup') {
+                $mensajes = max(100, (int) ($payment->mensajes_comprados ?? 100));
+                app(\App\Services\WhatsAppBillingService::class)->creditTopup(
+                    $empresa->id,
+                    $mensajes,
+                    (float) $payment->monto,
+                    $payment->user_id,
+                    $payment->id,
+                    'Recarga aprobada de mensajes WhatsApp'
+                );
+
+                $payment->update([
+                    'estado' => 'approved',
+                    'aprobado_por' => $user->id,
+                    'fecha_aprobacion' => now(),
+                ]);
+
+                DB::commit();
+
+                return back()->with('notification', [
+                    'type' => 'success',
+                    'message' => "Recarga de {$mensajes} mensajes aprobada y acreditada a {$empresa->nombre_comercial}.",
+                ]);
+            }
+
             $meses = max(1, (int) $payment->ciclo_meses);
 
             $hasActivePaidSubscription = $empresa->subscription_status === 'active' && ! $empresa->isExemptFromSubscription();

@@ -9,6 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -57,6 +64,9 @@ interface Plan {
     precio_6_meses: number;
     precio_12_meses: number;
     precio_sucursal_extra_mensual: number;
+    costo_por_mensaje_usd?: number;
+    mensajes_incluidos_mes?: number;
+    min_compra_mensajes?: number;
     sucursales_incluidas: number;
     modulos_incluidos: string[] | null;
     activo: boolean;
@@ -66,8 +76,17 @@ interface Plan {
     esta_expirado?: boolean;
 }
 
+interface PricingSetting {
+    costo_por_mensaje_usd: number;
+    mensajes_gratis_defecto: number;
+    min_compra_mensajes: number;
+    paquetes_recarga: number[];
+    cobro_activo: boolean;
+}
+
 interface PageProps {
     planes: Plan[];
+    pricingSetting?: PricingSetting;
     stats: {
         totalPlanes: number;
         planesActivos: number;
@@ -89,12 +108,21 @@ const MODULOS_DISPONIBLES = [
     { id: 'creditos', label: 'Cuentas por Cobrar & Créditos' },
 ];
 
-export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }: PageProps) {
+export default function PlanesIndex({ planes = [], pricingSetting, stats, currencySymbol = '$' }: PageProps) {
     const { __ } = useTranslate();
     const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
     const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSavingPricing, setIsSavingPricing] = useState(false);
+    const [pricingForm, setPricingForm] = useState({
+        costo_por_mensaje_usd: pricingSetting?.costo_por_mensaje_usd ?? 0.005,
+        mensajes_gratis_defecto: pricingSetting?.mensajes_gratis_defecto ?? 60,
+        min_compra_mensajes: pricingSetting?.min_compra_mensajes ?? 100,
+        cobro_activo: pricingSetting?.cobro_activo ?? true,
+        aplicar_a_todos_los_planes: true,
+    });
 
     // Form state
     const [formData, setFormData] = useState({
@@ -114,6 +142,9 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
         precio_6_meses: 149,
         precio_12_meses: 149,
         precio_sucursal_extra_mensual: 84.72,
+        costo_por_mensaje_usd: 0.005,
+        mensajes_incluidos_mes: 60,
+        min_compra_mensajes: 100,
         sucursales_incluidas: 1,
         modulos_incluidos: ['todos'],
         activo: true,
@@ -142,6 +173,9 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
             precio_6_meses: 499,
             precio_12_meses: 499,
             precio_sucursal_extra_mensual: 20,
+            costo_por_mensaje_usd: pricingForm.costo_por_mensaje_usd,
+            mensajes_incluidos_mes: pricingForm.mensajes_gratis_defecto,
+            min_compra_mensajes: pricingForm.min_compra_mensajes,
             sucursales_incluidas: 1,
             modulos_incluidos: ['todos'],
             activo: true,
@@ -170,6 +204,9 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
             precio_6_meses: Number(plan.precio_6_meses) || promoMensual,
             precio_12_meses: Number(plan.precio_12_meses) || promoMensual,
             precio_sucursal_extra_mensual: Number(plan.precio_sucursal_extra_mensual) || 20,
+            costo_por_mensaje_usd: Number(plan.costo_por_mensaje_usd ?? 0.005),
+            mensajes_incluidos_mes: Number(plan.mensajes_incluidos_mes ?? 60),
+            min_compra_mensajes: Number(plan.min_compra_mensajes ?? 100),
             sucursales_incluidas: plan.sucursales_incluidas || 1,
             modulos_incluidos: plan.modulos_incluidos || ['todos'],
             activo: Boolean(plan.activo),
@@ -258,6 +295,38 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
             notifyError(__('Error en la conexión con el servidor.'));
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleSaveMessagingPricing = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (pricingForm.min_compra_mensajes < 100) {
+            notifyError(__('La compra mínima de mensajes debe ser al menos 100.'));
+            return;
+        }
+        setIsSavingPricing(true);
+        try {
+            const res = await fetch('/admin/planes/messaging-pricing', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                },
+                body: JSON.stringify(pricingForm),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                notifySuccess(data.message || __('Configuración de mensajería guardada.'));
+                setIsPricingModalOpen(false);
+                router.reload({ preserveScroll: true });
+            } else {
+                notifyError(data.message || __('Error al guardar configuración de mensajería.'));
+            }
+        } catch {
+            notifyError(__('Error en la conexión con el servidor.'));
+        } finally {
+            setIsSavingPricing(false);
         }
     };
 
@@ -413,6 +482,16 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                                 <span className="hidden sm:inline">{__('Tabla')}</span>
                             </button>
                         </div>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsPricingModalOpen(true)}
+                            className="bg-slate-800 border-slate-600 text-white hover:bg-slate-700 font-semibold gap-2"
+                        >
+                            <DollarSign className="w-4 h-4 text-emerald-400" />
+                            {__('Precios Mensajería')}
+                        </Button>
 
                         <Button
                             onClick={handleOpenCreate}
@@ -942,16 +1021,19 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                                 <div className="space-y-1">
                                     <Label htmlFor="ciclo_meses">{__('Ciclo del Plan')}</Label>
-                                    <select
-                                        id="ciclo_meses"
-                                        value={formData.ciclo_meses}
-                                        onChange={(e) => setFormData({ ...formData, ciclo_meses: parseInt(e.target.value, 10) })}
-                                        className="w-full h-8 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs font-medium"
+                                    <Select
+                                        value={String(formData.ciclo_meses)}
+                                        onValueChange={(val) => setFormData({ ...formData, ciclo_meses: parseInt(val, 10) })}
                                     >
-                                        <option value={0}>{__('Prueba (0 meses)')}</option>
-                                        <option value={1}>{__('Mensual (1 mes)')}</option>
-                                        <option value={12}>{__('Anual (12 meses)')}</option>
-                                    </select>
+                                        <SelectTrigger id="ciclo_meses" className="h-8 text-xs font-medium">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="0" className="text-xs">{__('Prueba (0 meses)')}</SelectItem>
+                                            <SelectItem value="1" className="text-xs">{__('Mensual (1 mes)')}</SelectItem>
+                                            <SelectItem value="12" className="text-xs">{__('Anual (12 meses)')}</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 <div className="space-y-1">
@@ -1028,6 +1110,43 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                                     <p className="text-[10px] text-slate-400">{__('Monto mensual cobrado por cada sede adicional.')}</p>
                                 </div>
                             </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs pt-2 border-t border-slate-200 dark:border-slate-700">
+                                <div className="space-y-1">
+                                    <Label htmlFor="costo_por_mensaje_usd">{__('Costo por Mensaje (USD)')}</Label>
+                                    <Input
+                                        id="costo_por_mensaje_usd"
+                                        type="number"
+                                        step="0.0001"
+                                        min="0.0001"
+                                        value={formData.costo_por_mensaje_usd}
+                                        onChange={(e) => setFormData({ ...formData, costo_por_mensaje_usd: parseFloat(e.target.value) || 0.005 })}
+                                        className="h-8 text-xs font-semibold"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="mensajes_incluidos_mes">{__('Mensajes Gratis / Ciclo')}</Label>
+                                    <Input
+                                        id="mensajes_incluidos_mes"
+                                        type="number"
+                                        min="0"
+                                        value={formData.mensajes_incluidos_mes}
+                                        onChange={(e) => setFormData({ ...formData, mensajes_incluidos_mes: parseInt(e.target.value, 10) || 0 })}
+                                        className="h-8 text-xs font-semibold"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="min_compra_mensajes">{__('Compra Mínima (Mensajes)')}</Label>
+                                    <Input
+                                        id="min_compra_mensajes"
+                                        type="number"
+                                        min="100"
+                                        value={formData.min_compra_mensajes}
+                                        onChange={(e) => setFormData({ ...formData, min_compra_mensajes: Math.max(100, parseInt(e.target.value, 10) || 100) })}
+                                        className="h-8 text-xs font-semibold"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         {/* 4. Módulos Incluidos */}
@@ -1102,6 +1221,88 @@ export default function PlanesIndex({ planes = [], stats, currencySymbol = '$' }
                                 className="bg-orange-600 hover:bg-orange-700 text-white font-semibold"
                             >
                                 {isSubmitting ? __('Guardando...') : (editingPlan ? __('Guardar Cambios') : __('Crear Plan'))}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Configuración Global de Precios de Mensajería */}
+            <Dialog open={isPricingModalOpen} onOpenChange={setIsPricingModalOpen}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                            <DollarSign className="w-5 h-5 text-emerald-500" />
+                            {__('Configuración de Precios de Mensajería WhatsApp')}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {__('Controla la tarifa por mensaje enviado, el cupo gratuito inicial y la compra mínima permitida.')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSaveMessagingPricing} className="space-y-4 pt-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold">{__('Precio / Mensaje (USD)')}</Label>
+                                <Input
+                                    type="number"
+                                    step="0.0001"
+                                    min="0.0001"
+                                    value={pricingForm.costo_por_mensaje_usd}
+                                    onChange={(e) => setPricingForm({ ...pricingForm, costo_por_mensaje_usd: parseFloat(e.target.value) || 0.005 })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold">{__('Mensajes Gratis')}</Label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    value={pricingForm.mensajes_gratis_defecto}
+                                    onChange={(e) => setPricingForm({ ...pricingForm, mensajes_gratis_defecto: parseInt(e.target.value, 10) || 0 })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold">{__('Mínimo de Compra')}</Label>
+                                <Input
+                                    type="number"
+                                    min="100"
+                                    value={pricingForm.min_compra_mensajes}
+                                    onChange={(e) => setPricingForm({ ...pricingForm, min_compra_mensajes: Math.max(100, parseInt(e.target.value, 10) || 100) })}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border text-xs space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="cobro_activo" className="font-semibold cursor-pointer">
+                                    {__('Activar control y cobro de mensajes')}
+                                </Label>
+                                <Switch
+                                    id="cobro_activo"
+                                    checked={pricingForm.cobro_activo}
+                                    onCheckedChange={(checked) => setPricingForm({ ...pricingForm, cobro_activo: checked })}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="aplicar_planes" className="font-semibold cursor-pointer">
+                                    {__('Aplicar esta tarifa a todos los planes actuales')}
+                                </Label>
+                                <Switch
+                                    id="aplicar_planes"
+                                    checked={pricingForm.aplicar_a_todos_los_planes}
+                                    onCheckedChange={(checked) => setPricingForm({ ...pricingForm, aplicar_a_todos_los_planes: checked })}
+                                />
+                            </div>
+                        </div>
+
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsPricingModalOpen(false)} disabled={isSavingPricing}>
+                                {__('Cancelar')}
+                            </Button>
+                            <Button type="submit" disabled={isSavingPricing} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                {isSavingPricing ? __('Guardando...') : __('Guardar Precios')}
                             </Button>
                         </DialogFooter>
                     </form>

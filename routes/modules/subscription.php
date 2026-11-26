@@ -22,6 +22,7 @@ Route::middleware(['verified'])->group(function () {
     // Panel de suscripción de la empresa
     Route::get('/monitoring/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::post('/monitoring/subscription/renew', [SubscriptionController::class, 'renew'])->name('subscription.renew');
+    Route::post('/monitoring/subscription/whatsapp-topup', [SubscriptionController::class, 'topupWhatsApp'])->name('subscription.whatsapp-topup');
 
     // Gestión global de suscripciones para Empresa ID 1 / Super Admin
     Route::get('/monitoring/subscription/manage', [SubscriptionController::class, 'manage'])->name('subscription.manage');
@@ -32,6 +33,7 @@ Route::middleware(['verified'])->group(function () {
 
     // Módulo Administrativo de Gestión de Planes (Super Admin)
     Route::get('/planes', [SubscriptionPlanController::class, 'index'])->name('planes.index');
+    Route::post('/planes/messaging-pricing', [SubscriptionPlanController::class, 'updateMessagingPricing'])->name('planes.messaging-pricing');
     Route::post('/planes', [SubscriptionPlanController::class, 'store'])->name('planes.store');
     Route::put('/planes/{plane}', [SubscriptionPlanController::class, 'update'])->name('planes.update');
     Route::delete('/planes/{plane}', [SubscriptionPlanController::class, 'destroy'])->name('planes.destroy');

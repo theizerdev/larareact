@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\SubscriptionPlan;
+use App\Models\WhatsAppPricingSetting;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class SubscriptionPlansSeeder extends Seeder
 {
@@ -12,6 +14,9 @@ class SubscriptionPlansSeeder extends Seeder
      */
     public function run(): void
     {
+        if (Schema::hasTable('whatsapp_pricing_settings')) {
+            WhatsAppPricingSetting::current();
+        }
         // Desactivar cualquier plan antiguo que no corresponda a los planes oficiales
         SubscriptionPlan::whereNotIn('nombre', ['Plan Prueba', 'Plan Mensual', 'Plan Anual'])
             ->update(['activo' => false]);
@@ -35,6 +40,9 @@ class SubscriptionPlansSeeder extends Seeder
                 'precio_6_meses' => 0.00,
                 'precio_12_meses' => 0.00,
                 'precio_sucursal_extra_mensual' => 84.72,
+                'costo_por_mensaje_usd' => 0.0050,
+                'mensajes_incluidos_mes' => 60,
+                'min_compra_mensajes' => 100,
                 'sucursales_incluidas' => 1,
                 'modulos_incluidos' => ['todos'],
                 'activo' => true,
@@ -60,6 +68,9 @@ class SubscriptionPlansSeeder extends Seeder
                 'precio_6_meses' => 1000.00,
                 'precio_12_meses' => 1000.00,
                 'precio_sucursal_extra_mensual' => 84.72,
+                'costo_por_mensaje_usd' => 0.0050,
+                'mensajes_incluidos_mes' => 60,
+                'min_compra_mensajes' => 100,
                 'sucursales_incluidas' => 1,
                 'modulos_incluidos' => ['todos'],
                 'activo' => true,
@@ -85,6 +96,9 @@ class SubscriptionPlansSeeder extends Seeder
                 'precio_6_meses' => 149.00,
                 'precio_12_meses' => 149.00,
                 'precio_sucursal_extra_mensual' => 84.72,
+                'costo_por_mensaje_usd' => 0.0050,
+                'mensajes_incluidos_mes' => 60,
+                'min_compra_mensajes' => 100,
                 'sucursales_incluidas' => 1,
                 'modulos_incluidos' => ['todos'],
                 'activo' => true,

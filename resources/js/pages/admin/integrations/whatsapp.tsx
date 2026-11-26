@@ -226,9 +226,25 @@ interface DiagnosticData {
     error?: string;
 }
 
+interface WalletSummary {
+    is_unlimited?: boolean;
+    balance_usd: number;
+    free_quota: number;
+    free_used: number;
+    free_remaining: number;
+    paid_remaining_messages: number;
+    total_remaining_messages: number;
+    unit_cost_usd: number;
+    min_purchase_messages: number;
+    packages: number[];
+    billing_enabled: boolean;
+    payment_methods?: { id: string; label: string }[];
+}
+
 interface PageProps {
     empresa_id: number;
     empresa_nombre: string;
+    wallet_summary?: WalletSummary;
     sucursales: SucursalInstanceSummary[];
     active_sucursal_id: number | null;
     target_name: string;
@@ -311,6 +327,7 @@ function getCsrfHeaders(): Record<string, string> {
 
 export default function WhatsAppIntegration({
     empresa_nombre,
+    wallet_summary,
     sucursales: initialSucursales = [],
     active_sucursal_id: initialSucursalId = null,
     whatsapp_api_url: initialApiUrl,
@@ -353,6 +370,51 @@ export default function WhatsAppIntegration({
     const [branchActive, setBranchActive] = useState<boolean>(initialWhatsappActive);
     const [instanceSlugInput, setInstanceSlugInput] = useState<string>(initialInstanceName || '');
     const [apiUrlInput, setApiUrlInput] = useState<string>(initialApiUrl || 'http://127.0.0.1:3001');
+    const [topupOpen, setTopupOpen] = useState(false);
+    const minPurchaseMessages = Math.max(100, wallet_summary?.min_purchase_messages ?? 100);
+    const unitCostUsd = wallet_summary?.unit_cost_usd ?? 0.005;
+    const [topupMessages, setTopupMessages] = useState<number>(minPurchaseMessages);
+    const activePaymentMethods = wallet_summary?.payment_methods?.length
+        ? wallet_summary.payment_methods
+        : [{ id: 'transferencia', label: 'Transferencia / SPEI' }];
+    const [topupMethod, setTopupMethod] = useState<string>(activePaymentMethods[0].id);
+    const [topupReference, setTopupReference] = useState<string>('');
+    const [topupNotes, setTopupNotes] = useState<string>('');
+    const [topupSubmitting, setTopupSubmitting] = useState<boolean>(false);
+
+    const handleTopupSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (topupMessages < minPurchaseMessages) {
+            toast.error(`La compra mínima es de ${minPurchaseMessages} mensajes.`);
+            return;
+        }
+        setTopupSubmitting(true);
+        try {
+            const res = await fetch('/admin/monitoring/subscription/whatsapp-topup', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({
+                    mensajes: topupMessages,
+                    metodo_pago: topupMethod,
+                    referencia_pago: topupReference,
+                    notas: topupNotes,
+                }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast.success(data.message || 'Solicitud de recarga registrada.');
+                setTopupOpen(false);
+                setTopupReference('');
+                setTopupNotes('');
+            } else {
+                toast.error(data.message || data.error || 'No se pudo registrar la recarga.');
+            }
+        } catch {
+            toast.error('Error de conexión al solicitar recarga.');
+        } finally {
+            setTopupSubmitting(false);
+        }
+    };
     const [savingInstanceConfig, setSavingInstanceConfig] = useState(false);
     const [loadingAction, setLoadingAction] = useState(false);
     const [switchingBranch, setSwitchingBranch] = useState(false);
@@ -725,9 +787,9 @@ export default function WhatsAppIntegration({
                 if (data.status?.isConnected) {
                     toast.success(`Sucursal conectada (+${data.status.phoneNumber || ''})`);
                 } else if (data.status?.qrDataUrl) {
-                    toast.success('Código QR generado desde Python. Escanéalo con tu teléfono.');
+                    toast.success('Código QR generado. Escanéalo con tu teléfono.');
                 } else {
-                    toast.info('Iniciando sesión de WhatsApp en Python...');
+                    toast.info('Iniciando sesión de WhatsApp...');
                 }
             } else {
                 toast.error(data.error || 'No se pudo iniciar la instancia de WhatsApp.');
@@ -828,7 +890,7 @@ export default function WhatsAppIntegration({
                 toast.error(data.error || 'No se pudo generar el código de emparejamiento.');
             }
         } catch {
-            toast.error('Error conectando con el motor Python.');
+            toast.error('Error conectando con el servicio de WhatsApp.');
         } finally {
             setPairLoading(false);
         }
@@ -1334,7 +1396,7 @@ export default function WhatsAppIntegration({
                 setDiagnostic(data);
             }
         } catch {
-            toast.error('Error ejecutando diagnóstico del motor Python.');
+            toast.error('Error ejecutando diagnóstico del servicio de WhatsApp.');
         } finally {
             setDiagLoading(false);
         }
@@ -1466,7 +1528,7 @@ export default function WhatsAppIntegration({
 
     return (
         <>
-            <Head title="WhatsApp Multi-Sucursal (Python)" />
+            <Head title="WhatsApp Multi-Sucursal" />
             <div className="space-y-5 w-full pb-10">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
 
@@ -1474,19 +1536,19 @@ export default function WhatsAppIntegration({
                 <ModuleHeader
                     icon={<MessageSquare className="size-6 text-white" />}
                     title="Centro de WhatsApp Multi-Sucursal"
-                    description={`Motor nativo en Python (Neonize / WhatsMeow) para ${empresa_nombre} · 1 línea independiente por sucursal.`}
+                    description={`Servicio de mensajería para ${empresa_nombre} · 1 línea independiente por sucursal.`}
                     colorClassName="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 dark:from-emerald-700 dark:via-teal-700 dark:to-cyan-800 shadow-sm"
                 >
                     <div className="flex flex-wrap items-center gap-2">
                         {isServiceUnavailable ? (
                             <Badge className="bg-rose-500/90 hover:bg-rose-500 text-white border-white/25 gap-1.5 px-2.5 py-1 text-xs">
                                 <WifiOff className="size-3.5" />
-                                Motor Python Offline
+                                Servicio Offline
                             </Badge>
                         ) : (
                             <Badge className="bg-white/15 hover:bg-white/20 text-white border-white/25 gap-1.5 px-2.5 py-1 text-xs">
                                 <Cpu className="size-3.5" />
-                                Motor Python · {connectedBranchesCount}/{instances.length || 1} en línea
+                                Servicio Activo · {connectedBranchesCount}/{instances.length || 1} en línea
                             </Badge>
                         )}
                         <Button
@@ -1504,7 +1566,7 @@ export default function WhatsAppIntegration({
                             onClick={() => {
                                 loadInstances();
                                 loadSelectedBranchData(selectedSucursalId, false);
-                                toast.info('Estado sincronizado con el motor Python');
+                                toast.info('Estado sincronizado con el servicio de WhatsApp');
                             }}
                             className="bg-white/15 hover:bg-white/25 text-white border border-white/20 h-8 px-2.5"
                             title="Sincronizar estado"
@@ -1514,29 +1576,17 @@ export default function WhatsAppIntegration({
                     </div>
                 </ModuleHeader>
 
-                {/* ── ALERTA MOTOR PYTHON OFFLINE ── */}
+                {/* ── ALERTA SERVICIO OFFLINE ── */}
                 {isServiceUnavailable && (
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4">
                         <div className="flex items-start gap-3">
                             <Terminal className="size-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                             <div className="space-y-1">
                                 <p className="text-sm font-bold text-rose-900 dark:text-rose-200">
-                                    El motor nativo de WhatsApp en Python está detenido
+                                    El servicio de WhatsApp está detenido
                                 </p>
                                 <p className="text-xs text-rose-800/90 dark:text-rose-300/90">
-                                    No se detectó respuesta en{' '}
-                                    <code className="font-mono font-semibold px-1.5 py-0.5 rounded bg-rose-500/15">
-                                        {apiUrlInput}
-                                    </code>
-                                    . Inícialo ejecutando{' '}
-                                    <code className="font-mono font-semibold px-1.5 py-0.5 rounded bg-rose-500/15">
-                                        php artisan whatsapp:start
-                                    </code>{' '}
-                                    o abriendo{' '}
-                                    <code className="font-mono font-semibold px-1.5 py-0.5 rounded bg-rose-500/15">
-                                        whatsapp-service\run.bat
-                                    </code>
-                                    .
+                                    No se detectó respuesta del servicio de mensajería. Verifica que el servicio esté activo o contacta a soporte técnico.
                                 </p>
                             </div>
                         </div>
@@ -1656,6 +1706,57 @@ export default function WhatsAppIntegration({
                     </div>
                 )}
 
+                {/* ── BANNER DE SALDO Y CUPO DE MENSAJERÍA ── */}
+                {wallet_summary && wallet_summary.billing_enabled && (
+                    wallet_summary.is_unlimited ? (
+                        <div className="flex items-center justify-between gap-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
+                            <div className="flex items-center gap-2.5">
+                                <Badge className="bg-emerald-600 text-white">Super Administrador</Badge>
+                                <span className="text-xs sm:text-sm font-semibold text-foreground">
+                                    Mensajería WhatsApp ilimitada (sin límite de envíos ni cobro por mensaje).
+                                </span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                            <div className="flex flex-wrap items-center gap-4">
+                                <div>
+                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Cupo Gratis del Ciclo
+                                    </p>
+                                    <p className="text-base font-black text-foreground">
+                                        {wallet_summary.free_remaining} / {wallet_summary.free_quota} disponibles
+                                    </p>
+                                </div>
+                                <div className="h-8 w-px bg-border hidden sm:block" />
+                                <div>
+                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Saldo Prepago (${unitCostUsd.toFixed(3)} USD/msg)
+                                    </p>
+                                    <p className="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                                        ${wallet_summary.balance_usd.toFixed(4)} USD{' '}
+                                        <span className="text-xs font-medium text-muted-foreground">
+                                            (~{wallet_summary.paid_remaining_messages} mensajes)
+                                        </span>
+                                    </p>
+                                </div>
+                                {wallet_summary.total_remaining_messages <= 10 && (
+                                    <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px]">
+                                        Saldo bajo: compra al menos {minPurchaseMessages} mensajes
+                                    </Badge>
+                                )}
+                            </div>
+                            <Button
+                                size="sm"
+                                onClick={() => setTopupOpen(true)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shrink-0"
+                            >
+                                Comprar Mensajes (Mín. {minPurchaseMessages})
+                            </Button>
+                        </div>
+                    )
+                )}
+
                 {/* ── 4 KPIs EN TIEMPO REAL DE LA SUCURSAL ACTIVA ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                     <Card className="border-border/80">
@@ -1686,7 +1787,7 @@ export default function WhatsAppIntegration({
                                 {liveStatus?.pushName
                                     ? `Perfil: ${liveStatus.pushName}`
                                     : branchActive
-                                    ? 'Sesión aislada cifrada en Python'
+                                    ? 'Sesión aislada cifrada'
                                     : 'Integración pausada para esta sucursal'}
                             </p>
                         </CardContent>
@@ -1848,7 +1949,7 @@ export default function WhatsAppIntegration({
                                                 Vincular: {selectedInstance?.nombre || 'Sucursal'}
                                             </CardTitle>
                                             <CardDescription className="text-xs mt-0.5">
-                                                Sesión Multi-Dispositivo aislada en Python (Neonize / WhatsMeow).
+                                                Sesión Multi-Dispositivo aislada para esta sucursal.
                                             </CardDescription>
                                         </div>
                                         {renderStateBadge(connState)}
@@ -1993,7 +2094,7 @@ export default function WhatsAppIntegration({
                                                                 <p className="text-xs text-muted-foreground">
                                                                     {isReconnecting
                                                                         ? 'Reconectando el socket cifrado de esta sucursal.'
-                                                                        : 'Generando código QR desde el motor Python nativo.'}
+                                                                        : 'Generando código QR desde el servicio de WhatsApp.'}
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -2112,19 +2213,6 @@ export default function WhatsAppIntegration({
                                                     placeholder="sucursal_1"
                                                 />
                                             </div>
-                                            {is_superadmin && (
-                                                <div className="space-y-1">
-                                                    <Label className="text-[11px] text-muted-foreground">
-                                                        URL Motor Python
-                                                    </Label>
-                                                    <Input
-                                                        value={apiUrlInput}
-                                                        onChange={(e) => setApiUrlInput(e.target.value)}
-                                                        className="h-8 text-xs font-mono"
-                                                        placeholder="http://127.0.0.1:3001"
-                                                    />
-                                                </div>
-                                            )}
                                         </div>
                                         <div className="flex justify-end">
                                             <Button
@@ -2498,7 +2586,7 @@ export default function WhatsAppIntegration({
                                         Control de Cuotas, Retardos & Pausas de Enfriamiento
                                     </CardTitle>
                                     <CardDescription className="text-xs">
-                                        El worker asíncrono de Python aplica retardos gaussianos aleatorios y descansos por lote para esta sucursal.
+                                        El worker asíncrono aplica retardos gaussianos aleatorios y descansos por lote para esta sucursal.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
@@ -2845,7 +2933,7 @@ export default function WhatsAppIntegration({
                                         Redactor con Spintax & Despacho Seguro ({selectedInstance?.nombre})
                                     </CardTitle>
                                     <CardDescription className="text-xs">
-                                        Los mensajes se encolan en el worker de Python y salen uno a uno desde la línea de{' '}
+                                        Los mensajes se encolan en el worker de mensajería y salen uno a uno desde la línea de{' '}
                                         <strong>{selectedInstance?.nombre}</strong> con simulación de escritura y pausas aleatorias.
                                     </CardDescription>
                                 </CardHeader>
@@ -3471,16 +3559,16 @@ export default function WhatsAppIntegration({
                     </DialogContent>
                 </Dialog>
 
-                {/* ── MODAL DIAGNÓSTICO DEL MOTOR PYTHON ── */}
+                {/* ── MODAL DIAGNÓSTICO DEL SERVICIO ── */}
                 <Dialog open={diagOpen} onOpenChange={setDiagOpen}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
                                 <Cpu className="size-5 text-emerald-600" />
-                                Diagnóstico del Motor Python Nativo
+                                Diagnóstico del Servicio de WhatsApp
                             </DialogTitle>
                             <DialogDescription className="text-xs">
-                                Telemetría en tiempo real de Neonize / WhatsMeow para{' '}
+                                Telemetría en tiempo real para{' '}
                                 <strong>{selectedInstance?.nombre}</strong>.
                             </DialogDescription>
                         </DialogHeader>
@@ -3488,13 +3576,12 @@ export default function WhatsAppIntegration({
                         {diagLoading ? (
                             <div className="py-8 text-center text-xs text-muted-foreground">
                                 <Loader2 className="size-6 animate-spin mx-auto mb-2 text-emerald-600" />
-                                Consultando estado interno del motor Python...
+                                Consultando estado interno del servicio...
                             </div>
                         ) : diagnostic ? (
                             <div className="space-y-2 text-xs">
                                 {[
-                                    ['Motor', diagnostic.engine || 'Python Nativo (Neonize)'],
-                                    ['Endpoint Local', diagnostic.api_url],
+                                    ['Servicio', 'WhatsApp Multi-Sucursal'],
                                     ['Sucursal', diagnostic.target_name || selectedInstance?.nombre || '—'],
                                     ['Instancia SQLite', diagnostic.instance],
                                     ['Estado del Socket', diagnostic.socket_state],
@@ -3538,6 +3625,100 @@ export default function WhatsAppIntegration({
                                 Cerrar
                             </Button>
                         </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* ── MODAL COMPRA DE MENSAJES WHATSAPP (MÍN. 100) ── */}
+                <Dialog open={topupOpen} onOpenChange={setTopupOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Comprar Paquete de Mensajes WhatsApp</DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Tarifa: <strong>${unitCostUsd.toFixed(4)} USD</strong> por mensaje enviado. Compra mínima:{' '}
+                                <strong>{minPurchaseMessages} mensajes</strong> (${(minPurchaseMessages * unitCostUsd).toFixed(2)} USD).
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleTopupSubmit} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold">Paquetes rápidos</Label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {(wallet_summary?.packages || [100, 500, 1000, 5000]).map((pkg) => (
+                                        <Button
+                                            key={pkg}
+                                            type="button"
+                                            size="sm"
+                                            variant={topupMessages === pkg ? 'default' : 'outline'}
+                                            onClick={() => setTopupMessages(pkg)}
+                                            className="text-xs font-mono"
+                                        >
+                                            {pkg}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-semibold">Cantidad de mensajes</Label>
+                                    <Input
+                                        type="number"
+                                        min={minPurchaseMessages}
+                                        value={topupMessages}
+                                        onChange={(e) => setTopupMessages(Math.max(minPurchaseMessages, parseInt(e.target.value, 10) || minPurchaseMessages))}
+                                        className="font-mono"
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-semibold">Total a pagar (USD)</Label>
+                                    <div className="h-9 px-3 rounded-md border bg-muted/50 flex items-center font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                        ${(topupMessages * unitCostUsd).toFixed(2)} USD
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-semibold">Método de pago</Label>
+                                    <Select value={topupMethod} onValueChange={setTopupMethod}>
+                                        <SelectTrigger className="h-9 text-xs">
+                                            <SelectValue placeholder="Selecciona método" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {activePaymentMethods.map((m) => (
+                                                <SelectItem key={m.id} value={m.id} className="text-xs">
+                                                    {m.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-semibold">Referencia de pago</Label>
+                                    <Input
+                                        value={topupReference}
+                                        onChange={(e) => setTopupReference(e.target.value)}
+                                        placeholder="Folio o ID"
+                                        className="text-xs"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold">Notas (opcional)</Label>
+                                <Input
+                                    value={topupNotes}
+                                    onChange={(e) => setTopupNotes(e.target.value)}
+                                    placeholder="Detalles adicionales..."
+                                    className="text-xs"
+                                />
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" size="sm" onClick={() => setTopupOpen(false)} disabled={topupSubmitting}>
+                                    Cancelar
+                                </Button>
+                                <Button type="submit" size="sm" disabled={topupSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                    {topupSubmitting ? 'Enviando...' : `Solicitar ${topupMessages} mensajes`}
+                                </Button>
+                            </DialogFooter>
+                        </form>
                     </DialogContent>
                 </Dialog>
             </div>
